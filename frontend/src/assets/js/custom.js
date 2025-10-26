@@ -9,7 +9,10 @@ jQuery(document).ready(function($) {
             nav: true,
 			dots:false,
             items: 1,
-            autoplay: true,
+            autoplay: false,
+            autoplayTimeout: 5000,
+            autoplayHoverPause: true,
+            smartSpeed: 1000
 
         })
     }
