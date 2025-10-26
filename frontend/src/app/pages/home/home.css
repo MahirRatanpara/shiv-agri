@@ -1,0 +1,148 @@
+/* Standardize slider carousel images */
+#home-slider {
+  position: relative;
+  z-index: 1;
+}
+
+#home-slider .item {
+  position: relative;
+  display: block;
+}
+
+#home-slider .item img {
+  width: 100%;
+  height: 600px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  position: relative;
+}
+
+/* Make specific text black */
+.text-black {
+  color: #000000 !important;
+}
+
+/* Standardize service icons */
+.services-area .sinfo img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+/* Standardize about section image */
+.home2-about .video-img img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Standardize about section video */
+.home2-about .video-img video {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 8px;
+}
+
+/* Standardize current project images */
+.pro-box img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Standardize news/blog images */
+.blog-post-large .post-thumb img {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.blog-small-post .post-thumb img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Standardize product/shop images */
+.product-box .pro-thumb img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Standardize Instagram gallery images */
+.instagram ul li img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  #home-slider .item img {
+    height: 400px;
+  }
+
+  .home2-about .video-img img,
+  .home2-about .video-img video {
+    height: 300px;
+  }
+
+  .pro-box img {
+    height: 250px;
+  }
+
+  .blog-post-large .post-thumb img {
+    height: 300px;
+  }
+
+  .product-box .pro-thumb img {
+    height: 250px;
+  }
+
+  .instagram ul li img {
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  #home-slider .item img {
+    height: 300px;
+  }
+
+  .services-area .sinfo img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .home2-about .video-img img,
+  .home2-about .video-img video {
+    height: 250px;
+  }
+
+  .pro-box img {
+    height: 200px;
+  }
+
+  .blog-small-post .post-thumb img {
+    width: 100px;
+    height: 100px;
+  }
+
+  .product-box .pro-thumb img {
+    height: 200px;
+  }
+
+  .instagram ul li img {
+    height: 120px;
+  }
+}

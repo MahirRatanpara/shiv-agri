@@ -13,6 +13,8 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/frontend",
+            "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
               "zone.js"
@@ -22,10 +24,29 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              }
+              },
+              "src/favicon.ico",
+              "src/assets"
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/assets/css/bootstrap.min.css",
+              "src/assets/css/all.min.css",
+              "src/assets/css/slick.css",
+              "src/assets/css/responsive.css",
+              "src/assets/css/color.css",
+              "src/assets/css/custom.css"
+            ],
+            "scripts": [
+              "src/assets/js/jquery-3.3.1.min.js",
+              "src/assets/js/popper.min.js",
+              "src/assets/js/bootstrap.min.js",
+              "src/assets/js/jquery.plugin.min.js",
+              "src/assets/js/isotope.pkgd.min.js",
+              "src/assets/js/owl.carousel.min.js",
+              "src/assets/js/jquery.prettyPhoto.js",
+              "src/assets/js/slick.min.js",
+              "src/assets/js/custom.js"
             ]
           },
           "configurations": {
@@ -33,13 +54,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "2MB",
+                  "maximumError": "5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "150kB",
+                  "maximumError": "150kB"
                 }
               ],
               "outputHashing": "all"
@@ -79,14 +100,36 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              }
+              },
+              "src/favicon.ico",
+              "src/assets"
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/assets/css/bootstrap.min.css",
+              "src/assets/css/all.min.css",
+              "src/assets/css/slick.css",
+              "src/assets/css/responsive.css",
+              "src/assets/css/color.css",
+              "src/assets/css/custom.css"
+            ],
+            "scripts": [
+              "src/assets/js/jquery-3.3.1.min.js",
+              "src/assets/js/popper.min.js",
+              "src/assets/js/bootstrap.min.js",
+              "src/assets/js/jquery.plugin.min.js",
+              "src/assets/js/isotope.pkgd.min.js",
+              "src/assets/js/owl.carousel.min.js",
+              "src/assets/js/jquery.prettyPhoto.js",
+              "src/assets/js/slick.min.js",
+              "src/assets/js/custom.js"
             ]
           }
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
