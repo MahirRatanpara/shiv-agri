@@ -1,27 +1,100 @@
-/* Logo styling */
+/* Logo area background only */
 .navbar-brand {
   display: flex;
   align-items: center;
-  padding: 0.5rem 0;
 }
 
 .navbar-brand img {
-  max-height: 100px;
-  height: 80px;
+  max-height: 75px;
   width: auto;
   object-fit: contain;
   object-position: left center;
 }
 
+/* Mobile menu toggle button */
+.navbar-toggler {
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.navbar-toggler:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+.navbar-toggler i {
+  color: #ffffff;
+  font-size: 1.5rem;
+}
+
 /* Responsive logo adjustments */
 @media (max-width: 991px) {
+  header.header-style-2 nav.navbar {
+    padding: 0.4rem 0.8rem;
+    position: relative;
+  }
+
   .navbar-brand img {
     max-height: 50px;
     height: 50px;
   }
+
+  /* Ensure mobile menu toggle is visible */
+  .navbar-toggler {
+    display: block !important;
+    z-index: 1001;
+    position: relative;
+  }
+
+  /* Mobile menu - hidden by default */
+  .navbar-collapse {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    z-index: 1000;
+  }
+
+  /* Show mobile menu when toggled */
+  .navbar-collapse.show {
+    display: block !important;
+  }
+
+  /* Style nav items for mobile */
+  .navbar-collapse .navbar-nav {
+    width: 100%;
+  }
+
+  .navbar-collapse .nav-item {
+    width: 100%;
+    text-align: left;
+  }
+
+  .navbar-collapse .nav-link {
+    padding: 0.75rem 1rem;
+    color: #ffffff !important;
+    display: block;
+  }
+
+  .navbar-collapse .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 @media (max-width: 576px) {
+  header.header-style-2 nav.navbar {
+    padding: 0.3rem 0.5rem;
+  }
+
   .navbar-brand img {
     max-height: 40px;
     height: 40px;
