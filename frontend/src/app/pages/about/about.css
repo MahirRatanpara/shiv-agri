@@ -1,0 +1,30 @@
+/* About page image styling */
+.about-page {
+  padding: 40px 20px;
+  margin: 0;
+}
+
+.about-page .container-fluid {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.about-image {
+  width: 100%;
+  height: auto;
+  max-width: 90%;
+  display: block;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+/* Ensure proper responsive behavior */
+@media (max-width: 768px) {
+  .about-page {
+    padding: 20px 10px;
+  }
+
+  .about-image {
+    max-width: 95%;
+  }
+}
