@@ -872,7 +872,7 @@ ul.topnav-right, .topside-menu {
 	top: 30px;
 }
 .slider-caption strong {
-	font-size: 16px;
+	font-size: 20px;
 }
 .slider-caption h1 {
 	font-size: 22px;
@@ -1281,7 +1281,14 @@ section.page404.wf100.p80 img {
 	line-height: 200px;
 }
 .slider-caption {
-	display: none;
+	display: block !important;
+}
+.slider-caption strong {
+	display: block !important;
+	font-size: 24px !important;
+}
+.slider-caption a {
+	display: none !important;
 }
 .counter-box {
 	margin: 0 0 30px;
