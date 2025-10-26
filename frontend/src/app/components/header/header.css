@@ -1,13 +1,11 @@
-/* Logo styling */
+/* Logo area background only */
 .navbar-brand {
   display: flex;
   align-items: center;
-  padding: 0.5rem 0;
 }
 
 .navbar-brand img {
-  max-height: 100px;
-  height: 80px;
+  max-height: 75px;
   width: auto;
   object-fit: contain;
   object-position: left center;
