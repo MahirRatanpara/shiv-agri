@@ -1,0 +1,508 @@
+<div class="project-detail">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <button class="btn btn-link text-white mb-2" (click)="goBack()">
+            <i class="fa fa-arrow-left"></i> Back to Projects
+          </button>
+          <h1 class="page-title">
+            {{ isNewProject ? 'Create New Project' : project?.projectName }}
+          </h1>
+          <p class="page-subtitle" *ngIf="!isNewProject">
+            <span class="badge" [ngClass]="'badge-' + project?.status?.toLowerCase()">
+              {{ project?.status }}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-4 text-right" *ngIf="!isNewProject">
+          <button class="btn btn-light mr-2" *ngIf="!isEditMode" (click)="toggleEditMode()">
+            <i class="fa fa-edit"></i> Edit
+          </button>
+          <button class="btn btn-danger" *ngIf="!isEditMode" (click)="deleteProject()">
+            <i class="fa fa-trash"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+    <p class="mt-2">Loading project details...</p>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="container-fluid mt-3">
+    <div class="alert alert-danger" role="alert">
+      {{ error }}
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading" class="container-fluid py-4">
+    <form [formGroup]="projectForm">
+      <!-- Tabs Navigation -->
+      <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'basic'"
+            (click)="setActiveTab('basic')"
+          >
+            <i class="fa fa-info-circle"></i> Basic Info
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'location'"
+            (click)="setActiveTab('location')"
+          >
+            <i class="fa fa-map-marker-alt"></i> Location & Land
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'contacts'"
+            (click)="setActiveTab('contacts')"
+          >
+            <i class="fa fa-users"></i> Contacts
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="!isNewProject">
+          <a
+            class="nav-link"
+            [class.active]="activeTab === 'files'"
+            (click)="setActiveTab('files')"
+          >
+            <i class="fa fa-file"></i> Files
+          </a>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- Basic Info Tab -->
+        <div *ngIf="activeTab === 'basic'" class="tab-pane active">
+          <div class="card">
+            <div class="card-header">
+              <h5>Project Information</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">
+                    Project Name <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="projectName"
+                    [readonly]="!isEditMode"
+                    [class.is-invalid]="isFieldInvalid('projectName')"
+                  />
+                  <div class="invalid-feedback" *ngIf="isFieldInvalid('projectName')">
+                    {{ getFieldError('projectName') }}
+                  </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Farm Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="farmName"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">
+                    Status <span class="text-danger">*</span>
+                  </label>
+                  <select
+                    class="form-control"
+                    formControlName="status"
+                    [disabled]="!isEditMode"
+                  >
+                    <option *ngFor="let status of projectStatuses" [value]="status">
+                      {{ status }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Start Date</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    formControlName="startDate"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">End Date</label>
+                  <input
+                    type="date"
+                    class="form-control"
+                    formControlName="endDate"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Estimated Cost (₹)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    formControlName="estimatedCost"
+                    [readonly]="!isEditMode"
+                    min="0"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Actual Cost (₹)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    formControlName="actualCost"
+                    [readonly]="!isEditMode"
+                    min="0"
+                  />
+                </div>
+
+                <div class="col-12 mb-3">
+                  <label class="form-label">Description</label>
+                  <textarea
+                    class="form-control"
+                    formControlName="description"
+                    rows="4"
+                    [readonly]="!isEditMode"
+                  ></textarea>
+                </div>
+
+                <div class="col-12 mb-3">
+                  <label class="form-label">Notes</label>
+                  <textarea
+                    class="form-control"
+                    formControlName="notes"
+                    rows="3"
+                    [readonly]="!isEditMode"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Location & Land Tab -->
+        <div *ngIf="activeTab === 'location'" class="tab-pane active">
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5>Location Information</h5>
+            </div>
+            <div class="card-body" formGroupName="location">
+              <div class="row">
+                <div class="col-12 mb-3">
+                  <label class="form-label">
+                    Address <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="address"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">
+                    City <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="city"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">
+                    State <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="state"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">
+                    Pincode <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="pincode"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3" formGroupName="coordinates">
+                  <label class="form-label">Latitude</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    formControlName="latitude"
+                    [readonly]="!isEditMode"
+                    step="0.000001"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3" formGroupName="coordinates">
+                  <label class="form-label">Longitude</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    formControlName="longitude"
+                    [readonly]="!isEditMode"
+                    step="0.000001"
+                  />
+                </div>
+
+                <div class="col-12 mb-3">
+                  <label class="form-label">Google Maps URL</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="mapUrl"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h5>Land Information</h5>
+            </div>
+            <div class="card-body" formGroupName="landInfo">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">
+                    Land Size <span class="text-danger">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    formControlName="size"
+                    [readonly]="!isEditMode"
+                    min="0"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">
+                    Unit <span class="text-danger">*</span>
+                  </label>
+                  <select class="form-control" formControlName="unit" [disabled]="!isEditMode">
+                    <option *ngFor="let unit of landUnits" [value]="unit">
+                      {{ unit }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Soil Type</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="soilType"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Irrigation Type</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="irrigationType"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Water Source</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="waterSource"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Coordinates</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    formControlName="coordinates"
+                    [readonly]="!isEditMode"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contacts Tab -->
+        <div *ngIf="activeTab === 'contacts'" class="tab-pane active">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5>Contact Information</h5>
+              <button
+                *ngIf="isEditMode"
+                type="button"
+                class="btn btn-sm btn-primary"
+                (click)="addContact()"
+              >
+                <i class="fa fa-plus"></i> Add Contact
+              </button>
+            </div>
+            <div class="card-body">
+              <div formArrayName="contacts">
+                <div
+                  *ngFor="let contact of contacts.controls; let i = index"
+                  [formGroupName]="i"
+                  class="contact-item mb-3 p-3 border rounded"
+                >
+                  <div class="d-flex justify-content-between mb-2">
+                    <h6>Contact {{ i + 1 }}</h6>
+                    <button
+                      *ngIf="isEditMode && contacts.length > 1"
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="removeContact(i)"
+                    >
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">
+                        Name <span class="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        formControlName="name"
+                        [readonly]="!isEditMode"
+                      />
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">
+                        Phone <span class="text-danger">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        class="form-control"
+                        formControlName="phone"
+                        [readonly]="!isEditMode"
+                        placeholder="10-digit number"
+                      />
+                    </div>
+
+                    <div class="col-md-6 mb-2">
+                      <label class="form-label">Email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        formControlName="email"
+                        [readonly]="!isEditMode"
+                      />
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                      <label class="form-label">
+                        Role <span class="text-danger">*</span>
+                      </label>
+                      <select class="form-control" formControlName="role" [disabled]="!isEditMode">
+                        <option *ngFor="let role of contactRoles" [value]="role">
+                          {{ role }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <div class="col-md-2 mb-2">
+                      <label class="form-label">Primary</label>
+                      <div class="form-check mt-2">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          formControlName="isPrimary"
+                          [disabled]="!isEditMode"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="contacts.length === 0" class="text-center py-4 text-muted">
+                No contacts added yet. Click "Add Contact" to add one.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Files Tab (Only for existing projects) -->
+        <div *ngIf="activeTab === 'files' && !isNewProject" class="tab-pane active">
+          <div class="card">
+            <div class="card-header">
+              <h5>Project Files</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">
+                File management will be available here. You can upload design files, drone
+                videos, quotations, and invoices.
+              </p>
+              <p class="text-info">
+                <i class="fa fa-info-circle"></i> File upload functionality will be implemented
+                in the next component.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="form-actions mt-4" *ngIf="isEditMode">
+        <button type="button" class="btn btn-primary" (click)="saveProject()" [disabled]="saving">
+          <span *ngIf="!saving">
+            <i class="fa fa-save"></i> {{ isNewProject ? 'Create Project' : 'Save Changes' }}
+          </span>
+          <span *ngIf="saving">
+            <i class="fa fa-spinner fa-spin"></i> Saving...
+          </span>
+        </button>
+        <button type="button" class="btn btn-secondary ml-2" (click)="cancelEdit()" [disabled]="saving">
+          <i class="fa fa-times"></i> Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

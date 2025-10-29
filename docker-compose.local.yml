@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # MongoDB for local development
+  mongodb:
+    image: mongo:7
+    container_name: shiv-agri-mongodb-local
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: shiv-agri
+    volumes:
+      # Mount init script to initialize database
+      - ./database/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      # Persist data locally
+      - mongodb_data_local:/data/db
+      # Persist MongoDB configuration
+      - mongodb_config_local:/data/configdb
+    networks:
+      - shiv-agri-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/shiv-agri --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  # Named volume for MongoDB data persistence
+  mongodb_data_local:
+    driver: local
+  mongodb_config_local:
+    driver: local
+
+networks:
+  shiv-agri-network:
+    driver: bridge

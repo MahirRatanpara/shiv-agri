@@ -18,11 +18,20 @@ import { DonationComponent } from './pages/donation/donation';
 import { MyAccountComponent } from './pages/my-account/my-account';
 import { ContactComponent } from './pages/contact/contact';
 import { NotFoundComponent } from './pages/not-found/not-found';
+import { LandscapingDashboardComponent } from './pages/landscaping-dashboard/landscaping-dashboard.component';
+import { ProjectDetailComponent } from './pages/project-detail/project-detail.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'about', redirectTo: '/contact', pathMatch: 'full' },
+
+  // Landscaping Management Module
+  { path: 'landscaping', component: LandscapingDashboardComponent },
+  { path: 'landscaping/project/new', component: ProjectDetailComponent },
+  { path: 'landscaping/project/:id', component: ProjectDetailComponent },
+  { path: 'landscaping/project/:id/edit', component: ProjectDetailComponent },
+
   { path: 'events', component: EventsComponent },
   { path: 'event-details/:id', component: EventDetailsComponent },
   { path: 'causes', component: CausesComponent },

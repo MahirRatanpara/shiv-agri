@@ -11,6 +11,35 @@
   object-position: left center;
 }
 
+/* Active navigation link styling */
+.nav-link.active {
+  color: #4CAF50 !important;
+  font-weight: 600;
+  position: relative;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background-color: #4CAF50;
+}
+
+/* Desktop nav link hover */
+@media (min-width: 992px) {
+  .nav-link {
+    transition: color 0.3s ease;
+  }
+
+  .nav-link:hover {
+    color: #4CAF50 !important;
+  }
+}
+
 /* Mobile menu toggle button */
 .navbar-toggler {
   padding: 0.5rem 0.75rem;

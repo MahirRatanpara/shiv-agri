@@ -1,0 +1,329 @@
+<div class="landscaping-dashboard">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h1 class="page-title">Landscaping Management</h1>
+          <p class="page-subtitle">Manage all your landscaping projects</p>
+        </div>
+        <div class="col-md-6 text-right">
+          <button class="btn btn-primary" (click)="createNewProject()">
+            <i class="fa fa-plus"></i> New Project
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-3 col-sm-6 mb-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-primary">
+              <i class="fa fa-briefcase"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ stats.total }}</h3>
+              <p>Total Projects</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-success">
+              <i class="fa fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ stats.completed }}</h3>
+              <p>Completed</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-info">
+              <i class="fa fa-spinner"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ stats.running }}</h3>
+              <p>Running</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-warning">
+              <i class="fa fa-clock"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ stats.upcoming }}</h3>
+              <p>Upcoming</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="container-fluid">
+      <div class="filter-card">
+        <div class="row">
+          <!-- Search -->
+          <div class="col-md-4 mb-3">
+            <div class="form-group">
+              <label>Search Projects</label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Search by project name, owner..."
+                [(ngModel)]="filters.searchTerm"
+                (keyup.enter)="onSearch()"
+              />
+            </div>
+          </div>
+
+          <!-- Status Filter -->
+          <div class="col-md-2 mb-3">
+            <div class="form-group">
+              <label>Status</label>
+              <select
+                class="form-control"
+                [(ngModel)]="filters.status"
+                (change)="onStatusChange($any($event.target).value)"
+              >
+                <option value="">All Status</option>
+                <option *ngFor="let status of projectStatuses" [value]="status">
+                  {{ status }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- City Filter -->
+          <div class="col-md-2 mb-3">
+            <div class="form-group">
+              <label>City</label>
+              <select
+                class="form-control"
+                [(ngModel)]="filters.city"
+                (change)="onCityChange($any($event.target).value)"
+              >
+                <option value="">All Cities</option>
+                <option *ngFor="let city of cities" [value]="city">
+                  {{ city }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Sort By -->
+          <div class="col-md-2 mb-3">
+            <div class="form-group">
+              <label>Sort By</label>
+              <select
+                class="form-control"
+                [(ngModel)]="filters.sortBy"
+                (change)="onSortChange()"
+              >
+                <option *ngFor="let option of sortOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="col-md-2 mb-3">
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <div class="btn-group d-flex">
+                <button
+                  class="btn btn-secondary"
+                  (click)="toggleSortOrder()"
+                  title="Toggle sort order"
+                >
+                  <i
+                    class="fa"
+                    [ngClass]="filters.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"
+                  ></i>
+                </button>
+                <button
+                  class="btn btn-secondary"
+                  (click)="toggleViewMode()"
+                  title="Toggle view mode"
+                >
+                  <i
+                    class="fa"
+                    [ngClass]="viewMode === 'grid' ? 'fa-list' : 'fa-th'"
+                  ></i>
+                </button>
+                <button class="btn btn-secondary" (click)="clearFilters()" title="Clear filters">
+                  <i class="fa fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects List/Grid -->
+  <div class="projects-section">
+    <div class="container-fluid">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+        <p class="mt-2">Loading projects...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error" class="alert alert-danger" role="alert">
+        {{ error }}
+        <button class="btn btn-sm btn-outline-danger ml-3" (click)="loadProjects()">
+          Retry
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        *ngIf="!loading && !error && filteredProjects.length === 0"
+        class="empty-state text-center py-5"
+      >
+        <i class="fa fa-folder-open fa-4x text-muted mb-3"></i>
+        <h4>No projects found</h4>
+        <p>Try adjusting your filters or create a new project</p>
+        <button class="btn btn-primary mt-3" (click)="createNewProject()">
+          Create New Project
+        </button>
+      </div>
+
+      <!-- Grid View -->
+      <div *ngIf="!loading && !error && filteredProjects.length > 0 && viewMode === 'grid'" class="row">
+        <div class="col-md-4 col-sm-6 mb-4" *ngFor="let project of filteredProjects">
+          <div class="project-card">
+            <div class="project-header">
+              <h5 class="project-title">{{ project.projectName }}</h5>
+              <span class="badge" [ngClass]="getStatusClass(project.status)">
+                {{ project.status }}
+              </span>
+            </div>
+            <div class="project-body">
+              <p class="project-location">
+                <i class="fa fa-map-marker-alt"></i>
+                {{ project.location.city }}, {{ project.location.state }}
+              </p>
+              <p class="project-detail">
+                <strong>Farm:</strong> {{ project.farmName || 'N/A' }}
+              </p>
+              <p class="project-detail">
+                <strong>Land Size:</strong> {{ project.landInfo.size }} {{ project.landInfo.unit }}
+              </p>
+              <p class="project-detail">
+                <strong>Start Date:</strong> {{ formatDate(project.startDate) }}
+              </p>
+              <p class="project-detail" *ngIf="project.contacts && project.contacts.length > 0">
+                <strong>Owner:</strong>
+                {{ getOwnerName(project) }}
+              </p>
+            </div>
+            <div class="project-footer">
+              <button class="btn btn-sm btn-outline-primary" (click)="viewProject(project._id!)">
+                <i class="fa fa-eye"></i> View
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="editProject(project._id!)">
+                <i class="fa fa-edit"></i> Edit
+              </button>
+              <button
+                class="btn btn-sm btn-outline-danger"
+                (click)="deleteProject(project._id!, project.projectName)"
+              >
+                <i class="fa fa-trash"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div *ngIf="!loading && !error && filteredProjects.length > 0 && viewMode === 'list'" class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Project Name</th>
+              <th>Status</th>
+              <th>Location</th>
+              <th>Land Size</th>
+              <th>Start Date</th>
+              <th>Owner</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let project of filteredProjects">
+              <td>{{ project.projectName }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusClass(project.status)">
+                  {{ project.status }}
+                </span>
+              </td>
+              <td>{{ project.location.city }}, {{ project.location.state }}</td>
+              <td>{{ project.landInfo.size }} {{ project.landInfo.unit }}</td>
+              <td>{{ formatDate(project.startDate) }}</td>
+              <td>{{ getOwnerName(project) }}</td>
+              <td>
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline-primary" (click)="viewProject(project._id!)">
+                    <i class="fa fa-eye"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" (click)="editProject(project._id!)">
+                    <i class="fa fa-edit"></i>
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="deleteProject(project._id!, project.projectName)"
+                  >
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div *ngIf="!loading && !error && filteredProjects.length > 0" class="pagination-section">
+        <nav>
+          <ul class="pagination justify-content-center">
+            <li class="page-item" [class.disabled]="currentPage === 1">
+              <a class="page-link" (click)="onPageChange(currentPage - 1)">Previous</a>
+            </li>
+            <li
+              class="page-item"
+              *ngFor="let page of getPaginationPages()"
+              [class.active]="page === currentPage"
+            >
+              <a class="page-link" (click)="onPageChange(page)">{{ page }}</a>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === totalPages">
+              <a class="page-link" (click)="onPageChange(currentPage + 1)">Next</a>
+            </li>
+          </ul>
+        </nav>
+        <p class="text-center text-muted">
+          Showing {{ (currentPage - 1) * (filters.limit || 10) + 1 }} to
+          {{ Math.min(currentPage * (filters.limit || 10), totalProjects) }} of
+          {{ totalProjects }} projects
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
