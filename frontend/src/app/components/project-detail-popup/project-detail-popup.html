@@ -1,0 +1,39 @@
+<div class="popup-backdrop" *ngIf="isOpen" (click)="onBackdropClick($event)">
+  <div class="popup-modal" (click)="stopPropagation($event)">
+    <!-- Close button -->
+    <button class="close-btn" (click)="onClose()" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Modal content -->
+    <div class="popup-content" *ngIf="project">
+      <!-- Title -->
+      <h2 class="popup-title">{{ project.title }}</h2>
+
+      <!-- Instagram-style Images section -->
+      <div class="popup-images" *ngIf="project.images && project.images.length > 0">
+        <div class="instagram-gallery">
+          <div class="instagram-image-item" *ngFor="let image of project.images">
+            <img [src]="image.url" [alt]="image.caption || project.title" />
+            <p class="image-caption" *ngIf="image.caption">{{ image.caption }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="popup-description">
+        <p>{{ project.description }}</p>
+      </div>
+
+      <!-- Paragraphs -->
+      <div class="popup-paragraphs" *ngIf="project.paragraphs && project.paragraphs.length > 0">
+        <p *ngFor="let paragraph of project.paragraphs" class="content-paragraph">{{ paragraph }}</p>
+      </div>
+
+      <!-- Detailed content (legacy support) -->
+      <div class="popup-detailed-content" *ngIf="project.detailedContent">
+        <div [innerHTML]="project.detailedContent"></div>
+      </div>
+    </div>
+  </div>
+</div>

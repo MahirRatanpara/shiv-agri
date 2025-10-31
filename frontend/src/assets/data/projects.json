@@ -1,0 +1,170 @@
+[
+  {
+    "id": "soil-analysis",
+    "title": "Soil Testing & Analysis",
+    "image": "assets/images/Projects/soil-analysis.jpeg",
+    "shortDescription": "Healthy soil is the foundation of every successful farm.",
+    "fullDescription": "We provide comprehensive soil testing and nutrient analysis to determine the exact macro and micro nutrient levels of your land. Based on your soil report, our experts identify which crops are best suited for your field and design a custom fertilizer recommendation plan to achieve optimum yield.",
+    "features": [
+      "Macro & Micro nutrient analysis (NPK, Zinc, Boron, Sulphur, etc.)",
+      "pH, EC, and Organic Carbon evaluation",
+      "Soil fertility and texture assessment",
+      "Fertilizer recommendation reports based on soil health and crop needs",
+      "Crop selection guidance according to soil suitability"
+    ]
+  },
+  {
+    "id": "water-analysis",
+    "title": "Water Analysis",
+    "image": "assets/images/Projects/water-analysis.jpeg",
+    "shortDescription": "Water quality plays a crucial role in plant growth and soil health.",
+    "fullDescription": "We conduct detailed water quality testing to assess physical, chemical, and biological parameters. Based on the results, our experts provide recommendations to improve water usability and crop performance.",
+    "features": [
+      "Testing of parameters like pH, EC, TDS, bicarbonates, chlorides, calcium, magnesium, sodium, etc.",
+      "Evaluation of irrigation water quality for different crops",
+      "Guidance on water management and filtration systems",
+      "Corrective measures for saline or alkaline water"
+    ]
+  },
+  {
+    "id": "landscape-design",
+    "title": "Landscaping Design",
+    "image": "assets/images/Projects/landscaping-design.png",
+    "shortDescription": "From concept to creation, we provide complete landscape design and development solutions.",
+    "fullDescription": "Our process begins with an on-site visit, area measurement, and design planning. We offer detailed plant, shrub, and flower selection suited to your region and climate. Additionally, we recommend trusted landscaping agencies and provide pest and disease consultancy to maintain a healthy and beautiful environment.",
+    "features": [
+      "Site survey and area analysis",
+      "2D/3D landscape design layouts",
+      "Plant, shrub, and flower selection",
+      "Vastu-compliant designs for harmony and aesthetics",
+      "Long-term plant health consultancy"
+    ]
+  },
+  {
+    "id": "landscaping",
+    "title": "Landscaping",
+    "image": "assets/images/Projects/landscaping-1.png",
+    "shortDescription": "Professional landscaping services to bring your vision to life.",
+    "fullDescription": "Our comprehensive landscaping services cover everything from initial site preparation to final planting and finishing touches. We work with precision and care to create stunning outdoor environments that enhance your property's beauty and value.",
+    "features": [
+      "Site preparation and grading",
+      "Planting and installation",
+      "Hardscape construction",
+      "Irrigation system setup",
+      "Ongoing maintenance support"
+    ]
+  },
+  {
+    "id": "waterfall-landscaping",
+    "title": "Waterfall Landscaping",
+    "image": "assets/images/Projects/waterfall-landscaping.png",
+    "shortDescription": "Stunning waterfall features that add tranquility to your landscape.",
+    "fullDescription": "Create a serene atmosphere with our custom waterfall landscaping services. We design and install beautiful water features that serve as focal points in your garden, combining natural aesthetics with modern engineering.",
+    "features": [
+      "Custom waterfall design",
+      "Natural stone selection",
+      "Recirculation system installation",
+      "LED lighting integration",
+      "Aquatic plant recommendations"
+    ]
+  },
+  {
+    "id": "miyawaki-forest",
+    "title": "Miyawaki Forest Design",
+    "image": "assets/images/Projects/miyawaki-forest.webp",
+    "shortDescription": "Create dense, native forests using the revolutionary Miyawaki method.",
+    "fullDescription": "The Miyawaki method creates native forests that grow 10 times faster and become maintenance-free after 3 years. Our experts design and implement these dense, biodiverse forests that support local ecosystems and provide environmental benefits.",
+    "features": [
+      "Native species selection",
+      "Soil preparation protocols",
+      "Dense planting methodology",
+      "Accelerated growth techniques",
+      "Biodiversity enhancement"
+    ]
+  },
+  {
+    "id": "vegetable-net-house",
+    "title": "Vegetable Net House",
+    "image": "assets/images/Projects/net-house.webp",
+    "shortDescription": "Modern farming begins with innovation — and vegetable net houses are the key to higher yield, better quality, and year-round production.",
+    "fullDescription": "We design and develop modern kitchen vegetable net houses that make year-round organic cultivation easy and efficient. Our consultancy provides complete support for organic vegetable production, including irrigation management, pest and disease control, and sustainable organic practices.\n With our expert guidance, you can enjoy fresh, chemical-free vegetables every season — grown naturally, right from your own space.",
+    "features": [
+      "Land Preparation & Site Planning",
+      "Water Management System Design",
+      "Seasonal Crop Planning",
+      "Pest, Disease & Insecticide Consultancy",
+      "Organic Cultivation Guidance",
+      "Continuous Monitoring & Expert Visits"
+    ]
+  },
+  {
+    "id": "terrace-garden",
+    "title": "Terrace Garden Development",
+    "image": "assets/images/Projects/terrace-garden.jpg",
+    "shortDescription": "Transform your terrace into a green paradise.",
+    "fullDescription": "We design beautiful, practical, and vastu-friendly terrace gardens customized for your available space. Our team helps with plant selection, layout design, and connects you to reliable nurseries for high-quality plant installation.",
+    "features": [
+      "Space analysis and customized layout design",
+      "Selection of flowering, fruiting, and ornamental plants",
+      "Recommendations of professional nurseries for quality plants",
+      "Pest and disease management consultancy",
+      "Organic gardening and maintenance guidance"
+    ]
+  },
+  {
+    "id": "indoor-plants",
+    "title": "Indoor Plant Solutions",
+    "image": "assets/images/Projects/indoor-plants.png",
+    "shortDescription": "Enhance your indoor environment with natural beauty and cleaner air.",
+    "fullDescription": "We provide expert indoor plant design consultancy, offering curated plant lists suitable for your space — offices, homes, hotels, or commercial properties.",
+    "features": [
+      "Indoor plant design and placement plan",
+      "Recommended flower and foliage plant varieties",
+      "Selection of air-purifying and low-maintenance species",
+      "Trusted agency and nursery recommendations for installation",
+      "Maintenance and plant health follow-up"
+    ]
+  },
+  {
+    "id": "fruit-crop-consultancy",
+    "title": "Fruit Crop Consultancy",
+    "image": "assets/images/Projects/mango-plant.webp",
+    "shortDescription": "We specialize in fruit crop consultancy, providing complete guidance from sowing to harvesting.",
+    "fullDescription": "Our expert agronomists offer both on-site visits and online consultancy, ensuring your orchard receives timely and accurate guidance at every stage of production. We have extensive experience in fruit crops like mango, guava, lemon, banana, pomegranate, and papaya, helping farmers achieve healthy, profitable yields with scientific precision.",
+    "features": [
+      "Crop selection based on soil and climate",
+      "Orchard layout and plantation planning",
+      "Fertilizer and irrigation scheduling",
+      "Pest and disease control strategies",
+      "Post-harvest handling and yield improvement consultancy"
+    ]
+  },
+  {
+    "id": "farm-management",
+    "title": "Farm Management Consultancy",
+    "image": "assets/images/Projects/farm-management.webp",
+    "shortDescription": "From bare land to a fully productive farm — we manage every step.",
+    "fullDescription": "Our farm development and management services cover complete project planning, infrastructure setup, and scientific crop management throughout the year. We provide end-to-end solutions that help farmers build modern, sustainable farms with maximum profitability.",
+    "features": [
+      "Land survey, irrigation design and leveling",
+      "Crop layout and plantation design",
+      "Yearly crop management schedule from sowing to harvesting",
+      "Drone-based farm diagnosis for precise recommendations",
+      "Continuous consultancy for plant health, pest control, and nutrient management"
+    ]
+  },
+  {
+    "id": "farm-visit",
+    "title": "Farm Visit",
+    "image": "assets/images/Projects/farm-drone.png",
+    "shortDescription": "On-site farm visits for personalized assessment and recommendations.",
+    "fullDescription": "Our farm visit service provides personalized, on-site consultation to assess your agricultural operations. We evaluate current practices, identify improvement opportunities, and provide tailored recommendations for your specific farming context.",
+    "features": [
+      "Comprehensive site assessment",
+      "Soil and crop evaluation",
+      "Water resource analysis",
+      "Custom recommendation reports",
+      "Follow-up support"
+    ]
+  }
+]
