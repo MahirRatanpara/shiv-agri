@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
 declare var $: any;
@@ -16,7 +17,7 @@ interface Project {
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -137,6 +138,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedProjectIndex >= 0 && this.selectedProjectIndex < this.projects.length) {
       this.selectedProject = this.projects[this.selectedProjectIndex];
     }
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
 }

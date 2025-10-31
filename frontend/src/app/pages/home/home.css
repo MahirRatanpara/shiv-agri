@@ -92,6 +92,282 @@
   font-weight: bold;
 }
 
+/* ===== Why Choose Us Section ===== */
+.why-choose-us {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 80px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.why-choose-us::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: rgba(98, 179, 35, 0.05);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.why-choose-us::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  background: rgba(98, 179, 35, 0.05);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.why-choose-us .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Section Header */
+.why-choose-header {
+  margin-bottom: 60px;
+}
+
+.section-subtitle {
+  color: #62b323;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+}
+
+.section-main-title {
+  font-size: 42px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  line-height: 1.3;
+}
+
+.tagline {
+  font-size: 20px;
+  color: #62b323;
+  font-weight: 500;
+  font-style: italic;
+  margin: 20px auto 0;
+  max-width: 600px;
+  position: relative;
+  padding: 0 40px;
+}
+
+.tagline::before,
+.tagline::after {
+  content: '"';
+  font-size: 36px;
+  color: #62b323;
+  opacity: 0.3;
+  position: absolute;
+}
+
+.tagline::before {
+  left: 0;
+  top: -10px;
+}
+
+.tagline::after {
+  right: 0;
+  bottom: -10px;
+}
+
+/* Story Cards */
+.why-choose-content {
+  margin-bottom: 40px;
+}
+
+.story-card {
+  background: #fff;
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  height: 100%;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.story-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, #62b323, #4a8f1a);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.story-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.story-card:hover::before {
+  transform: scaleY(1);
+}
+
+.card-icon {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #62b323 0%, #4a8f1a 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(98, 179, 35, 0.3);
+}
+
+.card-icon i {
+  font-size: 32px;
+  color: #fff;
+}
+
+.story-card h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.story-card p {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 15px;
+}
+
+.story-card p:last-of-type {
+  margin-bottom: 0;
+}
+
+.quote-text {
+  font-style: italic;
+  color: #62b323 !important;
+  font-weight: 500;
+  padding: 15px 20px;
+  background: rgba(98, 179, 35, 0.05);
+  border-left: 3px solid #62b323;
+  border-radius: 4px;
+  margin-top: 20px !important;
+}
+
+/* Mission Statement */
+.mission-statement {
+  background: linear-gradient(135deg, #62b323 0%, #4a8f1a 100%);
+  padding: 60px 40px;
+  border-radius: 20px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.mission-statement::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.mission-statement::after {
+  content: '';
+  position: absolute;
+  bottom: -70px;
+  left: -70px;
+  width: 250px;
+  height: 250px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+.mission-icon {
+  width: 90px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.mission-icon i {
+  font-size: 40px;
+  color: #fff;
+}
+
+.mission-statement h2 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 1;
+}
+
+.mission-statement p {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
+}
+
+.mission-statement .signature {
+  font-size: 16px;
+  font-style: italic;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: -15px;
+  margin-bottom: 35px;
+  letter-spacing: 0.5px;
+}
+
+.cta-button {
+  display: inline-block;
+  padding: 15px 45px;
+  background: #fff;
+  color: #62b323;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 50px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.cta-button:hover {
+  background: #2c3e50;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+}
+
 /* ===== Project Tiles Styling ===== */
 .current-projects .section-title-2 {
   margin-bottom: 50px;
@@ -517,6 +793,73 @@
     height: 150px;
   }
 
+  /* Why Choose Us Section - Tablet */
+  .why-choose-us {
+    padding: 60px 0;
+  }
+
+  .why-choose-us::before,
+  .why-choose-us::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  .why-choose-header {
+    margin-bottom: 40px;
+  }
+
+  .section-main-title {
+    font-size: 32px;
+  }
+
+  .tagline {
+    font-size: 18px;
+    padding: 0 30px;
+  }
+
+  .story-card {
+    padding: 30px;
+  }
+
+  .card-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .card-icon i {
+    font-size: 28px;
+  }
+
+  .story-card h3 {
+    font-size: 20px;
+  }
+
+  .story-card p {
+    font-size: 14px;
+  }
+
+  .mission-statement {
+    padding: 50px 30px;
+  }
+
+  .mission-statement h2 {
+    font-size: 28px;
+  }
+
+  .mission-statement p {
+    font-size: 16px;
+  }
+
+  .mission-statement .signature {
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  .cta-button {
+    padding: 12px 35px;
+    font-size: 14px;
+  }
+
   /* Project tiles responsive */
   .project-tile {
     min-height: 320px;
@@ -660,6 +1003,127 @@
 
   .instagram ul li img {
     height: 120px;
+  }
+
+  /* Why Choose Us Section - Mobile */
+  .why-choose-us {
+    padding: 50px 0;
+  }
+
+  .why-choose-us::before,
+  .why-choose-us::after {
+    width: 200px;
+    height: 200px;
+  }
+
+  .why-choose-header {
+    margin-bottom: 35px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    letter-spacing: 1.5px;
+  }
+
+  .section-main-title {
+    font-size: 28px;
+  }
+
+  .tagline {
+    font-size: 16px;
+    padding: 0 20px;
+  }
+
+  .tagline::before,
+  .tagline::after {
+    font-size: 28px;
+  }
+
+  .why-choose-content {
+    margin-bottom: 30px;
+  }
+
+  .story-card {
+    padding: 25px;
+    margin-bottom: 20px;
+  }
+
+  .card-icon {
+    width: 55px;
+    height: 55px;
+  }
+
+  .card-icon i {
+    font-size: 24px;
+  }
+
+  .story-card h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .story-card p {
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  .quote-text {
+    padding: 12px 15px;
+    font-size: 13px !important;
+    margin-top: 15px !important;
+  }
+
+  .mission-statement {
+    padding: 40px 25px;
+    border-radius: 16px;
+    margin-top: 15px;
+  }
+
+  .mission-statement::before {
+    width: 150px;
+    height: 150px;
+    top: -30px;
+    right: -30px;
+  }
+
+  .mission-statement::after {
+    width: 180px;
+    height: 180px;
+    bottom: -50px;
+    left: -50px;
+  }
+
+  .mission-icon {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 20px;
+  }
+
+  .mission-icon i {
+    font-size: 32px;
+  }
+
+  .mission-statement h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .mission-statement p {
+    font-size: 15px;
+    margin-bottom: 25px;
+  }
+
+  .mission-statement .signature {
+    font-size: 13px;
+    margin-top: -10px;
+    margin-bottom: 28px;
+  }
+
+  .cta-button {
+    padding: 12px 30px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
   }
 
   /* Project tiles responsive for mobile */

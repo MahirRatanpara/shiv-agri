@@ -234,8 +234,112 @@
   </div>
 </section>
 <!--About Section End-->
-<!--Urgent Causes Start-->
-<!--Urgent Causes End-->
+<section class="why-choose-us wf100">
+  <div class="container">
+    <!-- Section Header -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="why-choose-header text-center">
+          <h5 class="section-subtitle">Our Story</h5>
+          <h1 class="section-main-title">Why Choose Shiv Agri Consultancy</h1>
+          <p class="tagline">"From Soil to Soul — Building a Greener Tomorrow."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="row why-choose-content">
+      <!-- Story Card 1 -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="story-card">
+          <div class="card-icon">
+            <i class="fas fa-seedling"></i>
+          </div>
+          <h3>25 Years of Walking the Fields</h3>
+          <p>
+            For over 25 years, I have walked through the fields of Gujarat — from the fertile plains to the dry lands,
+            from lush orchards to newly sown farms. There are few places where my footsteps haven't touched the soil,
+            where I haven't listened to the silent stories of the earth.
+          </p>
+          <p class="quote-text">
+            "I am an Agronomist by profession, but a farmer by heart — someone who believes that every leaf, every root,
+            and every grain carries the rhythm of life itself."
+          </p>
+        </div>
+      </div>
+
+      <!-- Story Card 2 -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="story-card">
+          <div class="card-icon">
+            <i class="fas fa-leaf"></i>
+          </div>
+          <h3>Nature as Our Teacher</h3>
+          <p>
+            Nature has been my greatest teacher, and the land my lifelong companion. Working with farmers, guiding them,
+            and watching barren fields turn into thriving farms has been not just my work — it has been my blessing.
+          </p>
+          <p>
+            Through Shiv Agri Consultancy, I bring together science, experience, and emotion — blending modern
+            agricultural technology with the timeless wisdom of farming.
+          </p>
+        </div>
+      </div>
+
+      <!-- Story Card 3 -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="story-card">
+          <div class="card-icon">
+            <i class="fas fa-hands-helping"></i>
+          </div>
+          <h3>Building Lasting Relationships</h3>
+          <p>
+            At Shiv Agri Consultancy, we don't just offer services — we build relationships that grow like roots,
+            deep and lasting. Your land becomes our land. Your success becomes our pride.
+          </p>
+          <p>
+            Together, let's create a future where the soil breathes again, where our children inherit not just farms,
+            but true, living lands.
+          </p>
+        </div>
+      </div>
+
+      <!-- Story Card 4 -->
+      <div class="col-lg-6 col-md-12 mb-4">
+        <div class="story-card">
+          <div class="card-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h3>Comprehensive Services</h3>
+          <p>
+            From soil testing to farm management, landscaping to fruit crop consultancy, my mission is to nurture every
+            inch of land with care, knowledge, and vision.
+          </p>
+          <p>
+            Let's turn every field into a story of growth, every harvest into a celebration — and make your land
+            a heaven that holds your family's memories for generations to come.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mission Statement -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="mission-statement text-center">
+          <div class="mission-icon">
+            <i class="fas fa-heart"></i>
+          </div>
+          <h2>Your Land. My Knowledge.</h2>
+          <p>One purpose — a greener, brighter future.</p>
+          <p class="signature">— Anil Hadavani (M.Sc. Agri.)</p>
+          <a routerLink="/contact" class="cta-button" (click)="scrollToTop()">Join Us Today</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!--Why Choose Shiv Agri End-->
 <!--Current Projects Start-->
 <section class="wf100 p80 current-projects">
   <div class="container">
@@ -254,16 +358,16 @@
           <div class="project-tile-image" *ngIf="project.image">
             <img [src]="project.image" [alt]="project.title || 'Project Image'">
             <div class="project-tile-overlay" *ngIf="project.category">
-              <span class="project-category">{{project.category}}</span>
+              <span class="project-category">{{ project.category }}</span>
             </div>
           </div>
           <div class="project-tile-content">
             <div class="project-tile-header" *ngIf="project.category && !project.image">
-              <span class="project-category-inline">{{project.category}}</span>
+              <span class="project-category-inline">{{ project.category }}</span>
             </div>
-            <h5 *ngIf="project.title">{{project.title}}</h5>
+            <h5 *ngIf="project.title">{{ project.title }}</h5>
             <h5 *ngIf="!project.title" class="text-muted">Untitled Project</h5>
-            <p *ngIf="project.shortDescription">{{project.shortDescription}}</p>
+            <p *ngIf="project.shortDescription">{{ project.shortDescription }}</p>
           </div>
         </div>
       </div>
@@ -271,21 +375,6 @@
   </div>
 </section>
 <!--Current Projects End-->
-<!--Why Ecova + Facts Start-->
-<section class="why-ecova wf100">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        <h1>Why to Choose Shiv Agri Consultancy!</h1>
-        <p>
-          Shiv Agri Consultancy blends innovation with expertise — offering smart solutions from soil and water testing to plant diagnostics and landscape design. We turn data into growth, transforming every field into a story of productivity, sustainability, and success.
-        </p>
-        <a href="#" class="cus">Signup to Join us</a>
-      </div>
-    </div>
-  </div>
-</section>
-<!--Why Ecova + Facts End-->
 <!--InstaGram Start-->
 <div class="instagram">
   <ul>
@@ -324,36 +413,37 @@
     <div class="project-popup-content" [class.no-image]="!selectedProject.image">
       <div class="popup-image" *ngIf="selectedProject.image">
         <img [src]="selectedProject.image" [alt]="selectedProject.title || 'Project Image'">
-        <span class="popup-category" *ngIf="selectedProject.category">{{selectedProject.category}}</span>
+        <span class="popup-category" *ngIf="selectedProject.category">{{ selectedProject.category }}</span>
       </div>
 
       <div class="popup-details">
         <div class="popup-header">
           <div class="popup-category-badge" *ngIf="selectedProject.category && !selectedProject.image">
-            <span class="badge badge-primary">{{selectedProject.category}}</span>
+            <span class="badge badge-primary">{{ selectedProject.category }}</span>
           </div>
-          <h2 *ngIf="selectedProject.title">{{selectedProject.title}}</h2>
+          <h2 *ngIf="selectedProject.title">{{ selectedProject.title }}</h2>
           <h2 *ngIf="!selectedProject.title" class="text-muted">Untitled Project</h2>
         </div>
 
         <p class="popup-description" *ngIf="selectedProject.shortDescription && !selectedProject.fullDescription">
-          {{selectedProject.shortDescription}}
+          {{ selectedProject.shortDescription }}
         </p>
 
         <p class="popup-description" *ngIf="selectedProject.fullDescription">
-          {{selectedProject.fullDescription}}
+          {{ selectedProject.fullDescription }}
         </p>
 
         <div class="popup-features" *ngIf="selectedProject.features && selectedProject.features.length > 0">
           <h4>Key Features</h4>
           <ul>
             <li *ngFor="let feature of selectedProject.features">
-              <i class="fas fa-check-circle"></i> {{feature}}
+              <i class="fas fa-check-circle"></i> {{ feature }}
             </li>
           </ul>
         </div>
 
-        <div class="popup-empty-state" *ngIf="!selectedProject.fullDescription && !selectedProject.shortDescription && (!selectedProject.features || selectedProject.features.length === 0)">
+        <div class="popup-empty-state"
+             *ngIf="!selectedProject.fullDescription && !selectedProject.shortDescription && (!selectedProject.features || selectedProject.features.length === 0)">
           <p class="text-muted">No additional details available for this project.</p>
         </div>
       </div>

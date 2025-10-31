@@ -2,7 +2,6 @@
   {
     "id": "soil-analysis",
     "title": "Soil Analysis",
-    "category": "Analysis",
     "image": "assets/images/home-crousal/2.jpeg",
     "shortDescription": "Comprehensive soil testing and analysis services for optimal crop production.",
     "fullDescription": "Our advanced soil analysis service provides detailed insights into soil health, nutrient levels, pH balance, and composition. We use state-of-the-art laboratory equipment to analyze soil samples and provide actionable recommendations for improving soil quality and crop yields.",
@@ -17,7 +16,6 @@
   {
     "id": "water-analysis",
     "title": "Water Analysis",
-    "category": "Analysis",
     "image": "assets/images/home-crousal/3.jpeg",
     "shortDescription": "Professional water quality testing for irrigation and agricultural use.",
     "fullDescription": "Our water analysis service ensures that your irrigation water meets the required standards for agricultural use. We test for pH, salinity, heavy metals, and other contaminants that may affect crop health and soil quality.",
@@ -32,7 +30,6 @@
   {
     "id": "landscape-design",
     "title": "Landscape Design",
-    "category": "Design",
     "image": "assets/images/home-crousal/19.png",
     "shortDescription": "Creative and sustainable landscape design solutions for your property.",
     "fullDescription": "Transform your outdoor spaces with our expert landscape design services. We create beautiful, functional, and sustainable landscapes that blend aesthetics with practicality, tailored to your specific needs and environmental conditions.",
@@ -47,7 +44,6 @@
   {
     "id": "landscaping",
     "title": "Landscaping",
-    "category": "Implementation",
     "image": "assets/images/home-crousal/4.png",
     "shortDescription": "Professional landscaping services to bring your vision to life.",
     "fullDescription": "Our comprehensive landscaping services cover everything from initial site preparation to final planting and finishing touches. We work with precision and care to create stunning outdoor environments that enhance your property's beauty and value.",
@@ -62,7 +58,6 @@
   {
     "id": "waterfall-landscaping",
     "title": "Waterfall Landscaping",
-    "category": "Implementation",
     "image": "assets/images/home-crousal/7.png",
     "shortDescription": "Stunning waterfall features that add tranquility to your landscape.",
     "fullDescription": "Create a serene atmosphere with our custom waterfall landscaping services. We design and install beautiful water features that serve as focal points in your garden, combining natural aesthetics with modern engineering.",
@@ -77,7 +72,6 @@
   {
     "id": "miyawaki-forest",
     "title": "Miyawaki Forest Design",
-    "category": "Design",
     "image": "assets/images/home-crousal/8.png",
     "shortDescription": "Create dense, native forests using the revolutionary Miyawaki method.",
     "fullDescription": "The Miyawaki method creates native forests that grow 10 times faster and become maintenance-free after 3 years. Our experts design and implement these dense, biodiverse forests that support local ecosystems and provide environmental benefits.",
@@ -92,7 +86,6 @@
   {
     "id": "vegetable-net-house",
     "title": "Vegetable Net House",
-    "category": "Infrastructure",
     "image": "assets/images/home-crousal/10.png",
     "shortDescription": "Protected cultivation structures for year-round vegetable production.",
     "fullDescription": "Our vegetable net houses provide optimal growing conditions for vegetables by protecting crops from extreme weather, pests, and diseases while maintaining natural ventilation and light penetration.",
@@ -122,7 +115,6 @@
   {
     "id": "indoor-plants",
     "title": "Indoor Plants",
-    "category": "Implementation",
     "image": "assets/images/home-crousal/12.png",
     "shortDescription": "Enhance indoor spaces with carefully selected plants and greenery.",
     "fullDescription": "Bring nature indoors with our indoor plant consultation and installation services. We select plants that thrive in indoor conditions, improve air quality, and complement your interior design aesthetic.",
@@ -137,7 +129,6 @@
   {
     "id": "fruit-crop-consultancy",
     "title": "Fruit Crop Consultancy",
-    "category": "Consultancy",
     "image": "assets/images/home-crousal/14.png",
     "shortDescription": "Expert guidance for successful fruit crop cultivation and management.",
     "fullDescription": "Our fruit crop consultancy service provides comprehensive support for establishing and managing fruit orchards. From variety selection to harvest planning, we offer expert advice to maximize your fruit production success.",
@@ -152,7 +143,6 @@
   {
     "id": "farm-management",
     "title": "Farm Management",
-    "category": "Consultancy",
     "image": "assets/images/home-crousal/18.png",
     "shortDescription": "Complete farm management solutions for optimal productivity and sustainability.",
     "fullDescription": "Our farm management services cover all aspects of agricultural operations, from crop planning to resource optimization. We help you implement efficient farming practices that enhance productivity while maintaining sustainability.",
@@ -167,7 +157,6 @@
   {
     "id": "farm-visit",
     "title": "Farm Visit",
-    "category": "Consultancy",
     "image": "assets/images/home-crousal/20.png",
     "shortDescription": "On-site farm visits for personalized assessment and recommendations.",
     "fullDescription": "Our farm visit service provides personalized, on-site consultation to assess your agricultural operations. We evaluate current practices, identify improvement opportunities, and provide tailored recommendations for your specific farming context.",
