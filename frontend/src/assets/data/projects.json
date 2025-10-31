@@ -1,44 +1,43 @@
 [
   {
     "id": "soil-analysis",
-    "title": "Soil Analysis",
+    "title": "Soil Testing & Analysis",
     "image": "assets/images/home-crousal/2.jpeg",
-    "shortDescription": "Comprehensive soil testing and analysis services for optimal crop production.",
-    "fullDescription": "Our advanced soil analysis service provides detailed insights into soil health, nutrient levels, pH balance, and composition. We use state-of-the-art laboratory equipment to analyze soil samples and provide actionable recommendations for improving soil quality and crop yields.",
+    "shortDescription": "Healthy soil is the foundation of every successful farm.",
+    "fullDescription": "We provide comprehensive soil testing and nutrient analysis to determine the exact macro and micro nutrient levels of your land. Based on your soil report, our experts identify which crops are best suited for your field and design a custom fertilizer recommendation plan to achieve optimum yield.",
     "features": [
-      "Complete nutrient analysis",
-      "pH level testing",
-      "Organic matter content measurement",
-      "Micronutrient evaluation",
-      "Customized fertilizer recommendations"
+      "Macro & Micro nutrient analysis (NPK, Zinc, Boron, Sulphur, etc.)",
+      "pH, EC, and Organic Carbon evaluation",
+      "Soil fertility and texture assessment",
+      "Fertilizer recommendation reports based on soil health and crop needs",
+      "Crop selection guidance according to soil suitability"
     ]
   },
   {
     "id": "water-analysis",
     "title": "Water Analysis",
     "image": "assets/images/home-crousal/3.jpeg",
-    "shortDescription": "Professional water quality testing for irrigation and agricultural use.",
-    "fullDescription": "Our water analysis service ensures that your irrigation water meets the required standards for agricultural use. We test for pH, salinity, heavy metals, and other contaminants that may affect crop health and soil quality.",
+    "shortDescription": "Water quality plays a crucial role in plant growth and soil health.",
+    "fullDescription": "We conduct detailed water quality testing to assess physical, chemical, and biological parameters. Based on the results, our experts provide recommendations to improve water usability and crop performance.",
     "features": [
-      "pH and EC testing",
-      "Salinity analysis",
-      "Heavy metal detection",
-      "Bacterial contamination screening",
-      "Irrigation suitability assessment"
+      "Testing of parameters like pH, EC, TDS, bicarbonates, chlorides, calcium, magnesium, sodium, etc.",
+      "Evaluation of irrigation water quality for different crops",
+      "Guidance on water management and filtration systems",
+      "Corrective measures for saline or alkaline water"
     ]
   },
   {
     "id": "landscape-design",
-    "title": "Landscape Design",
+    "title": "Landscaping Consultancy",
     "image": "assets/images/home-crousal/19.png",
-    "shortDescription": "Creative and sustainable landscape design solutions for your property.",
-    "fullDescription": "Transform your outdoor spaces with our expert landscape design services. We create beautiful, functional, and sustainable landscapes that blend aesthetics with practicality, tailored to your specific needs and environmental conditions.",
+    "shortDescription": "From concept to creation, we provide complete landscape design and development solutions.",
+    "fullDescription": "Our process begins with an on-site visit, area measurement, and design planning. We offer detailed plant, shrub, and flower selection suited to your region and climate. Additionally, we recommend trusted landscaping agencies and provide pest and disease consultancy to maintain a healthy and beautiful environment.",
     "features": [
-      "Custom design plans",
-      "3D visualization",
-      "Plant selection guidance",
-      "Sustainable design practices",
-      "Maintenance planning"
+      "Site survey and area analysis",
+      "2D/3D landscape design layouts",
+      "Plant, shrub, and flower selection",
+      "Vastu-compliant designs for harmony and aesthetics",
+      "Long-term plant health consultancy"
     ]
   },
   {
@@ -87,71 +86,71 @@
     "id": "vegetable-net-house",
     "title": "Vegetable Net House",
     "image": "assets/images/home-crousal/10.png",
-    "shortDescription": "Protected cultivation structures for year-round vegetable production.",
-    "fullDescription": "Our vegetable net houses provide optimal growing conditions for vegetables by protecting crops from extreme weather, pests, and diseases while maintaining natural ventilation and light penetration.",
+    "shortDescription": "Modern farming begins with innovation — and vegetable net houses are the key to higher yield, better quality, and year-round production.",
+    "fullDescription": "We design and develop modern kitchen vegetable net houses that make year-round organic cultivation easy and efficient. Our consultancy provides complete support for organic vegetable production, including irrigation management, pest and disease control, and sustainable organic practices.\n With our expert guidance, you can enjoy fresh, chemical-free vegetables every season — grown naturally, right from your own space.",
     "features": [
-      "Custom size configurations",
-      "UV-stabilized netting",
-      "Pest and disease protection",
-      "Climate moderation",
-      "Increased yield potential"
+      "Land Preparation & Site Planning",
+      "Water Management System Design",
+      "Seasonal Crop Planning",
+      "Pest, Disease & Insecticide Consultancy",
+      "Organic Cultivation Guidance",
+      "Continuous Monitoring & Expert Visits"
     ]
   },
   {
     "id": "terrace-garden",
-    "title": "Terrace Garden",
-    "category": "Design",
+    "title": "Terrace Garden Development",
     "image": "assets/images/home-crousal/11.png",
-    "shortDescription": "Transform your terrace into a lush, productive garden space.",
-    "fullDescription": "Make the most of your urban space with our terrace garden solutions. We create beautiful, productive gardens on rooftops and terraces, incorporating proper waterproofing, drainage, and plant selection for successful container gardening.",
+    "shortDescription": "Transform your terrace into a green paradise.",
+    "fullDescription": "We design beautiful, practical, and vastu-friendly terrace gardens customized for your available space. Our team helps with plant selection, layout design, and connects you to reliable nurseries for high-quality plant installation.",
     "features": [
-      "Waterproofing solutions",
-      "Lightweight growing media",
-      "Container selection",
-      "Drip irrigation systems",
-      "Space optimization techniques"
+      "Space analysis and customized layout design",
+      "Selection of flowering, fruiting, and ornamental plants",
+      "Recommendations of professional nurseries for quality plants",
+      "Pest and disease management consultancy",
+      "Organic gardening and maintenance guidance"
     ]
   },
   {
     "id": "indoor-plants",
-    "title": "Indoor Plants",
+    "title": "Indoor Plant Solutions",
     "image": "assets/images/home-crousal/12.png",
-    "shortDescription": "Enhance indoor spaces with carefully selected plants and greenery.",
-    "fullDescription": "Bring nature indoors with our indoor plant consultation and installation services. We select plants that thrive in indoor conditions, improve air quality, and complement your interior design aesthetic.",
+    "shortDescription": "Enhance your indoor environment with natural beauty and cleaner air.",
+    "fullDescription": "We provide expert indoor plant design consultancy, offering curated plant lists suitable for your space — offices, homes, hotels, or commercial properties.",
     "features": [
-      "Air-purifying plant selection",
-      "Low-light tolerant species",
-      "Decorative container options",
-      "Care and maintenance guidance",
-      "Seasonal plant rotation"
+      "Indoor plant design and placement plan",
+      "Recommended flower and foliage plant varieties",
+      "Selection of air-purifying and low-maintenance species",
+      "Trusted agency and nursery recommendations for installation",
+      "Maintenance and plant health follow-up"
     ]
   },
   {
     "id": "fruit-crop-consultancy",
     "title": "Fruit Crop Consultancy",
     "image": "assets/images/home-crousal/14.png",
-    "shortDescription": "Expert guidance for successful fruit crop cultivation and management.",
-    "fullDescription": "Our fruit crop consultancy service provides comprehensive support for establishing and managing fruit orchards. From variety selection to harvest planning, we offer expert advice to maximize your fruit production success.",
+    "shortDescription": "We specialize in fruit crop consultancy, providing complete guidance from sowing to harvesting.",
+    "fullDescription": "Our expert agronomists offer both on-site visits and online consultancy, ensuring your orchard receives timely and accurate guidance at every stage of production. We have extensive experience in fruit crops like mango, guava, lemon, banana, pomegranate, and papaya, helping farmers achieve healthy, profitable yields with scientific precision.",
     "features": [
-      "Variety selection assistance",
-      "Planting layout optimization",
-      "Nutrient management programs",
+      "Crop selection based on soil and climate",
+      "Orchard layout and plantation planning",
+      "Fertilizer and irrigation scheduling",
       "Pest and disease control strategies",
-      "Harvest and post-harvest guidance"
+      "Post-harvest handling and yield improvement consultancy"
     ]
   },
   {
     "id": "farm-management",
-    "title": "Farm Management",
+    "title": "Farm Management Consultancy",
     "image": "assets/images/home-crousal/18.png",
-    "shortDescription": "Complete farm management solutions for optimal productivity and sustainability.",
-    "fullDescription": "Our farm management services cover all aspects of agricultural operations, from crop planning to resource optimization. We help you implement efficient farming practices that enhance productivity while maintaining sustainability.",
+    "shortDescription": "From bare land to a fully productive farm — we manage every step.",
+    "fullDescription": "Our farm development and management services cover complete project planning, infrastructure setup, and scientific crop management throughout the year. We provide end-to-end solutions that help farmers build modern, sustainable farms with maximum profitability.",
     "features": [
-      "Crop planning and rotation",
-      "Resource optimization",
-      "Labor management",
-      "Technology integration",
-      "Performance monitoring"
+      "Land survey, irrigation design and leveling",
+      "Crop layout and plantation design",
+      "Yearly crop management schedule from sowing to harvesting",
+      "Drone-based farm diagnosis for precise recommendations",
+      "Continuous consultancy for plant health, pest control, and nutrient management"
     ]
   },
   {
