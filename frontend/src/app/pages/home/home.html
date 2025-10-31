@@ -250,16 +250,20 @@
     </div>
     <div class="row projects-grid">
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4" *ngFor="let project of projects">
-        <div class="project-tile" (click)="openProject(project)">
-          <div class="project-tile-image">
-            <img [src]="project.image" [alt]="project.title">
-            <div class="project-tile-overlay">
+        <div class="project-tile" [class.no-image]="!project.image" (click)="openProject(project)">
+          <div class="project-tile-image" *ngIf="project.image">
+            <img [src]="project.image" [alt]="project.title || 'Project Image'">
+            <div class="project-tile-overlay" *ngIf="project.category">
               <span class="project-category">{{project.category}}</span>
             </div>
           </div>
           <div class="project-tile-content">
-            <h5>{{project.title}}</h5>
-            <p>{{project.shortDescription}}</p>
+            <div class="project-tile-header" *ngIf="project.category && !project.image">
+              <span class="project-category-inline">{{project.category}}</span>
+            </div>
+            <h5 *ngIf="project.title">{{project.title}}</h5>
+            <h5 *ngIf="!project.title" class="text-muted">Untitled Project</h5>
+            <p *ngIf="project.shortDescription">{{project.shortDescription}}</p>
           </div>
         </div>
       </div>
@@ -297,29 +301,48 @@
 <!--InstaGram End-->
 
 <!-- Project Detail Popup -->
-<div class="project-popup-overlay" *ngIf="isPopupOpen" (click)="closePopup()">
+<div class="project-popup-overlay" *ngIf="isPopupOpen && selectedProject" (click)="closePopup()">
   <div class="project-popup-container" (click)="$event.stopPropagation()">
-    <button class="popup-close-btn" (click)="closePopup()">
+    <button class="popup-close-btn" (click)="closePopup()" aria-label="Close popup">
       <i class="fas fa-times"></i>
     </button>
 
-    <button class="popup-nav-btn prev" (click)="navigateProject('prev')" *ngIf="projects.length > 1">
+    <button class="popup-nav-btn prev"
+            (click)="navigateProject('prev')"
+            *ngIf="projects.length > 1"
+            aria-label="Previous project">
       <i class="fas fa-chevron-left"></i>
     </button>
 
-    <button class="popup-nav-btn next" (click)="navigateProject('next')" *ngIf="projects.length > 1">
+    <button class="popup-nav-btn next"
+            (click)="navigateProject('next')"
+            *ngIf="projects.length > 1"
+            aria-label="Next project">
       <i class="fas fa-chevron-right"></i>
     </button>
 
-    <div class="project-popup-content" *ngIf="selectedProject">
-      <div class="popup-image">
-        <img [src]="selectedProject.image" [alt]="selectedProject.title">
-        <span class="popup-category">{{selectedProject.category}}</span>
+    <div class="project-popup-content" [class.no-image]="!selectedProject.image">
+      <div class="popup-image" *ngIf="selectedProject.image">
+        <img [src]="selectedProject.image" [alt]="selectedProject.title || 'Project Image'">
+        <span class="popup-category" *ngIf="selectedProject.category">{{selectedProject.category}}</span>
       </div>
 
       <div class="popup-details">
-        <h2>{{selectedProject.title}}</h2>
-        <p class="popup-description">{{selectedProject.fullDescription}}</p>
+        <div class="popup-header">
+          <div class="popup-category-badge" *ngIf="selectedProject.category && !selectedProject.image">
+            <span class="badge badge-primary">{{selectedProject.category}}</span>
+          </div>
+          <h2 *ngIf="selectedProject.title">{{selectedProject.title}}</h2>
+          <h2 *ngIf="!selectedProject.title" class="text-muted">Untitled Project</h2>
+        </div>
+
+        <p class="popup-description" *ngIf="selectedProject.shortDescription && !selectedProject.fullDescription">
+          {{selectedProject.shortDescription}}
+        </p>
+
+        <p class="popup-description" *ngIf="selectedProject.fullDescription">
+          {{selectedProject.fullDescription}}
+        </p>
 
         <div class="popup-features" *ngIf="selectedProject.features && selectedProject.features.length > 0">
           <h4>Key Features</h4>
@@ -328,6 +351,10 @@
               <i class="fas fa-check-circle"></i> {{feature}}
             </li>
           </ul>
+        </div>
+
+        <div class="popup-empty-state" *ngIf="!selectedProject.fullDescription && !selectedProject.shortDescription && (!selectedProject.features || selectedProject.features.length === 0)">
+          <p class="text-muted">No additional details available for this project.</p>
         </div>
       </div>
     </div>

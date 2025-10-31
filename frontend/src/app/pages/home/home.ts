@@ -5,13 +5,13 @@ import { HttpClient } from '@angular/common/http';
 declare var $: any;
 
 interface Project {
-  id: string;
-  title: string;
-  category: string;
-  image: string;
-  shortDescription: string;
-  fullDescription: string;
-  features: string[];
+  id?: string;
+  title?: string;
+  category?: string;
+  image?: string;
+  shortDescription?: string;
+  fullDescription?: string;
+  features?: string[];
 }
 
 @Component({
@@ -36,10 +36,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.http.get<Project[]>('assets/data/projects.json').subscribe({
       next: (projects) => {
         console.log('Projects loaded:', projects);
-        this.projects = projects;
+        // Filter out invalid projects (must have at least a title or id)
+        this.projects = projects.filter(project =>
+          project && (project.title || project.id)
+        );
+        console.log('Valid projects:', this.projects);
       },
       error: (error) => {
         console.error('Error loading projects:', error);
+        // Initialize with empty array on error
+        this.projects = [];
       }
     });
   }
@@ -79,7 +85,25 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   openProject(project: Project): void {
-    this.selectedProjectIndex = this.projects.findIndex(p => p.id === project.id);
+    // Find project index - handle cases where projects don't have IDs
+    if (project.id) {
+      // If project has an ID, use it for matching
+      this.selectedProjectIndex = this.projects.findIndex(p => p.id === project.id);
+    } else {
+      // If no ID, match by reference or use indexOf
+      this.selectedProjectIndex = this.projects.indexOf(project);
+    }
+
+    // Fallback: if still not found, try matching by title
+    if (this.selectedProjectIndex === -1 && project.title) {
+      this.selectedProjectIndex = this.projects.findIndex(p => p.title === project.title);
+    }
+
+    // Final fallback: just use the first project
+    if (this.selectedProjectIndex === -1 && this.projects.length > 0) {
+      this.selectedProjectIndex = 0;
+    }
+
     this.selectedProject = project;
     this.isPopupOpen = true;
 
@@ -96,15 +120,23 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   navigateProject(direction: 'prev' | 'next'): void {
-    if (this.projects.length === 0 || this.selectedProjectIndex === -1) return;
+    // Safety checks
+    if (this.projects.length === 0) return;
+    if (this.selectedProjectIndex === -1) {
+      this.selectedProjectIndex = 0; // Reset to first project if invalid
+    }
 
+    // Navigate
     if (direction === 'prev') {
       this.selectedProjectIndex = (this.selectedProjectIndex - 1 + this.projects.length) % this.projects.length;
     } else {
       this.selectedProjectIndex = (this.selectedProjectIndex + 1) % this.projects.length;
     }
 
-    this.selectedProject = this.projects[this.selectedProjectIndex];
+    // Update selected project with boundary check
+    if (this.selectedProjectIndex >= 0 && this.selectedProjectIndex < this.projects.length) {
+      this.selectedProject = this.projects[this.selectedProjectIndex];
+    }
   }
 
 }
