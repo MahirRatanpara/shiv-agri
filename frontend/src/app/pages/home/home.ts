@@ -144,4 +144,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  scrollToServices(event: Event): void {
+    event.preventDefault();
+    const servicesSection = document.getElementById('services');
+    if (servicesSection) {
+      servicesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
 }
