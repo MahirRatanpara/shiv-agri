@@ -15,6 +15,13 @@ interface Project {
   features?: string[];
 }
 
+interface CarouselSlide {
+  id: string;
+  title: string;
+  image: string;
+  darkText: boolean;
+}
+
 @Component({
   selector: 'app-home',
   imports: [CommonModule, RouterLink],
@@ -23,6 +30,7 @@ interface Project {
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   projects: Project[] = [];
+  carouselSlides: CarouselSlide[] = [];
   selectedProject: Project | null = null;
   selectedProjectIndex: number = -1;
   isPopupOpen: boolean = false;
@@ -30,7 +38,25 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    this.loadCarouselSlides();
     this.loadProjects();
+  }
+
+  loadCarouselSlides(): void {
+    this.http.get<CarouselSlide[]>('assets/data/carousel-slides.json').subscribe({
+      next: (slides) => {
+        console.log('Carousel slides loaded:', slides);
+        this.carouselSlides = slides;
+        // Reinitialize carousel after slides are loaded
+        setTimeout(() => {
+          this.initializeOwlCarousel();
+        }, 100);
+      },
+      error: (error) => {
+        console.error('Error loading carousel slides:', error);
+        this.carouselSlides = [];
+      }
+    });
   }
 
   loadProjects(): void {

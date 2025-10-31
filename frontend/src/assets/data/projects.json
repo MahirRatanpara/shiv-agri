@@ -16,7 +16,7 @@
   {
     "id": "water-analysis",
     "title": "Water Analysis",
-    "image": "assets/images/home-crousal/3.jpeg",
+    "image": "assets/images/Projects/water-analysis.jpeg",
     "shortDescription": "Water quality plays a crucial role in plant growth and soil health.",
     "fullDescription": "We conduct detailed water quality testing to assess physical, chemical, and biological parameters. Based on the results, our experts provide recommendations to improve water usability and crop performance.",
     "features": [
@@ -43,7 +43,7 @@
   {
     "id": "landscaping",
     "title": "Landscaping",
-    "image": "assets/images/home-crousal/4.png",
+    "image": "assets/images/Projects/landscaping-1.png",
     "shortDescription": "Professional landscaping services to bring your vision to life.",
     "fullDescription": "Our comprehensive landscaping services cover everything from initial site preparation to final planting and finishing touches. We work with precision and care to create stunning outdoor environments that enhance your property's beauty and value.",
     "features": [
@@ -57,7 +57,7 @@
   {
     "id": "waterfall-landscaping",
     "title": "Waterfall Landscaping",
-    "image": "assets/images/home-crousal/7.png",
+    "image": "assets/images/Projects/waterfall-landscaping.png",
     "shortDescription": "Stunning waterfall features that add tranquility to your landscape.",
     "fullDescription": "Create a serene atmosphere with our custom waterfall landscaping services. We design and install beautiful water features that serve as focal points in your garden, combining natural aesthetics with modern engineering.",
     "features": [
@@ -71,7 +71,7 @@
   {
     "id": "miyawaki-forest",
     "title": "Miyawaki Forest Design",
-    "image": "assets/images/home-crousal/8.png",
+    "image": "assets/images/Projects/miyawaki-forest.webp",
     "shortDescription": "Create dense, native forests using the revolutionary Miyawaki method.",
     "fullDescription": "The Miyawaki method creates native forests that grow 10 times faster and become maintenance-free after 3 years. Our experts design and implement these dense, biodiverse forests that support local ecosystems and provide environmental benefits.",
     "features": [
@@ -85,7 +85,7 @@
   {
     "id": "vegetable-net-house",
     "title": "Vegetable Net House",
-    "image": "assets/images/home-crousal/10.png",
+    "image": "assets/images/Projects/net-house.webp",
     "shortDescription": "Modern farming begins with innovation — and vegetable net houses are the key to higher yield, better quality, and year-round production.",
     "fullDescription": "We design and develop modern kitchen vegetable net houses that make year-round organic cultivation easy and efficient. Our consultancy provides complete support for organic vegetable production, including irrigation management, pest and disease control, and sustainable organic practices.\n With our expert guidance, you can enjoy fresh, chemical-free vegetables every season — grown naturally, right from your own space.",
     "features": [
@@ -100,7 +100,7 @@
   {
     "id": "terrace-garden",
     "title": "Terrace Garden Development",
-    "image": "assets/images/home-crousal/11.png",
+    "image": "assets/images/Projects/terrace-garden.jpg",
     "shortDescription": "Transform your terrace into a green paradise.",
     "fullDescription": "We design beautiful, practical, and vastu-friendly terrace gardens customized for your available space. Our team helps with plant selection, layout design, and connects you to reliable nurseries for high-quality plant installation.",
     "features": [
@@ -114,7 +114,7 @@
   {
     "id": "indoor-plants",
     "title": "Indoor Plant Solutions",
-    "image": "assets/images/home-crousal/12.png",
+    "image": "assets/images/Projects/indoor-plants.png",
     "shortDescription": "Enhance your indoor environment with natural beauty and cleaner air.",
     "fullDescription": "We provide expert indoor plant design consultancy, offering curated plant lists suitable for your space — offices, homes, hotels, or commercial properties.",
     "features": [
@@ -128,7 +128,7 @@
   {
     "id": "fruit-crop-consultancy",
     "title": "Fruit Crop Consultancy",
-    "image": "assets/images/home-crousal/14.png",
+    "image": "assets/images/Projects/mango-plant.webp",
     "shortDescription": "We specialize in fruit crop consultancy, providing complete guidance from sowing to harvesting.",
     "fullDescription": "Our expert agronomists offer both on-site visits and online consultancy, ensuring your orchard receives timely and accurate guidance at every stage of production. We have extensive experience in fruit crops like mango, guava, lemon, banana, pomegranate, and papaya, helping farmers achieve healthy, profitable yields with scientific precision.",
     "features": [
@@ -142,7 +142,7 @@
   {
     "id": "farm-management",
     "title": "Farm Management Consultancy",
-    "image": "assets/images/home-crousal/18.png",
+    "image": "assets/images/Projects/farm-management.webp",
     "shortDescription": "From bare land to a fully productive farm — we manage every step.",
     "fullDescription": "Our farm development and management services cover complete project planning, infrastructure setup, and scientific crop management throughout the year. We provide end-to-end solutions that help farmers build modern, sustainable farms with maximum profitability.",
     "features": [
@@ -156,7 +156,7 @@
   {
     "id": "farm-visit",
     "title": "Farm Visit",
-    "image": "assets/images/home-crousal/20.png",
+    "image": "assets/images/Projects/farm-drone.png",
     "shortDescription": "On-site farm visits for personalized assessment and recommendations.",
     "fullDescription": "Our farm visit service provides personalized, on-site consultation to assess your agricultural operations. We evaluate current practices, identify improvement opportunities, and provide tailored recommendations for your specific farming context.",
     "features": [

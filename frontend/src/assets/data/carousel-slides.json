@@ -1,0 +1,104 @@
+[
+  {
+    "id": "slide-1",
+    "title": "Soil Analysis",
+    "image": "assets/images/home-crousal/soil-analysis.jpeg",
+    "darkText": false
+  },
+  {
+    "id": "slide-2",
+    "title": "Water Analysis",
+    "image": "assets/images/home-crousal/water-analysis.jpeg",
+    "darkText": false
+  },
+  {
+    "id": "slide-3",
+    "title": "Landscape Design",
+    "image": "assets/images/home-crousal/landscaping-design.png",
+    "darkText": true
+  },
+  {
+    "id": "slide-4",
+    "title": "Landscaping",
+    "image": "assets/images/home-crousal/landscaping-1.jpeg",
+    "darkText": false
+  },
+  {
+    "id": "slide-5",
+    "title": "Landscaping",
+    "image": "assets/images/home-crousal/landscaping-2.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-6",
+    "title": "Landscaping",
+    "image": "assets/images/home-crousal/landscaping-3.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-7",
+    "title": "Waterfall Landscaping",
+    "image": "assets/images/home-crousal/waterfall-landscaping.jpg",
+    "darkText": false
+  },
+  {
+    "id": "slide-8",
+    "title": "Landscaping",
+    "image": "assets/images/home-crousal/landscaping-4.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-9",
+    "title": "Miyawaki Forest Design",
+    "image": "assets/images/home-crousal/miyawaki-forest-design.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-10",
+    "title": "Vegetable Net House",
+    "image": "assets/images/home-crousal/net-house.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-11",
+    "title": "Terrace Garden",
+    "image": "assets/images/home-crousal/terrace-garden.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-12",
+    "title": "Indoor Plants",
+    "image": "assets/images/home-crousal/indoor-plants.jpg",
+    "darkText": true
+  },
+  {
+    "id": "slide-13",
+    "title": "Fruit Crop Consultancy",
+    "image": "assets/images/home-crousal/mango-plant.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-14",
+    "title": "Fruit Crop Consultancy",
+    "image": "assets/images/home-crousal/dragon-fruit.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-15",
+    "title": "Fruit Crop Consultancy",
+    "image": "assets/images/home-crousal/lemon-plant.png",
+    "darkText": false
+  },
+  {
+    "id": "slide-16",
+    "title": "Farm Management",
+    "image": "assets/images/home-crousal/farm-management.avif",
+    "darkText": false
+  },
+  {
+    "id": "slide-17",
+    "title": "Farm Visit",
+    "image": "assets/images/home-crousal/drone-farm-visit.jpg",
+    "darkText": false
+  }
+]
