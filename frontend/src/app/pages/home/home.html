@@ -179,14 +179,15 @@
 <!--Current Projects End-->
 <!--InstaGram Start-->
 <div class="instagram">
+  <div class="instagram-header text-center">
+    <h5 class="section-subtitle">Gallery Glimpses</h5>
+    <h2 class="section-main-title">Moments from the Field</h2>
+  </div>
   <ul>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/1.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/2.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/3.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/4.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/5.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/6.jpeg" alt=""></li>
-    <li><a href="#"> <i class="fas fa-search"></i> </a> <img src="assets/images/miniPhotos/7.jpeg" alt=""></li>
+    <li *ngFor="let photo of miniPhotos">
+      <a href="#"> <i class="fas fa-search"></i> </a>
+      <img [src]="photo" alt="Instagram Photo">
+    </li>
   </ul>
 </div>
 <!--InstaGram End-->

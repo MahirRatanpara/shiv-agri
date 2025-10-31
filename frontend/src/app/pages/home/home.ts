@@ -34,12 +34,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedProject: Project | null = null;
   selectedProjectIndex: number = -1;
   isPopupOpen: boolean = false;
+  miniPhotos: string[] = [];
 
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
     this.loadCarouselSlides();
     this.loadProjects();
+    this.loadMiniPhotos();
   }
 
   loadCarouselSlides(): void {
@@ -73,6 +75,19 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         console.error('Error loading projects:', error);
         // Initialize with empty array on error
         this.projects = [];
+      }
+    });
+  }
+
+  loadMiniPhotos(): void {
+    this.http.get<string[]>('assets/data/mini-photos.json').subscribe({
+      next: (photos) => {
+        console.log('Mini photos loaded:', photos);
+        this.miniPhotos = photos;
+      },
+      error: (error) => {
+        console.error('Error loading mini photos:', error);
+        this.miniPhotos = [];
       }
     });
   }
