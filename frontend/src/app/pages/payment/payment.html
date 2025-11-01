@@ -1,73 +1,179 @@
 <section class="payment-page wf100">
+
+  <!-- Animated Background Elements -->
+  <div class="floating-shapes">
+    <div class="shape shape-1">💰</div>
+    <div class="shape shape-2">💳</div>
+    <div class="shape shape-3">📱</div>
+    <div class="shape shape-4">🏦</div>
+    <div class="shape shape-5">💵</div>
+    <div class="shape shape-6">✨</div>
+  </div>
+
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-lg-10">
+      <div class="col-lg-11">
 
-        <!-- Page Title -->
+        <!-- Spectacular Page Header -->
         <div class="page-header">
-          <h1 class="page-title">Payment Information</h1>
-          <p class="page-subtitle">Choose your preferred payment method below</p>
-        </div>
-
-        <!-- Payment Method Section -->
-        <div class="payment-section">
-          <div class="payment-methods">
-            <div class="payment-card">
-              <h3>ONLINE PAYMENT</h3>
-              <ul>
-                <li class="payment-options">9723456866 (PhonePe)</li>
-                <li class="payment-options">9265508385 (GPay)</li>
-              </ul>
+          <div class="header-icon-wrapper">
+            <div class="icon-circle">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="payment-icon">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
             </div>
           </div>
+          <h1 class="page-title">
+            <span class="gradient-text">Seamless Payments</span>
+            <span class="subtitle-accent">Choose Your Preferred Method</span>
+          </h1>
+          <p class="page-subtitle">Fast, secure, and hassle-free transactions for your agricultural needs</p>
         </div>
 
-        <!-- Bank Details Section -->
-        <div class="payment-section">
-          <div class="bank-card">
-            <h2 class="bank-title">FOR BANK DEPOSIT</h2>
-            <div class="bank-details">
-              <div class="detail-row">
-                <span class="label">A/c No.:</span>
-                <span class="value">6799201000093</span>
+        <!-- Payment Methods Grid -->
+        <div class="payment-grid">
+
+          <!-- Online Payments Card -->
+          <div class="premium-card online-payment-card">
+            <div class="card-glow"></div>
+            <div class="card-header">
+              <div class="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
               </div>
-              <div class="detail-row">
-                <span class="label">Bank Name:</span>
-                <span class="value">Canara Bank</span>
+              <h2>Digital Payments</h2>
+              <p class="card-subtitle">Instant & Convenient</p>
+            </div>
+
+            <div class="payment-options">
+              <!-- PhonePe Option -->
+              <div class="payment-option phonepe-option">
+                <div class="option-left">
+                  <div class="payment-logo phonepe-logo">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                  </div>
+                  <div class="option-details">
+                    <h4>PhonePe</h4>
+                    <p class="payment-number">9723456866</p>
+                  </div>
+                </div>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('9723456866')">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                  </svg>
+                  Copy
+                </button>
               </div>
-              <div class="detail-row">
-                <span class="label">Branch:</span>
-                <span class="value">Zanzarada, Dist. Junagadh (Gujarat)</span>
+
+              <!-- GPay Option -->
+              <div class="payment-option gpay-option">
+                <div class="option-left">
+                  <div class="payment-logo gpay-logo">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z"/>
+                    </svg>
+                  </div>
+                  <div class="option-details">
+                    <h4>Google Pay</h4>
+                    <p class="payment-number">9265508385</p>
+                  </div>
+                </div>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('9265508385')">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                  </svg>
+                  Copy
+                </button>
               </div>
-              <div class="detail-row">
-                <span class="label">Pincode:</span>
-                <span class="value">362002</span>
+
+            </div>
+          </div>
+
+          <!-- Bank Transfer Card -->
+          <div class="premium-card bank-card-modern">
+            <div class="card-glow"></div>
+            <div class="card-header">
+              <div class="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/>
+                </svg>
               </div>
-              <div class="detail-row">
-                <span class="label">IFSC Code:</span>
-                <span class="value">CNRB0006799</span>
+              <h2>Bank Transfer</h2>
+              <p class="card-subtitle">Direct Deposit</p>
+            </div>
+
+            <div class="bank-card-design">
+              <div class="card-chip">
+                <div class="chip-line"></div>
+                <div class="chip-line"></div>
+                <div class="chip-line"></div>
+                <div class="chip-line"></div>
               </div>
-              <div class="detail-row">
-                <span class="label">Account Holder:</span>
-                <span class="value">Shiv Agri Consultancy & Laboratory</span>
+              <div class="card-wave"></div>
+
+              <div class="bank-info-grid">
+                <div class="info-item">
+                  <span class="info-label">Account Number</span>
+                  <span class="info-value">6799201000093</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Bank Name</span>
+                  <span class="info-value">Canara Bank</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">IFSC Code</span>
+                  <span class="info-value">CNRB0006799</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Branch</span>
+                  <span class="info-value">Zanzarada, Junagadh</span>
+                </div>
+                <div class="info-item full-width">
+                  <span class="info-label">Account Holder</span>
+                  <span class="info-value">Shiv Agri Consultancy & Laboratory</span>
+                </div>
+              </div>
+
+              <div class="card-footer">
+                <span class="pincode">PIN: 362002</span>
               </div>
             </div>
           </div>
+
         </div>
 
-        <!-- Note Section -->
-        <div class="payment-section note-section">
-          <div class="note-card">
-            <p><strong>NOTE:</strong> send receipt photo after payment.</p>
+        <!-- Important Note Banner -->
+        <div class="note-banner">
+          <div class="banner-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+          </div>
+          <div class="banner-content">
+            <h3>Important Reminder</h3>
+            <p>Please send us a photo of your payment receipt after completing the transaction. This helps us process your order faster!</p>
           </div>
         </div>
 
-        <!-- Contact CTA Section -->
-        <div class="payment-section cta-section">
-          <div class="cta-card">
-            <h3>Need Help?</h3>
-            <p>If you have any questions about payment, feel free to contact us.</p>
-            <a routerLink="/contact" class="btn-contact">Contact Us</a>
+        <!-- Help Section -->
+        <div class="help-section">
+          <div class="help-content">
+            <div class="help-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+              </svg>
+            </div>
+            <h3>Need Assistance?</h3>
+            <p>Our team is here to help with any payment-related questions</p>
+            <a routerLink="/contact" class="help-btn">
+              <span>Contact Support</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              </svg>
+            </a>
           </div>
         </div>
 
