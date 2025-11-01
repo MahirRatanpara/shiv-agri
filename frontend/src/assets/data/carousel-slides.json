@@ -69,7 +69,7 @@
     "id": "slide-12",
     "title": "Indoor Plants",
     "image": "assets/images/home-crousal/indoor-plants.jpg",
-    "darkText": true
+    "darkText": false
   },
   {
     "id": "slide-13",
