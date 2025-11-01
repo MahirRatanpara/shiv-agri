@@ -1,0 +1,303 @@
+/* Payment page styling */
+.payment-page {
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+/* Page Header */
+.page-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.page-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  letter-spacing: 1px;
+}
+
+.page-subtitle {
+  font-size: 18px;
+  color: #555;
+  margin: 0;
+}
+
+.payment-section {
+  margin-bottom: 40px;
+}
+
+/* Payment Method Card */
+.payment-methods {
+  display: block;
+  width: 100%;
+}
+
+.payment-card {
+  background: white;
+  padding: 35px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.payment-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+.payment-card h3 {
+  color: #4CAF50;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.payment-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.payment-card ul li {
+  font-size: 18px;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.3s ease;
+  text-align: center;
+}
+
+.payment-card ul li:last-child {
+  margin-bottom: 0;
+}
+
+.payment-card ul li:hover {
+  background: #e9ecef;
+}
+
+.payment-options {
+  font-size: 18px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Bank Details Card */
+.bank-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.bank-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+.bank-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4CAF50;
+  margin-bottom: 30px;
+  text-align: center;
+  letter-spacing: 1px;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.bank-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 2px;
+}
+
+.bank-details {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detail-row {
+  display: block;
+  padding: 15px 25px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+  text-align: center;
+}
+
+.detail-row:hover {
+  background: #e9ecef;
+}
+
+.detail-row .label {
+  font-weight: 600;
+  color: #4CAF50;
+  font-size: 16px;
+  display: inline;
+  margin-right: 8px;
+}
+
+.detail-row .value {
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 500;
+  display: inline;
+}
+
+/* Note Section */
+.note-section {
+  margin-top: 30px;
+}
+
+.note-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 25px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.note-card p {
+  color: white;
+  font-size: 18px;
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.note-card strong {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* CTA Section */
+.cta-section {
+  margin-top: 40px;
+}
+
+.cta-card {
+  background: white;
+  padding: 35px;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cta-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+.cta-card h3 {
+  color: #4CAF50;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.cta-card p {
+  color: #555;
+  font-size: 16px;
+  margin-bottom: 25px;
+}
+
+.btn-contact {
+  display: inline-block;
+  padding: 12px 35px;
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: white;
+  text-decoration: none;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.btn-contact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  color: white;
+  text-decoration: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .payment-page {
+    padding: 40px 15px;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .page-subtitle {
+    font-size: 16px;
+  }
+
+  .payment-card,
+  .bank-card,
+  .cta-card {
+    padding: 25px;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .detail-row .label {
+    min-width: auto;
+  }
+
+  .detail-row .value {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 24px;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+  }
+
+  .payment-card h3,
+  .cta-card h3 {
+    font-size: 20px;
+  }
+
+  .payment-card,
+  .bank-card,
+  .cta-card {
+    padding: 20px;
+  }
+
+  .note-card p {
+    font-size: 16px;
+  }
+}
