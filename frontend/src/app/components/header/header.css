@@ -2,10 +2,13 @@
 .navbar-brand {
   display: flex;
   align-items: center;
+  padding: 0;
+  margin: 0;
+  height: 100%;
 }
 
 .navbar-brand img {
-  max-height: 75px;
+  height: 75px;
   width: auto;
   object-fit: contain;
   object-position: left center;
@@ -34,13 +37,12 @@
 /* Responsive logo adjustments */
 @media (max-width: 991px) {
   header.header-style-2 nav.navbar {
-    padding: 0.4rem 0.8rem;
+    padding: 0;
     position: relative;
   }
 
   .navbar-brand img {
-    max-height: 50px;
-    height: 50px;
+    height: 55px;
   }
 
   /* Ensure mobile menu toggle is visible */
@@ -92,11 +94,10 @@
 
 @media (max-width: 576px) {
   header.header-style-2 nav.navbar {
-    padding: 0.3rem 0.5rem;
+    padding: 0;
   }
 
   .navbar-brand img {
-    max-height: 40px;
-    height: 40px;
+    height: 45px;
   }
 }

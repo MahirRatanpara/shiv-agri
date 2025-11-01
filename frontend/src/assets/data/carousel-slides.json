@@ -15,7 +15,7 @@
     "id": "slide-3",
     "title": "Landscape Design",
     "image": "assets/images/home-crousal/landscaping-design.png",
-    "darkText": true
+    "darkText": false
   },
   {
     "id": "slide-4",
@@ -69,7 +69,7 @@
     "id": "slide-12",
     "title": "Indoor Plants",
     "image": "assets/images/home-crousal/indoor-plants.jpg",
-    "darkText": true
+    "darkText": false
   },
   {
     "id": "slide-13",

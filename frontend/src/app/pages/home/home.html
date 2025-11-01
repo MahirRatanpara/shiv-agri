@@ -199,20 +199,6 @@
       <i class="fas fa-times"></i>
     </button>
 
-    <button class="popup-nav-btn prev"
-            (click)="navigateProject('prev')"
-            *ngIf="projects.length > 1"
-            aria-label="Previous project">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-
-    <button class="popup-nav-btn next"
-            (click)="navigateProject('next')"
-            *ngIf="projects.length > 1"
-            aria-label="Next project">
-      <i class="fas fa-chevron-right"></i>
-    </button>
-
     <div class="project-popup-content" [class.no-image]="!selectedProject.image">
       <div class="popup-image" *ngIf="selectedProject.image">
         <img [src]="selectedProject.image" [alt]="selectedProject.title || 'Project Image'">
@@ -252,4 +238,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Navigation arrows outside the popup container -->
+  <button class="popup-nav-btn prev"
+          (click)="navigateProject('prev'); $event.stopPropagation()"
+          *ngIf="projects.length > 1"
+          aria-label="Previous project">
+    <i class="fas fa-chevron-left"></i>
+  </button>
+
+  <button class="popup-nav-btn next"
+          (click)="navigateProject('next'); $event.stopPropagation()"
+          *ngIf="projects.length > 1"
+          aria-label="Next project">
+    <i class="fas fa-chevron-right"></i>
+  </button>
 </div>

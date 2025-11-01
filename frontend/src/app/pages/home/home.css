@@ -619,7 +619,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .popup-nav-btn:hover {
@@ -628,12 +628,24 @@
   transform: translateY(-50%) scale(1.1);
 }
 
+/* Position arrows outside the popup container on large screens */
 .popup-nav-btn.prev {
-  left: 20px;
+  left: calc((100vw - 900px) / 2 - 70px);
 }
 
 .popup-nav-btn.next {
-  right: 20px;
+  right: calc((100vw - 900px) / 2 - 70px);
+}
+
+/* For screens smaller than container + arrows space */
+@media (max-width: 1100px) {
+  .popup-nav-btn.prev {
+    left: 20px;
+  }
+
+  .popup-nav-btn.next {
+    right: 20px;
+  }
 }
 
 .project-popup-content {
@@ -977,6 +989,7 @@
     font-size: 16px;
   }
 
+  /* Arrows stay on the sides of the screen on tablet */
   .popup-nav-btn.prev {
     left: 10px;
   }
@@ -1291,6 +1304,7 @@
     font-size: 14px;
   }
 
+  /* Arrows on the sides of the screen on mobile */
   .popup-nav-btn.prev {
     left: 5px;
   }

@@ -35,6 +35,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedProjectIndex: number = -1;
   isPopupOpen: boolean = false;
   miniPhotos: string[] = [];
+  private keyboardHandler: ((event: KeyboardEvent) => void) | null = null;
+  private isCarouselNavigating: boolean = false;
 
   constructor(private http: HttpClient) {}
 
@@ -97,6 +99,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Remove keyboard event listener
+    if (this.keyboardHandler) {
+      document.removeEventListener('keydown', this.keyboardHandler);
+      this.keyboardHandler = null;
+    }
+
     // Destroy Owl Carousel when component is destroyed
     if ($('#home-slider').data('owl.carousel')) {
       $('#home-slider').data('owl.carousel').destroy();
@@ -112,17 +120,89 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       $('#home-slider').removeClass('owl-loaded owl-drag owl-grab');
       $('#home-slider').find('.owl-stage-outer').children().unwrap();
-      $('#home-slider').owlCarousel({
+      const carousel = $('#home-slider').owlCarousel({
         loop: true,
         margin: 0,
         nav: true,
-        dots: false,
+        dots: true,
         items: 1,
         autoplay: false,
         autoplayTimeout: 5000,
         autoplayHoverPause: true,
-        smartSpeed: 1000
+        smartSpeed: 1000,
+        dotsSpeed: 400,
+        dotsEach: false
       });
+
+      // Function to update dot states based on current slide
+      const updateDotStates = (currentPage: number) => {
+        const $dots = $('#home-slider .owl-dot');
+        const totalDots = $dots.length;
+
+        $dots.each((index: number, element: any) => {
+          const $dot = $(element);
+
+          // Check if this dot is a neighbor (previous, current, or next)
+          const isPrevious = index === (currentPage - 1 + totalDots) % totalDots;
+          const isCurrent = index === currentPage;
+          const isNext = index === (currentPage + 1) % totalDots;
+
+          if (isPrevious || isCurrent || isNext) {
+            // Enable neighbor dots
+            $dot.removeClass('disabled-dot').css('pointer-events', 'auto');
+          } else {
+            // Disable non-neighbor dots
+            $dot.addClass('disabled-dot').css('pointer-events', 'none');
+          }
+        });
+      };
+
+      // Update dot states on slide change
+      carousel.on('changed.owl.carousel', function(event: any) {
+        // event.page.index gives us the current page/slide index
+        const currentPage = event.page.index;
+        updateDotStates(currentPage);
+      });
+
+      // Initial update after carousel is ready
+      carousel.on('initialized.owl.carousel', function(event: any) {
+        const currentPage = event.page.index;
+        updateDotStates(currentPage);
+      });
+
+      // Fallback initial update
+      setTimeout(() => {
+        updateDotStates(0);
+      }, 500);
+
+      // Add keyboard navigation
+      this.keyboardHandler = (event: KeyboardEvent) => {
+        // Only handle arrow keys when popup is not open and not already navigating
+        if (!this.isPopupOpen && !this.isCarouselNavigating) {
+          if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            this.isCarouselNavigating = true;
+            // Simply click the prev button
+            $('#home-slider .owl-prev').trigger('click');
+            // Reset flag after animation completes
+            setTimeout(() => {
+              this.isCarouselNavigating = false;
+            }, 1100);
+          } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            this.isCarouselNavigating = true;
+            // Simply click the next button
+            $('#home-slider .owl-next').trigger('click');
+            // Reset flag after animation completes
+            setTimeout(() => {
+              this.isCarouselNavigating = false;
+            }, 1100);
+          }
+        }
+      };
+
+      // Add event listener
+      document.addEventListener('keydown', this.keyboardHandler);
     }, 200);
   }
 
