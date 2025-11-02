@@ -1,3 +1,5 @@
+/* ===== HOME PAGE RESPONSIVE CSS - CLEAN REWRITE ===== */
+
 /* Standardize slider carousel images */
 #home-slider {
   position: relative;
@@ -424,6 +426,7 @@
   display: flex;
   flex-direction: column;
   min-height: 350px;
+  margin-bottom: 30px;
 }
 
 .project-tile:hover {
@@ -484,6 +487,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  text-align: left !important;
+  align-items: flex-start !important;
 }
 
 /* Category inline (when no image) */
@@ -509,6 +514,7 @@
   color: #2c3e50;
   margin-bottom: 12px;
   line-height: 1.4;
+  text-align: left !important;
 }
 
 .project-tile-content h5.text-muted {
@@ -525,6 +531,7 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  text-align: left !important;
 }
 
 /* ===== Project Popup Styling ===== */
@@ -798,61 +805,59 @@
   font-style: italic;
 }
 
-/* Responsive adjustments for smaller screens */
+/* ===== RESPONSIVE STYLES ===== */
+
+/* Small Desktop/Large Tablet (992px and below) */
+@media (max-width: 992px) {
+  /* Projects - gradual scaling */
+  .project-tile-content h5 {
+    font-size: 19px;
+  }
+
+  .project-tile-content p {
+    font-size: 13px;
+  }
+
+  /* Popup - gradual scaling */
+  .popup-details h2 {
+    font-size: 28px;
+  }
+}
+
+/* Tablet (768px and below) */
 @media (max-width: 768px) {
+  /* Slider */
   #home-slider .item img {
     height: 400px;
   }
 
-  /* Ensure slider text is visible on mobile */
-  .slider-caption {
-    top: 20% !important;
-  }
-
   .slider-caption strong {
     font-size: 24px !important;
-    text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.9);
   }
 
+  /* Ensure project titles stay left-aligned */
+  .project-tile-content {
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .project-tile-content h5 {
+    text-align: left !important;
+  }
+
+  .project-tile-content p {
+    text-align: left !important;
+  }
+
+  /* About Section */
   .home2-about .video-img img,
   .home2-about .video-img video {
     height: 300px;
   }
 
-  .pro-box img {
-    height: 250px;
-  }
-
-  .blog-post-large .post-thumb img {
-    height: 300px;
-  }
-
-  .product-box .pro-thumb img {
-    height: 250px;
-  }
-
-  /* Instagram Section - Tablet */
-  .instagram {
-    padding: 30px 0;
-  }
-
-  .instagram ul li img {
-    height: 150px;
-  }
-
-  /* Why Choose Us Section - Tablet */
+  /* Why Choose Us */
   .why-choose-us {
-    padding: 60px 0;
-  }
-
-  .why-choose-us::before,
-  .why-choose-us::after {
-    width: 300px;
-    height: 300px;
-  }
-
-  .why-choose-header {
-    margin-bottom: 40px;
+    padding: 60px 15px;
   }
 
   .section-main-title {
@@ -861,67 +866,25 @@
 
   .tagline {
     font-size: 18px;
-    padding: 0 30px;
   }
 
   .story-card {
     padding: 30px;
-  }
-
-  .card-icon {
-    width: 60px;
-    height: 60px;
-  }
-
-  .card-icon i {
-    font-size: 28px;
-  }
-
-  .story-card h3 {
-    font-size: 20px;
-  }
-
-  .story-card p {
-    font-size: 14px;
+    margin-bottom: 20px;
   }
 
   .mission-statement {
     padding: 50px 30px;
   }
 
-  .mission-statement h2 {
-    font-size: 28px;
-  }
-
-  .mission-statement p {
-    font-size: 16px;
-  }
-
-  .mission-statement .signature {
-    font-size: 14px;
-    margin-bottom: 30px;
-  }
-
-  .cta-button {
-    padding: 12px 35px;
-    font-size: 14px;
-  }
-
-  /* Project tiles responsive */
+  /* Projects */
   .project-tile {
-    min-height: 320px;
-  }
-
-  .project-tile.no-image {
-    min-height: 180px;
+    min-height: 300px;
+    margin-bottom: 20px;
   }
 
   .project-tile-image {
     height: 200px;
-  }
-
-  .project-tile-content {
-    padding: 20px;
   }
 
   .project-tile-content h5 {
@@ -932,28 +895,12 @@
     font-size: 13px;
   }
 
-  .project-category-inline {
-    font-size: 11px;
-    padding: 5px 14px;
+  /* Instagram */
+  .instagram ul li img {
+    height: 150px;
   }
 
-  /* Popup responsive */
-  .project-popup-overlay {
-    padding: 10px;
-    align-items: flex-start;
-    overflow-y: auto;
-  }
-
-  .project-popup-container {
-    margin: 20px auto;
-    max-height: none;
-  }
-
-  .project-popup-content {
-    height: auto;
-    max-height: none;
-  }
-
+  /* Popup */
   .popup-image {
     height: 250px;
   }
@@ -962,34 +909,10 @@
     padding: 25px;
   }
 
-  .project-popup-content.no-image .popup-details {
-    padding-top: 30px;
-  }
-
   .popup-details h2 {
     font-size: 24px;
   }
 
-  .popup-description {
-    font-size: 14px;
-  }
-
-  .popup-features h4 {
-    font-size: 18px;
-  }
-
-  .popup-features ul li {
-    font-size: 14px;
-    padding: 10px 0;
-  }
-
-  .popup-nav-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
-  }
-
-  /* Arrows stay on the sides of the screen on tablet */
   .popup-nav-btn.prev {
     left: 10px;
   }
@@ -997,85 +920,80 @@
   .popup-nav-btn.next {
     right: 10px;
   }
+}
 
-  .popup-close-btn {
-    width: 40px;
-    height: 40px;
-    top: 15px;
-    right: 15px;
-    font-size: 18px;
+/* Specific fix for 576px to 768px range (includes 662px) */
+@media (min-width: 577px) and (max-width: 768px) {
+  .projects-grid .col-sm-6 {
+    text-align: left !important;
   }
 
-  .popup-empty-state {
-    padding: 30px 15px;
+  .project-tile-content {
+    text-align: left !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+  }
+
+  .project-tile-content h5 {
+    text-align: left !important;
+    width: 100%;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
+  .project-tile-content p {
+    text-align: left !important;
+    width: 100%;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
+  .project-tile-header {
+    text-align: left !important;
   }
 }
 
+/* Small Mobile/Large Phone (576px and below) */
+@media (max-width: 576px) {
+  /* Ensure consistent project title sizing and positioning */
+  .project-tile-content {
+    padding: 20px;
+    text-align: left !important;
+    align-items: flex-start !important;
+  }
+
+  .project-tile-content h5 {
+    font-size: 17px;
+    text-align: left !important;
+    margin-bottom: 10px;
+  }
+
+  .project-tile-content p {
+    font-size: 13px;
+    text-align: left !important;
+  }
+}
+
+/* Mobile (480px and below) */
 @media (max-width: 480px) {
+  /* Slider */
   #home-slider .item img {
     height: 300px;
   }
 
-  /* Ensure slider text is visible on small mobile */
-  .slider-caption {
-    top: 15% !important;
-  }
-
   .slider-caption strong {
     font-size: 20px !important;
-    text-shadow: 2px 2px 12px rgba(0, 0, 0, 1);
   }
 
-  .services-area .sinfo img {
-    width: 60px;
-    height: 60px;
-  }
-
+  /* About Section */
   .home2-about .video-img img,
   .home2-about .video-img video {
     height: 250px;
   }
 
-  .pro-box img {
-    height: 200px;
-  }
-
-  .blog-small-post .post-thumb img {
-    width: 100px;
-    height: 100px;
-  }
-
-  .product-box .pro-thumb img {
-    height: 200px;
-  }
-
-  /* Instagram Section - Mobile */
-  .instagram {
-    padding: 25px 0;
-  }
-
-  .instagram ul li img {
-    height: 120px;
-  }
-
-  /* Why Choose Us Section - Mobile */
+  /* Why Choose Us */
   .why-choose-us {
-    padding: 50px 0;
-  }
-
-  .why-choose-us::before,
-  .why-choose-us::after {
-    width: 200px;
-    height: 200px;
-  }
-
-  .why-choose-header {
-    margin-bottom: 35px;
-  }
-
-  .section-subtitle {
-    font-size: 14px;
-    letter-spacing: 1.5px;
+    padding: 50px 10px;
   }
 
   .section-main-title {
@@ -1084,120 +1002,29 @@
 
   .tagline {
     font-size: 16px;
-    padding: 0 20px;
-  }
-
-  .tagline::before,
-  .tagline::after {
-    font-size: 28px;
-  }
-
-  .why-choose-content {
-    margin-bottom: 30px;
   }
 
   .story-card {
     padding: 25px;
-    margin-bottom: 20px;
-  }
-
-  .card-icon {
-    width: 55px;
-    height: 55px;
-  }
-
-  .card-icon i {
-    font-size: 24px;
-  }
-
-  .story-card h3 {
-    font-size: 18px;
     margin-bottom: 15px;
   }
 
-  .story-card p {
-    font-size: 13px;
-    line-height: 1.7;
-    margin-bottom: 12px;
-  }
-
-  .quote-text {
-    padding: 12px 15px;
-    font-size: 13px !important;
-    margin-top: 15px !important;
+  .story-card h3 {
+    font-size: 20px;
   }
 
   .mission-statement {
     padding: 40px 25px;
-    border-radius: 16px;
-    margin-top: 15px;
-  }
-
-  .mission-statement::before {
-    width: 150px;
-    height: 150px;
-    top: -30px;
-    right: -30px;
-  }
-
-  .mission-statement::after {
-    width: 180px;
-    height: 180px;
-    bottom: -50px;
-    left: -50px;
-  }
-
-  .mission-icon {
-    width: 70px;
-    height: 70px;
-    margin-bottom: 20px;
-  }
-
-  .mission-icon i {
-    font-size: 32px;
   }
 
   .mission-statement h2 {
-    font-size: 24px;
-    margin-bottom: 12px;
-  }
-
-  .mission-statement p {
-    font-size: 15px;
-    margin-bottom: 25px;
-  }
-
-  .mission-statement .signature {
-    font-size: 13px;
-    margin-top: -10px;
-    margin-bottom: 28px;
-  }
-
-  .cta-button {
-    padding: 12px 30px;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-  }
-
-  /* Project tiles responsive for mobile */
-  .current-projects .section-title-2 {
-    margin-bottom: 30px;
-  }
-
-  .current-projects .section-title-2 h2 {
     font-size: 28px;
   }
 
-  .current-projects .section-title-2 p {
-    font-size: 14px;
-  }
-
+  /* Projects */
   .project-tile {
-    min-height: 300px;
-  }
-
-  .project-tile.no-image {
-    min-height: 160px;
+    min-height: 280px;
+    margin-bottom: 15px;
   }
 
   .project-tile-image {
@@ -1210,31 +1037,31 @@
 
   .project-tile-content h5 {
     font-size: 16px;
-    margin-bottom: 10px;
   }
 
   .project-tile-content p {
     font-size: 12px;
-    -webkit-line-clamp: 2;
   }
 
-  .project-category {
-    font-size: 10px;
-    padding: 5px 12px;
+  /* Instagram */
+  .instagram {
+    padding: 25px 10px;
   }
 
-  .project-category-inline {
-    font-size: 10px;
-    padding: 4px 12px;
+  .instagram ul li {
+    width: 50%;
   }
 
-  /* Popup responsive for mobile */
+  .instagram ul li img {
+    height: 120px;
+  }
+
+  /* Popup */
   .project-popup-overlay {
     padding: 0;
   }
 
   .project-popup-container {
-    margin: 0;
     border-radius: 0;
     max-height: 100vh;
     height: 100vh;
@@ -1242,7 +1069,6 @@
 
   .project-popup-content {
     height: 100vh;
-    overflow-y: auto;
   }
 
   .popup-image {
@@ -1253,41 +1079,8 @@
     padding: 20px;
   }
 
-  .project-popup-content.no-image .popup-details {
-    padding-top: 25px;
-  }
-
-  .popup-header {
-    gap: 12px;
-  }
-
   .popup-details h2 {
     font-size: 20px;
-    margin-bottom: 15px;
-  }
-
-  .popup-description {
-    font-size: 13px;
-    line-height: 1.7;
-  }
-
-  .popup-features {
-    margin-top: 25px;
-  }
-
-  .popup-features h4 {
-    font-size: 17px;
-    margin-bottom: 15px;
-  }
-
-  .popup-features ul li {
-    font-size: 13px;
-    padding: 10px 0;
-  }
-
-  .popup-features ul li i {
-    font-size: 16px;
-    margin-right: 10px;
   }
 
   .popup-close-btn {
@@ -1295,40 +1088,18 @@
     height: 35px;
     top: 10px;
     right: 10px;
-    font-size: 16px;
   }
 
   .popup-nav-btn {
     width: 35px;
     height: 35px;
-    font-size: 14px;
   }
 
-  /* Arrows on the sides of the screen on mobile */
   .popup-nav-btn.prev {
     left: 5px;
   }
 
   .popup-nav-btn.next {
     right: 5px;
-  }
-
-  .popup-category {
-    font-size: 11px;
-    padding: 6px 15px;
-  }
-
-  .popup-category-badge .badge {
-    font-size: 11px;
-    padding: 6px 15px;
-  }
-
-  .popup-empty-state {
-    padding: 30px 15px;
-    margin-top: 15px;
-  }
-
-  .popup-empty-state p {
-    font-size: 13px;
   }
 }

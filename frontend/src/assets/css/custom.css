@@ -353,8 +353,10 @@ Inner Header End
 Home Page Content Start
 *********************************/
 .wrapper .container {
-	width: 1170px;
+	width: 100%;
 	max-width: 1170px;
+	padding-left: 15px;
+	padding-right: 15px;
 }
 /***************  Home 1 Slider Start  *****************/
 
@@ -711,6 +713,14 @@ section#home-slider img {
 		width: 6px;
 		height: 6px;
 		margin: 0 3px;
+	}
+}
+
+/* Hide slider buttons on tablet and mobile (below 992px) */
+@media (max-width: 991px) {
+	.slider-caption a,
+	.slider-caption.h2slider a {
+		display: none !important;
 	}
 }
 
@@ -1659,13 +1669,50 @@ header.header-style-2 {
 	background: #1b5e20;
 }
 header.header-style-2 .navbar {
-  height: 75px;
+  height: 60px;
 	padding: 0px;
 	margin: 0px;
 }
 header.header-style-2 .navbar-brand {
 	background: white;
 	text-align: center;
+	max-width: 120px;
+}
+
+@media (max-width: 991px) {
+	header.header-style-2 .navbar {
+		height: 65px;
+	}
+	header.header-style-2 .navbar-brand {
+		max-width: 120px;
+	}
+}
+
+@media (max-width: 768px) {
+	header.header-style-2 .navbar {
+		height: 60px;
+	}
+	header.header-style-2 .navbar-brand {
+		max-width: 120px;
+	}
+}
+
+@media (max-width: 576px) {
+	header.header-style-2 .navbar {
+		height: 60px;
+	}
+	header.header-style-2 .navbar-brand {
+		max-width: 120px;
+	}
+}
+
+@media (max-width: 480px) {
+	header.header-style-2 .navbar {
+		height: 60px;
+	}
+	header.header-style-2 .navbar-brand {
+		max-width: 120px;
+	}
 }
 ul.topnav-right {
 	margin: 0;
@@ -1931,6 +1978,7 @@ section.services-area ul li.active:after {
 	color: #66bb6a;
 	font-family: 'Poppins', sans-serif;
 	font-weight: 500;
+  padding-top: 50px;
 }
 .h2-about-txt h2 {
 	color: #222222;
