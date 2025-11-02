@@ -617,7 +617,7 @@ The nginx configuration file already has HTTPS setup (commented out).
 **On your local machine**, edit `nginx/nginx.conf`:
 
 1. **Uncomment the HTTPS server block** (around line 80)
-2. **Replace `[YOUR_DOMAIN.com]`** with your actual domain
+2. **Replace `shivagri.com`** with your actual domain
 3. **Uncomment the HTTP to HTTPS redirect** (around line 140)
 
 Then push to trigger deployment:
