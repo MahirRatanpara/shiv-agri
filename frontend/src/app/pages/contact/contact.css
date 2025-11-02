@@ -498,6 +498,31 @@
   .map-wrapper {
     height: 400px;
   }
+
+  .enhanced-info-card {
+    padding: 35px 30px;
+  }
+
+  .business-icon {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+  }
+
+  .business-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .business-text h2 {
+    font-size: 21px;
+  }
+
+  .directions-btn {
+    padding: 16px 32px;
+    font-size: 16px;
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -581,6 +606,77 @@
   .directions-btn {
     padding: 15px 30px;
     font-size: 16px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-title {
+    font-size: 26px;
+  }
+
+  .title-icon {
+    font-size: 32px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+  }
+
+  .map-wrapper {
+    height: 320px;
+  }
+
+  .enhanced-info-card {
+    padding: 28px 22px;
+  }
+
+  .business-icon {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+  }
+
+  .business-icon svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .business-text h2 {
+    font-size: 18.5px;
+  }
+
+  .owner-name {
+    font-size: 14.5px;
+  }
+
+  .contact-item {
+    padding: 15px;
+  }
+
+  .item-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  .item-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .item-content h4 {
+    font-size: 14.5px;
+  }
+
+  .item-content p {
+    font-size: 13.5px;
+  }
+
+  .directions-btn {
+    padding: 14.5px 28px;
+    font-size: 15.5px;
+    min-height: 44px;
   }
 }
 

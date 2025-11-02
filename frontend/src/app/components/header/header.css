@@ -1,4 +1,6 @@
-/* Logo area background only */
+/* ===== HEADER RESPONSIVE CSS - CLEAN REWRITE ===== */
+
+/* Logo */
 .navbar-brand {
   display: flex;
   align-items: center;
@@ -10,6 +12,7 @@
 .navbar-brand img {
   height: 75px;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
   object-position: left center;
 }
@@ -34,7 +37,9 @@
   font-size: 1.5rem;
 }
 
-/* Responsive logo adjustments */
+/* ===== RESPONSIVE STYLES ===== */
+
+/* Tablet and below (991px) */
 @media (max-width: 991px) {
   header.header-style-2 nav.navbar {
     padding: 0;
@@ -43,6 +48,7 @@
 
   .navbar-brand img {
     height: 55px;
+    max-width: 100%;
   }
 
   /* Ensure mobile menu toggle is visible */
@@ -92,6 +98,15 @@
   }
 }
 
+/* Tablet (768px and below) */
+@media (max-width: 768px) {
+  .navbar-brand img {
+    height: 50px;
+    max-width: 100%;
+  }
+}
+
+/* Small Mobile/Large Phone (576px and below) */
 @media (max-width: 576px) {
   header.header-style-2 nav.navbar {
     padding: 0;
@@ -99,5 +114,22 @@
 
   .navbar-brand img {
     height: 45px;
+    max-width: 100%;
+  }
+}
+
+/* Extra Small Mobile (480px and below) */
+@media (max-width: 480px) {
+  .navbar-brand img {
+    height: 40px;
+    max-width: 100%;
+  }
+}
+
+/* Very Small Mobile (375px and below) */
+@media (max-width: 375px) {
+  .navbar-brand img {
+    height: 35px;
+    max-width: 100%;
   }
 }
