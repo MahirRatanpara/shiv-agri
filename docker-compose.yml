@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   mongodb:
-    image: mongo:7
-    container_name: shiv-agri-mongodb
+    image: mongo:7.0
+    container_name: shivagri-mongodb-dev
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: shiv-agri
@@ -11,32 +11,64 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - app-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  backend:
+  api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: shiv-agri-backend
+    container_name: shivagri-api-dev
     restart: unless-stopped
     environment:
       PORT: 3000
       MONGODB_URI: mongodb://mongodb:27017/shiv-agri
-      NODE_ENV: production
+      NODE_ENV: development
     ports:
       - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - api_uploads:/app/uploads
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: shiv-agri-frontend
+    container_name: shivagri-frontend-dev
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: shivagri-nginx-dev
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - api
+      - frontend
+    networks:
+      - app-network
 
 volumes:
   mongodb_data:
+  mongodb_config:
+  api_uploads:
+
+networks:
+  app-network:
+    driver: bridge
