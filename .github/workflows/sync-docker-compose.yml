@@ -1,0 +1,113 @@
+name: Sync Docker Compose to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/sync-docker-compose.yml'
+  workflow_dispatch:
+
+jobs:
+  sync-docker-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload docker-compose.prod.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/var/www/shiv-agri/"
+          overwrite: true
+
+      - name: Upload MongoDB initialization script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "mongodb/init-mongo.js"
+          target: "/var/www/shiv-agri/"
+          overwrite: true
+
+      - name: Verify and Restart Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/shiv-agri
+
+            echo "═══════════════════════════════════════════════════════"
+            echo "  Docker Compose Configuration Update"
+            echo "═══════════════════════════════════════════════════════"
+            echo ""
+
+            # Verify files were uploaded
+            if [ -f docker-compose.prod.yml ]; then
+              echo "✓ docker-compose.prod.yml successfully uploaded"
+            else
+              echo "✗ docker-compose.prod.yml not found!"
+              exit 1
+            fi
+
+            if [ -f mongodb/init-mongo.js ]; then
+              echo "✓ mongodb/init-mongo.js successfully uploaded"
+            else
+              echo "⚠ Warning: mongodb/init-mongo.js not found"
+            fi
+            echo ""
+
+            # Show file modification time
+            echo "File details:"
+            ls -lh docker-compose.prod.yml | awk '{print "  Size: " $5 "  Modified: " $6 " " $7 " " $8}'
+            echo ""
+
+            # Validate docker-compose file syntax
+            echo "Validating docker-compose configuration..."
+            if docker compose -f docker-compose.prod.yml config > /dev/null 2>&1; then
+              echo "✓ Configuration is valid"
+              echo ""
+            else
+              echo "✗ Configuration validation failed!"
+              docker compose -f docker-compose.prod.yml config
+              exit 1
+            fi
+
+            # Source environment variables
+            if [ -f .env ]; then
+              export $(cat .env | grep -v '^#' | xargs)
+              echo "✓ Environment variables loaded from .env"
+              echo ""
+            else
+              echo "⚠ Warning: .env file not found"
+              echo ""
+            fi
+
+            # Ask user to review changes (via workflow output)
+            echo "Docker Compose configuration has been updated."
+            echo ""
+            echo "⚠ NOTE: MongoDB init script only runs on FIRST container start!"
+            echo "   If MongoDB already has data, the init script will be ignored."
+            echo "   To apply init script, you must remove MongoDB volumes first."
+            echo ""
+            echo "To restart all services, run:"
+            echo "  docker compose -f docker-compose.prod.yml up -d"
+            echo ""
+            echo "To restart specific services, run:"
+            echo "  docker compose -f docker-compose.prod.yml up -d <service-name>"
+            echo ""
+            echo "Current running services:"
+            docker compose -f docker-compose.prod.yml ps
+
+            echo ""
+            echo "═══════════════════════════════════════════════════════"
+            echo "  Configuration sync completed successfully!"
+            echo "═══════════════════════════════════════════════════════"
