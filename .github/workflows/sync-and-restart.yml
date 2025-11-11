@@ -1,0 +1,153 @@
+name: Sync Docker Compose and Restart Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      restart_services:
+        description: 'Restart services after sync?'
+        required: true
+        type: choice
+        default: 'no'
+        options:
+          - 'yes'
+          - 'no'
+      services_to_restart:
+        description: 'Services to restart (comma-separated, or "all" for all services)'
+        required: false
+        default: 'all'
+        type: string
+
+jobs:
+  sync-and-restart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload docker-compose.prod.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/var/www/shiv-agri/"
+          overwrite: true
+
+      - name: Upload MongoDB initialization script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "mongodb/init-mongo.js"
+          target: "/var/www/shiv-agri/"
+          overwrite: true
+
+      - name: Sync and Optionally Restart Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/shiv-agri
+
+            echo "═══════════════════════════════════════════════════════"
+            echo "  Docker Compose Configuration Sync"
+            echo "═══════════════════════════════════════════════════════"
+            echo ""
+
+            # Verify the file was uploaded
+            if [ ! -f docker-compose.prod.yml ]; then
+              echo "✗ docker-compose.prod.yml not found!"
+              exit 1
+            fi
+
+            echo "✓ docker-compose.prod.yml successfully uploaded"
+            echo ""
+
+            # Show file details
+            echo "File details:"
+            ls -lh docker-compose.prod.yml | awk '{print "  Size: " $5 "  Modified: " $6 " " $7 " " $8}'
+            echo ""
+
+            # Validate configuration
+            echo "Validating docker-compose configuration..."
+            if docker compose -f docker-compose.prod.yml config > /dev/null 2>&1; then
+              echo "✓ Configuration is valid"
+              echo ""
+            else
+              echo "✗ Configuration validation failed!"
+              docker compose -f docker-compose.prod.yml config
+              exit 1
+            fi
+
+            # Source environment variables
+            if [ -f .env ]; then
+              export $(cat .env | grep -v '^#' | xargs)
+              echo "✓ Environment variables loaded from .env"
+              echo ""
+            else
+              echo "⚠ Warning: .env file not found"
+              echo ""
+            fi
+
+            # Restart services if requested
+            RESTART="${{ github.event.inputs.restart_services }}"
+            SERVICES="${{ github.event.inputs.services_to_restart }}"
+
+            if [ "$RESTART" = "yes" ]; then
+              echo "═══════════════════════════════════════════════════════"
+              echo "  Restarting Services"
+              echo "═══════════════════════════════════════════════════════"
+              echo ""
+
+              # Pull latest images
+              echo "Pulling latest images..."
+              docker compose -f docker-compose.prod.yml pull
+              echo ""
+
+              if [ "$SERVICES" = "all" ]; then
+                echo "Restarting all services..."
+                docker compose -f docker-compose.prod.yml up -d
+              else
+                echo "Restarting services: $SERVICES"
+                # Convert comma-separated list to space-separated
+                SERVICES_LIST=$(echo "$SERVICES" | tr ',' ' ')
+                docker compose -f docker-compose.prod.yml up -d $SERVICES_LIST
+              fi
+
+              echo ""
+              echo "✓ Services restarted successfully"
+              echo ""
+
+              # Show updated status
+              echo "Current service status:"
+              docker compose -f docker-compose.prod.yml ps
+              echo ""
+
+              # Clean up old images
+              echo "Cleaning up unused images..."
+              docker image prune -f
+              echo ""
+
+            else
+              echo "═══════════════════════════════════════════════════════"
+              echo "  No Service Restart Requested"
+              echo "═══════════════════════════════════════════════════════"
+              echo ""
+              echo "Configuration synced but services were not restarted."
+              echo ""
+              echo "Current running services:"
+              docker compose -f docker-compose.prod.yml ps
+              echo ""
+              echo "To restart services manually, run:"
+              echo "  docker compose -f docker-compose.prod.yml up -d [service-name]"
+              echo ""
+            fi
+
+            echo "═══════════════════════════════════════════════════════"
+            echo "  Sync completed successfully!"
+            echo "═══════════════════════════════════════════════════════"
