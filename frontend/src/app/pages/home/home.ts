@@ -35,6 +35,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedProjectIndex: number = -1;
   isPopupOpen: boolean = false;
   miniPhotos: string[] = [];
+  showScrollButton: boolean = false;
   private keyboardHandler: ((event: KeyboardEvent) => void) | null = null;
   private isCarouselNavigating: boolean = false;
 
@@ -44,6 +45,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadCarouselSlides();
     this.loadProjects();
     this.loadMiniPhotos();
+    this.setupScrollListener();
   }
 
   loadCarouselSlides(): void {
@@ -104,6 +106,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       document.removeEventListener('keydown', this.keyboardHandler);
       this.keyboardHandler = null;
     }
+
+    // Remove scroll event listener
+    window.removeEventListener('scroll', this.handleScroll);
 
     // Destroy Owl Carousel when component is destroyed
     if ($('#home-slider').data('owl.carousel')) {
@@ -271,6 +276,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (servicesSection) {
       servicesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  setupScrollListener(): void {
+    window.addEventListener('scroll', this.handleScroll);
+  }
+
+  handleScroll = (): void => {
+    // Show button when scrolled down more than 300px
+    this.showScrollButton = window.pageYOffset > 300;
   }
 
 }
