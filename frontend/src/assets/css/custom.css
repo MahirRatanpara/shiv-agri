@@ -698,9 +698,9 @@ section#home-slider img {
 	}
 
 	#home-slider.owl-theme .owl-dots .owl-dot span {
-		width: 7px;
-		height: 7px;
-		margin: 0 3px;
+		width: 12px;
+		height: 12px;
+		margin: 0 5px;
 	}
 }
 
@@ -710,9 +710,9 @@ section#home-slider img {
 	}
 
 	#home-slider.owl-theme .owl-dots .owl-dot span {
-		width: 6px;
-		height: 6px;
-		margin: 0 3px;
+		width: 10px;
+		height: 10px;
+		margin: 0 4px;
 	}
 }
 
