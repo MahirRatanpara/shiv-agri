@@ -230,6 +230,70 @@
   margin-bottom: 8px;
 }
 
+/* Bottom close button */
+.bottom-close-btn-wrapper {
+  display: block !important;
+  padding: 20px;
+  text-align: center;
+  width: 100%;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.bottom-close-btn {
+  background: #66bb6a !important;
+  color: white !important;
+  border: none;
+  border-radius: 30px;
+  padding: 14px 35px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+  min-width: 150px;
+}
+
+.bottom-close-btn:hover {
+  background: #558b59;
+  transform: translateY(2px);
+  box-shadow: 0 6px 16px rgba(102, 187, 106, 0.4);
+}
+
+.bottom-close-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 8px rgba(102, 187, 106, 0.3);
+}
+
+.bottom-close-btn i {
+  font-size: 18px;
+  animation: bounceDown 2s infinite;
+}
+
+@keyframes bounceDown {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Hide bottom button on desktop */
+@media (min-width: 769px) {
+  .bottom-close-btn-wrapper {
+    display: none;
+  }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .popup-modal {

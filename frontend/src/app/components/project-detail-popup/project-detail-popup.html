@@ -34,6 +34,15 @@
       <div class="popup-detailed-content" *ngIf="project.detailedContent">
         <div [innerHTML]="project.detailedContent"></div>
       </div>
+
+    </div>
+
+    <!-- Bottom close button for mobile - OUTSIDE popup-content -->
+    <div class="bottom-close-btn-wrapper">
+      <button class="bottom-close-btn" (click)="onClose()" aria-label="Close">
+        <i class="fas fa-arrow-down"></i>
+        <span>Close</span>
+      </button>
     </div>
   </div>
 </div>
