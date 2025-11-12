@@ -86,6 +86,7 @@
   padding: 40px 0;
   position: relative;
   margin: 0;
+  margin-bottom: 60px;
 }
 
 .instagram ul {
@@ -532,6 +533,23 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   text-align: left !important;
+}
+
+/* Click indicator */
+.click-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 15px;
+  color: #62b323;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.click-indicator i {
+  font-size: 14px;
 }
 
 /* ===== Project Popup Styling ===== */
@@ -1242,5 +1260,66 @@
   .popup-nav-btn {
     width: 40px;
     height: 40px;
+  }
+}
+
+/* ===== Scroll to Top Button ===== */
+.scroll-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #7ed957 0%, #6bc742 100%);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(126, 217, 87, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+}
+
+.scroll-to-top.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-to-top:hover {
+  background: linear-gradient(135deg, #6bc742 0%, #7ed957 100%);
+  transform: translateY(-5px);
+  box-shadow: 0 6px 20px rgba(126, 217, 87, 0.6);
+}
+
+.scroll-to-top:active {
+  transform: translateY(-2px);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .scroll-to-top {
+    bottom: 20px;
+    right: 20px;
+    width: 55px;
+    height: 55px;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-to-top {
+    bottom: 15px;
+    right: 15px;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
   }
 }
