@@ -629,15 +629,42 @@
   transform: rotate(90deg);
 }
 
-.popup-nav-btn {
+/* Navigation buttons in footer (mobile) */
+.popup-footer-section .popup-nav-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #66bb6a;
+  border: 2px solid #66bb6a;
+  color: #fff;
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 187, 106, 0.3);
+  flex-shrink: 0;
+}
+
+.popup-footer-section .popup-nav-btn:hover {
+  background: #62b323;
+  color: #fff;
+  border-color: #62b323;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(98, 179, 35, 0.3);
+}
+
+/* Desktop navigation arrows (outside popup) */
+.popup-nav-btn-desktop {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
+  background: #fff;
+  border: 2px solid #e0e0e0;
   color: #333;
   font-size: 20px;
   cursor: pointer;
@@ -646,31 +673,33 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-.popup-nav-btn:hover {
+.popup-nav-btn-desktop:hover {
   background: #62b323;
   color: #fff;
+  border-color: #62b323;
   transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 25px rgba(98, 179, 35, 0.4);
 }
 
-/* Position arrows outside the popup container on large screens */
-.popup-nav-btn.prev {
+/* Position desktop arrows outside the popup container */
+.popup-nav-btn-desktop.prev {
   left: calc((100vw - 900px) / 2 - 70px);
 }
 
-.popup-nav-btn.next {
+.popup-nav-btn-desktop.next {
   right: calc((100vw - 900px) / 2 - 70px);
 }
 
 /* For screens smaller than container + arrows space */
 @media (max-width: 1100px) {
-  .popup-nav-btn.prev {
+  .popup-nav-btn-desktop.prev {
     left: 20px;
   }
 
-  .popup-nav-btn.next {
+  .popup-nav-btn-desktop.next {
     right: 20px;
   }
 }
@@ -714,7 +743,7 @@
 
 .popup-details {
   padding: 30px;
-  padding-bottom: 120px;
+  padding-bottom: 100px;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -854,51 +883,62 @@
   font-style: italic;
 }
 
-/* Bottom close button for mobile */
-.popup-bottom-close-wrapper {
-  display: block !important;
-  text-align: center;
-  width: 100%;
-  position: fixed;
-  bottom: 20px;
+/* Fixed footer section - stays at bottom of popup */
+.popup-footer-section {
+  position: absolute;
+  bottom: 0;
   left: 0;
   right: 0;
-  z-index: 200;
-  pointer-events: none;
+  width: 100%;
+  background: #fff;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  border-radius: 0 0 16px 16px;
+}
+
+.popup-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 500px;
+  width: 100%;
 }
 
 .popup-bottom-close-btn {
-  background: #66bb6a !important;
-  color: white !important;
+  background: #66bb6a;
+  color: white;
   border: none;
-  border-radius: 30px;
-  padding: 14px 35px;
-  font-size: 16px;
+  border-radius: 28px;
+  padding: 11px 28px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  min-width: 150px;
-  pointer-events: auto;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+  min-width: 130px;
 }
 
 .popup-bottom-close-btn:hover {
-  background: #558b59 !important;
+  background: #558b59;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .popup-bottom-close-btn:active {
   transform: translateY(0px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .popup-bottom-close-btn i {
-  font-size: 18px;
+  font-size: 17px;
   animation: bounceDown 2s infinite;
 }
 
@@ -914,20 +954,28 @@
   }
 }
 
-/* On tablet and desktop, constrain button to popup width */
+/* Desktop: Hide footer, show side arrows */
 @media (min-width: 769px) {
-  .popup-bottom-close-wrapper {
-    display: none !important;
+  .popup-footer-section {
+    display: none;
+  }
+
+  .popup-nav-btn-desktop {
+    display: flex;
   }
 }
 
-/* On mobile landscape and small tablets, center the button */
-@media (max-width: 768px) and (min-width: 481px) {
-  .popup-bottom-close-wrapper {
-    max-width: 900px;
-    margin: 0 auto;
+/* Mobile/Tablet: Show footer, hide side arrows */
+@media (max-width: 768px) {
+  .popup-nav-btn-desktop {
+    display: none;
+  }
+
+  .popup-footer-section {
+    display: flex;
   }
 }
+
 
 /* ===== RESPONSIVE STYLES ===== */
 
@@ -957,7 +1005,7 @@
 
   .popup-details {
     padding: 25px 20px;
-    padding-bottom: 140px;
+    padding-bottom: 110px;
   }
 
   .popup-details h2 {
@@ -976,28 +1024,13 @@
     font-size: 14px;
   }
 
-  /* Move navigation buttons to bottom near close button */
-  .popup-nav-btn {
-    top: auto !important;
-    bottom: 25px;
-    transform: none !important;
-    width: 45px;
-    height: 45px;
-    background: rgba(255, 255, 255, 0.95);
+  /* Footer adjustments for tablet */
+  .popup-footer-section {
+    padding: 14px 15px;
   }
 
-  .popup-nav-btn:hover {
-    transform: scale(1.05) !important;
-  }
-
-  .popup-nav-btn.prev {
-    left: auto !important;
-    right: calc(50% + 90px);
-  }
-
-  .popup-nav-btn.next {
-    right: auto !important;
-    left: calc(50% + 90px);
+  .popup-footer-content {
+    gap: 12px;
   }
 
   /* Slider */
@@ -1256,10 +1289,29 @@
     right: 10px;
   }
 
-  /* Nav buttons sized smaller on very small screens */
-  .popup-nav-btn {
-    width: 40px;
-    height: 40px;
+  /* Footer adjustments for small mobile */
+  .popup-footer-section {
+    padding: 12px;
+  }
+
+  .popup-footer-content {
+    gap: 10px;
+  }
+
+  .popup-footer-section .popup-nav-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .popup-bottom-close-btn {
+    padding: 10px 22px;
+    font-size: 14px;
+    min-width: 110px;
+  }
+
+  .popup-bottom-close-btn i {
+    font-size: 15px;
   }
 }
 

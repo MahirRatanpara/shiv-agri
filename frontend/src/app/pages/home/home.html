@@ -241,24 +241,40 @@
       </div>
     </div>
 
-    <!-- Bottom close button for mobile -->
-    <div class="popup-bottom-close-wrapper">
-      <button class="popup-bottom-close-btn" (click)="closePopup()" aria-label="Close popup">
-        <i class="fas fa-arrow-down"></i>
-        <span>Close</span>
-      </button>
+    <!-- Fixed footer section with navigation controls -->
+    <div class="popup-footer-section">
+      <div class="popup-footer-content">
+        <button class="popup-nav-btn prev"
+                (click)="navigateProject('prev'); $event.stopPropagation()"
+                *ngIf="projects.length > 1"
+                aria-label="Previous project">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <button class="popup-bottom-close-btn" (click)="closePopup()" aria-label="Close popup">
+          <i class="fas fa-arrow-down"></i>
+          <span>Close</span>
+        </button>
+
+        <button class="popup-nav-btn next"
+                (click)="navigateProject('next'); $event.stopPropagation()"
+                *ngIf="projects.length > 1"
+                aria-label="Next project">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Navigation arrows outside the popup container -->
-  <button class="popup-nav-btn prev"
+  <!-- Navigation arrows outside the popup container (desktop only) -->
+  <button class="popup-nav-btn-desktop prev"
           (click)="navigateProject('prev'); $event.stopPropagation()"
           *ngIf="projects.length > 1"
           aria-label="Previous project">
     <i class="fas fa-chevron-left"></i>
   </button>
 
-  <button class="popup-nav-btn next"
+  <button class="popup-nav-btn-desktop next"
           (click)="navigateProject('next'); $event.stopPropagation()"
           *ngIf="projects.length > 1"
           aria-label="Next project">
