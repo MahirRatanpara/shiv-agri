@@ -584,7 +584,7 @@
   border-radius: 16px;
   max-width: 900px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.4s ease;
@@ -743,10 +743,11 @@
 
 .popup-details {
   padding: 30px;
-  padding-bottom: 100px;
+  padding-bottom: 120px;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .popup-header {
@@ -809,7 +810,7 @@
 
 /* Custom scrollbar for popup details section */
 .popup-details::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 
 .popup-details::-webkit-scrollbar-track {
@@ -823,6 +824,25 @@
 }
 
 .popup-details::-webkit-scrollbar-thumb:hover {
+  background: #558b59;
+}
+
+/* Scrollbar for popup content */
+.project-popup-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.project-popup-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.project-popup-content::-webkit-scrollbar-thumb {
+  background: #66bb6a;
+  border-radius: 10px;
+}
+
+.project-popup-content::-webkit-scrollbar-thumb:hover {
   background: #558b59;
 }
 
@@ -1005,7 +1025,9 @@
 
   .popup-details {
     padding: 25px 20px;
-    padding-bottom: 110px;
+    padding-bottom: 130px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .popup-details h2 {
@@ -1262,12 +1284,14 @@
 
   .project-popup-container {
     border-radius: 0;
-    max-height: 100vh;
-    height: 100vh;
+    max-height: 95vh;
+    height: 95vh;
   }
 
   .project-popup-content {
-    height: 100vh;
+    max-height: calc(95vh - 70px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .popup-image {
@@ -1276,6 +1300,9 @@
 
   .popup-details {
     padding: 20px;
+    padding-bottom: 120px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .popup-details h2 {
@@ -1337,6 +1364,9 @@
   visibility: hidden;
   transform: translateY(20px);
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .scroll-to-top.show {
@@ -1353,6 +1383,7 @@
 
 .scroll-to-top:active {
   transform: translateY(-2px);
+  background: linear-gradient(135deg, #5ab03e 0%, #6bc742 100%);
 }
 
 /* Mobile adjustments */
