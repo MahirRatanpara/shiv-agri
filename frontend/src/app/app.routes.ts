@@ -17,7 +17,6 @@ import { TestimonialsComponent } from './pages/testimonials/testimonials';
 import { DonationComponent } from './pages/donation/donation';
 import { MyAccountComponent } from './pages/my-account/my-account';
 import { ContactComponent } from './pages/contact/contact';
-import { PaymentComponent } from './pages/payment/payment';
 import { NotFoundComponent } from './pages/not-found/not-found';
 
 export const routes: Routes = [
@@ -40,7 +39,6 @@ export const routes: Routes = [
   { path: 'testimonials', component: TestimonialsComponent },
   { path: 'donation', component: DonationComponent },
   { path: 'my-account', component: MyAccountComponent },
-  { path: 'payment', component: PaymentComponent },
   { path: 'contact', component: ContactComponent },
   { path: '404', component: NotFoundComponent },
   { path: '**', redirectTo: '/404' }
