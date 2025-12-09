@@ -1,0 +1,195 @@
+<div class="soil-testing-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container">
+      <div class="header-content">
+        <div class="title-section">
+          <h1 class="page-title">
+            <i class="fas fa-vial"></i>
+            Soil Testing Dashboard
+          </h1>
+          <p class="page-subtitle">Manage and analyze soil test results with automatic calculations</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container-fluid main-content">
+    <!-- Loading State -->
+    <div class="session-card" *ngIf="isLoading">
+      <div class="session-info">
+        <h2><i class="fas fa-spinner fa-spin"></i> Connecting to Backend...</h2>
+        <p>Please wait while we connect to the server</p>
+      </div>
+    </div>
+
+    <!-- Backend Disconnected State -->
+    <div class="session-card error-card" *ngIf="!isLoading && !isBackendConnected && !sessionActive">
+      <div class="session-info">
+        <h2><i class="fas fa-exclamation-triangle"></i> Backend Connection Failed</h2>
+        <p class="error-message">Cannot connect to the backend server.</p>
+        <p class="error-message">Please ensure the backend is running on <strong>http://localhost:3000</strong></p>
+        <p class="session-details">
+          <strong>To start the backend:</strong>
+        </p>
+        <code style="display: block; margin: 1rem 0; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+          cd backend<br>
+          npm start
+        </code>
+      </div>
+      <button class="btn btn-info btn-lg" (click)="checkBackendConnection()">
+        <i class="fas fa-sync"></i>
+        Retry Connection
+      </button>
+    </div>
+
+    <!-- Session Management -->
+    <div class="session-management" *ngIf="!isLoading && isBackendConnected && !sessionActive">
+      <!-- Quick Actions Bar -->
+      <div class="quick-actions">
+        <button class="btn btn-primary" (click)="startNewSession()" [disabled]="!isBackendConnected">
+          <i class="fas fa-plus"></i>
+          Start New Session
+        </button>
+      </div>
+
+      <!-- Session History -->
+      <div class="session-history-card">
+        <div class="history-header">
+          <h3>
+            <i class="fas fa-history"></i>
+            Session History
+          </h3>
+          <span class="session-count">{{ allSessions.length }} total sessions</span>
+        </div>
+
+        <div class="sessions-list" *ngIf="allSessions.length > 0">
+          <div class="session-item" *ngFor="let session of paginatedSessions">
+            <div class="session-main-info">
+              <div class="session-badge-info">
+                <span class="session-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ session.date | date:'mediumDate' }}
+                </span>
+                <span class="session-version">Version {{ session.version }}</span>
+              </div>
+              <div class="session-metadata">
+                <span class="session-time">
+                  <i class="fas fa-clock"></i>
+                  {{ session.startTime | date:'shortTime' }}
+                  <span *ngIf="session.endTime"> - {{ session.endTime | date:'shortTime' }}</span>
+                </span>
+                <span class="session-records">
+                  <i class="fas fa-database"></i>
+                  {{ session.data.length || 0 }} records
+                </span>
+                <span class="session-status" [ngClass]="session.endTime ? 'completed' : 'in-progress'">
+                  <i [class]="session.endTime ? 'fas fa-check-circle' : 'fas fa-circle'"></i>
+                  {{ session.endTime ? 'Completed' : 'In Progress' }}
+                </span>
+              </div>
+            </div>
+            <div class="session-actions">
+              <button class="btn btn-sm btn-info" (click)="resumeSession(session)">
+                <i class="fas fa-eye"></i>
+                View/Resume
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="allSessions.length === 0">
+          <i class="fas fa-inbox"></i>
+          <p>No sessions found</p>
+          <p class="empty-hint">Click "Start New Session" to create your first session</p>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Session Header -->
+    <div class="active-session-header" *ngIf="sessionActive">
+      <div class="session-badge">
+        <i class="fas fa-circle pulse-icon"></i>
+        <span>Active Session</span>
+      </div>
+      <div class="session-metadata">
+        <span class="session-date" *ngIf="currentSession">
+          <i class="fas fa-calendar"></i>
+          {{ getFormattedDate(currentSession.date) }}
+        </span>
+        <span class="session-version">
+          <i class="fas fa-hashtag"></i>
+          Version {{ currentSession?.version }}
+        </span>
+        <span class="session-time">
+          <i class="fas fa-clock"></i>
+          Started: {{ currentSession?.startTime | date:'short' }}
+        </span>
+      </div>
+      <div class="session-actions-header">
+        <button class="btn btn-warning" (click)="saveAndExit()">
+          <i class="fas fa-save"></i>
+          Save & Exit
+        </button>
+        <button class="btn btn-success" (click)="completeSession()">
+          <i class="fas fa-check-circle"></i>
+          Complete Session
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" *ngIf="sessionActive">
+      <div class="toolbar-left">
+        <button class="btn btn-primary" (click)="addNewRow()">
+          <i class="fas fa-plus"></i>
+          Add Row
+        </button>
+        <button class="btn btn-danger" (click)="deleteSelectedRows()">
+          <i class="fas fa-trash"></i>
+          Delete Selected
+        </button>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-info" (click)="exportToCsv()">
+          <i class="fas fa-file-csv"></i>
+          Export to CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <div class="grid-wrapper" *ngIf="sessionActive">
+      <ag-grid-angular
+        class="ag-theme-alpine soil-testing-grid"
+        [rowData]="rowData"
+        [columnDefs]="colDefs"
+        [defaultColDef]="defaultColDef"
+        [animateRows]="true"
+        [rowSelection]="'multiple'"
+        [pagination]="true"
+        [paginationPageSize]="20"
+        [paginationPageSizeSelector]="[10, 20, 50, 100]"
+        (gridReady)="onGridReady($event)"
+        (cellValueChanged)="onCellValueChanged($event)"
+        [enableCellChangeFlash]="true"
+        [suppressMovableColumns]="false"
+        [enableRangeSelection]="true"
+        [enableCharts]="true"
+        [sideBar]="true"
+      ></ag-grid-angular>
+    </div>
+  </div>
+</div>

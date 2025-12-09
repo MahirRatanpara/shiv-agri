@@ -1,6 +1,7 @@
-import { Component, AfterViewInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, AfterViewInit, OnInit } from '@angular/core';
+import { RouterLink, Router } from '@angular/router';
 import {CommonModule, NgOptimizedImage} from '@angular/common';
+import { AuthService, User } from '../../services/auth.service';
 
 declare var $: any;
 
@@ -10,7 +11,36 @@ declare var $: any;
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
-export class HeaderComponent implements AfterViewInit {
+export class HeaderComponent implements AfterViewInit, OnInit {
+  currentUser: User | null = null;
+  isAuthenticated = false;
+
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    // Subscribe to current user changes
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+      this.isAuthenticated = !!user;
+    });
+  }
+
+  logout(): void {
+    if (confirm('Are you sure you want to logout?')) {
+      this.authService.logout().subscribe({
+        next: () => {
+          this.router.navigate(['/login']);
+        },
+        error: (error) => {
+          console.error('Logout error:', error);
+          this.router.navigate(['/login']);
+        }
+      });
+    }
+  }
 
   ngAfterViewInit(): void {
     // Manual toggle for mobile menu

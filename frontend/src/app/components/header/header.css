@@ -37,6 +37,43 @@
   font-size: 1.5rem;
 }
 
+/* Auth navigation */
+.auth-nav {
+  margin-left: auto;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.user-avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.logout-link {
+  cursor: pointer;
+}
+
+.logout-link:hover {
+  opacity: 0.8;
+}
+
 /* ===== RESPONSIVE STYLES ===== */
 
 /* Tablet and below (991px) */
