@@ -497,6 +497,49 @@
   background: linear-gradient(135deg, #32d86a 0%, #27e8c6 100%);
 }
 
+.btn-pdf {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+}
+
+.btn-pdf:hover {
+  background: linear-gradient(135deg, #ee5a6f 0%, #dd495e 100%);
+}
+
+.btn-pdf-combined {
+  background: linear-gradient(135deg, #ff9068 0%, #fd868c 100%);
+  color: white;
+}
+
+.btn-pdf-combined:hover {
+  background: linear-gradient(135deg, #fd868c 0%, #fc757b 100%);
+}
+
+.btn-pdf-action {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-pdf-action:hover {
+  background: linear-gradient(135deg, #ee5a6f 0%, #dd495e 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(238, 90, 111, 0.3);
+}
+
+.btn-pdf-action i {
+  font-size: 0.9rem;
+}
+
 /* Info Cards */
 .info-cards {
   display: grid;

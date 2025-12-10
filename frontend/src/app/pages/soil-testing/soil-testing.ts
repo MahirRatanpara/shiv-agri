@@ -9,12 +9,13 @@ import {
   ModuleRegistry,
 } from 'ag-grid-community';
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
+import { ReportGeneratorService, ReportData } from '../../services/report-generator.service';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular],
-  providers: [SoilTestingService],
+  providers: [SoilTestingService, ReportGeneratorService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
 })
@@ -256,6 +257,21 @@ export class SoilTestingComponent implements OnInit {
       cellEditor: 'agLargeTextCellEditor',
       cellEditorPopup: true,
     },
+    {
+      headerName: 'Actions',
+      cellRenderer: (params: any) => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm btn-pdf-action';
+        button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+        button.addEventListener('click', () => this.downloadSinglePdf(params.data));
+        return button;
+      },
+      minWidth: 120,
+      maxWidth: 120,
+      pinned: 'right',
+      sortable: false,
+      filter: false,
+    },
   ];
 
   // Default column definitions
@@ -271,7 +287,10 @@ export class SoilTestingComponent implements OnInit {
   // Row Data
   rowData: SoilTestingData[] = [];
 
-  constructor(private soilTestingService: SoilTestingService) {
+  constructor(
+    private soilTestingService: SoilTestingService,
+    private reportGeneratorService: ReportGeneratorService
+  ) {
     console.log('SoilTestingComponent: Constructor called');
     console.log('SoilTestingService injected:', this.soilTestingService);
   }
@@ -396,13 +415,8 @@ export class SoilTestingComponent implements OnInit {
       return;
     }
 
-    // Get all row data from the grid to ensure we have latest data
-    const allGridData: SoilTestingData[] = [];
-    this.gridApi.forEachNode(node => {
-      if (node.data) {
-        allGridData.push(node.data);
-      }
-    });
+    // Get all row data from the grid with calculated values
+    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
       endTime: null as any, // Explicitly remove endTime to mark as in-progress
@@ -444,13 +458,8 @@ export class SoilTestingComponent implements OnInit {
       return;
     }
 
-    // Get all row data from the grid to ensure we have latest data
-    const allGridData: SoilTestingData[] = [];
-    this.gridApi.forEachNode(node => {
-      if (node.data) {
-        allGridData.push(node.data);
-      }
-    });
+    // Get all row data from the grid with calculated values
+    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
       endTime: new Date().toISOString(),
@@ -590,6 +599,216 @@ export class SoilTestingComponent implements OnInit {
     this.gridApi.exportDataAsCsv({
       fileName: `soil-testing-${new Date().toISOString().split('T')[0]}.csv`,
     });
+  }
+
+  /**
+   * Extract all row data from grid including calculated values
+   */
+  private extractGridDataWithCalculatedValues(): SoilTestingData[] {
+    const allGridData: SoilTestingData[] = [];
+    this.gridApi.forEachNode(node => {
+      if (node.data) {
+        // Get all values from the grid to ensure we capture popup editor changes
+        const completeData: SoilTestingData = {
+          farmersName: this.gridApi.getValue('farmersName', node) || '',
+          mobileNo: this.gridApi.getValue('mobileNo', node) || '',
+          location: this.gridApi.getValue('location', node) || '',
+          farmsName: this.gridApi.getValue('farmsName', node) || '',
+          taluka: this.gridApi.getValue('taluka', node) || '',
+          ph: this.gridApi.getValue('ph', node),
+          ec: this.gridApi.getValue('ec', node),
+          ocBlank: this.gridApi.getValue('ocBlank', node),
+          ocStart: this.gridApi.getValue('ocStart', node),
+          ocEnd: this.gridApi.getValue('ocEnd', node),
+          p2o5R: this.gridApi.getValue('p2o5R', node),
+          k2oR: this.gridApi.getValue('k2oR', node),
+          ocDifference: this.gridApi.getValue('ocDifference', node),
+          ocPercent: this.gridApi.getValue('ocPercent', node),
+          p2o5: this.gridApi.getValue('p2o5', node),
+          k2o: this.gridApi.getValue('k2o', node),
+          organicMatter: this.gridApi.getValue('organicMatter', node),
+          cropName: this.gridApi.getValue('cropName', node) || '',
+          finalDeduction: this.gridApi.getValue('finalDeduction', node) || '',
+        };
+
+        // Debug logging for troubleshooting
+        console.log('Extracted row data:', {
+          farmersName: completeData.farmersName,
+          cropName: completeData.cropName,
+          finalDeduction: completeData.finalDeduction?.substring(0, 50),
+          ocDifference: completeData.ocDifference,
+          ocPercent: completeData.ocPercent,
+          p2o5: completeData.p2o5,
+          k2o: completeData.k2o,
+          organicMatter: completeData.organicMatter
+        });
+
+        allGridData.push(completeData);
+      }
+    });
+
+    console.log(`Extracted ${allGridData.length} rows with all fields`);
+    return allGridData;
+  }
+
+  /**
+   * Save current session data silently (without exiting)
+   */
+  private async saveCurrentSession(): Promise<void> {
+    if (!this.currentSession || !this.currentSession._id) {
+      return Promise.reject('No active session to save');
+    }
+
+    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+
+    const updates = {
+      data: allGridData
+    };
+
+    return new Promise((resolve, reject) => {
+      this.soilTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
+        next: (session) => {
+          console.log('Session auto-saved before PDF generation:', session.data?.length, 'records');
+          // Update current session with saved data
+          this.currentSession = session;
+          this.rowData = session.data || [];
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error auto-saving session:', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // ===== PDF GENERATION METHODS =====
+
+  /**
+   * Download PDF for a single row
+   */
+  async downloadSinglePdf(data: SoilTestingData) {
+    try {
+      console.log('📥 Starting PDF download - saving to database first...');
+
+      // STEP 1: Save session to database and wait for completion
+      await this.saveCurrentSession();
+      console.log('✅ Database save complete. Proceeding with PDF generation...');
+
+      // STEP 2: Use the saved data from currentSession to ensure consistency
+      const savedRow = this.currentSession?.data?.find(row =>
+        row.farmersName === data.farmersName && row.mobileNo === data.mobileNo
+      ) || data;
+
+      const reportData: ReportData = {
+        ...savedRow,
+        sessionDate: this.currentSession?.date,
+        reportDate: new Date().toISOString().split('T')[0],
+        sessionVersion: this.currentSession?.version
+      };
+
+      // STEP 3: Generate PDF from saved data
+      await this.reportGeneratorService.generateSingleReport(reportData);
+      console.log('✅ PDF generated successfully for:', savedRow.farmersName);
+    } catch (error) {
+      console.error('❌ Error generating PDF:', error);
+      alert('Failed to generate PDF report. Please check the console for details.');
+    }
+  }
+
+  /**
+   * Download all PDFs (individual files)
+   */
+  async downloadAllPdfs() {
+    if (this.rowData.length === 0) {
+      alert('No data available to generate reports');
+      return;
+    }
+
+    try {
+      console.log('📥 Starting bulk PDF download - saving to database first...');
+
+      // STEP 1: Save session to database and wait for completion
+      await this.saveCurrentSession();
+      console.log('✅ Database save complete. Proceeding with bulk PDF generation...');
+
+      // STEP 2: Use saved data from currentSession (guaranteed to be in DB)
+      const reportDataArray: ReportData[] = (this.currentSession?.data || []).map(data => ({
+        ...data,
+        sessionDate: this.currentSession?.date,
+        reportDate: new Date().toISOString().split('T')[0],
+        sessionVersion: this.currentSession?.version
+      }));
+
+      // STEP 3: Generate PDFs from saved data
+      await this.reportGeneratorService.generateBulkReports(
+        reportDataArray,
+        this.currentSession?.date,
+        this.currentSession?.version
+      );
+
+      console.log(`✅ Successfully generated ${reportDataArray.length} PDF reports from saved data`);
+    } catch (error) {
+      console.error('❌ Error generating bulk PDFs:', error);
+      alert('Failed to generate all PDF reports. Some reports may not have been downloaded.');
+    }
+  }
+
+  /**
+   * Download all data as a single combined PDF
+   */
+  async downloadCombinedPdf() {
+    if (this.rowData.length === 0) {
+      alert('No data available to generate reports');
+      return;
+    }
+
+    try {
+      console.log('📥 Starting combined PDF download - saving to database first...');
+
+      // STEP 1: Save session to database and wait for completion
+      await this.saveCurrentSession();
+      console.log('✅ Database save complete. Proceeding with combined PDF generation...');
+
+      // STEP 2: Use saved data from currentSession (guaranteed to be in DB)
+      const reportDataArray: ReportData[] = (this.currentSession?.data || []).map(data => ({
+        ...data,
+        sessionDate: this.currentSession?.date,
+        reportDate: new Date().toISOString().split('T')[0],
+        sessionVersion: this.currentSession?.version
+      }));
+
+      // STEP 3: Generate combined PDF from saved data
+      await this.reportGeneratorService.generateCombinedReport(
+        reportDataArray,
+        this.currentSession?.date,
+        this.currentSession?.version
+      );
+
+      console.log(`✅ Successfully generated combined PDF with ${reportDataArray.length} reports from saved data`);
+    } catch (error) {
+      console.error('❌ Error generating combined PDF:', error);
+      alert('Failed to generate combined PDF report.');
+    }
+  }
+
+  /**
+   * Preview PDF in new tab (optional utility)
+   */
+  async previewPdf(data: SoilTestingData) {
+    try {
+      const reportData: ReportData = {
+        ...data,
+        sessionDate: this.currentSession?.date,
+        reportDate: new Date().toISOString().split('T')[0],
+        sessionVersion: this.currentSession?.version
+      };
+
+      await this.reportGeneratorService.previewReport(reportData);
+    } catch (error) {
+      console.error('Error previewing PDF:', error);
+      alert('Failed to preview PDF report.');
+    }
   }
 
 }

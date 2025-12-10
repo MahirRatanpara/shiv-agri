@@ -49,11 +49,23 @@ const soilTestDataSchema = new mongoose.Schema({
     type: Number,
     default: null
   },
+  ocDifference: {
+    type: Number,
+    default: null
+  },
+  ocPercent: {
+    type: Number,
+    default: null
+  },
   p2o5: {
     type: Number,
     default: null
   },
   k2o: {
+    type: Number,
+    default: null
+  },
+  organicMatter: {
     type: Number,
     default: null
   },
