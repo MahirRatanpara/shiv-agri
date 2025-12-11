@@ -171,29 +171,19 @@ export class ReportGeneratorService {
       sessionDate: data.sessionDate || '',
       reportDate: data.reportDate || new Date().toISOString().split('T')[0],
 
-      // Classification fields (Gujarati)
-      phClassification: data.phClassification || '',
-      phLabel: data.phLabel || '',
-      ecClassification: data.ecClassification || '',
-      ecLabel: data.ecLabel || '',
-      nitrogenClassification: data.nitrogenClassification || '',
-      nitrogenLabel: data.nitrogenLabel || '',
-      phosphorusClassification: data.phosphorusClassification || '',
-      phosphorusLabel: data.phosphorusLabel || '',
-      potashClassification: data.potashClassification || '',
-      potashLabel: data.potashLabel || '',
+      // Classification result fields (Gujarati)
+      phResult: data.phResult || '',
+      ecResult: data.ecResult || '',
+      nitrogenResult: data.nitrogenResult || '',
+      phosphorusResult: data.phosphorusResult || '',
+      potashResult: data.potashResult || '',
 
-      // Classification fields (English)
-      phClassificationEn: data.phClassificationEn || '',
-      phLabelEn: data.phLabelEn || '',
-      ecClassificationEn: data.ecClassificationEn || '',
-      ecLabelEn: data.ecLabelEn || '',
-      nitrogenClassificationEn: data.nitrogenClassificationEn || '',
-      nitrogenLabelEn: data.nitrogenLabelEn || '',
-      phosphorusClassificationEn: data.phosphorusClassificationEn || '',
-      phosphorusLabelEn: data.phosphorusLabelEn || '',
-      potashClassificationEn: data.potashClassificationEn || '',
-      potashLabelEn: data.potashLabelEn || ''
+      // Classification result fields (English)
+      phResultEn: data.phResultEn || '',
+      ecResultEn: data.ecResultEn || '',
+      nitrogenResultEn: data.nitrogenResultEn || '',
+      phosphorusResultEn: data.phosphorusResultEn || '',
+      potashResultEn: data.potashResultEn || ''
     };
 
     // Fill each field

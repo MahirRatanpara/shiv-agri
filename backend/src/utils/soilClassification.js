@@ -231,35 +231,19 @@ function addClassifications(sampleData) {
 
   return {
     ...sampleData,
-    // pH classifications
-    phClassification: classifications.pH.classification,
-    phClassificationEn: classifications.pH.classificationEn,
-    phLabel: classifications.pH.label,
-    phLabelEn: classifications.pH.labelEn,
+    // Single result fields per parameter (Gujarati label or classification)
+    phResult: classifications.pH.label || classifications.pH.classification,
+    ecResult: classifications.EC.label || classifications.EC.classification,
+    nitrogenResult: classifications.nitrogen.label || classifications.nitrogen.classification,
+    phosphorusResult: classifications.phosphorus.label || classifications.phosphorus.classification,
+    potashResult: classifications.potash.label || classifications.potash.classification,
 
-    // EC classifications
-    ecClassification: classifications.EC.classification,
-    ecClassificationEn: classifications.EC.classificationEn,
-    ecLabel: classifications.EC.label,
-    ecLabelEn: classifications.EC.labelEn,
-
-    // Nitrogen/Organic Carbon classifications
-    nitrogenClassification: classifications.nitrogen.classification,
-    nitrogenClassificationEn: classifications.nitrogen.classificationEn,
-    nitrogenLabel: classifications.nitrogen.label,
-    nitrogenLabelEn: classifications.nitrogen.labelEn,
-
-    // Phosphorus classifications
-    phosphorusClassification: classifications.phosphorus.classification,
-    phosphorusClassificationEn: classifications.phosphorus.classificationEn,
-    phosphorusLabel: classifications.phosphorus.label,
-    phosphorusLabelEn: classifications.phosphorus.labelEn,
-
-    // Potash classifications
-    potashClassification: classifications.potash.classification,
-    potashClassificationEn: classifications.potash.classificationEn,
-    potashLabel: classifications.potash.label,
-    potashLabelEn: classifications.potash.labelEn
+    // English result fields
+    phResultEn: classifications.pH.labelEn || classifications.pH.classificationEn,
+    ecResultEn: classifications.EC.labelEn || classifications.EC.classificationEn,
+    nitrogenResultEn: classifications.nitrogen.labelEn || classifications.nitrogen.classificationEn,
+    phosphorusResultEn: classifications.phosphorus.labelEn || classifications.phosphorus.classificationEn,
+    potashResultEn: classifications.potash.labelEn || classifications.potash.classificationEn
   };
 }
 

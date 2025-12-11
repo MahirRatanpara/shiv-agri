@@ -102,92 +102,46 @@ const sampleSchema = new mongoose.Schema({
     trim: true
   },
 
-  // pH Classifications
-  phClassification: {
+  // Classification Results (Gujarati)
+  phResult: {
     type: String,
     default: ''
   },
-  phClassificationEn: {
+  ecResult: {
     type: String,
     default: ''
   },
-  phLabel: {
+  nitrogenResult: {
     type: String,
     default: ''
   },
-  phLabelEn: {
+  phosphorusResult: {
     type: String,
     default: ''
   },
-
-  // EC Classifications
-  ecClassification: {
-    type: String,
-    default: ''
-  },
-  ecClassificationEn: {
-    type: String,
-    default: ''
-  },
-  ecLabel: {
-    type: String,
-    default: ''
-  },
-  ecLabelEn: {
+  potashResult: {
     type: String,
     default: ''
   },
 
-  // Nitrogen/Organic Carbon Classifications
-  nitrogenClassification: {
+  // Classification Results (English)
+  phResultEn: {
     type: String,
     default: ''
   },
-  nitrogenClassificationEn: {
+  ecResultEn: {
     type: String,
     default: ''
   },
-  nitrogenLabel: {
+  nitrogenResultEn: {
     type: String,
     default: ''
   },
-  nitrogenLabelEn: {
+  phosphorusResultEn: {
     type: String,
     default: ''
   },
-
-  // Phosphorus Classifications
-  phosphorusClassification: {
-    type: String,
-    default: ''
-  },
-  phosphorusClassificationEn: {
-    type: String,
-    default: ''
-  },
-  phosphorusLabel: {
-    type: String,
-    default: ''
-  },
-  phosphorusLabelEn: {
-    type: String,
-    default: ''
-  },
-
-  // Potash Classifications
-  potashClassification: {
-    type: String,
-    default: ''
-  },
-  potashClassificationEn: {
-    type: String,
-    default: ''
-  },
-  potashLabel: {
-    type: String,
-    default: ''
-  },
-  potashLabelEn: {
+  potashResultEn: {
     type: String,
     default: ''
   }

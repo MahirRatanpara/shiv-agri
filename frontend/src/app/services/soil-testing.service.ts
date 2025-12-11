@@ -30,27 +30,19 @@ export interface SoilTestingData {
   createdAt?: string; // Added for referenced samples
   updatedAt?: string; // Added for referenced samples
 
-  // Classification fields (NEW)
-  phClassification?: string;
-  phClassificationEn?: string;
-  phLabel?: string;
-  phLabelEn?: string;
-  ecClassification?: string;
-  ecClassificationEn?: string;
-  ecLabel?: string;
-  ecLabelEn?: string;
-  nitrogenClassification?: string;
-  nitrogenClassificationEn?: string;
-  nitrogenLabel?: string;
-  nitrogenLabelEn?: string;
-  phosphorusClassification?: string;
-  phosphorusClassificationEn?: string;
-  phosphorusLabel?: string;
-  phosphorusLabelEn?: string;
-  potashClassification?: string;
-  potashClassificationEn?: string;
-  potashLabel?: string;
-  potashLabelEn?: string;
+  // Classification result fields (Gujarati label or classification)
+  phResult?: string;
+  ecResult?: string;
+  nitrogenResult?: string;
+  phosphorusResult?: string;
+  potashResult?: string;
+
+  // Classification result fields (English)
+  phResultEn?: string;
+  ecResultEn?: string;
+  nitrogenResultEn?: string;
+  phosphorusResultEn?: string;
+  potashResultEn?: string;
 }
 
 /**
