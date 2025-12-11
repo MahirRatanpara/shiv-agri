@@ -147,6 +147,8 @@ export class ReportGeneratorService {
 
     // Map data to form fields
     const fieldMapping: { [key: string]: string } = {
+      sampleId: data._id || '',  // Add sampleId (MongoDB _id)
+      date: data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],  // Add date
       farmerName: data.farmersName || '',
       mobileNumber: data.mobileNo || '',
       location: data.location || '',
@@ -167,7 +169,31 @@ export class ReportGeneratorService {
       cropName: data.cropName || '',
       finalDeduction: data.finalDeduction || '',
       sessionDate: data.sessionDate || '',
-      reportDate: data.reportDate || new Date().toISOString().split('T')[0]
+      reportDate: data.reportDate || new Date().toISOString().split('T')[0],
+
+      // Classification fields (Gujarati)
+      phClassification: data.phClassification || '',
+      phLabel: data.phLabel || '',
+      ecClassification: data.ecClassification || '',
+      ecLabel: data.ecLabel || '',
+      nitrogenClassification: data.nitrogenClassification || '',
+      nitrogenLabel: data.nitrogenLabel || '',
+      phosphorusClassification: data.phosphorusClassification || '',
+      phosphorusLabel: data.phosphorusLabel || '',
+      potashClassification: data.potashClassification || '',
+      potashLabel: data.potashLabel || '',
+
+      // Classification fields (English)
+      phClassificationEn: data.phClassificationEn || '',
+      phLabelEn: data.phLabelEn || '',
+      ecClassificationEn: data.ecClassificationEn || '',
+      ecLabelEn: data.ecLabelEn || '',
+      nitrogenClassificationEn: data.nitrogenClassificationEn || '',
+      nitrogenLabelEn: data.nitrogenLabelEn || '',
+      phosphorusClassificationEn: data.phosphorusClassificationEn || '',
+      phosphorusLabelEn: data.phosphorusLabelEn || '',
+      potashClassificationEn: data.potashClassificationEn || '',
+      potashLabelEn: data.potashLabelEn || ''
     };
 
     // Fill each field

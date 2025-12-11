@@ -2,7 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+/**
+ * SoilTestingData interface - represents a single soil test sample
+ * This can be either embedded (old API) or a separate document (new API)
+ */
 export interface SoilTestingData {
+  _id?: string; // Added for referenced samples
   farmersName: string;
   mobileNo: string;
   location: string;
@@ -22,15 +27,61 @@ export interface SoilTestingData {
   organicMatter?: number | null; // Auto-calculated
   cropName: string;
   finalDeduction: string;
+  createdAt?: string; // Added for referenced samples
+  updatedAt?: string; // Added for referenced samples
+
+  // Classification fields (NEW)
+  phClassification?: string;
+  phClassificationEn?: string;
+  phLabel?: string;
+  phLabelEn?: string;
+  ecClassification?: string;
+  ecClassificationEn?: string;
+  ecLabel?: string;
+  ecLabelEn?: string;
+  nitrogenClassification?: string;
+  nitrogenClassificationEn?: string;
+  nitrogenLabel?: string;
+  nitrogenLabelEn?: string;
+  phosphorusClassification?: string;
+  phosphorusClassificationEn?: string;
+  phosphorusLabel?: string;
+  phosphorusLabelEn?: string;
+  potashClassification?: string;
+  potashClassificationEn?: string;
+  potashLabel?: string;
+  potashLabelEn?: string;
 }
 
+/**
+ * Session interface - represents a soil testing session
+ * Note: 'data' is maintained for backward compatibility but is now populated from separate Sample collection
+ */
 export interface Session {
   _id?: string;
   date: string;
   version: number;
   startTime: string;
   endTime?: string;
-  data: SoilTestingData[];
+  status?: 'active' | 'completed' | 'archived'; // New field
+  sampleCount?: number; // New field - denormalized count
+  lastActivity?: string; // New field - tracks when session was last modified
+  data: SoilTestingData[]; // Populated from SoilTestSample collection
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Sample pagination response
+ */
+export interface SamplePaginationResponse {
+  samples: SoilTestingData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 @Injectable({
@@ -83,5 +134,66 @@ export class SoilTestingService {
   // Delete a session
   deleteSession(id: string): Observable<{ message: string; session: Session }> {
     return this.http.delete<{ message: string; session: Session }>(`${this.apiUrl}/sessions/${id}`);
+  }
+
+  // ========================================
+  // NEW SAMPLE-SPECIFIC METHODS
+  // ========================================
+
+  /**
+   * Get paginated samples for a session
+   * @param sessionId - The session ID
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 100)
+   */
+  getSamplesForSession(sessionId: string, page: number = 1, limit: number = 100): Observable<SamplePaginationResponse> {
+    return this.http.get<SamplePaginationResponse>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+      params: { page: page.toString(), limit: limit.toString() }
+    });
+  }
+
+  /**
+   * Create a new sample for a session
+   * @param sessionId - The session ID
+   * @param sampleData - The sample data
+   */
+  createSample(sessionId: string, sampleData: Partial<SoilTestingData>): Observable<SoilTestingData> {
+    return this.http.post<SoilTestingData>(`${this.apiUrl}/sessions/${sessionId}/samples`, sampleData);
+  }
+
+  /**
+   * Get a specific sample by ID
+   * @param sampleId - The sample ID
+   */
+  getSampleById(sampleId: string): Observable<SoilTestingData> {
+    return this.http.get<SoilTestingData>(`${this.apiUrl}/samples/${sampleId}`);
+  }
+
+  /**
+   * Update a sample
+   * @param sampleId - The sample ID
+   * @param updates - The fields to update
+   */
+  updateSample(sampleId: string, updates: Partial<SoilTestingData>): Observable<SoilTestingData> {
+    return this.http.put<SoilTestingData>(`${this.apiUrl}/samples/${sampleId}`, updates);
+  }
+
+  /**
+   * Delete a sample
+   * @param sampleId - The sample ID
+   */
+  deleteSample(sampleId: string): Observable<{ message: string; sample: SoilTestingData }> {
+    return this.http.delete<{ message: string; sample: SoilTestingData }>(`${this.apiUrl}/samples/${sampleId}`);
+  }
+
+  /**
+   * Bulk delete samples
+   * @param sessionId - The session ID
+   * @param sampleIds - Array of sample IDs to delete
+   */
+  deleteSamplesBulk(sessionId: string, sampleIds: string[]): Observable<{ message: string; deletedCount: number }> {
+    return this.http.delete<{ message: string; deletedCount: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+      body: { sampleIds }
+    });
   }
 }
