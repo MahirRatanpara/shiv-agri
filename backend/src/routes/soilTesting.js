@@ -3,10 +3,10 @@ const router = express.Router();
 const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
 const { addClassifications } = require('../utils/soilClassification');
+const logger = require('../utils/logger');
 
-console.log('✅ SoilSample model loaded - USING REFERENCED MODE');
-console.log('   Samples stored in separate "soil_samples" collection');
-console.log('   ✅ Soil classification system enabled');
+logger.info('Soil Testing routes initialized - Using referenced mode with separate collections');
+logger.info('Soil classification system enabled');
 
 // Get all sessions with their samples
 router.get('/sessions', async (req, res) => {
@@ -21,20 +21,10 @@ router.get('/sessions', async (req, res) => {
       sessionsWithSamples.push(sessionObj);
     }
 
-    console.log(`\n🔍 GET /sessions - Retrieved ${sessionsWithSamples.length} sessions`);
-    if (sessionsWithSamples.length > 0 && sessionsWithSamples[0].data.length > 0) {
-      const firstSample = sessionsWithSamples[0].data[0];
-      console.log(`  First sample of first session - results:`);
-      console.log(`    pH: "${firstSample.phResult}" / "${firstSample.phResultEn}"`);
-      console.log(`    EC: "${firstSample.ecResult}" / "${firstSample.ecResultEn}"`);
-      console.log(`    Nitrogen: "${firstSample.nitrogenResult}" / "${firstSample.nitrogenResultEn}"`);
-      console.log(`    Phosphorus: "${firstSample.phosphorusResult}" / "${firstSample.phosphorusResultEn}"`);
-      console.log(`    Potash: "${firstSample.potashResult}" / "${firstSample.potashResultEn}"`);
-    }
-
+    logger.info(`Retrieved ${sessionsWithSamples.length} sessions with samples`);
     res.json(sessionsWithSamples);
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    logger.error(`Error fetching sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
   }
 });
@@ -53,9 +43,10 @@ router.get('/sessions/date/:date', async (req, res) => {
       sessionsWithSamples.push(sessionObj);
     }
 
+    logger.info(`Retrieved ${sessionsWithSamples.length} sessions for date ${date}`);
     res.json(sessionsWithSamples);
   } catch (error) {
-    console.error('Error fetching sessions by date:', error);
+    logger.error(`Error fetching sessions by date: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
   }
 });
@@ -65,9 +56,10 @@ router.get('/sessions/count/:date', async (req, res) => {
   try {
     const { date } = req.params;
     const count = await SoilSession.countDocuments({ date });
+    logger.debug(`Session count for ${date}: ${count}`);
     res.json({ date, count });
   } catch (error) {
-    console.error('Error counting sessions:', error);
+    logger.error(`Error counting sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to count sessions' });
   }
 });
@@ -77,28 +69,19 @@ router.get('/sessions/:id', async (req, res) => {
   try {
     const session = await SoilSession.findById(req.params.id);
     if (!session) {
+      logger.warn(`Session not found: ${req.params.id}`);
       return res.status(404).json({ error: 'Session not found' });
     }
 
     const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
-
-    console.log(`\n🔍 GET /sessions/${req.params.id} - Retrieved ${samples.length} samples`);
-    if (samples.length > 0) {
-      const firstSample = samples[0];
-      console.log(`  First sample results:`);
-      console.log(`    pH: "${firstSample.phResult}" / "${firstSample.phResultEn}"`);
-      console.log(`    EC: "${firstSample.ecResult}" / "${firstSample.ecResultEn}"`);
-      console.log(`    Nitrogen: "${firstSample.nitrogenResult}" / "${firstSample.nitrogenResultEn}"`);
-      console.log(`    Phosphorus: "${firstSample.phosphorusResult}" / "${firstSample.phosphorusResultEn}"`);
-      console.log(`    Potash: "${firstSample.potashResult}" / "${firstSample.potashResultEn}"`);
-    }
+    logger.debug(`Retrieved session ${req.params.id} with ${samples.length} samples`);
 
     const sessionObj = session.toObject();
     sessionObj.data = samples;
 
     res.json(sessionObj);
   } catch (error) {
-    console.error('Error fetching session:', error);
+    logger.error(`Error fetching session ${req.params.id}: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch session' });
   }
 });
@@ -110,10 +93,9 @@ router.post('/sessions', async (req, res) => {
 
     const existingSession = await SoilSession.findOne({ date, version });
     if (existingSession) {
+      logger.warn(`Session already exists for ${date} v${version}`);
       return res.status(409).json({ error: 'Session with this date and version already exists' });
     }
-
-    console.log(`📝 Creating new session for ${date} v${version}`);
 
     const session = new SoilSession({
       date,
@@ -125,14 +107,14 @@ router.post('/sessions', async (req, res) => {
     });
 
     const savedSession = await session.save();
-    console.log(`  ✅ SoilSession created: ${savedSession._id}`);
+    logger.info(`Created session ${savedSession._id} for ${date} v${version}`);
 
     const responseSession = savedSession.toObject();
     responseSession.data = [];
 
     res.status(201).json(responseSession);
   } catch (error) {
-    console.error('❌ Error creating session:', error);
+    logger.error(`Error creating session: ${error.message}`);
     res.status(500).json({ error: 'Failed to create session' });
   }
 });
@@ -144,81 +126,45 @@ router.put('/sessions/:id', async (req, res) => {
 
     const session = await SoilSession.findById(req.params.id);
     if (!session) {
+      logger.warn(`Session not found for update: ${req.params.id}`);
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    console.log(`📝 Updating session ${req.params.id} with ${data ? data.length : 0} samples`);
+    logger.info(`Updating session ${req.params.id} with ${data ? data.length : 0} samples`);
 
     // Handle endTime update
     if ('endTime' in req.body) {
       session.endTime = endTime;
       session.status = endTime ? 'completed' : 'active';
+      logger.debug(`Session ${req.params.id} status changed to ${session.status}`);
     }
 
     // Handle sample updates
     if (data && Array.isArray(data)) {
       // Delete existing samples
       const deleteResult = await SoilSample.deleteMany({ sessionId: session._id });
-      console.log(`  🗑️  Deleted ${deleteResult.deletedCount} old samples`);
+      logger.debug(`Deleted ${deleteResult.deletedCount} old samples from session ${req.params.id}`);
 
       // Create new samples with classifications
       if (data.length > 0) {
-        const newSamples = data.map((sampleData, index) => {
+        const newSamples = data.map((sampleData) => {
           const sampleWithClassifications = addClassifications(sampleData);
 
-          console.log(`\n🔍 Sample ${index + 1} - Classification results:`);
-          console.log(`  Input: ph=${sampleData.ph}, ec=${sampleData.ec}, ocPercent=${sampleData.ocPercent}, p2o5=${sampleData.p2o5}, k2o=${sampleData.k2o}`);
-          console.log(`  Crop: "${sampleData.cropName}", Final Deduction: "${sampleData.finalDeduction}"`);
-          console.log(`  pH Result: ${sampleWithClassifications.phResult} / ${sampleWithClassifications.phResultEn}`);
-          console.log(`  EC Result: ${sampleWithClassifications.ecResult} / ${sampleWithClassifications.ecResultEn}`);
-          console.log(`  Nitrogen Result: ${sampleWithClassifications.nitrogenResult} / ${sampleWithClassifications.nitrogenResultEn}`);
-          console.log(`  Phosphorus Result: ${sampleWithClassifications.phosphorusResult} / ${sampleWithClassifications.phosphorusResultEn}`);
-          console.log(`  Potash Result: ${sampleWithClassifications.potashResult} / ${sampleWithClassifications.potashResultEn}`);
-
-          const documentToSave = {
+          return {
             sessionId: session._id,
             sessionDate: session.date,
             sessionVersion: session.version,
             ...sampleWithClassifications
           };
-
-          console.log(`\n📝 Document to save has these fields:`);
-          console.log(`  cropName: "${documentToSave.cropName}"`);
-          console.log(`  finalDeduction: "${documentToSave.finalDeduction}"`);
-          console.log(`  phResult: "${documentToSave.phResult}"`);
-          console.log(`  ecResult: "${documentToSave.ecResult}"`);
-          console.log(`  nitrogenResult: "${documentToSave.nitrogenResult}"`);
-          console.log(`  phosphorusResult: "${documentToSave.phosphorusResult}"`);
-          console.log(`  potashResult: "${documentToSave.potashResult}"`);
-
-          return documentToSave;
         });
 
         const insertResult = await SoilSample.insertMany(newSamples);
-        console.log(`\n  ✅ Created ${insertResult.length} new sample documents in "soil_samples" collection`);
-        console.log(`  📊 Applied soil classification rules to all samples`);
+        logger.info(`Created ${insertResult.length} samples with classifications for session ${req.params.id}`);
 
-        // Verify what was actually saved by querying MongoDB
-        console.log(`\n🔍 Verifying what MongoDB actually saved for first sample:`);
-        if (insertResult.length > 0) {
-          const firstInserted = insertResult[0];
-          console.log(`  From insertResult object:`);
-          console.log(`    pH: "${firstInserted.phResult}" / "${firstInserted.phResultEn}"`);
-          console.log(`    EC: "${firstInserted.ecResult}" / "${firstInserted.ecResultEn}"`);
-          console.log(`    Nitrogen: "${firstInserted.nitrogenResult}" / "${firstInserted.nitrogenResultEn}"`);
-          console.log(`    Phosphorus: "${firstInserted.phosphorusResult}" / "${firstInserted.phosphorusResultEn}"`);
-          console.log(`    Potash: "${firstInserted.potashResult}" / "${firstInserted.potashResultEn}"`);
-
-          // Query the database to see what was actually persisted
-          const savedSample = await SoilSample.findById(firstInserted._id);
-          console.log(`\n  From database query:`);
-          console.log(`    cropName: "${savedSample.cropName}"`);
-          console.log(`    finalDeduction: "${savedSample.finalDeduction}"`);
-          console.log(`    pH: "${savedSample.phResult}" / "${savedSample.phResultEn}"`);
-          console.log(`    EC: "${savedSample.ecResult}" / "${savedSample.ecResultEn}"`);
-          console.log(`    Nitrogen: "${savedSample.nitrogenResult}" / "${savedSample.nitrogenResultEn}"`);
-          console.log(`    Phosphorus: "${savedSample.phosphorusResult}" / "${savedSample.phosphorusResultEn}"`);
-          console.log(`    Potash: "${savedSample.potashResult}" / "${savedSample.potashResultEn}"`);
+        // Log first sample details at debug level
+        if (insertResult.length > 0 && process.env.LOG_LEVEL === 'debug') {
+          const first = insertResult[0];
+          logger.debug(`Sample classifications - pH: ${first.phResult}, EC: ${first.ecResult}, N: ${first.nitrogenResult}, P: ${first.phosphorusResult}, K: ${first.potashResult}`);
         }
       }
 
@@ -228,7 +174,7 @@ router.put('/sessions/:id', async (req, res) => {
     }
 
     const updatedSession = await session.save();
-    console.log(`  ✅ Session updated successfully`);
+    logger.info(`Session ${req.params.id} updated successfully`);
 
     // Fetch samples and return
     const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
@@ -237,7 +183,7 @@ router.put('/sessions/:id', async (req, res) => {
 
     res.json(sessionObj);
   } catch (error) {
-    console.error('❌ Error updating session:', error);
+    logger.error(`Error updating session ${req.params.id}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: 'Failed to update session' });
   }
 });
@@ -247,19 +193,21 @@ router.delete('/sessions/:id', async (req, res) => {
   try {
     const session = await SoilSession.findById(req.params.id);
     if (!session) {
+      logger.warn(`Session not found for deletion: ${req.params.id}`);
       return res.status(404).json({ error: 'Session not found' });
     }
 
     // Delete all associated samples
     const deleteResult = await SoilSample.deleteMany({ sessionId: req.params.id });
-    console.log(`🗑️  Deleted ${deleteResult.deletedCount} samples for session ${req.params.id}`);
+    logger.info(`Deleted ${deleteResult.deletedCount} samples for session ${req.params.id}`);
 
     // Delete the session
     await SoilSession.findByIdAndDelete(req.params.id);
+    logger.info(`Deleted session ${req.params.id}`);
 
     res.json({ message: 'Session and associated samples deleted successfully', session });
   } catch (error) {
-    console.error('Error deleting session:', error);
+    logger.error(`Error deleting session ${req.params.id}: ${error.message}`);
     res.status(500).json({ error: 'Failed to delete session' });
   }
 });
@@ -269,9 +217,10 @@ router.get('/sessions/today/count', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const count = await SoilSession.countDocuments({ date: today });
+    logger.debug(`Today's session count (${today}): ${count}`);
     res.json({ date: today, count });
   } catch (error) {
-    console.error('Error counting today sessions:', error);
+    logger.error(`Error counting today's sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to count sessions' });
   }
 });

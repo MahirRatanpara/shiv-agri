@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb, PDFName, PDFHexString, PDFDict } from 'pdf-lib';
 import { saveAs } from 'file-saver';
 import { SoilTestingData } from './soil-testing.service';
+import fontkit from '@pdf-lib/fontkit';
 
 export interface ReportData extends SoilTestingData {
   sessionDate?: string;
@@ -145,10 +146,17 @@ export class ReportGeneratorService {
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
 
-    // Map data to form fields
-    const fieldMapping: { [key: string]: string } = {
-      sampleId: data._id || '',  // Add sampleId (MongoDB _id)
-      date: data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],  // Add date
+    // Register fontkit to enable custom font embedding
+    pdfDoc.registerFontkit(fontkit);
+
+    // Load and embed Gujarati font for Unicode support with subsetting disabled
+    const gujaratiFontBytes = await this.loadGujaratiFont();
+    const gujaratiFont = await pdfDoc.embedFont(gujaratiFontBytes, { subset: false });
+
+    // Map data to form fields - separate English and Gujarati fields
+    const englishFields: { [key: string]: string } = {
+      sampleId: data._id || '',
+      date: data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
       farmerName: data.farmersName || '',
       mobileNumber: data.mobileNo || '',
       location: data.location || '',
@@ -171,14 +179,7 @@ export class ReportGeneratorService {
       sessionDate: data.sessionDate || '',
       reportDate: data.reportDate || new Date().toISOString().split('T')[0],
 
-      // Classification result fields (Gujarati)
-      phResult: data.phResult || '',
-      ecResult: data.ecResult || '',
-      nitrogenResult: data.nitrogenResult || '',
-      phosphorusResult: data.phosphorusResult || '',
-      potashResult: data.potashResult || '',
-
-      // Classification result fields (English)
+      // English classification results
       phResultEn: data.phResultEn || '',
       ecResultEn: data.ecResultEn || '',
       nitrogenResultEn: data.nitrogenResultEn || '',
@@ -186,8 +187,17 @@ export class ReportGeneratorService {
       potashResultEn: data.potashResultEn || ''
     };
 
-    // Fill each field
-    Object.entries(fieldMapping).forEach(([fieldName, value]) => {
+    // Gujarati fields - these contain Unicode characters
+    const gujaratiFields: { [key: string]: string } = {
+      phResult: data.phResult || '',
+      ecResult: data.ecResult || '',
+      nitrogenResult: data.nitrogenResult || '',
+      phosphorusResult: data.phosphorusResult || '',
+      potashResult: data.potashResult || ''
+    };
+
+    // Fill English fields with default font
+    Object.entries(englishFields).forEach(([fieldName, value]) => {
       try {
         const field = form.getTextField(fieldName);
         field.setText(value);
@@ -196,7 +206,42 @@ export class ReportGeneratorService {
       }
     });
 
-    // Flatten form to make it non-editable
+    // For Gujarati fields, manually flatten them by drawing text and removing fields
+    // This avoids the WinAnsi encoding error during the standard flatten operation
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+
+    Object.entries(gujaratiFields).forEach(([fieldName, value]) => {
+      if (!value) return;
+
+      try {
+        const field = form.getTextField(fieldName);
+        const widgets = field.acroField.getWidgets();
+
+        if (widgets.length > 0) {
+          const widget = widgets[0];
+          const rect = widget.getRectangle();
+
+          // Draw the Gujarati text at the field position
+          firstPage.drawText(value, {
+            x: rect.x + 3,
+            y: rect.y + 3,
+            size: 12,
+            font: gujaratiFont,
+            color: rgb(0, 0, 0),
+            maxWidth: rect.width - 6
+          });
+
+          // Remove the field from the form so flatten() won't process it
+          form.removeField(field);
+        }
+
+      } catch (error) {
+        console.warn(`Error manually flattening Gujarati field "${fieldName}":`, error);
+      }
+    });
+
+    // Flatten the remaining (English) form fields
     form.flatten();
 
     return await pdfDoc.save();
@@ -209,6 +254,18 @@ export class ReportGeneratorService {
     const response = await fetch(this.templatePath);
     if (!response.ok) {
       throw new Error(`Failed to load PDF template from ${this.templatePath}`);
+    }
+    return await response.arrayBuffer();
+  }
+
+  /**
+   * Load Gujarati font from assets
+   */
+  private async loadGujaratiFont(): Promise<ArrayBuffer> {
+    const fontPath = '/assets/fonts/NotoSansGujarati-Regular.ttf';
+    const response = await fetch(fontPath);
+    if (!response.ok) {
+      throw new Error(`Failed to load Gujarati font from ${fontPath}`);
     }
     return await response.arrayBuffer();
   }
