@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 
 /**
  * SoilTestingData interface - represents a single soil test sample
@@ -80,7 +81,7 @@ export interface SamplePaginationResponse {
   providedIn: 'root'
 })
 export class SoilTestingService {
-  private apiUrl = 'http://localhost:3000/api/soil-testing';
+  private apiUrl = `${environment.apiUrl}/soil-testing`;
 
   constructor(private http: HttpClient) {}
 

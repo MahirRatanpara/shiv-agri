@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>શિવ એગ્રી કન્સલ્ટન્સી સોઇલ રિપોર્ટ</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Gujarati', 'Shruti', sans-serif;
+      background: white;
+      padding: 0;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      margin: 0;
+      padding: 20mm;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .header .address {
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 5px;
+    }
+
+    .header .contact {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .header .contact-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 5px;
+    }
+
+    .header .contact-row .email {
+      text-decoration: underline;
+    }
+
+    .header .contact-row .website {
+      text-decoration: underline;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    table.info-table td {
+      border: 1px solid #000;
+      padding: 8px;
+      font-size: 13px;
+    }
+
+    table.info-table td:first-child {
+      width: 5%;
+      font-weight: 500;
+    }
+
+    table.info-table td:nth-child(2) {
+      width: 35%;
+    }
+
+    .section-title {
+      background: #000;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 20px 0 10px 0;
+    }
+
+    table.results-table th,
+    table.results-table td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    table.results-table th {
+      background: #fff;
+      font-weight: bold;
+    }
+
+    table.results-table td:first-child {
+      font-weight: 500;
+      width: 5%;
+    }
+
+    table.results-table th:nth-child(2),
+    table.results-table td:nth-child(2) {
+      width: 35%;
+    }
+
+    .note-section {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .classification-table {
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+
+    .classification-table th {
+      background: #fff;
+    }
+
+    .notes {
+      margin-top: 20px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .notes p {
+      margin-bottom: 5px;
+    }
+
+    .signature {
+      text-align: right;
+      margin-top: 30px;
+      font-size: 13px;
+    }
+
+    .signature .name {
+      font-weight: bold;
+    }
+
+    .signature .designation {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header Section -->
+    <div class="header">
+      <h1>શિવ એગ્રી કન્સલ્ટન્સી સોઇલ લેબોરેટરી</h1>
+      <div class="address">
+        ૩૦૬, ૩૦૬, લાઈન સ્ટ્રેટ, ગોલ્ડનસીટીના, ઝંઝડા ચોકડી પાસે, જુનાગઢ-૩૬૨૦૦૧.
+      </div>
+      <div class="contact">
+        મો. ૯૭૩૩૫૫૬૬૬, ૯૬૬૫૫૦૮૯૮૫
+      </div>
+      <div class="contact-row">
+        <div>ઈમેલ. <span class="email">shivagriconsultancy@gmail.com</span></div>
+        <div>વેબસાઈટ. <span class="website">www.shivagriconsultancy.com</span></div>
+      </div>
+    </div>
+
+    <!-- Customer Information Table -->
+    <table class="info-table">
+      <tr>
+        <td>૧</td>
+        <td>ખેડૂત નું નામ :-</td>
+        <td>{{farmersName}}</td>
+      </tr>
+      <tr>
+        <td>૨</td>
+        <td>મોબાઈલ નં. :-</td>
+        <td>{{mobileNo}}</td>
+      </tr>
+      <tr>
+        <td>૩</td>
+        <td>ગામ :-</td>
+        <td>{{location}}</td>
+      </tr>
+      <tr>
+        <td>૪</td>
+        <td>ખેતરનું નામ/સર્વે નં./ખાતા નં.:-</td>
+        <td>{{farmsName}}</td>
+      </tr>
+      <tr>
+        <td>૫</td>
+        <td>તાલુકો :-</td>
+        <td>{{taluka}}</td>
+      </tr>
+      <tr>
+        <td>૬</td>
+        <td>તારીખ :-</td>
+        <td>{{date}}</td>
+      </tr>
+      <tr>
+        <td>૭</td>
+        <td>પાકનું નામ :-</td>
+        <td>{{cropName}}</td>
+      </tr>
+      <tr>
+        <td>૮</td>
+        <td>સેમ્પલ નં. :-</td>
+        <td>{{sampleId}}</td>
+      </tr>
+    </table>
+
+    <!-- Soil Analysis Results Section -->
+    <div class="section-title">જમીનના પૃથ્થકરણની અહેવાલ</div>
+
+    <table class="results-table">
+      <tr>
+        <th>ક્રમ</th>
+        <th>વિગત</th>
+        <th>અવલોકન</th>
+        <th>પરિણામ</th>
+      </tr>
+      <tr>
+        <td>૧</td>
+        <td>જમીનનો રસાણુ (pH)</td>
+        <td>{{phLevel}}</td>
+        <td>{{phResult}}</td>
+      </tr>
+      <tr>
+        <td>૨</td>
+        <td>ક્ષારોની માત્રા (EC)  (મિલી મ્હોઝ / સેમી)</td>
+        <td>{{ecLevel}}</td>
+        <td>{{ecResult}}</td>
+      </tr>
+      <tr>
+        <td>૩</td>
+        <td>નાઈટ્રોજન / રોજીયકાર્બન (%)</td>
+        <td>{{ocPercentage}}</td>
+        <td>{{nitrogenResult}}</td>
+      </tr>
+      <tr>
+        <td>૪</td>
+        <td>લભ્ય ફોસ્ફરસ (કિલો / હેક્ટર)</td>
+        <td>{{p2o5}}</td>
+        <td>{{phosphorusResult}}</td>
+      </tr>
+      <tr>
+        <td>૫</td>
+        <td>લભ્ય પોટાશ (કિલો / હેક્ટર)</td>
+        <td>{{k2o}}</td>
+        <td>{{potashResult}}</td>
+      </tr>
+      <tr>
+        <td>૬</td>
+        <td>સેન્દ્રીય તત્વ (%)</td>
+        <td>{{organicMatter}}</td>
+        <td></td>
+      </tr>
+    </table>
+
+    <!-- Classification Table -->
+    <div class="note-section">
+      અવલોકન / પરિણામ  : બધાજ ખેત પાસે માટે અનુકૂળ છે.
+    </div>
+
+    <table class="results-table classification-table">
+      <tr>
+        <th>ક્રમ</th>
+        <th>વિગત</th>
+        <th>ઓછું</th>
+        <th>મધ્યમ</th>
+        <th>વધારે</th>
+      </tr>
+      <tr>
+        <td>૧</td>
+        <td>pH</td>
+        <td>૦ - ૬.૪ (એસિડિક)</td>
+        <td>૬.૫ - ૮.૧૯ (સામાન્ય)</td>
+        <td>૮.૨ થી વધુ (ક્ષારિક)</td>
+      </tr>
+      <tr>
+        <td>૨</td>
+        <td>EC</td>
+        <td>૦ - ૦.૮૮ (સામાન્ય)</td>
+        <td>૧ - ૩ (વર્ડસમાનકારક)</td>
+        <td>૩ થી (ક્ષનિકારક)</td>
+      </tr>
+      <tr>
+        <td>૩</td>
+        <td>નાઈટ્રોજન</td>
+        <td>૦ - ૦.૫૦</td>
+        <td>૦.૫૧ - ૦.૭૫</td>
+        <td>૦.૭૬ થી વધુ</td>
+      </tr>
+      <tr>
+        <td>૪</td>
+        <td>ફોસ્ફરસ</td>
+        <td>૦ - ૨૫</td>
+        <td>૨૬ - ૬૦</td>
+        <td>૬૧ થી વધુ</td>
+      </tr>
+      <tr>
+        <td>૫</td>
+        <td>પોટાશ</td>
+        <td>૦ - ૧૫૦</td>
+        <td>૧૫૧ - ૩૦૦</td>
+        <td>૩૦૧ થી વધુ</td>
+      </tr>
+    </table>
+
+    <!-- Notes Section -->
+    <div class="notes">
+      <p><strong>Note: -1 This report gives the idea of fertility status of given sample (soil / water),<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Note involves any guaranty of crop production.</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2 Homoginous chemical materials measures the heterogineous soil materials,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;May be slight variable.</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3 This report is prepared by the work of instrument and manually, that give<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Slight error some time.</strong></p>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature">
+      <div class="name">અનિલકુમાર દદવાણી</div>
+      <div class="designation">M. Sc. (Agri.)</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -9,13 +9,13 @@ import {
   ModuleRegistry,
 } from 'ag-grid-community';
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
-import { ReportGeneratorService, ReportData } from '../../services/report-generator.service';
+import { PdfService } from '../../services/pdf.service';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular],
-  providers: [SoilTestingService, ReportGeneratorService],
+  providers: [SoilTestingService, PdfService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
 })
@@ -289,7 +289,7 @@ export class SoilTestingComponent implements OnInit {
 
   constructor(
     private soilTestingService: SoilTestingService,
-    private reportGeneratorService: ReportGeneratorService
+    private pdfService: PdfService
   ) {
     console.log('SoilTestingComponent: Constructor called');
     console.log('SoilTestingService injected:', this.soilTestingService);
@@ -695,20 +695,20 @@ export class SoilTestingComponent implements OnInit {
       await this.saveCurrentSession();
       console.log('✅ Database save complete. Proceeding with PDF generation...');
 
-      // STEP 2: Use the saved data from currentSession to ensure consistency
+      // STEP 2: Find the saved sample with its database ID
       const savedRow = this.currentSession?.data?.find(row =>
         row.farmersName === data.farmersName && row.mobileNo === data.mobileNo
       ) || data;
 
-      const reportData: ReportData = {
-        ...savedRow,
-        sessionDate: this.currentSession?.date,
-        reportDate: new Date().toISOString().split('T')[0],
-        sessionVersion: this.currentSession?.version
-      };
+      if (!savedRow._id) {
+        throw new Error('Sample ID not found. Please save the data first.');
+      }
 
-      // STEP 3: Generate PDF from saved data
-      await this.reportGeneratorService.generateSingleReport(reportData);
+      // STEP 3: Generate PDF from backend using sample ID
+      const farmerName = savedRow.farmersName?.replace(/\s+/g, '_') || 'Unknown';
+      const filename = `Soil_Report_${farmerName}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      await this.pdfService.downloadSinglePDF(savedRow._id, filename);
       console.log('✅ PDF generated successfully for:', savedRow.farmersName);
     } catch (error) {
       console.error('❌ Error generating PDF:', error);
@@ -732,22 +732,15 @@ export class SoilTestingComponent implements OnInit {
       await this.saveCurrentSession();
       console.log('✅ Database save complete. Proceeding with bulk PDF generation...');
 
-      // STEP 2: Use saved data from currentSession (guaranteed to be in DB)
-      const reportDataArray: ReportData[] = (this.currentSession?.data || []).map(data => ({
-        ...data,
-        sessionDate: this.currentSession?.date,
-        reportDate: new Date().toISOString().split('T')[0],
-        sessionVersion: this.currentSession?.version
-      }));
+      // STEP 2: Verify we have a session ID
+      if (!this.currentSession?._id) {
+        throw new Error('Session ID not found. Please save the session first.');
+      }
 
-      // STEP 3: Generate PDFs from saved data
-      await this.reportGeneratorService.generateBulkReports(
-        reportDataArray,
-        this.currentSession?.date,
-        this.currentSession?.version
-      );
+      // STEP 3: Generate bulk PDFs using backend service
+      await this.pdfService.downloadBulkSessionPDFs(this.currentSession._id);
 
-      console.log(`✅ Successfully generated ${reportDataArray.length} PDF reports from saved data`);
+      console.log(`✅ Successfully generated ${this.currentSession.data?.length || 0} PDF reports`);
     } catch (error) {
       console.error('❌ Error generating bulk PDFs:', error);
       alert('Failed to generate all PDF reports. Some reports may not have been downloaded.');
@@ -770,22 +763,16 @@ export class SoilTestingComponent implements OnInit {
       await this.saveCurrentSession();
       console.log('✅ Database save complete. Proceeding with combined PDF generation...');
 
-      // STEP 2: Use saved data from currentSession (guaranteed to be in DB)
-      const reportDataArray: ReportData[] = (this.currentSession?.data || []).map(data => ({
-        ...data,
-        sessionDate: this.currentSession?.date,
-        reportDate: new Date().toISOString().split('T')[0],
-        sessionVersion: this.currentSession?.version
-      }));
+      // STEP 2: Verify we have a session ID
+      if (!this.currentSession?._id) {
+        throw new Error('Session ID not found. Please save the session first.');
+      }
 
-      // STEP 3: Generate combined PDF from saved data
-      await this.reportGeneratorService.generateCombinedReport(
-        reportDataArray,
-        this.currentSession?.date,
-        this.currentSession?.version
-      );
+      // STEP 3: Generate combined PDF using backend service
+      const filename = `Soil_Reports_Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
+      await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
 
-      console.log(`✅ Successfully generated combined PDF with ${reportDataArray.length} reports from saved data`);
+      console.log(`✅ Successfully generated combined PDF with ${this.currentSession.data?.length || 0} reports`);
     } catch (error) {
       console.error('❌ Error generating combined PDF:', error);
       alert('Failed to generate combined PDF report.');
@@ -797,14 +784,18 @@ export class SoilTestingComponent implements OnInit {
    */
   async previewPdf(data: SoilTestingData) {
     try {
-      const reportData: ReportData = {
-        ...data,
-        sessionDate: this.currentSession?.date,
-        reportDate: new Date().toISOString().split('T')[0],
-        sessionVersion: this.currentSession?.version
-      };
+      // Save to ensure we have the latest data with ID
+      await this.saveCurrentSession();
 
-      await this.reportGeneratorService.previewReport(reportData);
+      const savedRow = this.currentSession?.data?.find(row =>
+        row.farmersName === data.farmersName && row.mobileNo === data.mobileNo
+      ) || data;
+
+      if (!savedRow._id) {
+        throw new Error('Sample ID not found. Please save the data first.');
+      }
+
+      await this.pdfService.previewSinglePDF(savedRow._id);
     } catch (error) {
       console.error('Error previewing PDF:', error);
       alert('Failed to preview PDF report.');
