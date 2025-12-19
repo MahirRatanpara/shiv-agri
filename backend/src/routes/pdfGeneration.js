@@ -102,7 +102,7 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
     const result = pdfs.map(pdf => ({
       sampleId: pdf.sampleId,
       farmerName: pdf.farmerName,
-      pdf: pdf.buffer.toString('base64')
+      pdf: Buffer.from(pdf.buffer).toString('base64')
     }));
 
     logger.info(`Bulk PDFs generated for session: ${sessionId}, count: ${pdfs.length}`);
@@ -200,7 +200,7 @@ router.post('/samples/multiple', async (req, res) => {
       const result = pdfs.map(pdf => ({
         sampleId: pdf.sampleId,
         farmerName: pdf.farmerName,
-        pdf: pdf.buffer.toString('base64')
+        pdf: Buffer.from(pdf.buffer).toString('base64')
       }));
 
       logger.info(`Bulk PDFs generated for ${pdfs.length} samples`);

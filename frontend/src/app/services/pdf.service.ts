@@ -109,17 +109,29 @@ export class PdfService {
   downloadBulkPDFs(response: BulkPDFResponse): void {
     response.pdfs.forEach((pdfData, index) => {
       try {
-        // Clean the base64 string (remove whitespace and newlines)
-        const cleanBase64 = pdfData.pdf.replace(/\s/g, '');
+        // Clean the base64 string (remove whitespace, newlines, and data URI prefix if present)
+        let cleanBase64 = pdfData.pdf.replace(/\s/g, '');
 
-        // Convert base64 to blob
-        const byteCharacters = atob(cleanBase64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        // Remove data URI prefix if present (e.g., "data:application/pdf;base64,")
+        if (cleanBase64.includes(',')) {
+          cleanBase64 = cleanBase64.split(',')[1];
         }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // Validate base64 string
+        if (!cleanBase64 || cleanBase64.length === 0) {
+          throw new Error('Empty base64 string');
+        }
+
+        // Convert base64 to blob using fetch API (more robust than atob for large files)
+        const byteString = atob(cleanBase64);
+        const arrayBuffer = new ArrayBuffer(byteString.length);
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        for (let i = 0; i < byteString.length; i++) {
+          uint8Array[i] = byteString.charCodeAt(i);
+        }
+
+        const blob = new Blob([uint8Array], { type: 'application/pdf' });
 
         // Download with delay to avoid browser blocking
         setTimeout(() => {
