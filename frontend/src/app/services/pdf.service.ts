@@ -108,21 +108,28 @@ export class PdfService {
    */
   downloadBulkPDFs(response: BulkPDFResponse): void {
     response.pdfs.forEach((pdfData, index) => {
-      // Convert base64 to blob
-      const byteCharacters = atob(pdfData.pdf);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      try {
+        // Clean the base64 string (remove whitespace and newlines)
+        const cleanBase64 = pdfData.pdf.replace(/\s/g, '');
 
-      // Download with delay to avoid browser blocking
-      setTimeout(() => {
-        const farmerName = pdfData.farmerName?.replace(/\s+/g, '_') || 'Unknown';
-        const filename = `Soil_Report_${farmerName}_${index + 1}.pdf`;
-        this.downloadPDF(blob, filename);
-      }, index * 500); // 500ms delay between downloads
+        // Convert base64 to blob
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // Download with delay to avoid browser blocking
+        setTimeout(() => {
+          const farmerName = pdfData.farmerName?.replace(/\s+/g, '_') || 'Unknown';
+          const filename = `Soil_Report_${farmerName}_${index + 1}.pdf`;
+          this.downloadPDF(blob, filename);
+        }, index * 500); // 500ms delay between downloads
+      } catch (error) {
+        console.error(`Error decoding PDF for ${pdfData.farmerName}:`, error);
+      }
     });
   }
 
@@ -193,5 +200,116 @@ export class PdfService {
    */
   checkHealth(): Observable<{ status: string; service: string }> {
     return this.http.get<{ status: string; service: string }>(`${this.apiUrl}/health`);
+  }
+
+  // =============== WATER TESTING PDF METHODS ===============
+
+  /**
+   * Generate and download PDF for a single water sample
+   */
+  generateWaterSamplePDF(sampleId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/water-testing/samples/${sampleId}/pdf`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Generate and download all PDFs for a water testing session (returns base64 encoded PDFs)
+   */
+  generateBulkWaterPDFs(sessionId: string): Observable<BulkPDFResponse> {
+    return this.http.post<BulkPDFResponse>(
+      `${environment.apiUrl}/water-testing/sessions/${sessionId}/pdfs`,
+      {}
+    );
+  }
+
+  /**
+   * Generate and download combined PDF for all water samples in a session
+   */
+  generateCombinedWaterPDF(sessionId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/water-testing/sessions/${sessionId}/pdf-combined`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Download water sample PDF
+   */
+  async downloadWaterSamplePDF(sampleId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateWaterSamplePDF(sampleId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `Water_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+      console.error('Error downloading water PDF:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download all water PDFs for a session (individual downloads with delay)
+   */
+  async downloadBulkWaterPDFs(sessionId: string): Promise<void> {
+    try {
+      const response = await this.generateBulkWaterPDFs(sessionId).toPromise();
+      if (response) {
+        this.downloadBulkWaterPDFsHelper(response);
+      }
+    } catch (error) {
+      console.error('Error downloading bulk water PDFs:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download bulk water PDFs from base64 response
+   */
+  private downloadBulkWaterPDFsHelper(response: BulkPDFResponse): void {
+    response.pdfs.forEach((pdfData, index) => {
+      try {
+        // Clean the base64 string (remove whitespace and newlines)
+        const cleanBase64 = pdfData.pdf.replace(/\s/g, '');
+
+        // Convert base64 to blob
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // Download with delay to avoid browser blocking
+        setTimeout(() => {
+          const farmerName = pdfData.farmerName?.replace(/\s+/g, '_') || 'Unknown';
+          const filename = `Water_Report_${farmerName}_${index + 1}.pdf`;
+          this.downloadPDF(blob, filename);
+        }, index * 500); // 500ms delay between downloads
+      } catch (error) {
+        console.error(`Error decoding PDF for ${pdfData.farmerName}:`, error);
+      }
+    });
+  }
+
+  /**
+   * Download combined water PDF for a session
+   */
+  async downloadCombinedWaterSessionPDF(sessionId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateCombinedWaterPDF(sessionId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `Water_Reports_Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+      console.error('Error downloading combined water PDF:', error);
+      throw error;
+    }
   }
 }

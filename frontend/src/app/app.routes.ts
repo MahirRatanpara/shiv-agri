@@ -20,6 +20,7 @@ import { ContactComponent } from './pages/contact/contact';
 import { NotFoundComponent } from './pages/not-found/not-found';
 import { LoginComponent } from './pages/login/login';
 import { SoilTestingComponent } from './pages/soil-testing/soil-testing';
+import { WaterTestingComponent } from './pages/water-testing/water-testing';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -43,6 +44,7 @@ export const routes: Routes = [
   { path: 'testimonials', component: TestimonialsComponent },
   { path: 'donation', component: DonationComponent },
   { path: 'soil-testing', component: SoilTestingComponent, canActivate: [authGuard] },
+  { path: 'water-testing', component: WaterTestingComponent, canActivate: [authGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard] },
   { path: 'contact', component: ContactComponent },
   { path: '404', component: NotFoundComponent },

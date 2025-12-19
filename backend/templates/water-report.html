@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>શિવ એગ્રી કન્સલ્ટન્સી એઠ લેબોરેટરી</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Gujarati', 'Shruti', sans-serif;
+      background: white;
+      padding: 0;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      margin: 0;
+      padding: 20mm;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .header .address {
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 5px;
+    }
+
+    .header .contact {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .header .contact-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 5px;
+    }
+
+    .header .contact-row .email {
+      text-decoration: underline;
+    }
+
+    .header .contact-row .website {
+      text-decoration: underline;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    table.info-table td {
+      border: 1px solid #000;
+      padding: 8px;
+      font-size: 13px;
+    }
+
+    table.info-table td:first-child {
+      width: 5%;
+      font-weight: 500;
+    }
+
+    table.info-table td:nth-child(2) {
+      width: 35%;
+    }
+
+    .section-title {
+      background: #000;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      margin: 20px 0 10px 0;
+    }
+
+    table.results-table th,
+    table.results-table td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    table.results-table th {
+      background: #fff;
+      font-weight: bold;
+    }
+
+    table.results-table td:first-child {
+      font-weight: 500;
+      width: 5%;
+    }
+
+    table.results-table th:nth-child(2),
+    table.results-table td:nth-child(2) {
+      width: 35%;
+    }
+
+    .note-section {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .classification-table {
+      margin-top: 5px;
+      margin-bottom: 15px;
+      font-size: 11px;
+    }
+
+    .classification-table th {
+      background: #fff;
+      padding: 5px;
+    }
+
+    .classification-table td {
+      padding: 5px;
+    }
+
+    .notes {
+      margin-top: 20px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .notes p {
+      margin-bottom: 5px;
+    }
+
+    .signature {
+      text-align: right;
+      margin-top: 30px;
+      font-size: 13px;
+    }
+
+    .signature .name {
+      font-weight: bold;
+    }
+
+    .signature .designation {
+      font-weight: bold;
+    }
+
+    .crop-recommendation {
+      margin-top: 15px;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid #000;
+      padding: 10px;
+    }
+
+    .crop-recommendation .section-header {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .crop-recommendation p {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header Section -->
+    <div class="header">
+      <h1>શિવ એગ્રી કન્સલ્ટન્સી એઠ લેબોરેટરી</h1>
+      <div class="address">
+        ૩૦૬, લાઈન સ્ટ્રેટ, ગોલ્ડનસીટી-૧, ઝંઝડા ચોકડી પાસે, જુનાગઢ-૩૬૨૦૦૧.મો. ૯૩૨૩૫૫૬૬૬, ૯૬૬૫૫૦૮૯૮૫
+      </div>
+      <div class="contact-row">
+        <div>ઈમેલ. <span class="email">shivagriconsultancy@gmail.com</span></div>
+        <div>વેબસાઈટ. <span class="website">www.shivagriconsultancy.com</span></div>
+      </div>
+    </div>
+
+    <!-- Customer Information Table -->
+    <table class="info-table">
+      <tr>
+        <td>૧</td>
+        <td>ખેડૂત નું નામ :-</td>
+        <td>{{farmersName}}</td>
+      </tr>
+      <tr>
+        <td>૨</td>
+        <td>મોબાઈલ નં. :-</td>
+        <td>{{mobileNo}}</td>
+      </tr>
+      <tr>
+        <td>૩</td>
+        <td>ગામ :-</td>
+        <td>{{location}}</td>
+      </tr>
+      <tr>
+        <td>૪</td>
+        <td>ખેતરનું નામ/સર્વે નં./ખાતા નં.:-</td>
+        <td>{{farmsName}}</td>
+      </tr>
+      <tr>
+        <td>૫</td>
+        <td>તાલુકો :-</td>
+        <td>{{taluka}}</td>
+      </tr>
+      <tr>
+        <td>૬</td>
+        <td>તારીખ :-</td>
+        <td>{{date}}</td>
+      </tr>
+      <tr>
+        <td>૭</td>
+        <td>બોર / કૂવો :-</td>
+        <td>{{boreWellType}}</td>
+      </tr>
+      <tr>
+        <td>૮</td>
+        <td>સેમ્પલ નં. :-</td>
+        <td>{{sampleId}}</td>
+      </tr>
+    </table>
+
+    <!-- Water Analysis Results Section -->
+    <div class="section-title">પિયત પાણીના પૃથ્થકરણીનો અહેવાલ</div>
+
+    <table class="results-table">
+      <tr>
+        <th>ક્રમ</th>
+        <th>વિગત</th>
+        <th>અવલોકન</th>
+        <th>પરિણામ</th>
+      </tr>
+      <tr>
+        <td>૧</td>
+        <td>PH</td>
+        <td>{{phLevel}}</td>
+        <td>{{phResult}}</td>
+      </tr>
+      <tr>
+        <td>૨</td>
+        <td>વિદ્યુતવાહકતા (EC) (મિલી મ્હોઝ / સેમી)</td>
+        <td>{{ecLevel}}</td>
+        <td>{{ecResult}}</td>
+      </tr>
+      <tr>
+        <td>૩</td>
+        <td>Na⁺meq / lit</td>
+        <td>{{naLevel}}</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>૪</td>
+        <td>[Ca⁺⁺+ Mg⁺⁺] meq / lit</td>
+        <td>{{caMgLevel}}</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>૫</td>
+        <td>S A R</td>
+        <td>{{sarLevel}}</td>
+        <td>{{sarResult}}</td>
+      </tr>
+      <tr>
+        <td>૬</td>
+        <td>Class [SR]</td>
+        <td>{{classification}}</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>૭</td>
+        <td>E S P ( % )</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>૮</td>
+        <td>[CO3⁻⁻ + HCO⁻³ ]</td>
+        <td>{{co3Hco3Level}}</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>૯</td>
+        <td>R S C meq / lit</td>
+        <td>{{rscLevel}}</td>
+        <td>{{rscResult}}</td>
+      </tr>
+    </table>
+
+    <!-- Classification Table -->
+    <div class="note-section">
+      અવલોકન / પરિણામ : {{finalDeduction}}
+    </div>
+
+    <table class="results-table classification-table">
+      <tr>
+        <th>EC</th>
+        <th></th>
+        <th></th>
+        <th></th>
+        <th>SAR</th>
+        <th></th>
+        <th>Salinity</th>
+        <th>RSC</th>
+        <th></th>
+        <th>Sodicity</th>
+      </tr>
+      <tr>
+        <td>C₁</td>
+        <td>&lt; 250</td>
+        <td>micromhos/cm</td>
+        <td>Safe</td>
+        <td>S₁</td>
+        <td>&lt; 10</td>
+        <td>Low</td>
+        <td>R₁</td>
+        <td>&lt; 1.25</td>
+        <td>Safe</td>
+      </tr>
+      <tr>
+        <td>C₂</td>
+        <td>250-750</td>
+        <td>micromhos/cm</td>
+        <td>Marginal</td>
+        <td>S₂</td>
+        <td>10-18</td>
+        <td>Medium</td>
+        <td>R₂</td>
+        <td>1.25-2.50</td>
+        <td>Marginal</td>
+      </tr>
+      <tr>
+        <td>C₃</td>
+        <td>750-2250</td>
+        <td>micromhos/cm</td>
+        <td>Problematic</td>
+        <td>S₃</td>
+        <td>18-26</td>
+        <td>High</td>
+        <td>R₃</td>
+        <td>&gt;2.50</td>
+        <td>Unsuitable</td>
+      </tr>
+      <tr>
+        <td>C₄</td>
+        <td>&gt;2250</td>
+        <td>micromhos/cm</td>
+        <td>Unsafe</td>
+        <td>S₄</td>
+        <td>&gt; 26</td>
+        <td>Very High</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </table>
+
+    <!-- Crop Recommendation Section -->
+    <div class="crop-recommendation">
+      <div class="section-header">ક્ષારીય પાણીને સહન કરતા પાકો</div>
+      <p><strong>ખેત પાકો :</strong> ઈસકો, કપાસ, જવાર, ઘઉં, તમાકુ, બાજરી, રાય, સૂર્યમુખી, એરંડા, તલ, મકાઈ, રજકો, ચેરડી, યાણી, મગ, મગકળી.</p>
+      <p><strong>શાકભાજી :</strong> મુગરવીટે, પાલક, ટમેટા, કોબીજ, કોલવર, શક્કરીયા, ગાજર, લસણ, ફુંગળી, કાકડી, બાટલી, બડાકા, ભીંડા, અજુર, ચીકુ.</p>
+      <p><strong>ફળઝડ :</strong> ખારેક, ખજુર, બોર, જામફળ, નાળિયેર, દાડમ, શણ, અજીર, ચીકુ.</p>
+      <p>ઉપર દર્શાવેલ પાકો ક્ષારોને સહન કરી શકે છે. પરંતુ સારી ઉત્પાદન લેવા માટે સારી ગણવાળી પાણી જરુરી છે. નબળા ગણવાવાળા પાણીમાં છોડનો વિકાસ ઓછો થાય છે.</p>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="notes">
+      <p><strong>Note: -1 This report gives the idea of fertility status of given sample ( soil / water),</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Note involves any guaranty of crop production.</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2 Homogenous chemical materials measures the heterogeneous soil materials,</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;may be slight variable.</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3 This report is prepared by the work of instrument and manually, that give</strong></p>
+      <p><strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;slight error some time.</strong></p>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature">
+      <div class="name">અનિલકુમાર દદવાણી</div>
+      <div class="designation">M. Sc. (Agri.)</div>
+    </div>
+  </div>
+</body>
+</html>

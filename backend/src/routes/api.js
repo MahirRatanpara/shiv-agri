@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const soilTestingRoutes = require('./soilTesting');
+const waterTestingRoutes = require('./waterTesting');
 const pdfGenerationRoutes = require('./pdfGeneration');
 
 router.get('/', (req, res) => {
@@ -13,6 +14,9 @@ router.get('/health', (req, res) => {
 
 // Soil Testing routes
 router.use('/soil-testing', soilTestingRoutes);
+
+// Water Testing routes
+router.use('/water-testing', waterTestingRoutes);
 
 // PDF Generation routes
 router.use('/pdf', pdfGenerationRoutes);

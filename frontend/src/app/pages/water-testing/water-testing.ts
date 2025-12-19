@@ -8,18 +8,18 @@ import {
   CellValueChangedEvent,
   ModuleRegistry,
 } from 'ag-grid-community';
-import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
+import { WaterTestingService, Session, WaterTestingData } from '../../services/water-testing.service';
 import { PdfService } from '../../services/pdf.service';
 
 @Component({
-  selector: 'app-soil-testing',
+  selector: 'app-water-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular],
-  providers: [SoilTestingService, PdfService],
-  templateUrl: './soil-testing.html',
-  styleUrls: ['./soil-testing.css'],
+  providers: [WaterTestingService, PdfService],
+  templateUrl: './water-testing.html',
+  styleUrls: ['./water-testing.css'],
 })
-export class SoilTestingComponent implements OnInit {
+export class WaterTestingComponent implements OnInit {
   private gridApi!: GridApi;
 
   // Session Management
@@ -43,7 +43,7 @@ export class SoilTestingComponent implements OnInit {
   }
 
   // Column Definitions
-  colDefs: ColDef<SoilTestingData>[] = [
+  colDefs: ColDef<WaterTestingData>[] = [
     {
       field: 'farmersName',
       headerName: "Farmer's Name",
@@ -86,6 +86,17 @@ export class SoilTestingComponent implements OnInit {
       minWidth: 120,
     },
     {
+      field: 'boreWellType',
+      headerName: 'Bore/Well',
+      editable: true,
+      filter: true,
+      minWidth: 140,
+      cellEditor: 'agSelectCellEditor',
+      cellEditorParams: {
+        values: ['Bore', 'Well', 'Other']
+      },
+    },
+    {
       field: 'ph',
       headerName: 'PH',
       editable: true,
@@ -104,149 +115,164 @@ export class SoilTestingComponent implements OnInit {
       cellClass: 'editable-number',
     },
     {
-      field: 'ocBlank',
-      headerName: 'OC Blank',
+      field: 'caMgBlank',
+      headerName: 'Ca+Mg Blank',
       editable: true,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 140,
+      cellClass: 'editable-number',
+    },
+    {
+      field: 'caMgStart',
+      headerName: 'Ca+Mg Start',
+      editable: true,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 140,
+      cellClass: 'editable-number',
+    },
+    {
+      field: 'caMgEnd',
+      headerName: 'Ca+Mg End',
+      editable: true,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 130,
+      cellClass: 'editable-number',
+    },
+    {
+      field: 'caMgDifference',
+      headerName: 'Ca+Mg Diff',
+      editable: false,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 130,
+      cellClass: 'calculated-cell',
+      valueGetter: (params) => {
+        const end = params.data?.caMgEnd;
+        const start = params.data?.caMgStart;
+        if (end !== null && end !== undefined && start !== null && start !== undefined) {
+          return parseFloat((end - start).toFixed(2));
+        }
+        return null;
+      },
+    },
+    {
+      field: 'caMg',
+      headerName: 'Ca+Mg',
+      editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
       minWidth: 120,
-      cellClass: 'editable-number',
-    },
-    {
-      field: 'ocStart',
-      headerName: 'OC Start',
-      editable: true,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 120,
-      cellClass: 'editable-number',
-    },
-    {
-      field: 'ocEnd',
-      headerName: 'OC End',
-      editable: true,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 120,
-      cellClass: 'editable-number',
-    },
-    {
-      field: 'p2o5R',
-      headerName: 'P2O5 R',
-      editable: true,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 110,
-      cellClass: 'editable-number',
-    },
-    {
-      field: 'k2oR',
-      headerName: 'K2O R',
-      editable: true,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 110,
-      cellClass: 'editable-number',
-    },
-    {
-      field: 'ocDifference',
-      headerName: 'OC Difference',
-      editable: false,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 150,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
-        const ocEnd = params.data?.ocEnd;
-        const ocStart = params.data?.ocStart;
-        // OC diff = OC end - OC start
-        if (ocEnd !== null && ocEnd !== undefined && ocStart !== null && ocStart !== undefined) {
-          return parseFloat((ocEnd - ocStart).toFixed(4));
+        const end = params.data?.caMgEnd;
+        const start = params.data?.caMgStart;
+        const blank = params.data?.caMgBlank;
+        if (end !== null && end !== undefined && start !== null && start !== undefined &&
+            blank !== null && blank !== undefined) {
+          const diff = end - start;
+          return parseFloat(((diff - blank) * 2).toFixed(2));
         }
         return null;
       },
     },
     {
-      field: 'ocPercent',
-      headerName: 'OC%',
+      field: 'na',
+      headerName: 'Na',
+      editable: false,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 100,
+      cellClass: 'calculated-cell',
+      valueGetter: (params) => {
+        const ec = params.data?.ec;
+        const end = params.data?.caMgEnd;
+        const start = params.data?.caMgStart;
+        const blank = params.data?.caMgBlank;
+
+        if (ec !== null && ec !== undefined &&
+            end !== null && end !== undefined &&
+            start !== null && start !== undefined &&
+            blank !== null && blank !== undefined) {
+          const diff = end - start;
+          const calculatedCaMg = (diff - blank) * 2;
+          return parseFloat((ec * 10 - calculatedCaMg).toFixed(2));
+        }
+        return null;
+      },
+    },
+    {
+      field: 'sar',
+      headerName: 'SAR',
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
       minWidth: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
-        const ocBlank = params.data?.ocBlank;
-        const ocDifference = params.getValue('ocDifference');
-        // OC per = (ocBlank - ocDiff) * 3 / ocBlank
-        if (
-          ocBlank !== null &&
-          ocBlank !== undefined &&
-          ocBlank !== 0 &&
-          ocDifference !== null &&
-          ocDifference !== undefined
-        ) {
-          return parseFloat((((ocBlank - ocDifference) * 3) / ocBlank).toFixed(2));
+        const ec = params.data?.ec;
+        const end = params.data?.caMgEnd;
+        const start = params.data?.caMgStart;
+        const blank = params.data?.caMgBlank;
+
+        if (ec !== null && ec !== undefined &&
+            end !== null && end !== undefined &&
+            start !== null && start !== undefined &&
+            blank !== null && blank !== undefined) {
+          const diff = end - start;
+          const calculatedCaMg = (diff - blank) * 2;
+          const calculatedNa = ec * 10 - calculatedCaMg;
+
+          const denominator = calculatedCaMg / 2;
+          if (denominator > 0) {
+            return parseFloat((calculatedNa / Math.sqrt(denominator)).toFixed(2));
+          }
         }
         return null;
       },
     },
     {
-      field: 'p2o5',
-      headerName: 'P2O5',
-      editable: false,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 110,
-      cellClass: 'calculated-cell',
-      valueGetter: (params) => {
-        const p2o5R = params.data?.p2o5R;
-        // p2o5 = P2O5 R * 2
-        if (p2o5R !== null && p2o5R !== undefined) {
-          return parseFloat((p2o5R * 2).toFixed(2));
-        }
-        return null;
-      },
-    },
-    {
-      field: 'k2o',
-      headerName: 'K2O',
-      editable: false,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 110,
-      cellClass: 'calculated-cell',
-      valueGetter: (params) => {
-        const k2oR = params.data?.k2oR;
-        // k2o = k2oR * 5
-        if (k2oR !== null && k2oR !== undefined) {
-          return parseFloat((k2oR * 5).toFixed(2));
-        }
-        return null;
-      },
-    },
-    {
-      field: 'organicMatter',
-      headerName: 'Organic Matter',
-      editable: false,
-      filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
-      minWidth: 160,
-      cellClass: 'calculated-cell',
-      valueGetter: (params) => {
-        const ocPercent = params.getValue('ocPercent');
-        // organic matter = ocPer * 1.724
-        if (ocPercent !== null && ocPercent !== undefined) {
-          return parseFloat((ocPercent * 1.724).toFixed(2));
-        }
-        return null;
-      },
-    },
-    {
-      field: 'cropName',
-      headerName: 'Crop Name',
+      field: 'classification',
+      headerName: 'CLASS',
       editable: true,
       filter: true,
       minWidth: 140,
+    },
+    {
+      field: 'co3Hco3',
+      headerName: 'CO3+HCO3',
+      editable: true,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 140,
+      cellClass: 'editable-number',
+    },
+    {
+      field: 'rsc',
+      headerName: 'RSC',
+      editable: false,
+      filter: 'agNumberColumnFilter',
+      cellDataType: 'number',
+      minWidth: 110,
+      cellClass: 'calculated-cell',
+      valueGetter: (params) => {
+        const co3Hco3 = params.data?.co3Hco3;
+        const end = params.data?.caMgEnd;
+        const start = params.data?.caMgStart;
+        const blank = params.data?.caMgBlank;
+
+        if (co3Hco3 !== null && co3Hco3 !== undefined &&
+            end !== null && end !== undefined &&
+            start !== null && start !== undefined &&
+            blank !== null && blank !== undefined) {
+          const diff = end - start;
+          const calculatedCaMg = (diff - blank) * 2;
+          return parseFloat((co3Hco3 - calculatedCaMg).toFixed(2));
+        }
+        return null;
+      },
     },
     {
       field: 'finalDeduction',
@@ -285,29 +311,29 @@ export class SoilTestingComponent implements OnInit {
   };
 
   // Row Data
-  rowData: SoilTestingData[] = [];
+  rowData: WaterTestingData[] = [];
 
   constructor(
-    private soilTestingService: SoilTestingService,
+    private waterTestingService: WaterTestingService,
     private pdfService: PdfService
   ) {
-    console.log('SoilTestingComponent: Constructor called');
-    console.log('SoilTestingService injected:', this.soilTestingService);
+    console.log('WaterTestingComponent: Constructor called');
+    console.log('WaterTestingService injected:', this.waterTestingService);
   }
 
   ngOnInit(): void {
-    console.log('SoilTestingComponent: ngOnInit called');
+    console.log('WaterTestingComponent: ngOnInit called');
     // Check backend connectivity first
     this.checkBackendConnection();
   }
 
   checkBackendConnection() {
-    console.log('SoilTestingComponent: checkBackendConnection called');
+    console.log('WaterTestingComponent: checkBackendConnection called');
     this.isLoading = true;
-    console.log('SoilTestingComponent: About to call getTodaySessionCount');
-    this.soilTestingService.getTodaySessionCount().subscribe({
+    console.log('WaterTestingComponent: About to call getTodaySessionCount');
+    this.waterTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
-        console.log('SoilTestingComponent: getTodaySessionCount success:', response);
+        console.log('WaterTestingComponent: getTodaySessionCount success:', response);
         this.isBackendConnected = true;
         this.todaySessionCount = response.count;
         this.isLoading = false;
@@ -323,7 +349,7 @@ export class SoilTestingComponent implements OnInit {
   }
 
   loadSessions() {
-    this.soilTestingService.getAllSessions().subscribe({
+    this.waterTestingService.getAllSessions().subscribe({
       next: (sessions) => {
         this.allSessions = sessions;
         this.totalPages = Math.ceil(sessions.length / this.pageSize);
@@ -362,7 +388,7 @@ export class SoilTestingComponent implements OnInit {
   }
 
   loadTodaySessionCount() {
-    this.soilTestingService.getTodaySessionCount().subscribe({
+    this.waterTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
         this.todaySessionCount = response.count;
         console.log('Today session count:', response.count);
@@ -392,7 +418,7 @@ export class SoilTestingComponent implements OnInit {
 
     console.log('Creating new session:', newSession);
 
-    this.soilTestingService.createSession(newSession).subscribe({
+    this.waterTestingService.createSession(newSession).subscribe({
       next: (session) => {
         console.log('Session created successfully:', session);
         this.currentSession = session;
@@ -415,7 +441,7 @@ export class SoilTestingComponent implements OnInit {
     }
 
     // Get all row data from the grid with calculated values
-    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+    const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
       endTime: null as any, // Explicitly remove endTime to mark as in-progress
@@ -424,7 +450,7 @@ export class SoilTestingComponent implements OnInit {
 
     console.log('Saving session:', this.currentSession._id, 'with', allGridData.length, 'records (Marked as In Progress)');
 
-    this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
+    this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
         console.log('Session saved successfully. Data saved:', session.data?.length, 'records (In Progress)');
 
@@ -458,7 +484,7 @@ export class SoilTestingComponent implements OnInit {
     }
 
     // Get all row data from the grid with calculated values
-    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+    const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
       endTime: new Date().toISOString(),
@@ -467,7 +493,7 @@ export class SoilTestingComponent implements OnInit {
 
     console.log('Completing session:', this.currentSession._id, 'with', allGridData.length, 'records');
 
-    this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
+    this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
         console.log('Session completed successfully. Data saved:', session.data?.length, 'records');
 
@@ -523,25 +549,25 @@ export class SoilTestingComponent implements OnInit {
     const colId = event.column.getColId();
 
     // When a cell value changes, refresh the row to recalculate computed values
-    if (colId === 'ocBlank' || colId === 'ocEnd' || colId === 'ocStart') {
-      // These affect OC Difference, OC%, and Organic Matter
+    if (colId === 'caMgStart' || colId === 'caMgEnd' || colId === 'caMgBlank') {
+      // These affect Ca+Mg Difference, Ca+Mg, Na, SAR, and RSC
       event.api.refreshCells({
         rowNodes: [event.node],
-        columns: ['ocDifference', 'ocPercent', 'organicMatter'],
+        columns: ['caMgDifference', 'caMg', 'na', 'sar', 'rsc'],
         force: true,
       });
-    } else if (colId === 'p2o5R') {
-      // This affects P2O5
+    } else if (colId === 'ec') {
+      // EC affects Na and SAR
       event.api.refreshCells({
         rowNodes: [event.node],
-        columns: ['p2o5'],
+        columns: ['na', 'sar'],
         force: true,
       });
-    } else if (colId === 'k2oR') {
-      // This affects K2O
+    } else if (colId === 'co3Hco3') {
+      // This affects RSC
       event.api.refreshCells({
         rowNodes: [event.node],
-        columns: ['k2o'],
+        columns: ['rsc'],
         force: true,
       });
     }
@@ -551,25 +577,25 @@ export class SoilTestingComponent implements OnInit {
   }
 
   addNewRow() {
-    const newRow: SoilTestingData = {
+    const newRow: WaterTestingData = {
       farmersName: '',
       mobileNo: '',
       location: '',
       farmsName: '',
       taluka: '',
+      boreWellType: '',
       ph: null,
       ec: null,
-      ocBlank: null,
-      ocStart: null,
-      ocEnd: null,
-      p2o5R: null,
-      k2oR: null,
-      ocDifference: null,
-      ocPercent: null,
-      p2o5: null,
-      k2o: null,
-      organicMatter: null,
-      cropName: '',
+      caMgBlank: null,
+      caMgStart: null,
+      caMgEnd: null,
+      caMgDifference: null,
+      caMg: null,
+      na: null,
+      sar: null,
+      classification: '',
+      co3Hco3: null,
+      rsc: null,
       finalDeduction: '',
     };
 
@@ -596,51 +622,39 @@ export class SoilTestingComponent implements OnInit {
 
   exportToCsv() {
     this.gridApi.exportDataAsCsv({
-      fileName: `soil-testing-${new Date().toISOString().split('T')[0]}.csv`,
+      fileName: `water-testing-${new Date().toISOString().split('T')[0]}.csv`,
     });
   }
 
   /**
    * Extract all row data from grid including calculated values
    */
-  private extractGridDataWithCalculatedValues(): SoilTestingData[] {
-    const allGridData: SoilTestingData[] = [];
+  private extractGridDataWithCalculatedValues(): WaterTestingData[] {
+    const allGridData: WaterTestingData[] = [];
     this.gridApi.forEachNode(node => {
       if (node.data) {
-        // Get all values from the grid to ensure we capture popup editor changes
-        const completeData: SoilTestingData = {
+        // Get all values from the grid
+        const completeData: WaterTestingData = {
           farmersName: this.gridApi.getValue('farmersName', node) || '',
           mobileNo: this.gridApi.getValue('mobileNo', node) || '',
           location: this.gridApi.getValue('location', node) || '',
           farmsName: this.gridApi.getValue('farmsName', node) || '',
           taluka: this.gridApi.getValue('taluka', node) || '',
+          boreWellType: this.gridApi.getValue('boreWellType', node) || '',
           ph: this.gridApi.getValue('ph', node) ?? null,
           ec: this.gridApi.getValue('ec', node) ?? null,
-          ocBlank: this.gridApi.getValue('ocBlank', node) ?? null,
-          ocStart: this.gridApi.getValue('ocStart', node) ?? null,
-          ocEnd: this.gridApi.getValue('ocEnd', node) ?? null,
-          p2o5R: this.gridApi.getValue('p2o5R', node) ?? null,
-          k2oR: this.gridApi.getValue('k2oR', node) ?? null,
-          ocDifference: this.gridApi.getValue('ocDifference', node) ?? null,
-          ocPercent: this.gridApi.getValue('ocPercent', node) ?? null,
-          p2o5: this.gridApi.getValue('p2o5', node) ?? null,
-          k2o: this.gridApi.getValue('k2o', node) ?? null,
-          organicMatter: this.gridApi.getValue('organicMatter', node) ?? null,
-          cropName: this.gridApi.getValue('cropName', node) || '',
+          caMgBlank: this.gridApi.getValue('caMgBlank', node) ?? null,
+          caMgStart: this.gridApi.getValue('caMgStart', node) ?? null,
+          caMgEnd: this.gridApi.getValue('caMgEnd', node) ?? null,
+          caMgDifference: this.gridApi.getValue('caMgDifference', node) ?? null,
+          caMg: this.gridApi.getValue('caMg', node) ?? null,
+          na: this.gridApi.getValue('na', node) ?? null,
+          sar: this.gridApi.getValue('sar', node) ?? null,
+          classification: this.gridApi.getValue('classification', node) || '',
+          co3Hco3: this.gridApi.getValue('co3Hco3', node) ?? null,
+          rsc: this.gridApi.getValue('rsc', node) ?? null,
           finalDeduction: this.gridApi.getValue('finalDeduction', node) || '',
         };
-
-        // Debug logging for troubleshooting
-        console.log('Extracted row data:', {
-          farmersName: completeData.farmersName,
-          cropName: completeData.cropName,
-          finalDeduction: completeData.finalDeduction?.substring(0, 50),
-          ocDifference: completeData.ocDifference,
-          ocPercent: completeData.ocPercent,
-          p2o5: completeData.p2o5,
-          k2o: completeData.k2o,
-          organicMatter: completeData.organicMatter
-        });
 
         allGridData.push(completeData);
       }
@@ -658,19 +672,25 @@ export class SoilTestingComponent implements OnInit {
       return Promise.reject('No active session to save');
     }
 
-    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+    const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
       data: allGridData
     };
 
     return new Promise((resolve, reject) => {
-      this.soilTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
+      this.waterTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
         next: (session) => {
           console.log('Session auto-saved before PDF generation:', session.data?.length, 'records');
           // Update current session with saved data
           this.currentSession = session;
           this.rowData = session.data || [];
+
+          // Refresh the grid to update with new IDs from database
+          if (this.gridApi) {
+            this.gridApi.setGridOption('rowData', this.rowData);
+          }
+
           resolve();
         },
         error: (error) => {
@@ -686,29 +706,28 @@ export class SoilTestingComponent implements OnInit {
   /**
    * Download PDF for a single row
    */
-  async downloadSinglePdf(data: SoilTestingData) {
+  async downloadSinglePdf(data: WaterTestingData) {
     try {
-      console.log('📥 Starting PDF download - saving to database first...');
-
-      // STEP 1: Save session to database and wait for completion
+      // Always save the current session first to ensure latest data is in database
+      console.log('💾 Saving current session before generating PDF...');
       await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with PDF generation...');
 
-      // STEP 2: Find the saved sample with its database ID
-      const savedRow = this.currentSession?.data?.find(row =>
-        row.farmersName === data.farmersName && row.mobileNo === data.mobileNo
-      ) || data;
+      // After saving, get the updated row data with the correct _id
+      // Find the row by matching farmer name and other identifiable fields
+      const updatedRow = this.rowData.find(row =>
+        row.farmersName === data.farmersName &&
+        row.mobileNo === data.mobileNo
+      );
 
-      if (!savedRow._id) {
-        throw new Error('Sample ID not found. Please save the data first.');
+      if (!updatedRow || !updatedRow._id) {
+        alert('Failed to save the sample. Please try again.');
+        return;
       }
 
-      // STEP 3: Generate PDF from backend using sample ID
-      const farmerName = savedRow.farmersName?.replace(/\s+/g, '_') || 'Unknown';
-      const filename = `Soil_Report_${farmerName}_${new Date().toISOString().split('T')[0]}.pdf`;
-
-      await this.pdfService.downloadSinglePDF(savedRow._id, filename);
-      console.log('✅ PDF generated successfully for:', savedRow.farmersName);
+      console.log('📥 Generating PDF for sample:', updatedRow._id);
+      const filename = `Water_Report_${updatedRow.farmersName || 'Sample'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      await this.pdfService.downloadWaterSamplePDF(updatedRow._id, filename);
+      console.log('✅ PDF downloaded successfully');
     } catch (error) {
       console.error('❌ Error generating PDF:', error);
       alert('Failed to generate PDF report. Please check the console for details.');
@@ -716,33 +735,28 @@ export class SoilTestingComponent implements OnInit {
   }
 
   /**
-   * Download all PDFs (individual files)
+   * Download all PDFs individually (one by one with delay)
    */
   async downloadAllPdfs() {
-    if (this.rowData.length === 0) {
-      alert('No data available to generate reports');
-      return;
-    }
-
     try {
-      console.log('📥 Starting bulk PDF download - saving to database first...');
-
-      // STEP 1: Save session to database and wait for completion
-      await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with bulk PDF generation...');
-
-      // STEP 2: Verify we have a session ID
-      if (!this.currentSession?._id) {
-        throw new Error('Session ID not found. Please save the session first.');
+      if (this.rowData.length === 0) {
+        alert('No data available to generate reports');
+        return;
       }
 
-      // STEP 3: Generate bulk PDFs using backend service
-      await this.pdfService.downloadBulkSessionPDFs(this.currentSession._id);
+      if (!this.currentSession || !this.currentSession._id) {
+        alert('Please save the session first before generating PDFs');
+        return;
+      }
 
-      console.log(`✅ Successfully generated ${this.currentSession.data?.length || 0} PDF reports`);
+      console.log('📥 Generating bulk PDFs for session:', this.currentSession._id);
+      await this.saveCurrentSession();
+
+      await this.pdfService.downloadBulkWaterPDFs(this.currentSession._id);
+      console.log('✅ Bulk PDFs downloaded successfully (individual files)');
     } catch (error) {
       console.error('❌ Error generating bulk PDFs:', error);
-      alert('Failed to generate all PDF reports. Some reports may not have been downloaded.');
+      alert('Failed to generate bulk PDFs. Please check the console for details.');
     }
   }
 
@@ -750,55 +764,26 @@ export class SoilTestingComponent implements OnInit {
    * Download all data as a single combined PDF
    */
   async downloadCombinedPdf() {
-    if (this.rowData.length === 0) {
-      alert('No data available to generate reports');
-      return;
-    }
-
     try {
-      console.log('📥 Starting combined PDF download - saving to database first...');
-
-      // STEP 1: Save session to database and wait for completion
-      await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with combined PDF generation...');
-
-      // STEP 2: Verify we have a session ID
-      if (!this.currentSession?._id) {
-        throw new Error('Session ID not found. Please save the session first.');
+      if (this.rowData.length === 0) {
+        alert('No data available to generate reports');
+        return;
       }
 
-      // STEP 3: Generate combined PDF using backend service
-      const filename = `Soil_Reports_Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
-      await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
+      if (!this.currentSession || !this.currentSession._id) {
+        alert('Please save the session first before generating PDFs');
+        return;
+      }
 
-      console.log(`✅ Successfully generated combined PDF with ${this.currentSession.data?.length || 0} reports`);
+      console.log('📥 Generating combined PDF for session:', this.currentSession._id);
+      await this.saveCurrentSession();
+
+      const filename = `Water_Reports_Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
+      await this.pdfService.downloadCombinedWaterSessionPDF(this.currentSession._id, filename);
+      console.log('✅ Combined PDF downloaded successfully');
     } catch (error) {
       console.error('❌ Error generating combined PDF:', error);
-      alert('Failed to generate combined PDF report.');
+      alert('Failed to generate combined PDF. Please check the console for details.');
     }
   }
-
-  /**
-   * Preview PDF in new tab (optional utility)
-   */
-  async previewPdf(data: SoilTestingData) {
-    try {
-      // Save to ensure we have the latest data with ID
-      await this.saveCurrentSession();
-
-      const savedRow = this.currentSession?.data?.find(row =>
-        row.farmersName === data.farmersName && row.mobileNo === data.mobileNo
-      ) || data;
-
-      if (!savedRow._id) {
-        throw new Error('Sample ID not found. Please save the data first.');
-      }
-
-      await this.pdfService.previewSinglePDF(savedRow._id);
-    } catch (error) {
-      console.error('Error previewing PDF:', error);
-      alert('Failed to preview PDF report.');
-    }
-  }
-
 }
