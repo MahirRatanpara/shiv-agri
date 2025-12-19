@@ -135,8 +135,8 @@ export class PdfService {
 
         // Download with delay to avoid browser blocking
         setTimeout(() => {
-          const farmerName = pdfData.farmerName?.replace(/\s+/g, '_') || 'Unknown';
-          const filename = `Soil_Report_${farmerName}_${index + 1}.pdf`;
+          const farmerName = pdfData.farmerName || 'Unknown';
+          const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -152,7 +152,7 @@ export class PdfService {
     try {
       const blob = await this.generateSinglePDF(sampleId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `Soil_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `જમીન ચકાસણી - ${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
@@ -183,7 +183,7 @@ export class PdfService {
     try {
       const blob = await this.generateCombinedSessionPDF(sessionId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `Soil_Reports_Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `જમીન ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
@@ -255,7 +255,7 @@ export class PdfService {
     try {
       const blob = await this.generateWaterSamplePDF(sampleId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `Water_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `પાણી ચકાસણી - ${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
@@ -299,8 +299,8 @@ export class PdfService {
 
         // Download with delay to avoid browser blocking
         setTimeout(() => {
-          const farmerName = pdfData.farmerName?.replace(/\s+/g, '_') || 'Unknown';
-          const filename = `Water_Report_${farmerName}_${index + 1}.pdf`;
+          const farmerName = pdfData.farmerName || 'Unknown';
+          const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -316,7 +316,7 @@ export class PdfService {
     try {
       const blob = await this.generateCombinedWaterPDF(sessionId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `Water_Reports_Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `પાણી ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {

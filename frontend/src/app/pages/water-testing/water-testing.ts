@@ -725,7 +725,7 @@ export class WaterTestingComponent implements OnInit {
       }
 
       console.log('📥 Generating PDF for sample:', updatedRow._id);
-      const filename = `Water_Report_${updatedRow.farmersName || 'Sample'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const filename = `પાણી ચકાસણી - ${updatedRow.farmersName || 'Unknown'}.pdf`;
       await this.pdfService.downloadWaterSamplePDF(updatedRow._id, filename);
       console.log('✅ PDF downloaded successfully');
     } catch (error) {
@@ -778,7 +778,7 @@ export class WaterTestingComponent implements OnInit {
       console.log('📥 Generating combined PDF for session:', this.currentSession._id);
       await this.saveCurrentSession();
 
-      const filename = `Water_Reports_Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
+      const filename = `પાણી ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
       await this.pdfService.downloadCombinedWaterSessionPDF(this.currentSession._id, filename);
       console.log('✅ Combined PDF downloaded successfully');
     } catch (error) {

@@ -22,12 +22,12 @@
       min-height: 297mm;
       background: white;
       margin: 0;
-      padding: 20mm;
+      padding: 15mm 20mm;
     }
 
     .header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .header h1 {
@@ -67,12 +67,12 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     table.info-table td {
       border: 1px solid #000;
-      padding: 8px;
+      padding: 6px 8px;
       font-size: 13px;
     }
 
@@ -89,16 +89,16 @@
       background: #000;
       color: #fff;
       text-align: center;
-      padding: 10px;
+      padding: 8px;
       font-size: 16px;
       font-weight: bold;
-      margin: 20px 0 10px 0;
+      margin: 15px 0 10px 0;
     }
 
     table.results-table th,
     table.results-table td {
       border: 1px solid #000;
-      padding: 8px;
+      padding: 6px 8px;
       text-align: center;
       font-size: 13px;
     }
@@ -119,23 +119,27 @@
     }
 
     .note-section {
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      font-size: 16px;
+      font-weight: bold;
     }
 
     .classification-table {
       margin-top: 5px;
-      margin-bottom: 15px;
-      font-size: 11px;
+      margin-bottom: 0px;
+      font-size: 10px;
     }
 
     .classification-table th {
       background: #fff;
-      padding: 5px;
+      padding: 4px;
+      font-size: 10px;
     }
 
     .classification-table td {
-      padding: 5px;
+      padding: 4px;
+      font-size: 10px;
     }
 
     .notes {
@@ -164,19 +168,25 @@
 
     .crop-recommendation {
       margin-top: 15px;
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.4;
       border: 1px solid #000;
-      padding: 10px;
+      padding: 8px;
     }
 
     .crop-recommendation .section-header {
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
     }
 
     .crop-recommendation p {
-      margin-bottom: 5px;
+      margin-bottom: 4px;
+      font-size: 10px;
+    }
+
+    .page-break {
+      page-break-before: always;
     }
   </style>
 </head>
@@ -190,7 +200,7 @@
       </div>
       <div class="contact-row">
         <div>ઈમેલ. <span class="email">shivagriconsultancy@gmail.com</span></div>
-        <div>વેબસાઈટ. <span class="website">www.shivagriconsultancy.com</span></div>
+        <div>વેબસાઈટ. <span class="website">www.shivagri.com</span></div>
       </div>
     </div>
 
@@ -304,11 +314,15 @@
       </tr>
     </table>
 
-    <!-- Classification Table -->
+    <!-- Observation/Result Section -->
     <div class="note-section">
       અવલોકન / પરિણામ : {{finalDeduction}}
     </div>
+  </div>
 
+  <!-- Second Page for Classification, Recommendations, Notes and Signature -->
+  <div class="page page-break">
+    <!-- Classification Table -->
     <table class="results-table classification-table">
       <tr>
         <th>EC</th>

@@ -704,8 +704,8 @@ export class SoilTestingComponent implements OnInit {
       }
 
       // STEP 3: Generate PDF from backend using sample ID
-      const farmerName = savedRow.farmersName?.replace(/\s+/g, '_') || 'Unknown';
-      const filename = `Soil_Report_${farmerName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const farmerName = savedRow.farmersName || 'Unknown';
+      const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
 
       await this.pdfService.downloadSinglePDF(savedRow._id, filename);
       console.log('✅ PDF generated successfully for:', savedRow.farmersName);
@@ -768,7 +768,7 @@ export class SoilTestingComponent implements OnInit {
       }
 
       // STEP 3: Generate combined PDF using backend service
-      const filename = `Soil_Reports_Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
+      const filename = `જમીન ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
       await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
 
       console.log(`✅ Successfully generated combined PDF with ${this.currentSession.data?.length || 0} reports`);
