@@ -10,6 +10,7 @@ import {
 } from 'ag-grid-community';
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
 import { PdfService } from '../../services/pdf.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-soil-testing',
@@ -289,7 +290,8 @@ export class SoilTestingComponent implements OnInit {
 
   constructor(
     private soilTestingService: SoilTestingService,
-    private pdfService: PdfService
+    private pdfService: PdfService,
+    private toastService: ToastService
   ) {
     console.log('SoilTestingComponent: Constructor called');
     console.log('SoilTestingService injected:', this.soilTestingService);
@@ -688,6 +690,9 @@ export class SoilTestingComponent implements OnInit {
    */
   async downloadSinglePdf(data: SoilTestingData) {
     try {
+      // Show downloading toast
+      this.toastService.info('📄 Preparing your soil report... Please wait', 0);
+
       console.log('📥 Starting PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
@@ -709,9 +714,14 @@ export class SoilTestingComponent implements OnInit {
 
       await this.pdfService.downloadSinglePDF(savedRow._id, filename);
       console.log('✅ PDF generated successfully for:', savedRow.farmersName);
+
+      // Clear all toasts and show success message
+      this.toastService.clear();
+      this.toastService.success(`✅ Soil report for ${farmerName} downloaded successfully!`, 4000);
     } catch (error) {
       console.error('❌ Error generating PDF:', error);
-      alert('Failed to generate PDF report. Please check the console for details.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate PDF report. Please try again.', 5000);
     }
   }
 
@@ -720,11 +730,14 @@ export class SoilTestingComponent implements OnInit {
    */
   async downloadAllPdfs() {
     if (this.rowData.length === 0) {
-      alert('No data available to generate reports');
+      this.toastService.warning('⚠️ No data available to generate reports');
       return;
     }
 
     try {
+      const totalReports = this.rowData.length;
+      this.toastService.info(`📄 Generating ${totalReports} soil reports... Please wait`, 0);
+
       console.log('📥 Starting bulk PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
@@ -740,9 +753,13 @@ export class SoilTestingComponent implements OnInit {
       await this.pdfService.downloadBulkSessionPDFs(this.currentSession._id);
 
       console.log(`✅ Successfully generated ${this.currentSession.data?.length || 0} PDF reports`);
+
+      this.toastService.clear();
+      this.toastService.success(`✅ All ${totalReports} soil reports downloaded successfully!`, 5000);
     } catch (error) {
       console.error('❌ Error generating bulk PDFs:', error);
-      alert('Failed to generate all PDF reports. Some reports may not have been downloaded.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
     }
   }
 
@@ -751,11 +768,14 @@ export class SoilTestingComponent implements OnInit {
    */
   async downloadCombinedPdf() {
     if (this.rowData.length === 0) {
-      alert('No data available to generate reports');
+      this.toastService.warning('⚠️ No data available to generate reports');
       return;
     }
 
     try {
+      const totalReports = this.rowData.length;
+      this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
+
       console.log('📥 Starting combined PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
@@ -772,9 +792,13 @@ export class SoilTestingComponent implements OnInit {
       await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
 
       console.log(`✅ Successfully generated combined PDF with ${this.currentSession.data?.length || 0} reports`);
+
+      this.toastService.clear();
+      this.toastService.success(`✅ Combined soil report with ${totalReports} samples downloaded successfully!`, 5000);
     } catch (error) {
       console.error('❌ Error generating combined PDF:', error);
-      alert('Failed to generate combined PDF report.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate combined PDF report. Please try again.', 5000);
     }
   }
 

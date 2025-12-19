@@ -10,6 +10,7 @@ import {
 } from 'ag-grid-community';
 import { WaterTestingService, Session, WaterTestingData } from '../../services/water-testing.service';
 import { PdfService } from '../../services/pdf.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-water-testing',
@@ -315,7 +316,8 @@ export class WaterTestingComponent implements OnInit {
 
   constructor(
     private waterTestingService: WaterTestingService,
-    private pdfService: PdfService
+    private pdfService: PdfService,
+    private toastService: ToastService
   ) {
     console.log('WaterTestingComponent: Constructor called');
     console.log('WaterTestingService injected:', this.waterTestingService);
@@ -708,6 +710,9 @@ export class WaterTestingComponent implements OnInit {
    */
   async downloadSinglePdf(data: WaterTestingData) {
     try {
+      // Show downloading toast
+      this.toastService.info('📄 Preparing your water report... Please wait', 0);
+
       // Always save the current session first to ensure latest data is in database
       console.log('💾 Saving current session before generating PDF...');
       await this.saveCurrentSession();
@@ -720,17 +725,24 @@ export class WaterTestingComponent implements OnInit {
       );
 
       if (!updatedRow || !updatedRow._id) {
-        alert('Failed to save the sample. Please try again.');
+        this.toastService.clear();
+        this.toastService.error('❌ Failed to save the sample. Please try again.', 5000);
         return;
       }
 
       console.log('📥 Generating PDF for sample:', updatedRow._id);
-      const filename = `પાણી ચકાસણી - ${updatedRow.farmersName || 'Unknown'}.pdf`;
+      const farmerName = updatedRow.farmersName || 'Unknown';
+      const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
       await this.pdfService.downloadWaterSamplePDF(updatedRow._id, filename);
       console.log('✅ PDF downloaded successfully');
+
+      // Clear all toasts and show success message
+      this.toastService.clear();
+      this.toastService.success(`✅ Water report for ${farmerName} downloaded successfully!`, 4000);
     } catch (error) {
       console.error('❌ Error generating PDF:', error);
-      alert('Failed to generate PDF report. Please check the console for details.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate PDF report. Please try again.', 5000);
     }
   }
 
@@ -740,23 +752,30 @@ export class WaterTestingComponent implements OnInit {
   async downloadAllPdfs() {
     try {
       if (this.rowData.length === 0) {
-        alert('No data available to generate reports');
+        this.toastService.warning('⚠️ No data available to generate reports');
         return;
       }
 
       if (!this.currentSession || !this.currentSession._id) {
-        alert('Please save the session first before generating PDFs');
+        this.toastService.warning('⚠️ Please save the session first before generating PDFs');
         return;
       }
+
+      const totalReports = this.rowData.length;
+      this.toastService.info(`📄 Generating ${totalReports} water reports... Please wait`, 0);
 
       console.log('📥 Generating bulk PDFs for session:', this.currentSession._id);
       await this.saveCurrentSession();
 
       await this.pdfService.downloadBulkWaterPDFs(this.currentSession._id);
       console.log('✅ Bulk PDFs downloaded successfully (individual files)');
+
+      this.toastService.clear();
+      this.toastService.success(`✅ All ${totalReports} water reports downloaded successfully!`, 5000);
     } catch (error) {
       console.error('❌ Error generating bulk PDFs:', error);
-      alert('Failed to generate bulk PDFs. Please check the console for details.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
     }
   }
 
@@ -766,14 +785,17 @@ export class WaterTestingComponent implements OnInit {
   async downloadCombinedPdf() {
     try {
       if (this.rowData.length === 0) {
-        alert('No data available to generate reports');
+        this.toastService.warning('⚠️ No data available to generate reports');
         return;
       }
 
       if (!this.currentSession || !this.currentSession._id) {
-        alert('Please save the session first before generating PDFs');
+        this.toastService.warning('⚠️ Please save the session first before generating PDFs');
         return;
       }
+
+      const totalReports = this.rowData.length;
+      this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
 
       console.log('📥 Generating combined PDF for session:', this.currentSession._id);
       await this.saveCurrentSession();
@@ -781,9 +803,13 @@ export class WaterTestingComponent implements OnInit {
       const filename = `પાણી ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
       await this.pdfService.downloadCombinedWaterSessionPDF(this.currentSession._id, filename);
       console.log('✅ Combined PDF downloaded successfully');
+
+      this.toastService.clear();
+      this.toastService.success(`✅ Combined water report with ${totalReports} samples downloaded successfully!`, 5000);
     } catch (error) {
       console.error('❌ Error generating combined PDF:', error);
-      alert('Failed to generate combined PDF. Please check the console for details.');
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate combined PDF. Please try again.', 5000);
     }
   }
 }
