@@ -1,28 +1,6 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:7.0
-    container_name: shivagri-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DB}
-      MONGO_APP_USER: ${MONGO_USER}
-      MONGO_APP_PASSWORD: ${MONGO_PASSWORD}
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-      - ./mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-    networks:
-      - app-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   api:
     image: ${DOCKERHUB_USERNAME}/shiv-agri-api:latest
     container_name: shivagri-api
@@ -30,13 +8,15 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD_ENCODED}@mongodb:27017/${MONGO_DB}
+      MONGODB_URI: ${MONGODB_URI}
       JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
     volumes:
       - api_uploads:/app/uploads
-    depends_on:
-      mongodb:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app-network
 
@@ -72,8 +52,6 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
-  mongodb_data:
-  mongodb_config:
   api_uploads:
   certbot_www:
   certbot_conf:
