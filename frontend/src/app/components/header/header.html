@@ -14,6 +14,33 @@
         <li class="nav-item">
           <a class="nav-link" routerLink="/contact"> Contact </a>
         </li>
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <a class="nav-link" routerLink="/soil-testing"> Soil Testing </a>
+        </li>
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <a class="nav-link" routerLink="/water-testing"> Water Testing </a>
+        </li>
+      </ul>
+      <ul class="navbar-nav ml-auto auth-nav">
+        <li class="nav-item" *ngIf="!isAuthenticated">
+          <a class="nav-link" routerLink="/login">
+            <i class="fas fa-sign-in-alt"></i> Login
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isAuthenticated && currentUser">
+          <a class="nav-link" routerLink="/my-account">
+            <img *ngIf="currentUser.profilePhoto" [src]="currentUser.profilePhoto" alt="{{ currentUser.name }}" class="user-avatar">
+            <span *ngIf="!currentUser.profilePhoto" class="user-avatar-placeholder">
+              {{ currentUser.name.charAt(0).toUpperCase() }}
+            </span>
+            {{ currentUser.name }}
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <a class="nav-link logout-link" (click)="logout()">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+        </li>
       </ul>
     </div>
   </nav>
