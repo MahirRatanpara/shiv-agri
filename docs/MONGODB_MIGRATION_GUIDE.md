@@ -75,7 +75,7 @@ docker exec shivagri-api printenv MONGODB_URI
 
 **Expected Output:**
 ```
-MONGODB_URI=mongodb://shivagri-app:shivagri246*%40@mongodb:27017/shiv-agri
+MONGODB_URI=mongodb://shivagri-app:MONGO_ENCODED_PASSWORD@mongodb:27017/shiv-agri
 ```
 
 ---
@@ -379,7 +379,7 @@ mongodb://admin:MONGO_ROOT_PASSWORD77.37.47.117:27017/shiv-agri?authSource=admin
 
 **For Application User:**
 ```
-mongodb://shivagri-app:shivagri246*@77.37.47.117:27017/shiv-agri?authSource=shiv-agri
+mongodb://shivagri-app:MONGO_APP_PASSWORD77.37.47.117:27017/shiv-agri?authSource=shiv-agri
 ```
 
 #### 4.4.5 Security Best Practices for External Access
@@ -501,7 +501,7 @@ use shiv-agri
 // Create application user with readWrite permissions
 db.createUser({
   user: "shivagri-app",
-  pwd: "shivagri246*@",
+  pwd: "MONGO_APP_PASSWORD",
   roles: [
     { role: "readWrite", db: "shiv-agri" }
   ]
@@ -518,7 +518,7 @@ exit
 
 ```bash
 # Test connection with app user
-mongosh -u shivagri-app -p 'shivagri246*@' --authenticationDatabase shiv-agri shiv-agri
+mongosh -u shivagri-app -p 'MONGO_APP_PASSWORD' --authenticationDatabase shiv-agri shiv-agri
 
 # In mongosh, test read/write
 db.users.findOne()
@@ -531,7 +531,7 @@ exit
 # Create verification script
 cat > /root/verify-migration.js << 'EOF'
 // Connect to database
-db = connect('mongodb://shivagri-app:shivagri246*@127.0.0.1:27017/shiv-agri?authSource=shiv-agri');
+db = connect('mongodb://shivagri-app:MONGO_APP_PASSWORD127.0.0.1:27017/shiv-agri?authSource=shiv-agri');
 
 print("=== Database Verification ===");
 print("Database: " + db.getName());
@@ -550,7 +550,7 @@ print("  - Total farms: " + db.farms.countDocuments());
 EOF
 
 # Run verification
-mongosh -u shivagri-app -p 'shivagri246*@' --authenticationDatabase shiv-agri shiv-agri /root/verify-migration.js
+mongosh -u shivagri-app -p 'MONGO_APP_PASSWORD' --authenticationDatabase shiv-agri shiv-agri /root/verify-migration.js
 ```
 
 ---
@@ -574,10 +574,10 @@ nano .env
 
 ```bash
 # OLD (Docker):
-# MONGODB_URI=mongodb://shivagri-app:shivagri246*%40@mongodb:27017/shiv-agri
+# MONGODB_URI=mongodb://shivagri-app:MONGO_ENCODED_PASSWORD@mongodb:27017/shiv-agri
 
 # NEW (Native - localhost):
-MONGODB_URI=mongodb://shivagri-app:shivagri246*%40@127.0.0.1:27017/shiv-agri?authSource=shiv-agri
+MONGODB_URI=mongodb://shivagri-app:MONGO_ENCODED_PASSWORD@127.0.0.1:27017/shiv-agri?authSource=shiv-agri
 
 # Keep other variables the same
 ```
@@ -1020,7 +1020,7 @@ use shiv-agri
 db.dropUser("shivagri-app")
 db.createUser({
   user: "shivagri-app",
-  pwd: "shivagri246*@",
+  pwd: "MONGO_APP_PASSWORD",
   roles: [{ role: "readWrite", db: "shiv-agri" }]
 })
 ```
@@ -1077,7 +1077,7 @@ db.system.profile.find().sort({ ts: -1 }).limit(10).pretty()
 
 ```bash
 # Review current indexes
-mongosh -u shivagri-app -p 'shivagri246*@' --authenticationDatabase shiv-agri shiv-agri
+mongosh -u shivagri-app -p 'MONGO_APP_PASSWORD' --authenticationDatabase shiv-agri shiv-agri
 
 # Analyze slow queries
 db.setProfilingLevel(1, { slowms: 100 })
