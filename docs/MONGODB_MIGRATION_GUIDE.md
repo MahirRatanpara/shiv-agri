@@ -580,12 +580,6 @@ nano .env
 MONGODB_URI=mongodb://shivagri-app:shivagri246*%40@127.0.0.1:27017/shiv-agri?authSource=shiv-agri
 
 # Keep other variables the same
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=MONGO_ROOT_PASSWORD
-MONGO_DB=shiv-agri
-MONGO_USER=shivagri-app
-MONGO_PASSWORD=shivagri246*@
-MONGO_PASSWORD_ENCODED=shivagri246*%40
 ```
 
 ### 6.2 Update Docker Compose Configuration
