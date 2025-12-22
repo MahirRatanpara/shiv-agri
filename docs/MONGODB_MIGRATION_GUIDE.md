@@ -45,13 +45,13 @@ docker ps --filter name=shivagri-mongodb
 docker exec shivagri-mongodb mongosh --version
 
 # Check database size and statistics
-docker exec shivagri-mongodb mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.stats()" shiv-agri
+docker exec shivagri-mongodb mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.stats()" shiv-agri
 
 # List all databases
-docker exec shivagri-mongodb mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "show dbs"
+docker exec shivagri-mongodb mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "show dbs"
 
 # Check collections in shiv-agri database
-docker exec shivagri-mongodb mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.getCollectionNames()" shiv-agri
+docker exec shivagri-mongodb mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.getCollectionNames()" shiv-agri
 
 # Check current Docker volume location
 docker volume inspect shiv-agri_mongodb_data
@@ -96,7 +96,7 @@ cd /root/mongodb-backup-$(date +%Y%m%d)
 # Dump all databases with authentication
 docker exec shivagri-mongodb mongodump \
   --username admin \
-  --password 'shivagriadmin135*@' \
+  --password 'MONGO_ROOT_PASSWORD' \
   --authenticationDatabase admin \
   --out /dump
 
@@ -117,7 +117,7 @@ du -sh ./mongodb-dump-*/
 # Export specific database as archive
 docker exec shivagri-mongodb mongodump \
   --username admin \
-  --password 'shivagriadmin135*@' \
+  --password 'MONGO_ROOT_PASSWORD' \
   --authenticationDatabase admin \
   --db shiv-agri \
   --archive=/backup/shiv-agri-$(date +%Y%m%d).archive
@@ -252,7 +252,7 @@ mongosh
 use admin
 db.createUser({
   user: "admin",
-  pwd: "shivagriadmin135*@",
+  pwd: "MONGO_ROOT_PASSWORD",
   roles: [
     { role: "userAdminAnyDatabase", db: "admin" },
     { role: "dbAdminAnyDatabase", db: "admin" },
@@ -271,7 +271,7 @@ exit
 sudo systemctl restart mongod
 
 # Verify authentication works
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 ```
 
 ### 4.4 Enable External Access (Optional - For Debugging)
@@ -333,7 +333,7 @@ sudo ufw status numbered
 
 ```bash
 # Connect as admin
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 ```
 
 **In mongosh:**
@@ -345,7 +345,7 @@ use shiv-agri
 // Create read-only debug user
 db.createUser({
   user: "shivagri.dev",
-  pwd: "ShivAgri123*!@",  // Use a strong password
+  pwd: "MONGO_RO_PASSWORD",  // Use a strong password
   roles: [
     { role: "read", db: "shiv-agri" }
   ]
@@ -374,7 +374,7 @@ mongodb://debug-user:YOUR_SECURE_DEBUG_PASSWORD@77.37.47.117:27017/shiv-agri?aut
 
 **For Admin Access (use with caution):**
 ```
-mongodb://admin:shivagriadmin135*@77.37.47.117:27017/shiv-agri?authSource=admin
+mongodb://admin:MONGO_ROOT_PASSWORD77.37.47.117:27017/shiv-agri?authSource=admin
 ```
 
 **For Application User:**
@@ -415,10 +415,10 @@ mongosh "mongodb://debug-user:YOUR_SECURE_DEBUG_PASSWORD@localhost:27017/shiv-ag
 
 ```bash
 # View current MongoDB connections
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.currentOp()" --quiet
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.currentOp()" --quiet
 
 # Check who's connected
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.serverStatus().connections" --quiet
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.serverStatus().connections" --quiet
 
 # Monitor MongoDB logs for external connections
 sudo tail -f /var/log/mongodb/mongod.log | grep "connection accepted"
@@ -456,12 +456,12 @@ cd /root/mongodb-backup-$(date +%Y%m%d)
 # Restore all databases
 mongorestore \
   --username admin \
-  --password 'shivagriadmin135*@' \
+  --password 'MONGO_ROOT_PASSWORD' \
   --authenticationDatabase admin \
   ./mongodb-dump-*/
 
 # Verify restoration
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 ```
 
 **In mongosh, verify data:**
@@ -489,7 +489,7 @@ exit
 
 ```bash
 # Connect as admin
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 ```
 
 **In mongosh:**
@@ -581,7 +581,7 @@ MONGODB_URI=mongodb://shivagri-app:shivagri246*%40@127.0.0.1:27017/shiv-agri?aut
 
 # Keep other variables the same
 MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=shivagriadmin135*@
+MONGO_ROOT_PASSWORD=MONGO_ROOT_PASSWORD
 MONGO_DB=shiv-agri
 MONGO_USER=shivagri-app
 MONGO_PASSWORD=shivagri246*@
@@ -690,7 +690,7 @@ docker logs shivagri-api | grep -i error
 
 ```bash
 # Monitor MongoDB in real-time
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 
 # In mongosh:
 use shiv-agri
@@ -752,7 +752,7 @@ curl https://shivagri.com/api/health
 docker logs -f shivagri-api
 
 # Check MongoDB connections
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.serverStatus().connections"
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.serverStatus().connections"
 ```
 
 ---
@@ -815,7 +815,7 @@ RETENTION_DAYS=7
 
 # MongoDB credentials
 MONGO_USER="admin"
-MONGO_PASSWORD="shivagriadmin135*@"
+MONGO_PASSWORD="MONGO_ROOT_PASSWORD"
 MONGO_DB="shiv-agri"
 
 # Create backup
@@ -883,7 +883,7 @@ ls -lh /backup/mongodb/
 # Test restore from backup (on test database)
 cd /backup/mongodb
 tar -xzf shiv-agri-*.tar.gz
-mongorestore --username admin --password 'shivagriadmin135*@' --authenticationDatabase admin --nsInclude="shiv-agri.*" --nsFrom="shiv-agri.*" --nsTo="shiv-agri-test.*" ./
+mongorestore --username admin --password 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --nsInclude="shiv-agri.*" --nsFrom="shiv-agri.*" --nsTo="shiv-agri-test.*" ./
 ```
 
 ---
@@ -907,11 +907,11 @@ sudo systemctl status mongod --no-pager
 
 echo ""
 echo "=== MongoDB Connections ==="
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --quiet --eval "db.serverStatus().connections"
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --quiet --eval "db.serverStatus().connections"
 
 echo ""
 echo "=== Database Size ==="
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --quiet --eval "db.adminCommand({ listDatabases: 1 })"
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --quiet --eval "db.adminCommand({ listDatabases: 1 })"
 
 echo ""
 echo "=== Disk Usage ==="
@@ -1018,10 +1018,10 @@ sudo chown -R mongodb:mongodb /var/log/mongodb
 
 ```bash
 # Verify users exist
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin --eval "db.getUsers()" admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin --eval "db.getUsers()" admin
 
 # Recreate application user if needed
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin
 use shiv-agri
 db.dropUser("shivagri-app")
 db.createUser({
@@ -1051,10 +1051,10 @@ docker exec shivagri-api printenv | grep MONGODB
 
 ```bash
 # Check indexes
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin shiv-agri --eval "db.getCollectionNames().forEach(function(col) { print(col); printjson(db[col].getIndexes()); })"
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin shiv-agri --eval "db.getCollectionNames().forEach(function(col) { print(col); printjson(db[col].getIndexes()); })"
 
 # Enable profiling for slow queries
-mongosh -u admin -p 'shivagriadmin135*@' --authenticationDatabase admin shiv-agri
+mongosh -u admin -p 'MONGO_ROOT_PASSWORD' --authenticationDatabase admin shiv-agri
 db.setProfilingLevel(1, { slowms: 100 })
 
 # Check slow queries
