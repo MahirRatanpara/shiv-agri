@@ -13,6 +13,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     volumes:
       - api_uploads:/app/uploads
     extra_hosts:
