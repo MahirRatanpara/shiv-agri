@@ -1310,17 +1310,6 @@ All components are production-ready and tested for the Shiv Agri application.
 
 ## Migration & Updates
 
-### Running Permission Migrations
-
-When you update `permissions.yml`, you need to run the migration script to update the database:
-
-```bash
-cd /Users/mahirratanpara/IdeaProjects/shiv-agri/backend
-
-# Run migration with MongoDB Atlas
-MONGODB_URI="mongodb+srv://shivagri-app:shivagri246*%40@shiv-agri-local.boh5oug.mongodb.net/shiv-agri?retryWrites=true&w=majority&appName=shiv-agri-local" node src/scripts/migrate-permissions.js
-```
-
 ### Applying Permission Updates to Users
 
 After running migrations:
