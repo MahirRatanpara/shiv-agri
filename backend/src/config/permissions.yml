@@ -403,20 +403,30 @@ roles:
   # ==================== ASSISTANT ROLE ====================
   - name: assistant
     displayName: Assistant
-    description: Assistant with limited data entry capabilities
+    description: Assistant with data entry and testing capabilities
     isSystem: true
     permissions:
-      # Soil Testing - Create & View
+      # Soil Testing - Create, View, Update & Reports
       - soil.sessions.view
       - soil.sessions.create
+      - soil.sessions.update
       - soil.samples.view
       - soil.samples.create
+      - soil.samples.update
+      - soil.samples.delete
+      - soil.reports.generate
+      - soil.reports.download
 
-      # Water Testing - Create & View
+      # Water Testing - Create, View, Update & Reports
       - water.sessions.view
       - water.sessions.create
+      - water.sessions.update
       - water.samples.view
       - water.samples.create
+      - water.samples.update
+      - water.samples.delete
+      - water.reports.generate
+      - water.reports.download
 
       # Files - Upload & View
       - files.view

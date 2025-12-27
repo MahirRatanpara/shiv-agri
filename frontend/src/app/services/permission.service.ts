@@ -85,9 +85,16 @@ export class PermissionService {
           this.userPermissionsSubject.next(permissionNames);
         }
       } catch (error) {
-        console.error('Error loading user permissions:', error);
+
       }
     }
+  }
+
+  /**
+   * Reload user permissions (useful after role updates)
+   */
+  reloadPermissions(): void {
+    this.loadUserPermissions();
   }
 
   /**

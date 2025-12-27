@@ -952,13 +952,173 @@ this.toastService.show('Cannot start session: Backend server is not connected', 
 </button>
 ```
 
+### Permission-Based Navigation
+
+**Issue**: All navigation items were visible regardless of user permissions, leading to 403 errors when users clicked sections they couldn't access.
+
+**Solution**: Implemented dynamic navigation that shows/hides sections based on user permissions.
+
+**Files Updated**:
+- `frontend/src/app/components/header/header.ts` - Permission-aware navigation logic
+- `frontend/src/app/components/header/header.html` - Conditional navigation rendering
+
+**Implementation**:
+
+```typescript
+// Header Component - Permission Flags
+hasSoilTestingAccess = false;
+hasWaterTestingAccess = false;
+
+ngOnInit(): void {
+  // Subscribe to current user changes
+  this.authService.currentUser$.subscribe(user => {
+    this.currentUser = user;
+    this.isAuthenticated = !!user;
+
+    // Reload permission service to ensure it has latest data
+    if (user) {
+      this.permissionService.reloadPermissions();
+    }
+  });
+
+  // Subscribe to permission changes to update navigation
+  this.permissionService.userPermissions$.subscribe(permissions => {
+    // Update permissions whenever they change
+    this.updatePermissions();
+  });
+}
+
+private updatePermissions(): void {
+  // Check if user has ANY soil testing related permission
+  this.hasSoilTestingAccess = this.permissionService.hasAnyPermission([
+    'soil.sessions.view',
+    'soil.sessions.create',
+    'soil.sessions.update',
+    'soil.samples.view',
+    'soil.samples.create',
+    'soil.reports.download'
+  ]);
+
+  this.hasWaterTestingAccess = this.permissionService.hasAnyPermission([
+    'water.sessions.view',
+    'water.sessions.create',
+    'water.sessions.update',
+    'water.samples.view',
+    'water.samples.create',
+    'water.reports.download'
+  ]);
+}
+```
+
+**Template Usage**:
+
+```html
+<li class="nav-item" *ngIf="isAuthenticated && hasSoilTestingAccess">
+  <a class="nav-link" routerLink="/soil-testing">Soil Testing</a>
+</li>
+<li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
+  <a class="nav-link" routerLink="/water-testing">Water Testing</a>
+</li>
+```
+
+**Automatic Updates**: Navigation items appear/disappear immediately after login without requiring a page refresh, thanks to reactive subscriptions to both `currentUser$` and `userPermissions$` observables.
+
+### Confirmation Modals
+
+**Issue**: Browser `confirm()` dialogs for logout were basic and unprofessional.
+
+**Solution**: Created reusable confirmation modal service with beautiful UI.
+
+**Files Created**:
+- `frontend/src/app/services/confirmation-modal.service.ts`
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.ts`
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.html`
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.css`
+
+**Usage Example**:
+
+```typescript
+async logout(): Promise<void> {
+  const confirmed = await this.confirmationService.confirm({
+    title: 'Confirm Logout',
+    message: 'Are you sure you want to logout? Any unsaved changes will be lost.',
+    confirmText: 'Yes, Logout',
+    cancelText: 'Cancel',
+    confirmClass: 'btn-warning',
+    icon: 'fas fa-sign-out-alt'
+  });
+
+  if (confirmed) {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.toastService.show('You have been logged out successfully', 'success');
+        this.router.navigate(['/login']);
+      }
+    });
+  }
+}
+```
+
+### Global Error Handling
+
+**Issue**: HTTP errors showed technical messages like "Failed to connect to backend" which confused users.
+
+**Solution**: Created global error interceptor with user-friendly messages.
+
+**File Created**:
+- `frontend/src/app/interceptors/error.interceptor.ts`
+
+**Error Message Mapping**:
+
+| HTTP Status | User-Friendly Message |
+|-------------|----------------------|
+| 403 | "You do not have permission to perform this action" |
+| 401 | "Your session has expired. Please login again" |
+| 404 | "The requested resource was not found" |
+| 500 | "An unexpected error occurred. Please try again" |
+| 503 | "Service is temporarily unavailable. Please try again later" |
+| Network Error | "Unable to connect. Please check your internet connection" |
+
+**Implementation**:
+
+```typescript
+export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const toastService = inject(ToastService);
+  const router = inject(Router);
+
+  return next(req).pipe(
+    catchError((error: HttpErrorResponse) => {
+      handleError(error, toastService, router);
+      return throwError(() => error);
+    })
+  );
+};
+
+function handleError(error: HttpErrorResponse, toastService: ToastService, router: Router): void {
+  let errorMessage = 'An unexpected error occurred';
+  let errorTitle = 'Error';
+
+  switch (error.status) {
+    case 403:
+      errorMessage = error.error?.error || 'You do not have permission to perform this action.';
+      errorTitle = 'Access Denied';
+      break;
+    // ... other cases
+  }
+
+  toastService.show(`${errorTitle}: ${errorMessage}`, 'error');
+}
+```
+
 ### Benefits
 
 1. **No More Intrusive Popups**: Toast messages appear at the corner and don't block user workflow
 2. **Better Error Messages**: More context-aware and user-friendly error descriptions
-3. **Proactive UX**: Users don't see buttons for actions they can't perform
+3. **Proactive UX**: Users don't see buttons/navigation for actions they can't perform
 4. **Reduced Errors**: Permission-based UI prevents unnecessary API calls and error states
-5. **Professional Feel**: Modern toast notifications instead of browser alerts
+5. **Professional Feel**: Modern toast notifications and confirmation modals instead of browser dialogs
+6. **Automatic Updates**: Navigation and UI update immediately after login without page refresh
+7. **User-Friendly Error Messages**: No technical jargon like "backend" or "server connection failed"
 
 ### User Role Experience
 
@@ -980,6 +1140,146 @@ A user with `soil.sessions.view` permission but without `soil.sessions.create`:
 - ❌ Will NOT see "Delete" or "Complete Session" buttons
 
 This creates a cleaner, more intuitive interface where users only see what they can actually do.
+
+### Permission-Based Navigation
+
+**Issue**: Users could see navigation items for sections they don't have access to, leading to confusion and wasted clicks.
+
+**Solution**: Navigation items now only appear if the user has at least one permission related to that section.
+
+**Files Updated**:
+- `frontend/src/app/components/header/header.ts` - Added permission checking logic
+- `frontend/src/app/components/header/header.html` - Conditional navigation based on permissions
+
+**Implementation**:
+
+```typescript
+// Header Component - Permission Flags
+hasSoilTestingAccess = false;
+hasWaterTestingAccess = false;
+
+private updatePermissions(): void {
+  // Check if user has ANY soil testing related permission
+  this.hasSoilTestingAccess = this.permissionService.hasAnyPermission([
+    'soil.sessions.view',
+    'soil.sessions.create',
+    'soil.sessions.update',
+    'soil.samples.view',
+    'soil.samples.create',
+    'soil.reports.download'
+  ]);
+
+  // Check if user has ANY water testing related permission
+  this.hasWaterTestingAccess = this.permissionService.hasAnyPermission([
+    'water.sessions.view',
+    'water.sessions.create',
+    'water.sessions.update',
+    'water.samples.view',
+    'water.samples.create',
+    'water.reports.download'
+  ]);
+}
+```
+
+```html
+<!-- Only show Soil Testing if user has relevant permissions -->
+<li class="nav-item" *ngIf="isAuthenticated && hasSoilTestingAccess">
+  <a class="nav-link" routerLink="/soil-testing">Soil Testing</a>
+</li>
+
+<!-- Only show Water Testing if user has relevant permissions -->
+<li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
+  <a class="nav-link" routerLink="/water-testing">Water Testing</a>
+</li>
+```
+
+### Confirmation Modals
+
+**Issue**: Browser `confirm()` dialogs were basic and didn't match the app's design.
+
+**Solution**: Created a reusable confirmation modal service with custom styling.
+
+**Files Created**:
+- `frontend/src/app/services/confirmation-modal.service.ts` - Service for managing confirmation dialogs
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.ts` - Modal component
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.html` - Modal template
+- `frontend/src/app/components/confirmation-modal/confirmation-modal.component.css` - Modal styles
+
+**Usage Example**:
+
+```typescript
+async logout(): Promise<void> {
+  const confirmed = await this.confirmationService.confirm({
+    title: 'Confirm Logout',
+    message: 'Are you sure you want to logout? Any unsaved changes will be lost.',
+    confirmText: 'Yes, Logout',
+    cancelText: 'Cancel',
+    confirmClass: 'btn-warning',
+    icon: 'fas fa-sign-out-alt'
+  });
+
+  if (confirmed) {
+    // Proceed with logout
+  }
+}
+```
+
+**Files Updated to Use Confirmation Modal**:
+- `frontend/src/app/components/header/header.ts` - Logout confirmation
+- `frontend/src/app/pages/my-account/my-account.ts` - Logout confirmation
+
+### Global Error Handling
+
+**Issue**: HTTP errors showed technical messages or generic alerts, providing poor UX.
+
+**Solution**: Created a global error interceptor that handles all HTTP errors gracefully with user-friendly messages.
+
+**File Created**:
+- `frontend/src/app/interceptors/error.interceptor.ts` - Global error handler
+
+**Error Handling Features**:
+
+| Error Code | User-Friendly Message | Behavior |
+|------------|----------------------|----------|
+| 0 | "Unable to connect to the server" | Network/CORS issue |
+| 400 | "Invalid request. Please check your input." | Bad request |
+| 401 | "Your session has expired. Please login again." | Unauthorized |
+| 403 | "You do not have permission to perform this action." | Forbidden - Shows specific error from server |
+| 404 | "The requested resource was not found." | Not found |
+| 500 | "A server error occurred. Please try again later." | Internal server error |
+| 503 | "The service is temporarily unavailable." | Service unavailable |
+
+**Example**:
+
+```typescript
+// Instead of showing:
+"Http failure response for http://localhost:3000/api/sessions: 403 Forbidden"
+
+// Users see:
+"Access Denied: You do not have permission to create sessions."
+```
+
+### User-Friendly Error Messages
+
+**Issue**: Error messages referenced "backend", "server", or showed technical details.
+
+**Solution**: All error messages updated to be user-centric and action-oriented.
+
+**Changes**:
+
+| Before | After |
+|--------|-------|
+| "Backend Connection Failed" | "Service Unavailable" |
+| "Cannot connect to the backend server" | "Unable to connect to the water/soil testing service" |
+| "Backend server is not connected" | "Unable to start session. Please check your connection" |
+| "Connecting to Backend..." | "Loading..." |
+
+**Files Updated**:
+- `frontend/src/app/pages/soil-testing/soil-testing.html` - Updated loading and error messages
+- `frontend/src/app/pages/soil-testing/soil-testing.ts` - Updated error messages
+- `frontend/src/app/pages/water-testing/water-testing.html` - Updated loading and error messages
+- `frontend/src/app/pages/water-testing/water-testing.ts` - Updated error messages
+- `frontend/src/app/interceptors/error.interceptor.ts` - Technical term cleanup
 
 ---
 
@@ -1003,5 +1303,79 @@ All components are production-ready and tested for the Shiv Agri application.
 ---
 
 **Last Updated**: December 27, 2024
-**Version**: 1.1.0
+**Version**: 1.2.0
 **Feature**: SHI-20
+
+---
+
+## Migration & Updates
+
+### Running Permission Migrations
+
+When you update `permissions.yml`, you need to run the migration script to update the database:
+
+```bash
+cd /Users/mahirratanpara/IdeaProjects/shiv-agri/backend
+
+# Run migration with MongoDB Atlas
+MONGODB_URI="mongodb+srv://shivagri-app:shivagri246*%40@shiv-agri-local.boh5oug.mongodb.net/shiv-agri?retryWrites=true&w=majority&appName=shiv-agri-local" node src/scripts/migrate-permissions.js
+```
+
+### Applying Permission Updates to Users
+
+After running migrations:
+
+**Option 1: Users logout and login again** ✅ Recommended
+- Simplest approach
+- Backend sends fresh `roleRef` with updated permissions
+- Frontend automatically updates navigation
+
+**Option 2: Clear localStorage**
+- Open DevTools → Application → Local Storage
+- Delete `currentUser` key
+- Refresh page
+
+**What happens during login:**
+1. Backend fetches user from database
+2. Populates `roleRef` with latest permissions from Role document
+3. Returns user object with nested `roleRef.permissions` array
+4. Frontend stores in localStorage
+5. PermissionService reads permissions from `roleRef`
+6. Header component checks permissions and shows/hides navigation items
+7. Permission directives control button visibility
+
+### Automatic Permission Reload
+
+The system now automatically reloads permissions when user logs in:
+- `AuthService.setSession()` triggers `currentUser$` observable
+- `HeaderComponent` subscribes to `currentUser$` changes
+- Calls `permissionService.reloadPermissions()` on user change
+- Navigation updates immediately without refresh
+
+### Troubleshooting Permission Issues
+
+**Navigation items don't appear after login:**
+
+1. Check browser console for permission logs:
+```
+✅ User logged in: user@example.com
+📋 Permissions loaded: 21
+✅ Loaded user permissions: [array of permissions]
+```
+
+2. Verify backend response includes `roleRef`:
+   - Open DevTools → Network tab
+   - Look for `/auth/google` request
+   - Check response includes `user.roleRef.permissions`
+
+3. Check if migration ran successfully:
+```bash
+# You should see output like:
+✓ Created role: assistant (21 permissions)
+✓ Migration completed successfully
+```
+
+**Still seeing old permissions:**
+- Logout and login again
+- Clear browser cache and localStorage
+- Verify migration script ran without errors

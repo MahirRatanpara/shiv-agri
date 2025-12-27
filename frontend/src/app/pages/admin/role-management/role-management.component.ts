@@ -75,7 +75,7 @@ export class RoleManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error loading roles:', error);
+
         this.toastService.show('Failed to load roles', 'error');
         this.loading = false;
       }
@@ -92,7 +92,7 @@ export class RoleManagementComponent implements OnInit {
         this.groupedPermissions = response.groupedByResource;
       },
       error: (error) => {
-        console.error('Error loading permissions:', error);
+
         this.toastService.show('Failed to load permissions', 'error');
       }
     });
@@ -182,7 +182,7 @@ export class RoleManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error creating role:', error);
+
         this.toastService.show(
           error.error?.error || 'Failed to create role',
           'error'
@@ -221,7 +221,7 @@ export class RoleManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error updating role:', error);
+
         this.toastService.show(
           error.error?.error || 'Failed to update role',
           'error'
@@ -248,7 +248,7 @@ export class RoleManagementComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error deleting role:', error);
+
         this.toastService.show(
           error.error?.error || error.error?.message || 'Failed to delete role',
           'error'

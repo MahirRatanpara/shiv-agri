@@ -80,7 +80,6 @@ export class LoginComponent implements OnInit {
       },
       error: (error) => {
         this.isLoading = false;
-        console.error('Login error:', error);
 
         if (error.error?.requiresApproval) {
           this.errorMessage = error.error.error || 'Account pending approval';

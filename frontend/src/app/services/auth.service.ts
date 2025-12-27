@@ -9,6 +9,17 @@ export interface User {
   name: string;
   role: string;
   profilePhoto?: string;
+  roleRef?: {
+    id: string;
+    name: string;
+    displayName: string;
+    permissions: Array<{
+      id: string;
+      name: string;
+      resource: string;
+      action: string;
+    }>;
+  };
 }
 
 export interface AuthResponse {

@@ -51,7 +51,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadCarouselSlides(): void {
     this.http.get<CarouselSlide[]>('assets/data/carousel-slides.json').subscribe({
       next: (slides) => {
-        console.log('Carousel slides loaded:', slides);
+
         this.carouselSlides = slides;
         // Reinitialize carousel after slides are loaded
         setTimeout(() => {
@@ -59,7 +59,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         }, 100);
       },
       error: (error) => {
-        console.error('Error loading carousel slides:', error);
+
         this.carouselSlides = [];
       }
     });
@@ -68,15 +68,15 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadProjects(): void {
     this.http.get<Project[]>('assets/data/projects.json').subscribe({
       next: (projects) => {
-        console.log('Projects loaded:', projects);
+
         // Filter out invalid projects (must have at least a title or id)
         this.projects = projects.filter(project =>
           project && (project.title || project.id)
         );
-        console.log('Valid projects:', this.projects);
+
       },
       error: (error) => {
-        console.error('Error loading projects:', error);
+
         // Initialize with empty array on error
         this.projects = [];
       }
@@ -86,11 +86,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   loadMiniPhotos(): void {
     this.http.get<string[]>('assets/data/mini-photos.json').subscribe({
       next: (photos) => {
-        console.log('Mini photos loaded:', photos);
+
         this.miniPhotos = photos;
       },
       error: (error) => {
-        console.error('Error loading mini photos:', error);
+
         this.miniPhotos = [];
       }
     });
