@@ -253,7 +253,7 @@ export class SoilTestingComponent implements OnInit {
     {
       field: 'finalDeduction',
       headerName: 'Final Deduction',
-      editable: true,
+      editable: false,
       filter: true,
       minWidth: 200,
       cellEditor: 'agLargeTextCellEditor',

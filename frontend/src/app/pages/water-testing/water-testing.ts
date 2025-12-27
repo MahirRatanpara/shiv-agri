@@ -236,9 +236,9 @@ export class WaterTestingComponent implements OnInit {
       },
     },
     {
-      field: 'classification',
+      field: 'waterClass',
       headerName: 'CLASS',
-      editable: true,
+      editable: false,
       filter: true,
       minWidth: 140,
     },
@@ -279,7 +279,7 @@ export class WaterTestingComponent implements OnInit {
     {
       field: 'finalDeduction',
       headerName: 'Final Deduction',
-      editable: true,
+      editable: false,
       filter: true,
       minWidth: 200,
       cellEditor: 'agLargeTextCellEditor',

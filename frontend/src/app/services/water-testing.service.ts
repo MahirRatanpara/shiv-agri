@@ -41,6 +41,17 @@ export interface WaterTestingData {
   ecResultEn?: string;
   sarResultEn?: string;
   rscResultEn?: string;
+
+  // Class codes
+  ecClass?: string;
+  sarClass?: string;
+  rscClass?: string;
+
+  // Combined water class (e.g., "C3S1", "C1S3")
+  waterClass?: string;
+
+  // Final deduction (English)
+  finalDeductionEn?: string;
 }
 
 /**

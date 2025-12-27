@@ -334,6 +334,11 @@ function addClassifications(sampleData) {
     classifications.SAR.classCode
   );
 
+  // Generate combined class (e.g., "C3S1", "C1S3")
+  const combinedClass = (classifications.EC.classCode && classifications.SAR.classCode)
+    ? `${classifications.EC.classCode}${classifications.SAR.classCode}`
+    : '';
+
   return {
     ...sampleData,
     // Single result fields per parameter (Gujarati classification)
@@ -352,6 +357,9 @@ function addClassifications(sampleData) {
     ecClass: classifications.EC.classCode,
     sarClass: classifications.SAR.classCode,
     rscClass: classifications.RSC.classCode,
+
+    // Combined class (e.g., "C3S1")
+    waterClass: combinedClass,
 
     // Final deduction
     finalDeduction: deduction.finalDeduction,
