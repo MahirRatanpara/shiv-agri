@@ -1,0 +1,64 @@
+<div class="modal-overlay" *ngIf="isVisible" (click)="cancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>
+        <i class="fas fa-user-tag"></i>
+        {{ options?.title || 'Select Role' }}
+      </h3>
+      <button class="close-button" (click)="cancel()" aria-label="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="user-info">
+        Select a new role for <strong>{{ options?.userName }}</strong>
+      </p>
+
+      <div class="role-selection">
+        <label class="form-label">Available Roles:</label>
+        <div class="role-options">
+          <label
+            *ngFor="let role of options?.availableRoles"
+            class="role-option"
+            [class.selected]="selectedRole === role.name"
+          >
+            <input
+              type="radio"
+              name="role"
+              [value]="role.name"
+              [(ngModel)]="selectedRole"
+            />
+            <div class="role-content">
+              <div class="role-header">
+                <span class="role-name">{{ role.displayName }}</span>
+                <span class="role-badge" [ngClass]="getRoleBadgeClass(role.name)">
+                  {{ role.name }}
+                </span>
+              </div>
+              <p class="role-description" *ngIf="role.description">
+                {{ role.description }}
+              </p>
+            </div>
+            <i class="fas fa-check-circle check-icon"></i>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancel()">
+        <i class="fas fa-times"></i>
+        Cancel
+      </button>
+      <button
+        class="btn btn-primary"
+        (click)="confirm()"
+        [disabled]="!selectedRole"
+      >
+        <i class="fas fa-check"></i>
+        Change Role
+      </button>
+    </div>
+  </div>
+</div>

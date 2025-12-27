@@ -3,13 +3,17 @@ const router = express.Router();
 const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
 const { addClassifications } = require('../utils/soilClassification');
+const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 logger.info('Soil Testing routes initialized - Using referenced mode with separate collections');
 logger.info('Soil classification system enabled');
 
+// All routes require authentication
+router.use(authenticate);
+
 // Get all sessions with their samples
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
     const sessions = await SoilSession.find().sort({ date: -1, version: -1 });
 
@@ -30,7 +34,7 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Get sessions by date with their samples
-router.get('/sessions/date/:date', async (req, res) => {
+router.get('/sessions/date/:date', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
     const { date } = req.params;
     const sessions = await SoilSession.find({ date }).sort({ version: -1 });
@@ -52,7 +56,7 @@ router.get('/sessions/date/:date', async (req, res) => {
 });
 
 // Get session count for a specific date
-router.get('/sessions/count/:date', async (req, res) => {
+router.get('/sessions/count/:date', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
     const { date } = req.params;
     const count = await SoilSession.countDocuments({ date });
@@ -65,7 +69,7 @@ router.get('/sessions/count/:date', async (req, res) => {
 });
 
 // Get a specific session by ID with its samples
-router.get('/sessions/:id', async (req, res) => {
+router.get('/sessions/:id', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
     const session = await SoilSession.findById(req.params.id);
     if (!session) {
@@ -87,7 +91,7 @@ router.get('/sessions/:id', async (req, res) => {
 });
 
 // Create a new session
-router.post('/sessions', async (req, res) => {
+router.post('/sessions', requirePermission('soil.sessions.create'), async (req, res) => {
   try {
     const { date, version, startTime } = req.body;
 
@@ -120,7 +124,7 @@ router.post('/sessions', async (req, res) => {
 });
 
 // Update a session and its samples
-router.put('/sessions/:id', async (req, res) => {
+router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (req, res) => {
   try {
     const { endTime, data } = req.body;
 

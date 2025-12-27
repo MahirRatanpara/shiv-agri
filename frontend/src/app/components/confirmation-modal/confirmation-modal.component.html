@@ -1,0 +1,26 @@
+<div class="modal-backdrop" *ngIf="showModal" (click)="closeModal()"></div>
+
+<div class="confirmation-modal" *ngIf="showModal && config" (click)="$event.stopPropagation()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <i [class]="config.icon"></i>
+      <h3>{{ config.title }}</h3>
+      <button class="close-btn" (click)="cancel()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p>{{ config.message }}</p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancel()">
+        {{ config.cancelText }}
+      </button>
+      <button [class]="'btn ' + config.confirmClass" (click)="confirm()">
+        {{ config.confirmText }}
+      </button>
+    </div>
+  </div>
+</div>

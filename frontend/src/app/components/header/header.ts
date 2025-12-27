@@ -2,6 +2,9 @@ import { Component, AfterViewInit, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import {CommonModule, NgOptimizedImage} from '@angular/common';
 import { AuthService, User } from '../../services/auth.service';
+import { PermissionService } from '../../services/permission.service';
+import { ConfirmationModalService } from '../../services/confirmation-modal.service';
+import { ToastService } from '../../services/toast.service';
 
 declare var $: any;
 
@@ -14,10 +17,18 @@ declare var $: any;
 export class HeaderComponent implements AfterViewInit, OnInit {
   currentUser: User | null = null;
   isAuthenticated = false;
+  profileImageLoadError = false;
+
+  // Permission flags for navigation items
+  hasSoilTestingAccess = false;
+  hasWaterTestingAccess = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private permissionService: PermissionService,
+    private confirmationService: ConfirmationModalService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -25,17 +36,71 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       this.isAuthenticated = !!user;
+      this.profileImageLoadError = false; // Reset error state on user change
+
+      // Reload permission service to ensure it has latest data
+      if (user) {
+        this.permissionService.reloadPermissions();
+      }
+    });
+
+    // Subscribe to permission changes to update navigation
+    this.permissionService.userPermissions$.subscribe(permissions => {
+      // Update permissions whenever they change
+      this.updatePermissions();
     });
   }
 
-  logout(): void {
-    if (confirm('Are you sure you want to logout?')) {
+  /**
+   * Update permission flags based on user's permissions
+   */
+  private updatePermissions(): void {
+    if (!this.isAuthenticated) {
+      this.hasSoilTestingAccess = false;
+      this.hasWaterTestingAccess = false;
+      return;
+    }
+
+    // Check if user has ANY soil testing related permission
+    this.hasSoilTestingAccess = this.permissionService.hasAnyPermission([
+      'soil.sessions.view',
+      'soil.sessions.create',
+      'soil.sessions.update',
+      'soil.samples.view',
+      'soil.samples.create',
+      'soil.reports.download'
+    ]);
+
+    // Check if user has ANY water testing related permission
+    this.hasWaterTestingAccess = this.permissionService.hasAnyPermission([
+      'water.sessions.view',
+      'water.sessions.create',
+      'water.sessions.update',
+      'water.samples.view',
+      'water.samples.create',
+      'water.reports.download'
+    ]);
+  }
+
+  async logout(): Promise<void> {
+    const confirmed = await this.confirmationService.confirm({
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to logout? Any unsaved changes will be lost.',
+      confirmText: 'Yes, Logout',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-warning',
+      icon: 'fas fa-sign-out-alt'
+    });
+
+    if (confirmed) {
       this.authService.logout().subscribe({
         next: () => {
+          this.toastService.show('You have been logged out successfully', 'success');
           this.router.navigate(['/login']);
         },
         error: (error) => {
-          console.error('Logout error:', error);
+          // Still navigate to login even if logout API fails
+          this.toastService.show('Logged out locally', 'info');
           this.router.navigate(['/login']);
         }
       });
@@ -57,8 +122,6 @@ export class HeaderComponent implements AfterViewInit, OnInit {
           const isExpanded = toggler.getAttribute('aria-expanded') === 'true';
           toggler.setAttribute('aria-expanded', (!isExpanded).toString());
           menu.classList.toggle('show');
-
-          console.log('Mobile menu toggled:', menu.classList.contains('show'));
         });
 
         // Close menu when clicking on nav links
@@ -78,10 +141,12 @@ export class HeaderComponent implements AfterViewInit, OnInit {
             toggler.setAttribute('aria-expanded', 'false');
           }
         });
-      } else {
-        console.error('Toggler or menu not found');
       }
     }, 100);
+  }
+
+  onProfileImageError(): void {
+    this.profileImageLoadError = true;
   }
 
 }

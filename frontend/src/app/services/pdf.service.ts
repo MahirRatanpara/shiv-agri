@@ -140,7 +140,7 @@ export class PdfService {
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
-        console.error(`Error decoding PDF for ${pdfData.farmerName}:`, error);
+
       }
     });
   }
@@ -156,7 +156,7 @@ export class PdfService {
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+
       throw error;
     }
   }
@@ -171,7 +171,7 @@ export class PdfService {
         this.openPDFInNewTab(blob);
       }
     } catch (error) {
-      console.error('Error previewing PDF:', error);
+
       throw error;
     }
   }
@@ -187,7 +187,7 @@ export class PdfService {
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
-      console.error('Error downloading combined PDF:', error);
+
       throw error;
     }
   }
@@ -202,7 +202,7 @@ export class PdfService {
         this.downloadBulkPDFs(response);
       }
     } catch (error) {
-      console.error('Error downloading bulk PDFs:', error);
+
       throw error;
     }
   }
@@ -259,7 +259,7 @@ export class PdfService {
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
-      console.error('Error downloading water PDF:', error);
+
       throw error;
     }
   }
@@ -274,7 +274,7 @@ export class PdfService {
         this.downloadBulkWaterPDFsHelper(response);
       }
     } catch (error) {
-      console.error('Error downloading bulk water PDFs:', error);
+
       throw error;
     }
   }
@@ -304,7 +304,7 @@ export class PdfService {
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
-        console.error(`Error decoding PDF for ${pdfData.farmerName}:`, error);
+
       }
     });
   }
@@ -320,7 +320,7 @@ export class PdfService {
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
-      console.error('Error downloading combined water PDF:', error);
+
       throw error;
     }
   }

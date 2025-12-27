@@ -14,11 +14,16 @@
         <li class="nav-item">
           <a class="nav-link" routerLink="/contact"> Contact </a>
         </li>
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAuthenticated && hasSoilTestingAccess">
           <a class="nav-link" routerLink="/soil-testing"> Soil Testing </a>
         </li>
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
           <a class="nav-link" routerLink="/water-testing"> Water Testing </a>
+        </li>
+        <li class="nav-item" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
+          <a class="nav-link" routerLink="/admin/users">
+            <i class="fas fa-user-shield"></i> Admin Dashboard
+          </a>
         </li>
       </ul>
       <ul class="navbar-nav ml-auto auth-nav">
@@ -29,8 +34,13 @@
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && currentUser">
           <a class="nav-link" routerLink="/my-account">
-            <img *ngIf="currentUser.profilePhoto" [src]="currentUser.profilePhoto" alt="{{ currentUser.name }}" class="user-avatar">
-            <span *ngIf="!currentUser.profilePhoto" class="user-avatar-placeholder">
+            <img
+              *ngIf="currentUser.profilePhoto && !profileImageLoadError"
+              [src]="currentUser.profilePhoto"
+              (error)="onProfileImageError()"
+              alt="{{ currentUser.name }}"
+              class="user-avatar">
+            <span *ngIf="!currentUser.profilePhoto || profileImageLoadError" class="user-avatar-placeholder">
               {{ currentUser.name.charAt(0).toUpperCase() }}
             </span>
             {{ currentUser.name }}

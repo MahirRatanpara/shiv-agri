@@ -48,7 +48,7 @@
     <div class="session-management" *ngIf="!isLoading && isBackendConnected && !sessionActive">
       <!-- Quick Actions Bar -->
       <div class="quick-actions">
-        <button class="btn btn-primary" (click)="startNewSession()" [disabled]="!isBackendConnected">
+        <button *hasPermission="'water.sessions.create'" class="btn btn-primary" (click)="startNewSession()" [disabled]="!isBackendConnected">
           <i class="fas fa-plus"></i>
           Start New Session
         </button>
@@ -139,11 +139,11 @@
         </span>
       </div>
       <div class="session-actions-header">
-        <button class="btn btn-warning" (click)="saveAndExit()">
+        <button *hasPermission="'water.sessions.update'" class="btn btn-warning" (click)="saveAndExit()">
           <i class="fas fa-save"></i>
           Save & Exit
         </button>
-        <button class="btn btn-success" (click)="completeSession()">
+        <button *hasPermission="'water.sessions.update'" class="btn btn-success" (click)="completeSession()">
           <i class="fas fa-check-circle"></i>
           Complete Session
         </button>
@@ -153,25 +153,25 @@
     <!-- Toolbar -->
     <div class="toolbar" *ngIf="sessionActive">
       <div class="toolbar-left">
-        <button class="btn btn-primary" (click)="addNewRow()">
+        <button *hasPermission="'water.samples.create'" class="btn btn-primary" (click)="addNewRow()">
           <i class="fas fa-plus"></i>
           Add Row
         </button>
-        <button class="btn btn-danger" (click)="deleteSelectedRows()">
+        <button *hasPermission="'water.samples.delete'" class="btn btn-danger" (click)="deleteSelectedRows()">
           <i class="fas fa-trash"></i>
           Delete Selected
         </button>
       </div>
       <div class="toolbar-right">
-        <button class="btn btn-info" (click)="exportToCsv()">
+        <button *hasPermission="'water.samples.view'" class="btn btn-info" (click)="exportToCsv()">
           <i class="fas fa-file-csv"></i>
           Export to CSV
         </button>
-        <button class="btn btn-pdf" (click)="downloadAllPdfs()">
+        <button *hasPermission="'water.reports.download'" class="btn btn-pdf" (click)="downloadAllPdfs()">
           <i class="fas fa-file-pdf"></i>
           Download All PDFs
         </button>
-        <button class="btn btn-pdf-combined" (click)="downloadCombinedPdf()">
+        <button *hasPermission="'water.reports.download'" class="btn btn-pdf-combined" (click)="downloadCombinedPdf()">
           <i class="fas fa-file-archive"></i>
           Download Combined PDF
         </button>

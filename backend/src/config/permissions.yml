@@ -1,0 +1,489 @@
+# ============================================
+# RBAC Permissions Configuration
+# ============================================
+# This file defines all permissions and their mappings to roles
+# Used by the database migration script to initialize/update permissions
+
+# ============================================
+# PERMISSION DEFINITIONS
+# ============================================
+# Each permission has:
+# - name: unique identifier (used in code)
+# - resource: what resource it applies to
+# - action: what action it allows
+# - description: human-readable description
+
+permissions:
+  # ==================== Authentication & User Management ====================
+  - name: users.view
+    resource: users
+    action: view
+    description: View user information and list users
+
+  - name: users.create
+    resource: users
+    action: create
+    description: Create new user accounts
+
+  - name: users.update
+    resource: users
+    action: update
+    description: Update user information
+
+  - name: users.delete
+    resource: users
+    action: delete
+    description: Delete user accounts
+
+  - name: users.assign-role
+    resource: users
+    action: assign-role
+    description: Assign or change user roles
+
+  # ==================== Soil Testing ====================
+  - name: soil.sessions.view
+    resource: soil-sessions
+    action: view
+    description: View soil testing sessions
+
+  - name: soil.sessions.create
+    resource: soil-sessions
+    action: create
+    description: Create new soil testing sessions
+
+  - name: soil.sessions.update
+    resource: soil-sessions
+    action: update
+    description: Update soil testing sessions
+
+  - name: soil.sessions.delete
+    resource: soil-sessions
+    action: delete
+    description: Delete soil testing sessions
+
+  - name: soil.samples.view
+    resource: soil-samples
+    action: view
+    description: View soil samples and results
+
+  - name: soil.samples.create
+    resource: soil-samples
+    action: create
+    description: Create soil sample records
+
+  - name: soil.samples.update
+    resource: soil-samples
+    action: update
+    description: Update soil sample records
+
+  - name: soil.samples.delete
+    resource: soil-samples
+    action: delete
+    description: Delete soil sample records
+
+  - name: soil.reports.generate
+    resource: soil-reports
+    action: generate
+    description: Generate soil analysis reports
+
+  - name: soil.reports.download
+    resource: soil-reports
+    action: download
+    description: Download soil reports as PDF
+
+  # ==================== Water Testing ====================
+  - name: water.sessions.view
+    resource: water-sessions
+    action: view
+    description: View water testing sessions
+
+  - name: water.sessions.create
+    resource: water-sessions
+    action: create
+    description: Create new water testing sessions
+
+  - name: water.sessions.update
+    resource: water-sessions
+    action: update
+    description: Update water testing sessions
+
+  - name: water.sessions.delete
+    resource: water-sessions
+    action: delete
+    description: Delete water testing sessions
+
+  - name: water.samples.view
+    resource: water-samples
+    action: view
+    description: View water samples and results
+
+  - name: water.samples.create
+    resource: water-samples
+    action: create
+    description: Create water sample records
+
+  - name: water.samples.update
+    resource: water-samples
+    action: update
+    description: Update water sample records
+
+  - name: water.samples.delete
+    resource: water-samples
+    action: delete
+    description: Delete water sample records
+
+  - name: water.reports.generate
+    resource: water-reports
+    action: generate
+    description: Generate water analysis reports
+
+  - name: water.reports.download
+    resource: water-reports
+    action: download
+    description: Download water reports as PDF
+
+  # ==================== Projects & Landscaping ====================
+  - name: projects.view
+    resource: projects
+    action: view
+    description: View landscaping projects
+
+  - name: projects.create
+    resource: projects
+    action: create
+    description: Create new projects
+
+  - name: projects.update
+    resource: projects
+    action: update
+    description: Update project information
+
+  - name: projects.delete
+    resource: projects
+    action: delete
+    description: Delete projects
+
+  # ==================== Farm Management ====================
+  - name: farms.view
+    resource: farms
+    action: view
+    description: View farm information
+
+  - name: farms.create
+    resource: farms
+    action: create
+    description: Create new farm records
+
+  - name: farms.update
+    resource: farms
+    action: update
+    description: Update farm information
+
+  - name: farms.delete
+    resource: farms
+    action: delete
+    description: Delete farm records
+
+  # ==================== Billing & Invoices ====================
+  - name: billing.view
+    resource: billing
+    action: view
+    description: View invoices and billing information
+
+  - name: billing.create
+    resource: billing
+    action: create
+    description: Create invoices and quotations
+
+  - name: billing.update
+    resource: billing
+    action: update
+    description: Update billing records
+
+  - name: billing.delete
+    resource: billing
+    action: delete
+    description: Delete billing records
+
+  - name: billing.send
+    resource: billing
+    action: send
+    description: Send invoices via email/WhatsApp
+
+  # ==================== File Management ====================
+  - name: files.view
+    resource: files
+    action: view
+    description: View uploaded files and documents
+
+  - name: files.upload
+    resource: files
+    action: upload
+    description: Upload files and documents
+
+  - name: files.delete
+    resource: files
+    action: delete
+    description: Delete uploaded files
+
+  # ==================== Reports ====================
+  - name: reports.view
+    resource: reports
+    action: view
+    description: View all types of reports
+
+  - name: reports.generate
+    resource: reports
+    action: generate
+    description: Generate custom reports
+
+  - name: reports.export
+    resource: reports
+    action: export
+    description: Export reports to various formats
+
+  # ==================== Roles & Permissions Management ====================
+  - name: roles.view
+    resource: roles
+    action: view
+    description: View roles and their permissions
+
+  - name: roles.create
+    resource: roles
+    action: create
+    description: Create new roles
+
+  - name: roles.update
+    resource: roles
+    action: update
+    description: Update role permissions
+
+  - name: roles.delete
+    resource: roles
+    action: delete
+    description: Delete roles
+
+  - name: permissions.view
+    resource: permissions
+    action: view
+    description: View all available permissions
+
+  - name: permissions.assign
+    resource: permissions
+    action: assign
+    description: Assign permissions to roles
+
+  # ==================== System Administration ====================
+  - name: system.settings.view
+    resource: system-settings
+    action: view
+    description: View system settings
+
+  - name: system.settings.update
+    resource: system-settings
+    action: update
+    description: Update system settings
+
+  - name: system.logs.view
+    resource: system-logs
+    action: view
+    description: View system logs and audit trails
+
+# ============================================
+# ROLE DEFINITIONS
+# ============================================
+# Each role has:
+# - name: unique identifier
+# - displayName: human-readable name
+# - description: role description
+# - permissions: list of permission names assigned to this role
+# - isSystem: whether this is a system role (cannot be deleted)
+
+roles:
+  # ==================== ADMIN ROLE ====================
+  - name: admin
+    displayName: Administrator
+    description: Full system access with all permissions
+    isSystem: true
+    permissions:
+      # User Management
+      - users.view
+      - users.create
+      - users.update
+      - users.delete
+      - users.assign-role
+
+      # Soil Testing - Full Access
+      - soil.sessions.view
+      - soil.sessions.create
+      - soil.sessions.update
+      - soil.sessions.delete
+      - soil.samples.view
+      - soil.samples.create
+      - soil.samples.update
+      - soil.samples.delete
+      - soil.reports.generate
+      - soil.reports.download
+
+      # Water Testing - Full Access
+      - water.sessions.view
+      - water.sessions.create
+      - water.sessions.update
+      - water.sessions.delete
+      - water.samples.view
+      - water.samples.create
+      - water.samples.update
+      - water.samples.delete
+      - water.reports.generate
+      - water.reports.download
+
+      # Projects
+      - projects.view
+      - projects.create
+      - projects.update
+      - projects.delete
+
+      # Farms
+      - farms.view
+      - farms.create
+      - farms.update
+      - farms.delete
+
+      # Billing
+      - billing.view
+      - billing.create
+      - billing.update
+      - billing.delete
+      - billing.send
+
+      # Files
+      - files.view
+      - files.upload
+      - files.delete
+
+      # Reports
+      - reports.view
+      - reports.generate
+      - reports.export
+
+      # Roles & Permissions
+      - roles.view
+      - roles.create
+      - roles.update
+      - roles.delete
+      - permissions.view
+      - permissions.assign
+
+      # System
+      - system.settings.view
+      - system.settings.update
+      - system.logs.view
+
+  # ==================== USER ROLE (Client) ====================
+  - name: user
+    displayName: User (Client)
+    description: Client with access to view their own data and reports
+    isSystem: true
+    permissions:
+      # Projects - View Only (Assigned)
+      - projects.view
+
+      # Farms - View Only (Own)
+      - farms.view
+
+      # Billing - View Only (Own)
+      - billing.view
+
+      # Files - View Only (Own)
+      - files.view
+
+      # Reports - View Only (Own)
+      - reports.view
+
+  # ==================== assistant ROLE ====================
+  - name: assistant
+    displayName: Assistant
+    description: Assistant role with full access to testing operations but no admin capabilities
+    isSystem: false
+    permissions:
+      # Soil Testing - Full Access
+      - soil.sessions.view
+      - soil.sessions.create
+      - soil.sessions.update
+      - soil.sessions.delete
+      - soil.samples.view
+      - soil.samples.create
+      - soil.samples.update
+      - soil.samples.delete
+      - soil.reports.generate
+      - soil.reports.download
+
+      # Water Testing - Full Access
+      - water.sessions.view
+      - water.sessions.create
+      - water.sessions.update
+      - water.sessions.delete
+      - water.samples.view
+      - water.samples.create
+      - water.samples.update
+      - water.samples.delete
+      - water.reports.generate
+      - water.reports.download
+
+      # Files
+      - files.view
+      - files.upload
+      - files.delete
+
+      # Reports
+      - reports.view
+      - reports.generate
+      - reports.export
+
+  # ==================== MANAGER ROLE ====================
+  - name: manager
+    displayName: Manager
+    description: Manager with access to projects, farms, and billing
+    isSystem: false
+    permissions:
+      # Users - View Only
+      - users.view
+
+      # Soil & Water Testing - View & Reports
+      - soil.sessions.view
+      - soil.samples.view
+      - soil.reports.generate
+      - soil.reports.download
+      - water.sessions.view
+      - water.samples.view
+      - water.reports.generate
+      - water.reports.download
+
+      # Projects - Full Access
+      - projects.view
+      - projects.create
+      - projects.update
+      - projects.delete
+
+      # Farms - Full Access
+      - farms.view
+      - farms.create
+      - farms.update
+      - farms.delete
+
+      # Billing - Full Access
+      - billing.view
+      - billing.create
+      - billing.update
+      - billing.delete
+      - billing.send
+
+      # Files
+      - files.view
+      - files.upload
+      - files.delete
+
+      # Reports
+      - reports.view
+      - reports.generate
+      - reports.export
