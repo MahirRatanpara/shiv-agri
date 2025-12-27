@@ -6,9 +6,15 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "google-auth-library": "^9.6.3",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "puppeteer": "^24.33.0",
     "winston": "^3.19.0"
+  },
+  "scripts": {
+    "migrate:permissions": "node src/scripts/migrate-permissions.js",
+    "migrate:permissions:dry-run": "node src/scripts/migrate-permissions.js --dry-run",
+    "migrate:permissions:force": "node src/scripts/migrate-permissions.js --force"
   }
 }

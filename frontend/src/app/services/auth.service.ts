@@ -9,7 +9,6 @@ export interface User {
   name: string;
   role: string;
   profilePhoto?: string;
-  isApproved: boolean;
 }
 
 export interface AuthResponse {
@@ -17,7 +16,6 @@ export interface AuthResponse {
   accessToken?: string;
   refreshToken?: string;
   user?: User;
-  requiresApproval?: boolean;
   error?: string;
 }
 
@@ -58,7 +56,7 @@ export class AuthService {
       withCredentials: true
     }).pipe(
       tap(response => {
-        if (response.accessToken && response.user && !response.requiresApproval) {
+        if (response.accessToken && response.user) {
           this.setSession(response);
         }
       })

@@ -28,25 +28,64 @@ const googleLogin = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create new user
+      // Create new user - auto-approved
       user = new User({
         googleId,
         email,
         name,
         profilePhoto: picture,
-        isApproved: false, // New users need approval
         lastLogin: new Date()
       });
       await user.save();
 
+      // Set roleRef based on role name
+      const Role = require('../models/Role');
+      const roleDoc = await Role.findOne({ name: user.role }).populate('permissions');
+      if (roleDoc) {
+        user.roleRef = roleDoc._id;
+        await user.save();
+      }
+
+      // Populate roleRef with permissions for response
+      await user.populate({
+        path: 'roleRef',
+        populate: { path: 'permissions' }
+      });
+
+      // Generate tokens for new user
+      const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
+      const refreshToken = generateRefreshToken({ userId: user._id });
+
+      // Save refresh token
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      // Set cookies
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 1000 // 1 hour
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
       return res.status(201).json({
-        message: 'Account created. Waiting for admin approval.',
-        requiresApproval: true,
+        message: 'Account created successfully',
+        accessToken,
+        refreshToken,
         user: {
           id: user._id,
           email: user.email,
           name: user.name,
-          profilePhoto: user.profilePhoto
+          role: user.role,
+          profilePhoto: user.profilePhoto,
+          roleRef: user.roleRef
         }
       });
     }
@@ -60,19 +99,13 @@ const googleLogin = async (req, res) => {
     }
     user.lastLogin = new Date();
 
-    // Check if user is approved
-    if (!user.isApproved) {
-      await user.save();
-      return res.status(403).json({
-        error: 'Account pending approval',
-        requiresApproval: true,
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          profilePhoto: user.profilePhoto
-        }
-      });
+    // Ensure roleRef is set
+    if (!user.roleRef) {
+      const Role = require('../models/Role');
+      const roleDoc = await Role.findOne({ name: user.role });
+      if (roleDoc) {
+        user.roleRef = roleDoc._id;
+      }
     }
 
     // Generate tokens
@@ -82,6 +115,12 @@ const googleLogin = async (req, res) => {
     // Save refresh token
     user.refreshToken = refreshToken;
     await user.save();
+
+    // Populate roleRef with permissions for response
+    await user.populate({
+      path: 'roleRef',
+      populate: { path: 'permissions' }
+    });
 
     // Set cookies
     res.cookie('accessToken', accessToken, {
@@ -108,7 +147,7 @@ const googleLogin = async (req, res) => {
         name: user.name,
         role: user.role,
         profilePhoto: user.profilePhoto,
-        isApproved: user.isApproved
+        roleRef: user.roleRef
       }
     });
   } catch (error) {
@@ -136,10 +175,6 @@ const refreshAccessToken = async (req, res) => {
 
     if (!user || user.refreshToken !== refreshToken) {
       return res.status(401).json({ error: 'Invalid refresh token' });
-    }
-
-    if (!user.isApproved) {
-      return res.status(403).json({ error: 'Account pending approval' });
     }
 
     // Generate new access token
@@ -200,7 +235,7 @@ const getCurrentUser = async (req, res) => {
         name: user.name,
         role: user.role,
         profilePhoto: user.profilePhoto,
-        isApproved: user.isApproved
+        roleRef: user.roleRef
       }
     });
   } catch (error) {

@@ -3,13 +3,17 @@ const router = express.Router();
 const WaterSession = require('../models/WaterSession');
 const WaterSample = require('../models/WaterSample');
 const { addClassifications } = require('../utils/waterClassification');
+const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 logger.info('Water Testing routes initialized - Using referenced mode with separate collections');
 logger.info('Water classification system enabled');
 
+// All routes require authentication
+router.use(authenticate);
+
 // Get all sessions with their samples
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', requirePermission('water.sessions.view'), async (req, res) => {
   try {
     const sessions = await WaterSession.find().sort({ date: -1, version: -1 });
 

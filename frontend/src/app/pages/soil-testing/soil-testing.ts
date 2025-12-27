@@ -11,11 +11,12 @@ import {
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
-  imports: [CommonModule, AgGridAngular],
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
   providers: [SoilTestingService, PdfService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
@@ -378,7 +379,7 @@ export class SoilTestingComponent implements OnInit {
 
   startNewSession() {
     if (!this.isBackendConnected) {
-      alert('Cannot start session: Backend server is not connected. Please ensure the server is running on http://localhost:3000');
+      this.toastService.show('Cannot start session: Backend server is not connected', 'error');
       return;
     }
 
@@ -404,7 +405,7 @@ export class SoilTestingComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error creating session:', error);
-        alert('Failed to create session. Error: ' + (error.message || 'Unknown error'));
+        this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
         this.isBackendConnected = false;
       }
     });
@@ -412,7 +413,7 @@ export class SoilTestingComponent implements OnInit {
 
   saveAndExit() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to save');
+      this.toastService.show('No active session to save', 'warning');
       return;
     }
 
@@ -448,14 +449,14 @@ export class SoilTestingComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error saving session:', error);
-        alert('Failed to save session. Error: ' + (error.message || 'Unknown error'));
+        this.toastService.show('Failed to save session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
 
   completeSession() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to complete');
+      this.toastService.show('No active session to complete', 'warning');
       return;
     }
 
@@ -491,7 +492,7 @@ export class SoilTestingComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error completing session:', error);
-        alert('Failed to complete session. Error: ' + (error.message || 'Unknown error'));
+        this.toastService.show('Failed to complete session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
@@ -821,7 +822,7 @@ export class SoilTestingComponent implements OnInit {
       await this.pdfService.previewSinglePDF(savedRow._id);
     } catch (error) {
       console.error('Error previewing PDF:', error);
-      alert('Failed to preview PDF report.');
+      this.toastService.show('Failed to preview PDF report', 'error');
     }
   }
 

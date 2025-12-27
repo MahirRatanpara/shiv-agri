@@ -68,23 +68,15 @@ export class LoginComponent implements OnInit {
     this.authService.googleLogin(response.credential).subscribe({
       next: (result) => {
         this.isLoading = false;
+        this.successMessage = 'Login successful! Redirecting...';
 
-        if (result.requiresApproval) {
-          this.successMessage = result.message || 'Account created. Waiting for admin approval.';
-          setTimeout(() => {
-            this.router.navigate(['/']);
-          }, 3000);
-        } else {
-          this.successMessage = 'Login successful! Redirecting...';
+        // Get redirect URL or default to home
+        const redirectUrl = localStorage.getItem('redirectUrl') || '/';
+        localStorage.removeItem('redirectUrl');
 
-          // Get redirect URL or default to home
-          const redirectUrl = localStorage.getItem('redirectUrl') || '/';
-          localStorage.removeItem('redirectUrl');
-
-          setTimeout(() => {
-            this.router.navigate([redirectUrl]);
-          }, 1000);
-        }
+        setTimeout(() => {
+          this.router.navigate([redirectUrl]);
+        }, 1000);
       },
       error: (error) => {
         this.isLoading = false;
