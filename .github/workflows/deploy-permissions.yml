@@ -78,13 +78,26 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/shiv-agri/backend
+            cd /var/www/shiv-agri
 
-            echo "📦 Pulling latest code from repository..."
-            git pull origin main
+            # Source environment variables from .env file
+            if [ -f .env ]; then
+              export $(cat .env | grep -v '^#' | xargs)
+              echo "✓ Environment variables loaded from .env"
+            else
+              echo "⚠ Warning: .env file not found"
+            fi
 
-            echo "📦 Installing dependencies..."
-            npm ci
+            echo "🔄 Pulling latest API image..."
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            docker compose -f docker-compose.prod.yml pull api
+
+            echo "🔄 Restarting API container with new image..."
+            docker compose -f docker-compose.prod.yml up -d api
+
+            # Wait for container to be healthy
+            echo "⏳ Waiting for API container to be ready..."
+            sleep 5
 
             # Determine migration mode
             DRY_RUN="${{ inputs.dry_run }}"
@@ -98,14 +111,14 @@ jobs:
             if [ "$DRY_RUN" == "true" ]; then
               echo "🔍 Running migration in DRY RUN mode..."
               echo "No changes will be made to the database"
-              npm run migrate:permissions:dry-run
+              docker exec shivagri-api npm run migrate:permissions:dry-run
             elif [ "$FORCE_UPDATE" == "true" ]; then
               echo "⚠️  Running migration with FORCE UPDATE..."
               echo "System roles will be updated"
-              npm run migrate:permissions:force
+              docker exec shivagri-api npm run migrate:permissions:force
             else
               echo "🚀 Running permission migration..."
-              npm run migrate:permissions
+              docker exec shivagri-api npm run migrate:permissions
             fi
 
             echo "✅ Permission migration completed successfully!"
