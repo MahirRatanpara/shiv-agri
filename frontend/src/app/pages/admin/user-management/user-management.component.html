@@ -1,0 +1,127 @@
+<div class="user-management-container">
+  <div class="page-header">
+    <h1>
+      <i class="fas fa-users"></i>
+      User Management
+    </h1>
+    <p class="subtitle">Manage user roles and permissions</p>
+  </div>
+
+  <div class="filters-section">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+        placeholder="Search by name or email..."
+        class="form-control"
+      />
+    </div>
+
+    <div class="role-filter">
+      <label for="roleFilter">Filter by Role:</label>
+      <select
+        id="roleFilter"
+        [(ngModel)]="selectedRole"
+        (ngModelChange)="onRoleFilterChange()"
+        class="form-control"
+      >
+        <option value="">All Roles</option>
+        <option *ngFor="let role of roles" [value]="role.name">
+          {{ role.displayName }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <div class="users-count">
+    <span>Total Users: {{ totalUsers }}</span>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-spinner">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading users...</p>
+  </div>
+
+  <div *ngIf="!isLoading && users.length === 0" class="no-users">
+    <i class="fas fa-user-slash"></i>
+    <p>No users found</p>
+  </div>
+
+  <div *ngIf="!isLoading && users.length > 0" class="users-table-container">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users">
+          <td class="user-info">
+            <div class="user-avatar">
+              <img *ngIf="user.profilePhoto" [src]="user.profilePhoto" [alt]="user.name" />
+              <span *ngIf="!user.profilePhoto" class="avatar-placeholder">
+                {{ user.name.charAt(0).toUpperCase() }}
+              </span>
+            </div>
+            <span class="user-name">{{ user.name }}</span>
+          </td>
+          <td class="user-email">{{ user.email }}</td>
+          <td>
+            <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+              {{ user.roleRef?.displayName || user.role }}
+            </span>
+          </td>
+          <td class="user-joined">{{ user.createdAt | date: 'MMM d, y' }}</td>
+          <td class="user-actions">
+            <button
+              class="btn btn-sm btn-primary"
+              (click)="changeUserRole(user)"
+              title="Change Role"
+            >
+              <i class="fas fa-user-tag"></i>
+              Change Role
+            </button>
+            <button
+              class="btn btn-sm btn-danger"
+              (click)="deleteUser(user)"
+              title="Delete User"
+            >
+              <i class="fas fa-trash-alt"></i>
+              Delete
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="!isLoading && totalPages > 1" class="pagination">
+    <button
+      class="btn btn-secondary"
+      (click)="previousPage()"
+      [disabled]="currentPage === 1"
+    >
+      <i class="fas fa-chevron-left"></i>
+      Previous
+    </button>
+    <span class="page-info">
+      Page {{ currentPage }} of {{ totalPages }}
+    </span>
+    <button
+      class="btn btn-secondary"
+      (click)="nextPage()"
+      [disabled]="currentPage === totalPages"
+    >
+      Next
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>
+
+<app-role-selection-modal></app-role-selection-modal>

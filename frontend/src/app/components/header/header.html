@@ -14,11 +14,16 @@
         <li class="nav-item">
           <a class="nav-link" routerLink="/contact"> Contact </a>
         </li>
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAuthenticated && hasSoilTestingAccess">
           <a class="nav-link" routerLink="/soil-testing"> Soil Testing </a>
         </li>
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
           <a class="nav-link" routerLink="/water-testing"> Water Testing </a>
+        </li>
+        <li class="nav-item" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
+          <a class="nav-link" routerLink="/admin/users">
+            <i class="fas fa-user-shield"></i> Admin Dashboard
+          </a>
         </li>
       </ul>
       <ul class="navbar-nav ml-auto auth-nav">

@@ -5,13 +5,12 @@ import { AuthService, User } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { ConfirmationModalService } from '../../services/confirmation-modal.service';
 import { ToastService } from '../../services/toast.service';
-import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 declare var $: any;
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, CommonModule, NgOptimizedImage, HasPermissionDirective],
+  imports: [RouterLink, CommonModule, NgOptimizedImage],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
