@@ -3,14 +3,6 @@ name: Deploy Database Permissions
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        type: choice
-        options:
-          - production
-          - staging
-        default: 'staging'
       dry_run:
         description: 'Run in dry-run mode (preview changes only)'
         required: false
@@ -30,12 +22,9 @@ on:
       - 'backend/src/config/permissions.yml'
 
 jobs:
-  deploy-permissions:
-    name: Deploy Permissions to Database
+  validate-and-deploy:
+    name: Validate and Deploy Permissions
     runs-on: ubuntu-latest
-
-    environment:
-      name: ${{ inputs.environment || 'staging' }}
 
     steps:
       - name: Checkout code
@@ -81,76 +70,56 @@ jobs:
             }
           "
 
-      - name: Setup SSH for production
-        if: ${{ inputs.environment == 'production' || github.ref == 'refs/heads/main' }}
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Deploy permissions to server
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@master
         with:
-          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/shiv-agri/backend
 
-      - name: Run migration (Dry Run)
-        if: ${{ inputs.dry_run == true }}
-        working-directory: backend
-        run: |
-          echo "🔍 Running migration in DRY RUN mode..."
-          echo "No changes will be made to the database"
-          echo ""
-          npm run migrate:permissions:dry-run
+            echo "📦 Pulling latest code from repository..."
+            git pull origin main
 
-      - name: Run migration (Production)
-        if: ${{ inputs.dry_run == false || github.ref == 'refs/heads/main' }}
-        working-directory: backend
-        run: |
-          echo "🚀 Running permission migration..."
+            echo "📦 Installing dependencies..."
+            npm ci
 
-          if [ "${{ inputs.force_update }}" == "true" ]; then
-            echo "⚠️  Force update enabled - system roles will be updated"
-            npm run migrate:permissions:force
-          else
-            npm run migrate:permissions
-          fi
+            # Determine migration mode
+            DRY_RUN="${{ inputs.dry_run }}"
+            FORCE_UPDATE="${{ inputs.force_update }}"
 
-      - name: Verify migration
-        if: ${{ inputs.dry_run == false || github.ref == 'refs/heads/main' }}
-        working-directory: backend
-        run: |
-          echo "Verifying migration results..."
-          node -e "
-            const mongoose = require('mongoose');
-            require('dotenv').config({ path: './src/.env' });
+            # Default to regular migration when triggered by push
+            if [ "${{ github.event_name }}" == "push" ]; then
+              DRY_RUN="false"
+            fi
 
-            async function verify() {
-              try {
-                await mongoose.connect(process.env.MONGODB_URI);
+            if [ "$DRY_RUN" == "true" ]; then
+              echo "🔍 Running migration in DRY RUN mode..."
+              echo "No changes will be made to the database"
+              npm run migrate:permissions:dry-run
+            elif [ "$FORCE_UPDATE" == "true" ]; then
+              echo "⚠️  Running migration with FORCE UPDATE..."
+              echo "System roles will be updated"
+              npm run migrate:permissions:force
+            else
+              echo "🚀 Running permission migration..."
+              npm run migrate:permissions
+            fi
 
-                const Permission = require('./src/models/Permission');
-                const Role = require('./src/models/Role');
-
-                const permissionCount = await Permission.countDocuments({ isActive: true });
-                const roleCount = await Role.countDocuments({ isActive: true });
-
-                console.log('✓ Migration verified');
-                console.log(\`  Active Permissions: \${permissionCount}\`);
-                console.log(\`  Active Roles: \${roleCount}\`);
-
-                await mongoose.disconnect();
-              } catch (error) {
-                console.error('✗ Verification failed:', error.message);
-                process.exit(1);
-              }
-            }
-
-            verify();
-          "
+            echo "✅ Permission migration completed successfully!"
 
       - name: Create deployment summary
-        if: ${{ inputs.dry_run == false || github.ref == 'refs/heads/main' }}
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "## Permission Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** ${{ inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Dry Run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Force Update:** ${{ inputs.force_update }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run:** ${{ inputs.dry_run || 'false (auto-deploy)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Force Update:** ${{ inputs.force_update || 'false' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Permission migration completed successfully" >> $GITHUB_STEP_SUMMARY
@@ -162,10 +131,5 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "The permission migration failed. Please check the logs above for details." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** ${{ inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Cleanup
-        if: always()
-        working-directory: backend/src
-        run: rm -f .env
+          echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
