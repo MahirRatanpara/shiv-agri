@@ -132,6 +132,33 @@ const sampleSchema = new mongoose.Schema({
   rscResultEn: {
     type: String,
     default: ''
+  },
+
+  // Class codes
+  ecClass: {
+    type: String,
+    default: ''
+  },
+  sarClass: {
+    type: String,
+    default: ''
+  },
+  rscClass: {
+    type: String,
+    default: ''
+  },
+
+  // Combined water class (e.g., "C3S1", "C1S3")
+  waterClass: {
+    type: String,
+    default: '',
+    index: true
+  },
+
+  // Final deduction (English)
+  finalDeductionEn: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
