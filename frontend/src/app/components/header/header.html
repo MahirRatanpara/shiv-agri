@@ -34,8 +34,13 @@
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && currentUser">
           <a class="nav-link" routerLink="/my-account">
-            <img *ngIf="currentUser.profilePhoto" [src]="currentUser.profilePhoto" alt="{{ currentUser.name }}" class="user-avatar">
-            <span *ngIf="!currentUser.profilePhoto" class="user-avatar-placeholder">
+            <img
+              *ngIf="currentUser.profilePhoto && !profileImageLoadError"
+              [src]="currentUser.profilePhoto"
+              (error)="onProfileImageError()"
+              alt="{{ currentUser.name }}"
+              class="user-avatar">
+            <span *ngIf="!currentUser.profilePhoto || profileImageLoadError" class="user-avatar-placeholder">
               {{ currentUser.name.charAt(0).toUpperCase() }}
             </span>
             {{ currentUser.name }}

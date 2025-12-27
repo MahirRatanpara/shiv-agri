@@ -9,8 +9,13 @@
         <div *ngIf="user" class="account-content">
           <div class="profile-card">
             <div class="profile-header">
-              <img *ngIf="user.profilePhoto" [src]="user.profilePhoto" alt="{{ user.name }}" class="profile-photo">
-              <div *ngIf="!user.profilePhoto" class="profile-photo-placeholder">
+              <img
+                *ngIf="user.profilePhoto && !profileImageLoadError"
+                [src]="user.profilePhoto"
+                (error)="onProfileImageError()"
+                alt="{{ user.name }}"
+                class="profile-photo">
+              <div *ngIf="!user.profilePhoto || profileImageLoadError" class="profile-photo-placeholder">
                 {{ user.name.charAt(0).toUpperCase() }}
               </div>
               <div class="profile-info">

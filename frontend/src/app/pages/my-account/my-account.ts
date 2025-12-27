@@ -15,6 +15,7 @@ import { ToastService } from '../../services/toast.service';
 export class MyAccountComponent implements OnInit {
   user: User | null = null;
   isLoading = false;
+  profileImageLoadError = false;
 
   constructor(
     private authService: AuthService,
@@ -26,6 +27,7 @@ export class MyAccountComponent implements OnInit {
   ngOnInit(): void {
     this.authService.currentUser$.subscribe(user => {
       this.user = user;
+      this.profileImageLoadError = false; // Reset error state on user change
     });
   }
 
@@ -55,6 +57,10 @@ export class MyAccountComponent implements OnInit {
         }
       });
     }
+  }
+
+  onProfileImageError(): void {
+    this.profileImageLoadError = true;
   }
 
   getRoleBadgeClass(role: string): string {

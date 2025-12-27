@@ -400,45 +400,10 @@ roles:
       # Reports - View Only (Own)
       - reports.view
 
-  # ==================== ASSISTANT ROLE ====================
+  # ==================== assistant ROLE ====================
   - name: assistant
     displayName: Assistant
-    description: Assistant with data entry and testing capabilities
-    isSystem: true
-    permissions:
-      # Soil Testing - Create, View, Update & Reports
-      - soil.sessions.view
-      - soil.sessions.create
-      - soil.sessions.update
-      - soil.samples.view
-      - soil.samples.create
-      - soil.samples.update
-      - soil.samples.delete
-      - soil.reports.generate
-      - soil.reports.download
-
-      # Water Testing - Create, View, Update & Reports
-      - water.sessions.view
-      - water.sessions.create
-      - water.sessions.update
-      - water.samples.view
-      - water.samples.create
-      - water.samples.update
-      - water.samples.delete
-      - water.reports.generate
-      - water.reports.download
-
-      # Files - Upload & View
-      - files.view
-      - files.upload
-
-      # Reports - View Only
-      - reports.view
-
-  # ==================== LAB_TECHNICIAN ROLE ====================
-  - name: lab_technician
-    displayName: Lab Technician
-    description: Lab technician with full access to testing operations but no admin capabilities
+    description: Assistant role with full access to testing operations but no admin capabilities
     isSystem: false
     permissions:
       # Soil Testing - Full Access

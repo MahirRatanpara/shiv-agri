@@ -17,6 +17,7 @@ declare var $: any;
 export class HeaderComponent implements AfterViewInit, OnInit {
   currentUser: User | null = null;
   isAuthenticated = false;
+  profileImageLoadError = false;
 
   // Permission flags for navigation items
   hasSoilTestingAccess = false;
@@ -35,6 +36,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       this.isAuthenticated = !!user;
+      this.profileImageLoadError = false; // Reset error state on user change
 
       // Reload permission service to ensure it has latest data
       if (user) {
@@ -141,6 +143,10 @@ export class HeaderComponent implements AfterViewInit, OnInit {
         });
       }
     }, 100);
+  }
+
+  onProfileImageError(): void {
+    this.profileImageLoadError = true;
   }
 
 }
