@@ -11,11 +11,12 @@ import {
 import { WaterTestingService, Session, WaterTestingData } from '../../services/water-testing.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 @Component({
   selector: 'app-water-testing',
   standalone: true,
-  imports: [CommonModule, AgGridAngular],
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
   providers: [WaterTestingService, PdfService],
   templateUrl: './water-testing.html',
   styleUrls: ['./water-testing.css'],
@@ -319,23 +320,23 @@ export class WaterTestingComponent implements OnInit {
     private pdfService: PdfService,
     private toastService: ToastService
   ) {
-    console.log('WaterTestingComponent: Constructor called');
-    console.log('WaterTestingService injected:', this.waterTestingService);
+
+
   }
 
   ngOnInit(): void {
-    console.log('WaterTestingComponent: ngOnInit called');
+
     // Check backend connectivity first
     this.checkBackendConnection();
   }
 
   checkBackendConnection() {
-    console.log('WaterTestingComponent: checkBackendConnection called');
+
     this.isLoading = true;
-    console.log('WaterTestingComponent: About to call getTodaySessionCount');
+
     this.waterTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
-        console.log('WaterTestingComponent: getTodaySessionCount success:', response);
+
         this.isBackendConnected = true;
         this.todaySessionCount = response.count;
         this.isLoading = false;
@@ -343,7 +344,7 @@ export class WaterTestingComponent implements OnInit {
         this.loadSessions();
       },
       error: (error) => {
-        console.error('Backend connection failed:', error);
+
         this.isBackendConnected = false;
         this.isLoading = false;
       }
@@ -355,10 +356,10 @@ export class WaterTestingComponent implements OnInit {
       next: (sessions) => {
         this.allSessions = sessions;
         this.totalPages = Math.ceil(sessions.length / this.pageSize);
-        console.log('Loaded sessions:', sessions);
+
       },
       error: (error) => {
-        console.error('Error loading sessions:', error);
+
         this.isBackendConnected = false;
       }
     });
@@ -368,7 +369,7 @@ export class WaterTestingComponent implements OnInit {
     this.currentSession = session;
     this.sessionActive = true;
     this.rowData = session.data || [];
-    console.log('Resumed session:', session);
+
   }
 
   nextPage() {
@@ -393,10 +394,10 @@ export class WaterTestingComponent implements OnInit {
     this.waterTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
         this.todaySessionCount = response.count;
-        console.log('Today session count:', response.count);
+
       },
       error: (error) => {
-        console.error('Error loading today session count:', error);
+
         this.isBackendConnected = false;
       }
     });
@@ -404,7 +405,7 @@ export class WaterTestingComponent implements OnInit {
 
   startNewSession() {
     if (!this.isBackendConnected) {
-      alert('Cannot start session: Backend server is not connected. Please ensure the server is running on http://localhost:3000');
+      this.toastService.show('Cannot start session: Backend server is not connected', 'error');
       return;
     }
 
@@ -418,19 +419,18 @@ export class WaterTestingComponent implements OnInit {
       data: []
     };
 
-    console.log('Creating new session:', newSession);
 
     this.waterTestingService.createSession(newSession).subscribe({
       next: (session) => {
-        console.log('Session created successfully:', session);
+
         this.currentSession = session;
         this.sessionActive = true;
         this.rowData = [];
         this.todaySessionCount = version;
       },
       error: (error) => {
-        console.error('Error creating session:', error);
-        alert('Failed to create session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
         this.isBackendConnected = false;
       }
     });
@@ -438,7 +438,7 @@ export class WaterTestingComponent implements OnInit {
 
   saveAndExit() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to save');
+      this.toastService.show('No active session to save', 'warning');
       return;
     }
 
@@ -450,11 +450,9 @@ export class WaterTestingComponent implements OnInit {
       data: allGridData
     };
 
-    console.log('Saving session:', this.currentSession._id, 'with', allGridData.length, 'records (Marked as In Progress)');
 
     this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
-        console.log('Session saved successfully. Data saved:', session.data?.length, 'records (In Progress)');
 
         // Update the session in allSessions array
         const index = this.allSessions.findIndex(s => s._id === session._id);
@@ -473,15 +471,15 @@ export class WaterTestingComponent implements OnInit {
         this.loadTodaySessionCount();
       },
       error: (error) => {
-        console.error('Error saving session:', error);
-        alert('Failed to save session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to save session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
 
   completeSession() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to complete');
+      this.toastService.show('No active session to complete', 'warning');
       return;
     }
 
@@ -493,11 +491,9 @@ export class WaterTestingComponent implements OnInit {
       data: allGridData
     };
 
-    console.log('Completing session:', this.currentSession._id, 'with', allGridData.length, 'records');
 
     this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
-        console.log('Session completed successfully. Data saved:', session.data?.length, 'records');
 
         // Update the session in allSessions array
         const index = this.allSessions.findIndex(s => s._id === session._id);
@@ -516,8 +512,8 @@ export class WaterTestingComponent implements OnInit {
         this.loadTodaySessionCount();
       },
       error: (error) => {
-        console.error('Error completing session:', error);
-        alert('Failed to complete session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to complete session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
@@ -604,7 +600,7 @@ export class WaterTestingComponent implements OnInit {
     // Add to rowData array and grid
     this.rowData.push(newRow);
     this.gridApi.applyTransaction({ add: [newRow] });
-    console.log('Added new row. Total rows:', this.rowData.length);
+
   }
 
   deleteSelectedRows() {
@@ -618,7 +614,7 @@ export class WaterTestingComponent implements OnInit {
         }
       });
       this.gridApi.applyTransaction({ remove: selectedRows });
-      console.log('Deleted rows. Remaining rows:', this.rowData.length);
+
     }
   }
 
@@ -662,7 +658,7 @@ export class WaterTestingComponent implements OnInit {
       }
     });
 
-    console.log(`Extracted ${allGridData.length} rows with all fields`);
+
     return allGridData;
   }
 
@@ -683,7 +679,7 @@ export class WaterTestingComponent implements OnInit {
     return new Promise((resolve, reject) => {
       this.waterTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
         next: (session) => {
-          console.log('Session auto-saved before PDF generation:', session.data?.length, 'records');
+
           // Update current session with saved data
           this.currentSession = session;
           this.rowData = session.data || [];
@@ -696,7 +692,7 @@ export class WaterTestingComponent implements OnInit {
           resolve();
         },
         error: (error) => {
-          console.error('Error auto-saving session:', error);
+
           reject(error);
         }
       });
@@ -714,7 +710,7 @@ export class WaterTestingComponent implements OnInit {
       this.toastService.info('📄 Preparing your water report... Please wait', 0);
 
       // Always save the current session first to ensure latest data is in database
-      console.log('💾 Saving current session before generating PDF...');
+
       await this.saveCurrentSession();
 
       // After saving, get the updated row data with the correct _id
@@ -730,17 +726,16 @@ export class WaterTestingComponent implements OnInit {
         return;
       }
 
-      console.log('📥 Generating PDF for sample:', updatedRow._id);
+
       const farmerName = updatedRow.farmersName || 'Unknown';
       const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
       await this.pdfService.downloadWaterSamplePDF(updatedRow._id, filename);
-      console.log('✅ PDF downloaded successfully');
 
       // Clear all toasts and show success message
       this.toastService.clear();
       this.toastService.success(`✅ Water report for ${farmerName} downloaded successfully!`, 4000);
     } catch (error) {
-      console.error('❌ Error generating PDF:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate PDF report. Please try again.', 5000);
     }
@@ -764,16 +759,15 @@ export class WaterTestingComponent implements OnInit {
       const totalReports = this.rowData.length;
       this.toastService.info(`📄 Generating ${totalReports} water reports... Please wait`, 0);
 
-      console.log('📥 Generating bulk PDFs for session:', this.currentSession._id);
+
       await this.saveCurrentSession();
 
       await this.pdfService.downloadBulkWaterPDFs(this.currentSession._id);
-      console.log('✅ Bulk PDFs downloaded successfully (individual files)');
 
       this.toastService.clear();
       this.toastService.success(`✅ All ${totalReports} water reports downloaded successfully!`, 5000);
     } catch (error) {
-      console.error('❌ Error generating bulk PDFs:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
     }
@@ -797,17 +791,16 @@ export class WaterTestingComponent implements OnInit {
       const totalReports = this.rowData.length;
       this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
 
-      console.log('📥 Generating combined PDF for session:', this.currentSession._id);
+
       await this.saveCurrentSession();
 
       const filename = `પાણી ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
       await this.pdfService.downloadCombinedWaterSessionPDF(this.currentSession._id, filename);
-      console.log('✅ Combined PDF downloaded successfully');
 
       this.toastService.clear();
       this.toastService.success(`✅ Combined water report with ${totalReports} samples downloaded successfully!`, 5000);
     } catch (error) {
-      console.error('❌ Error generating combined PDF:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate combined PDF. Please try again.', 5000);
     }

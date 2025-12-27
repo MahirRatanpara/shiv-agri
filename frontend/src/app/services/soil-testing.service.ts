@@ -87,7 +87,7 @@ export class SoilTestingService {
 
   // Get all sessions
   getAllSessions(): Observable<Session[]> {
-    console.log('Service: Calling getAllSessions API:', `${this.apiUrl}/sessions`);
+
     return this.http.get<Session[]>(`${this.apiUrl}/sessions`);
   }
 
@@ -103,7 +103,7 @@ export class SoilTestingService {
 
   // Get today's session count
   getTodaySessionCount(): Observable<{ date: string; count: number }> {
-    console.log('Service: Calling getTodaySessionCount API:', `${this.apiUrl}/sessions/today/count`);
+
     return this.http.get<{ date: string; count: number }>(`${this.apiUrl}/sessions/today/count`);
   }
 
@@ -114,13 +114,13 @@ export class SoilTestingService {
 
   // Create a new session
   createSession(session: Omit<Session, '_id'>): Observable<Session> {
-    console.log('Service: Calling createSession API:', `${this.apiUrl}/sessions`, session);
+
     return this.http.post<Session>(`${this.apiUrl}/sessions`, session);
   }
 
   // Update a session
   updateSession(id: string, updates: { endTime?: string; data?: SoilTestingData[] }): Observable<Session> {
-    console.log('Service: Calling updateSession API:', `${this.apiUrl}/sessions/${id}`, updates);
+
     return this.http.put<Session>(`${this.apiUrl}/sessions/${id}`, updates);
   }
 

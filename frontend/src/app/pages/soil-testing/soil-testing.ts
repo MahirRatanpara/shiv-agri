@@ -11,11 +11,12 @@ import {
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
-  imports: [CommonModule, AgGridAngular],
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
   providers: [SoilTestingService, PdfService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
@@ -293,23 +294,23 @@ export class SoilTestingComponent implements OnInit {
     private pdfService: PdfService,
     private toastService: ToastService
   ) {
-    console.log('SoilTestingComponent: Constructor called');
-    console.log('SoilTestingService injected:', this.soilTestingService);
+
+
   }
 
   ngOnInit(): void {
-    console.log('SoilTestingComponent: ngOnInit called');
+
     // Check backend connectivity first
     this.checkBackendConnection();
   }
 
   checkBackendConnection() {
-    console.log('SoilTestingComponent: checkBackendConnection called');
+
     this.isLoading = true;
-    console.log('SoilTestingComponent: About to call getTodaySessionCount');
+
     this.soilTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
-        console.log('SoilTestingComponent: getTodaySessionCount success:', response);
+
         this.isBackendConnected = true;
         this.todaySessionCount = response.count;
         this.isLoading = false;
@@ -317,7 +318,7 @@ export class SoilTestingComponent implements OnInit {
         this.loadSessions();
       },
       error: (error) => {
-        console.error('Backend connection failed:', error);
+
         this.isBackendConnected = false;
         this.isLoading = false;
       }
@@ -329,10 +330,10 @@ export class SoilTestingComponent implements OnInit {
       next: (sessions) => {
         this.allSessions = sessions;
         this.totalPages = Math.ceil(sessions.length / this.pageSize);
-        console.log('Loaded sessions:', sessions);
+
       },
       error: (error) => {
-        console.error('Error loading sessions:', error);
+
         this.isBackendConnected = false;
       }
     });
@@ -342,7 +343,7 @@ export class SoilTestingComponent implements OnInit {
     this.currentSession = session;
     this.sessionActive = true;
     this.rowData = session.data || [];
-    console.log('Resumed session:', session);
+
   }
 
   nextPage() {
@@ -367,10 +368,10 @@ export class SoilTestingComponent implements OnInit {
     this.soilTestingService.getTodaySessionCount().subscribe({
       next: (response) => {
         this.todaySessionCount = response.count;
-        console.log('Today session count:', response.count);
+
       },
       error: (error) => {
-        console.error('Error loading today session count:', error);
+
         this.isBackendConnected = false;
       }
     });
@@ -378,7 +379,7 @@ export class SoilTestingComponent implements OnInit {
 
   startNewSession() {
     if (!this.isBackendConnected) {
-      alert('Cannot start session: Backend server is not connected. Please ensure the server is running on http://localhost:3000');
+      this.toastService.show('Cannot start session: Backend server is not connected', 'error');
       return;
     }
 
@@ -392,19 +393,18 @@ export class SoilTestingComponent implements OnInit {
       data: []
     };
 
-    console.log('Creating new session:', newSession);
 
     this.soilTestingService.createSession(newSession).subscribe({
       next: (session) => {
-        console.log('Session created successfully:', session);
+
         this.currentSession = session;
         this.sessionActive = true;
         this.rowData = [];
         this.todaySessionCount = version;
       },
       error: (error) => {
-        console.error('Error creating session:', error);
-        alert('Failed to create session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
         this.isBackendConnected = false;
       }
     });
@@ -412,7 +412,7 @@ export class SoilTestingComponent implements OnInit {
 
   saveAndExit() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to save');
+      this.toastService.show('No active session to save', 'warning');
       return;
     }
 
@@ -424,11 +424,9 @@ export class SoilTestingComponent implements OnInit {
       data: allGridData
     };
 
-    console.log('Saving session:', this.currentSession._id, 'with', allGridData.length, 'records (Marked as In Progress)');
 
     this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
-        console.log('Session saved successfully. Data saved:', session.data?.length, 'records (In Progress)');
 
         // Update the session in allSessions array
         const index = this.allSessions.findIndex(s => s._id === session._id);
@@ -447,15 +445,15 @@ export class SoilTestingComponent implements OnInit {
         this.loadTodaySessionCount();
       },
       error: (error) => {
-        console.error('Error saving session:', error);
-        alert('Failed to save session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to save session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
 
   completeSession() {
     if (!this.currentSession || !this.currentSession._id) {
-      alert('No active session to complete');
+      this.toastService.show('No active session to complete', 'warning');
       return;
     }
 
@@ -467,11 +465,9 @@ export class SoilTestingComponent implements OnInit {
       data: allGridData
     };
 
-    console.log('Completing session:', this.currentSession._id, 'with', allGridData.length, 'records');
 
     this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
-        console.log('Session completed successfully. Data saved:', session.data?.length, 'records');
 
         // Update the session in allSessions array
         const index = this.allSessions.findIndex(s => s._id === session._id);
@@ -490,8 +486,8 @@ export class SoilTestingComponent implements OnInit {
         this.loadTodaySessionCount();
       },
       error: (error) => {
-        console.error('Error completing session:', error);
-        alert('Failed to complete session. Error: ' + (error.message || 'Unknown error'));
+
+        this.toastService.show('Failed to complete session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
@@ -578,7 +574,7 @@ export class SoilTestingComponent implements OnInit {
     // Add to rowData array and grid
     this.rowData.push(newRow);
     this.gridApi.applyTransaction({ add: [newRow] });
-    console.log('Added new row. Total rows:', this.rowData.length);
+
   }
 
   deleteSelectedRows() {
@@ -592,7 +588,7 @@ export class SoilTestingComponent implements OnInit {
         }
       });
       this.gridApi.applyTransaction({ remove: selectedRows });
-      console.log('Deleted rows. Remaining rows:', this.rowData.length);
+
     }
   }
 
@@ -633,22 +629,12 @@ export class SoilTestingComponent implements OnInit {
         };
 
         // Debug logging for troubleshooting
-        console.log('Extracted row data:', {
-          farmersName: completeData.farmersName,
-          cropName: completeData.cropName,
-          finalDeduction: completeData.finalDeduction?.substring(0, 50),
-          ocDifference: completeData.ocDifference,
-          ocPercent: completeData.ocPercent,
-          p2o5: completeData.p2o5,
-          k2o: completeData.k2o,
-          organicMatter: completeData.organicMatter
-        });
 
         allGridData.push(completeData);
       }
     });
 
-    console.log(`Extracted ${allGridData.length} rows with all fields`);
+
     return allGridData;
   }
 
@@ -669,14 +655,14 @@ export class SoilTestingComponent implements OnInit {
     return new Promise((resolve, reject) => {
       this.soilTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
         next: (session) => {
-          console.log('Session auto-saved before PDF generation:', session.data?.length, 'records');
+
           // Update current session with saved data
           this.currentSession = session;
           this.rowData = session.data || [];
           resolve();
         },
         error: (error) => {
-          console.error('Error auto-saving session:', error);
+
           reject(error);
         }
       });
@@ -693,11 +679,9 @@ export class SoilTestingComponent implements OnInit {
       // Show downloading toast
       this.toastService.info('📄 Preparing your soil report... Please wait', 0);
 
-      console.log('📥 Starting PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
       await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with PDF generation...');
 
       // STEP 2: Find the saved sample with its database ID
       const savedRow = this.currentSession?.data?.find(row =>
@@ -713,13 +697,12 @@ export class SoilTestingComponent implements OnInit {
       const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
 
       await this.pdfService.downloadSinglePDF(savedRow._id, filename);
-      console.log('✅ PDF generated successfully for:', savedRow.farmersName);
 
       // Clear all toasts and show success message
       this.toastService.clear();
       this.toastService.success(`✅ Soil report for ${farmerName} downloaded successfully!`, 4000);
     } catch (error) {
-      console.error('❌ Error generating PDF:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate PDF report. Please try again.', 5000);
     }
@@ -738,11 +721,9 @@ export class SoilTestingComponent implements OnInit {
       const totalReports = this.rowData.length;
       this.toastService.info(`📄 Generating ${totalReports} soil reports... Please wait`, 0);
 
-      console.log('📥 Starting bulk PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
       await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with bulk PDF generation...');
 
       // STEP 2: Verify we have a session ID
       if (!this.currentSession?._id) {
@@ -752,12 +733,11 @@ export class SoilTestingComponent implements OnInit {
       // STEP 3: Generate bulk PDFs using backend service
       await this.pdfService.downloadBulkSessionPDFs(this.currentSession._id);
 
-      console.log(`✅ Successfully generated ${this.currentSession.data?.length || 0} PDF reports`);
 
       this.toastService.clear();
       this.toastService.success(`✅ All ${totalReports} soil reports downloaded successfully!`, 5000);
     } catch (error) {
-      console.error('❌ Error generating bulk PDFs:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
     }
@@ -776,11 +756,9 @@ export class SoilTestingComponent implements OnInit {
       const totalReports = this.rowData.length;
       this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
 
-      console.log('📥 Starting combined PDF download - saving to database first...');
 
       // STEP 1: Save session to database and wait for completion
       await this.saveCurrentSession();
-      console.log('✅ Database save complete. Proceeding with combined PDF generation...');
 
       // STEP 2: Verify we have a session ID
       if (!this.currentSession?._id) {
@@ -791,12 +769,11 @@ export class SoilTestingComponent implements OnInit {
       const filename = `જમીન ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
       await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
 
-      console.log(`✅ Successfully generated combined PDF with ${this.currentSession.data?.length || 0} reports`);
 
       this.toastService.clear();
       this.toastService.success(`✅ Combined soil report with ${totalReports} samples downloaded successfully!`, 5000);
     } catch (error) {
-      console.error('❌ Error generating combined PDF:', error);
+
       this.toastService.clear();
       this.toastService.error('❌ Failed to generate combined PDF report. Please try again.', 5000);
     }
@@ -820,8 +797,8 @@ export class SoilTestingComponent implements OnInit {
 
       await this.pdfService.previewSinglePDF(savedRow._id);
     } catch (error) {
-      console.error('Error previewing PDF:', error);
-      alert('Failed to preview PDF report.');
+
+      this.toastService.show('Failed to preview PDF report', 'error');
     }
   }
 
