@@ -1,0 +1,258 @@
+<div class="invoices-container">
+  <!-- List View -->
+  <div *ngIf="currentView === 'list'" class="list-view">
+    <div class="list-header">
+      <div class="search-bar">
+        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="applySearch()" placeholder="Search invoices..." class="search-input" />
+        <button (click)="applySearch()" class="btn btn-search">Search</button>
+        <button
+          (click)="toggleDrafts()"
+          class="btn-toggle-drafts"
+          [class.active]="filters.includeDrafts"
+          title="Toggle drafts visibility">
+          <span class="toggle-icon">📝</span>
+          <span class="toggle-text">Drafts</span>
+        </button>
+      </div>
+      <div class="header-actions">
+        <button (click)="showFilters = !showFilters" class="btn btn-secondary">{{ showFilters ? 'Hide' : 'Show' }} Filters</button>
+        <button (click)="showCreateForm()" class="btn btn-primary" *hasPermission="'managerial.invoices.create'">+ New Invoice</button>
+      </div>
+    </div>
+
+    <div *ngIf="showFilters" class="filters-panel">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Payment Status</label>
+          <select [(ngModel)]="filters.paymentStatus" (change)="applyFilters()">
+            <option value="">All</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="filters.startDate" (change)="applyFilters()" />
+        </div>
+        <div class="filter-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="filters.endDate" (change)="applyFilters()" />
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button (click)="clearFilters()" class="btn btn-secondary">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-label">Total Invoices:</span>
+        <span class="summary-value">{{ totalInvoices }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Amount:</span>
+        <span class="summary-value">{{ formatCurrency(totalAmount) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Paid:</span>
+        <span class="summary-value">{{ formatCurrency(totalPaid) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Unpaid:</span>
+        <span class="summary-value danger">{{ formatCurrency(totalUnpaid) }}</span>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="invoices-table" *ngIf="!isLoading && invoices.length > 0">
+        <thead>
+          <tr>
+            <th>Invoice No.</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let invoice of invoices">
+            <td>
+              {{ invoice.invoiceNumber || 'DRAFT' }}
+              <span *ngIf="invoice.isDraft" class="badge badge-draft" style="margin-left: 8px;">📝 Draft</span>
+            </td>
+            <td>{{ formatDate(invoice.date) }}</td>
+            <td>{{ invoice.customerName }}</td>
+            <td class="amount">{{ formatCurrency(invoice.grandTotal) }}</td>
+            <td>
+              <select
+                [(ngModel)]="invoice.paymentStatus"
+                (change)="updatePaymentStatus(invoice)"
+                class="status-dropdown"
+                [class.status-paid]="invoice.paymentStatus === 'paid'"
+                [class.status-unpaid]="invoice.paymentStatus === 'unpaid'"
+                *hasPermission="'managerial.invoices.update'">
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
+              </select>
+              <span
+                *ngIf="!hasPermission('managerial.invoices.update')"
+                class="badge"
+                [class]="getPaymentStatusBadge(invoice.paymentStatus || 'unpaid')">
+                {{ getPaymentStatusLabel(invoice.paymentStatus || 'unpaid') }}
+              </span>
+            </td>
+            <td class="actions">
+              <button (click)="generatePDF(invoice)" class="btn-icon" title="Download PDF">📄</button>
+              <button (click)="editInvoice(invoice)" class="btn-icon" title="Edit" *hasPermission="'managerial.invoices.update'">✏️</button>
+              <button (click)="duplicateInvoice(invoice)" class="btn-icon" title="Duplicate" *hasPermission="'managerial.invoices.create'">📋</button>
+              <button (click)="deleteInvoice(invoice)" class="btn-icon btn-danger" title="Delete" *hasPermission="'managerial.invoices.delete'">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="isLoading" class="loading">Loading invoices...</div>
+      <div *ngIf="!isLoading && invoices.length === 0" class="no-data">No invoices found</div>
+    </div>
+
+    <div *ngIf="totalPages > 1" class="pagination">
+      <button (click)="changePage(filters.page! - 1)" [disabled]="filters.page === 1" class="btn btn-secondary">Previous</button>
+      <span class="page-info">Page {{ filters.page }} of {{ totalPages }}</span>
+      <button (click)="changePage(filters.page! + 1)" [disabled]="filters.page === totalPages" class="btn btn-secondary">Next</button>
+    </div>
+  </div>
+
+  <!-- Document Editor View - Using Exact Backend Template -->
+  <div *ngIf="currentView === 'form'" class="document-editor">
+    <!-- Minimal Sidebar -->
+    <div class="editor-sidebar">
+      <h3>{{ isEditing ? 'Edit' : 'Create' }}</h3>
+      <div class="sidebar-actions">
+        <button (click)="cancelForm()" class="btn btn-secondary btn-block">Cancel</button>
+        <button (click)="saveInvoice(true)" [disabled]="isSaving" class="btn btn-secondary btn-block">
+          Save Draft
+        </button>
+        <button (click)="saveInvoice(false)" [disabled]="isSaving" class="btn btn-primary btn-block">
+          {{ isSaving ? 'Saving...' : isEditing ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Actual Invoice Template (Editable) -->
+    <div class="invoice-template">
+      <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+          <h1 class="gujarati">શિવ એગ્રી કન્સલ્ટન્સી એન્ડ લેબોરેટરી</h1>
+          <div class="company-details gujarati">
+            ૩૦૬, નાઈન સ્ક્વેર, ગોલ્ડન સીટી-૧, ઝંઝારડા ચોકડી, જુનાગઢ (ગુજરાત)<br>
+            મો. ૯૭૨૩૪૫૬૮૬૬ / ૦૨૬૫૫૦૮૩૮૫
+          </div>
+        </div>
+
+        <!-- Invoice Meta -->
+        <div class="invoice-meta">
+          <div>
+            <strong class="gujarati">નં.</strong> <span class="editable">{{ currentInvoice.invoiceNumber }}</span>
+          </div>
+          <div>
+            <strong class="gujarati">કેશ / ડેબીટ મેમો</strong>
+          </div>
+          <div>
+            <strong class="gujarati">તા.</strong>
+            <input type="date" [(ngModel)]="currentInvoice.date" class="date-input" />
+          </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="customer-info">
+          <div class="info-row">
+            <span class="info-label gujarati">નામ</span>
+            <input type="text" [(ngModel)]="currentInvoice.customerName" class="info-value-input" />
+          </div>
+          <div class="info-row">
+            <span class="info-label gujarati">સરનામું</span>
+            <input type="text" [(ngModel)]="currentInvoice.referenceNumber" class="info-value-input" />
+          </div>
+          <div class="info-row">
+            <span class="info-label gujarati">ગામ</span>
+            <input type="text" [(ngModel)]="currentInvoice.village" class="info-value-input" style="max-width: 150px;" />
+            <span style="margin-left: 20px;" class="gujarati">સ્થળ</span>
+            <input type="text" [(ngModel)]="currentInvoice.location" class="info-value-input" style="max-width: 200px;" />
+          </div>
+          <div class="info-row">
+            <span class="info-label gujarati">તાલુકો</span>
+            <input type="text" class="info-value-input" style="max-width: 150px;" />
+            <span style="margin-left: 20px;" class="gujarati">જિલ્લો</span>
+            <input type="text" class="info-value-input" style="max-width: 150px;" />
+          </div>
+          <div class="info-row">
+            <span class="info-label gujarati">ફોન</span>
+            <input type="text" [(ngModel)]="currentInvoice.phoneNumber" class="info-value-input" style="max-width: 200px;" />
+            <span style="margin-left: 20px;" class="gujarati">મો.</span>
+            <input type="text" [(ngModel)]="currentInvoice.mobileNumber" class="info-value-input" style="max-width: 200px;" />
+          </div>
+        </div>
+
+        <!-- Services Table -->
+        <table class="services-table">
+          <thead>
+            <tr>
+              <th class="gujarati">અ.નં.</th>
+              <th class="gujarati">વિગત</th>
+              <th class="gujarati">કિંમત</th>
+              <th class="gujarati">નમૂનાની સંખ્યા</th>
+              <th class="gujarati">કુલ રુ.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of currentInvoice.items; let i = index">
+              <td style="text-align: center;">{{ item.serialNumber }}</td>
+              <td>
+                <div class="gujarati" style="font-weight: 600;">{{ item.descriptionGujarati }}</div>
+                <div *ngIf="item.serialNumber === 7" style="margin-top: 4px;">
+                  <input type="text"
+                         [(ngModel)]="item.description"
+                         [name]="'desc_' + i"
+                         placeholder="Add description (optional)"
+                         class="table-input description-input"
+                         style="font-size: 11px; color: #666; font-style: italic;" />
+                </div>
+                <div *ngIf="item.serialNumber !== 7 && item.description" style="font-size: 12px; color: #666;">{{ item.description }}</div>
+              </td>
+              <td>
+                <input type="number" [(ngModel)]="item.rate" [name]="'rate_' + i"
+                       (ngModelChange)="onLineItemChange(item)" min="0" step="0.01"
+                       class="table-input number-input" />
+              </td>
+              <td>
+                <input type="number" [(ngModel)]="item.quantity" [name]="'qty_' + i"
+                       (ngModelChange)="onLineItemChange(item)" min="0"
+                       class="table-input number-input" />
+              </td>
+              <td style="text-align: right;">{{ formatCurrency(item.total) }}</td>
+            </tr>
+            <!-- Total Row -->
+            <tr class="total-row-in-table">
+              <td></td>
+              <td colspan="2" style="text-align: right; font-style: italic; font-size: 11px;">
+                {{ currentInvoice.grandTotalInWords || '' }}
+              </td>
+              <td class="gujarati" style="text-align: center; font-weight: bold;">કુલ રુ.</td>
+              <td style="text-align: right; font-weight: bold;">{{ formatCurrency(currentInvoice.grandTotal || 0) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Signature -->
+        <div class="signature-section" style="margin-top: 150px;">
+          <div class="signature-line">
+            <div class="signature-name gujarati">અનિલકુમાર હદવાણી</div>
+            <div class="signature-credentials">M.Sc. (Agri.)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

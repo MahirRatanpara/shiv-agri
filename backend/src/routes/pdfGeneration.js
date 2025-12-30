@@ -217,6 +217,105 @@ router.post('/samples/multiple', async (req, res) => {
 });
 
 /**
+ * Generate PDF for a receipt
+ * POST /api/pdf/receipt/:receiptId
+ */
+router.post('/receipt/:receiptId', async (req, res) => {
+  try {
+    const { receiptId } = req.params;
+    const Receipt = require('../models/Receipt');
+
+    logger.info(`PDF generation requested for receipt: ${receiptId}`);
+
+    const receipt = await Receipt.findById(receiptId);
+    if (!receipt) {
+      logger.warn(`Receipt not found: ${receiptId}`);
+      return res.status(404).json({ error: 'Receipt not found' });
+    }
+
+    const pdfBuffer = await pdfGeneratorService.generateReceiptPDF(receipt);
+
+    const fileName = `Receipt_${receipt.receiptNumber}_${receipt.customerName?.replace(/\s+/g, '_') || 'Unknown'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    logger.info(`Receipt PDF generated and sent: ${receiptId}`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    logger.error(`Error generating receipt PDF: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ error: 'Failed to generate receipt PDF' });
+  }
+});
+
+/**
+ * Generate PDF for an invoice
+ * POST /api/pdf/invoice/:invoiceId
+ */
+router.post('/invoice/:invoiceId', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const Invoice = require('../models/Invoice');
+
+    logger.info(`PDF generation requested for invoice: ${invoiceId}`);
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) {
+      logger.warn(`Invoice not found: ${invoiceId}`);
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const pdfBuffer = await pdfGeneratorService.generateInvoicePDF(invoice);
+
+    const fileName = `Invoice_${invoice.invoiceNumber}_${invoice.customerName?.replace(/\s+/g, '_') || 'Unknown'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    logger.info(`Invoice PDF generated and sent: ${invoiceId}`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    logger.error(`Error generating invoice PDF: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ error: 'Failed to generate invoice PDF' });
+  }
+});
+
+/**
+ * Generate PDF for a letter
+ * POST /api/pdf/letter/:letterId
+ */
+router.post('/letter/:letterId', async (req, res) => {
+  try {
+    const { letterId } = req.params;
+    const Letter = require('../models/Letter');
+
+    logger.info(`PDF generation requested for letter: ${letterId}`);
+
+    const letter = await Letter.findById(letterId);
+    if (!letter) {
+      logger.warn(`Letter not found: ${letterId}`);
+      return res.status(404).json({ error: 'Letter not found' });
+    }
+
+    const pdfBuffer = await pdfGeneratorService.generateLetterPDF(letter);
+
+    const fileName = `Letter_${letter.letterNumber || 'Draft'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    logger.info(`Letter PDF generated and sent: ${letterId}`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    logger.error(`Error generating letter PDF: ${error.message}`, { stack: error.stack });
+    res.status(500).json({ error: 'Failed to generate letter PDF' });
+  }
+});
+
+/**
  * Health check endpoint
  */
 router.get('/health', (req, res) => {

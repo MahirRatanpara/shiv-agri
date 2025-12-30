@@ -1,0 +1,209 @@
+<div class="receipts-container">
+  <!-- List View -->
+  <div *ngIf="currentView === 'list'" class="list-view">
+    <div class="list-header">
+      <div class="search-bar">
+        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="applySearch()"
+               placeholder="Search receipts..." class="search-input" />
+        <button (click)="applySearch()" class="btn btn-search">Search</button>
+      </div>
+      <div class="header-actions">
+        <button (click)="showFilters = !showFilters" class="btn btn-secondary">
+          {{ showFilters ? 'Hide' : 'Show' }} Filters
+        </button>
+        <button (click)="showCreateForm()" class="btn btn-primary" *hasPermission="'managerial.receipts.create'">
+          + New Receipt
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="showFilters" class="filters-panel">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Payment Method</label>
+          <select [(ngModel)]="filters.paymentMethod" (change)="applyFilters()">
+            <option value="">All</option>
+            <option value="cash">Cash</option>
+            <option value="cheque">Cheque/D.D.</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Payment Type</label>
+          <select [(ngModel)]="filters.paymentType" (change)="applyFilters()">
+            <option value="">All</option>
+            <option value="full_payment">Full Payment</option>
+            <option value="part_payment">Part Payment</option>
+            <option value="advance_payment">Advance Payment</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="filters.startDate" (change)="applyFilters()" />
+        </div>
+        <div class="filter-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="filters.endDate" (change)="applyFilters()" />
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button (click)="clearFilters()" class="btn btn-secondary">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-label">Total Receipts:</span>
+        <span class="summary-value">{{ totalReceipts }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Total Amount:</span>
+        <span class="summary-value">{{ formatCurrency(totalAmount) }}</span>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="receipts-table" *ngIf="!isLoading && receipts.length > 0">
+        <thead>
+          <tr>
+            <th>Receipt No.</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Payment Method</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let receipt of receipts">
+            <td>{{ receipt.receiptNumber }}</td>
+            <td>{{ formatDate(receipt.date) }}</td>
+            <td>{{ receipt.customerName }}</td>
+            <td class="amount">{{ formatCurrency(receipt.amount) }}</td>
+            <td>{{ getPaymentMethodLabel(receipt.paymentMethod) }}</td>
+            <td>{{ getPaymentTypeLabel(receipt.paymentType) }}</td>
+            <td class="actions">
+              <button (click)="generatePDF(receipt)" class="btn-icon" title="Download PDF">📄</button>
+              <button (click)="editReceipt(receipt)" class="btn-icon" title="Edit" *hasPermission="'managerial.receipts.update'">✏️</button>
+              <button (click)="deleteReceipt(receipt)" class="btn-icon btn-danger" title="Delete" *hasPermission="'managerial.receipts.delete'">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="isLoading" class="loading">Loading receipts...</div>
+      <div *ngIf="!isLoading && receipts.length === 0" class="no-data">No receipts found</div>
+    </div>
+
+    <div *ngIf="totalPages > 1" class="pagination">
+      <button (click)="changePage(filters.page! - 1)" [disabled]="filters.page === 1" class="btn btn-secondary">
+        Previous
+      </button>
+      <span class="page-info">Page {{ filters.page }} of {{ totalPages }}</span>
+      <button (click)="changePage(filters.page! + 1)" [disabled]="filters.page === totalPages" class="btn btn-secondary">
+        Next
+      </button>
+    </div>
+  </div>
+
+  <!-- Document Editor View - Using Exact Backend Template -->
+  <div *ngIf="currentView === 'form'" class="document-editor">
+    <!-- Minimal Sidebar -->
+    <div class="editor-sidebar">
+      <h3>{{ isEditing ? 'Edit' : 'Create' }}</h3>
+      <div class="sidebar-actions">
+        <button (click)="cancelForm()" class="btn btn-secondary btn-block">Cancel</button>
+        <button (click)="saveReceipt()" [disabled]="isSaving" class="btn btn-primary btn-block">
+          {{ isSaving ? 'Saving...' : isEditing ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Actual Receipt Template (Editable) - Matching Backend Exactly -->
+    <div class="receipt-template">
+      <div class="receipt-wrapper">
+        <div class="receipt-outer">
+          <div class="receipt-inner">
+            <!-- Header -->
+            <div class="header">
+              <div class="company-info">
+                <h1>SHIV AGRI</h1>
+                <p>Consultancy & Laboratory</p>
+              </div>
+              <div class="address-info">
+                <div class="address-top">
+                  <p>306, Nine Square, Golden City-1, Zanzarda Chowkdi,</p>
+                  <p>Junagadh (Gujarat)</p>
+                </div>
+                <p>Mo. 97234 56866, 92655 08385</p>
+              </div>
+            </div>
+
+            <!-- Title Bar -->
+            <div class="title-bar">
+              <div class="receipt-no">No. {{ currentReceipt.receiptNumber }}</div>
+              <div class="receipt-title">RECEIPT</div>
+              <div class="receipt-date">Date  -  <input type="date" [(ngModel)]="currentReceipt.date" class="date-input-inline" /></div>
+            </div>
+
+            <!-- Content -->
+            <div class="content">
+              <div class="line">
+                <em>Received With thanks from M/s./Shri</em>
+                <input type="text" [(ngModel)]="currentReceipt.customerName"
+                       class="blank-line" placeholder="Customer Name" />
+              </div>
+
+              <input type="text" [(ngModel)]="customerAddress"
+                     class="blank-line-full" placeholder="Customer Address (Optional)" />
+
+              <div class="line">
+                <em>the sum of Rupess</em>
+                <span class="blank-line readonly">{{ currentReceipt.amountInWords || 'Amount in words will appear here' }}</span>
+              </div>
+
+              <div class="line">
+                <em>By Cheque / D.D. No.</em>
+                <input type="text" [(ngModel)]="currentReceipt.chequeNumber"
+                       class="inline-blank" style="min-width: 220px;" placeholder="" />
+                <em>Bank</em>
+                <input type="text" [(ngModel)]="currentReceipt.bankName"
+                       class="inline-blank" style="min-width: 450px;" placeholder="" />
+                <em>Cash in</em>
+              </div>
+
+              <div class="line">
+                <em>Full / Part / Advance payment of our Bill No.</em>
+                <input type="text" [(ngModel)]="currentReceipt.billReference"
+                       class="inline-blank" style="min-width: 150px;" placeholder="" />
+                <em>Dated</em>
+                <input type="date" [(ngModel)]="billDate"
+                       class="inline-blank" style="min-width: 300px;" />
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer-section">
+              <div class="footer-left">
+                <div class="amount-box">
+                  <div class="amount-label">Rs.</div>
+                  <div class="amount-value">
+                    <input type="number" [(ngModel)]="currentReceipt.amount"
+                           (input)="onAmountChange()"
+                           min="0" step="0.01"
+                           class="amount-input"
+                           placeholder="0" />
+                  </div>
+                </div>
+                <div class="footer-note">Cheque Subject to Incashment</div>
+              </div>
+              <div class="footer-text">
+                <div class="footer-signature">For, SHIV AGRI CONSULTANCY & LABORATORY</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
