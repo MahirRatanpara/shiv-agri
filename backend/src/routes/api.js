@@ -5,6 +5,7 @@ const waterTestingRoutes = require('./waterTesting');
 const pdfGenerationRoutes = require('./pdfGeneration');
 const rolesRoutes = require('./roles');
 const usersRoutes = require('./users');
+const managerialWorkRoutes = require('./managerialWork');
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome to Shiv Agri API' });
@@ -28,5 +29,8 @@ router.use('/roles', rolesRoutes);
 
 // User Management routes
 router.use('/users', usersRoutes);
+
+// Managerial Work routes (Receipts, Invoices, Letters)
+router.use('/managerial-work', managerialWorkRoutes);
 
 module.exports = router;

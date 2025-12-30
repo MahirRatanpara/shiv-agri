@@ -22,6 +22,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   // Permission flags for navigation items
   hasSoilTestingAccess = false;
   hasWaterTestingAccess = false;
+  hasManagerialWorkAccess = false;
 
   constructor(
     private authService: AuthService,
@@ -58,6 +59,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     if (!this.isAuthenticated) {
       this.hasSoilTestingAccess = false;
       this.hasWaterTestingAccess = false;
+      this.hasManagerialWorkAccess = false;
       return;
     }
 
@@ -79,6 +81,13 @@ export class HeaderComponent implements AfterViewInit, OnInit {
       'water.samples.view',
       'water.samples.create',
       'water.reports.download'
+    ]);
+
+    // Check if user has ANY managerial work related permission
+    this.hasManagerialWorkAccess = this.permissionService.hasAnyPermission([
+      'managerial.receipts.view',
+      'managerial.invoices.view',
+      'managerial.letters.view'
     ]);
   }
 

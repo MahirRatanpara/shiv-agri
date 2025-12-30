@@ -12,7 +12,6 @@ import { Observable } from 'rxjs';
       <div
         *ngFor="let toast of toasts$ | async"
         class="toast toast-{{toast.type}}"
-        [@slideIn]
       >
         <div class="toast-icon">
           <i class="fas" [ngClass]="{
@@ -49,10 +48,13 @@ import { Observable } from 'rxjs';
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
       animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       min-width: 320px;
+      min-height: 60px;
       color: white;
       font-family: 'Noto Sans Gujarati', 'Shruti', sans-serif;
       font-size: 14px;
       border-left: 4px solid rgba(255, 255, 255, 0.5);
+      opacity: 1;
+      visibility: visible;
     }
 
     @keyframes slideIn {
@@ -99,6 +101,9 @@ import { Observable } from 'rxjs';
       font-weight: 500;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      min-height: 20px;
+      display: flex;
+      align-items: center;
     }
 
     .toast-close {

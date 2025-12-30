@@ -1,0 +1,42 @@
+<div class="managerial-work-container">
+  <div class="page-header">
+    <h1>Managerial Work</h1>
+    <p class="subtitle">Manage receipts, invoices, and letter pad documents</p>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'receipts'"
+      (click)="setActiveTab('receipts')"
+      *hasPermission="'managerial.receipts.view'"
+    >
+      <i class="icon-receipt"></i>
+      Receipts
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'invoices'"
+      (click)="setActiveTab('invoices')"
+      *hasPermission="'managerial.invoices.view'"
+    >
+      <i class="icon-invoice"></i>
+      Invoices
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'letters'"
+      (click)="setActiveTab('letters')"
+      *hasPermission="'managerial.letters.view'"
+    >
+      <i class="icon-letter"></i>
+      Letter Pad
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>

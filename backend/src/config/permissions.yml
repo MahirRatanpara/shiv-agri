@@ -289,6 +289,70 @@ permissions:
     action: view
     description: View system logs and audit trails
 
+  # ==================== Managerial Work ====================
+  # Receipts
+  - name: managerial.receipts.view
+    resource: receipts
+    action: view
+    description: View receipt documents and history
+
+  - name: managerial.receipts.create
+    resource: receipts
+    action: create
+    description: Create new receipt documents
+
+  - name: managerial.receipts.update
+    resource: receipts
+    action: update
+    description: update existing receipt documents
+
+  - name: managerial.receipts.delete
+    resource: receipts
+    action: delete
+    description: Delete receipt documents
+
+  # Invoices
+  - name: managerial.invoices.view
+    resource: invoices
+    action: view
+    description: View invoice documents and history
+
+  - name: managerial.invoices.create
+    resource: invoices
+    action: create
+    description: Create new invoice documents
+
+  - name: managerial.invoices.update
+    resource: invoices
+    action: update
+    description: update existing invoice documents
+
+  - name: managerial.invoices.delete
+    resource: invoices
+    action: delete
+    description: Delete invoice documents
+
+  # Letters
+  - name: managerial.letters.view
+    resource: letters
+    action: view
+    description: View letter documents and history
+
+  - name: managerial.letters.create
+    resource: letters
+    action: create
+    description: Create new letter documents
+
+  - name: managerial.letters.update
+    resource: letters
+    action: update
+    description: update existing letter documents
+
+  - name: managerial.letters.delete
+    resource: letters
+    action: delete
+    description: Delete letter documents
+
 # ============================================
 # ROLE DEFINITIONS
 # ============================================
@@ -379,6 +443,20 @@ roles:
       - system.settings.update
       - system.logs.view
 
+      # Managerial Work - Full Access (including delete)
+      - managerial.receipts.view
+      - managerial.receipts.create
+      - managerial.receipts.update
+      - managerial.receipts.delete
+      - managerial.invoices.view
+      - managerial.invoices.create
+      - managerial.invoices.update
+      - managerial.invoices.delete
+      - managerial.letters.view
+      - managerial.letters.create
+      - managerial.letters.update
+      - managerial.letters.delete
+
   # ==================== USER ROLE (Client) ====================
   - name: user
     displayName: User (Client)
@@ -449,13 +527,27 @@ roles:
       # Users - View Only
       - users.view
 
-      # Soil & Water Testing - View & Reports
+      # Soil Testing - Full Access
       - soil.sessions.view
+      - soil.sessions.create
+      - soil.sessions.update
+      - soil.sessions.delete
       - soil.samples.view
+      - soil.samples.create
+      - soil.samples.update
+      - soil.samples.delete
       - soil.reports.generate
       - soil.reports.download
+
+      # Water Testing - Full Access
       - water.sessions.view
+      - water.sessions.create
+      - water.sessions.update
+      - water.sessions.delete
       - water.samples.view
+      - water.samples.create
+      - water.samples.update
+      - water.samples.delete
       - water.reports.generate
       - water.reports.download
 
@@ -487,3 +579,14 @@ roles:
       - reports.view
       - reports.generate
       - reports.export
+
+      # Managerial Work - All permissions EXCEPT delete
+      - managerial.receipts.view
+      - managerial.receipts.create
+      - managerial.receipts.update
+      - managerial.invoices.view
+      - managerial.invoices.create
+      - managerial.invoices.update
+      - managerial.letters.view
+      - managerial.letters.create
+      - managerial.letters.update

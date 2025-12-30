@@ -1,0 +1,183 @@
+<div class="letters-container">
+  <!-- List View -->
+  <div *ngIf="currentView === 'list'" class="list-view">
+    <div class="list-header">
+      <div class="search-bar">
+        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="applySearch()"
+               placeholder="Search letters..." class="search-input" />
+        <button (click)="applySearch()" class="btn btn-search">Search</button>
+        <button
+          (click)="toggleDrafts()"
+          class="btn-toggle-drafts"
+          [class.active]="filters.includeDrafts"
+          title="Toggle drafts visibility">
+          <span class="toggle-icon">📝</span>
+          <span class="toggle-text">Drafts</span>
+        </button>
+      </div>
+      <div class="header-actions">
+        <button (click)="showFilters = !showFilters" class="btn btn-secondary">
+          {{ showFilters ? 'Hide' : 'Show' }} Filters
+        </button>
+        <button (click)="showCreateForm()" class="btn btn-primary" *hasPermission="'managerial.letters.create'">
+          + New Letter
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="showFilters" class="filters-panel">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Letter Type</label>
+          <select [(ngModel)]="filters.letterType" (change)="applyFilters()">
+            <option value="">All</option>
+            <option value="service_list">Service List</option>
+            <option value="general">General</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="filters.startDate" (change)="applyFilters()" />
+        </div>
+        <div class="filter-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="filters.endDate" (change)="applyFilters()" />
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button (click)="clearFilters()" class="btn btn-secondary">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-item">
+        <span class="summary-label">Total Letters:</span>
+        <span class="summary-value">{{ totalLetters }}</span>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="letters-table" *ngIf="!isLoading && letters.length > 0">
+        <thead>
+          <tr>
+            <th>Letter No.</th>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Subject/Recipient</th>
+            <th>Preview</th>
+            <th>Tags</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let letter of letters">
+            <td>{{ letter.letterNumber || 'Draft' }}</td>
+            <td>{{ formatDate(letter.date) }}</td>
+            <td>{{ getLetterTypeLabel(letter.letterType) }}</td>
+            <td>
+              <div *ngIf="letter.subject" class="subject">{{ letter.subject }}</div>
+              <div *ngIf="letter.recipientName" class="recipient">{{ letter.recipientName }}</div>
+            </td>
+            <td class="preview">{{ letter.contentPlainText || '' }}</td>
+            <td>
+              <span *ngFor="let tag of letter.tags" class="tag">{{ tag }}</span>
+            </td>
+            <td class="actions">
+              <button (click)="generatePDF(letter)" class="btn-icon" title="Download PDF">📄</button>
+              <button (click)="editLetter(letter)" class="btn-icon" title="Edit" *hasPermission="'managerial.letters.update'">✏️</button>
+              <button (click)="deleteLetter(letter)" class="btn-icon btn-danger" title="Delete" *hasPermission="'managerial.letters.delete'">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="isLoading" class="loading">Loading letters...</div>
+      <div *ngIf="!isLoading && letters.length === 0" class="no-data">No letters found</div>
+    </div>
+
+    <div *ngIf="totalPages > 1" class="pagination">
+      <button (click)="changePage(filters.page! - 1)" [disabled]="filters.page === 1" class="btn btn-secondary">
+        Previous
+      </button>
+      <span class="page-info">Page {{ filters.page }} of {{ totalPages }}</span>
+      <button (click)="changePage(filters.page! + 1)" [disabled]="filters.page === totalPages" class="btn btn-secondary">
+        Next
+      </button>
+    </div>
+  </div>
+
+  <!-- Document Editor View - Using Exact Backend Template -->
+  <div *ngIf="currentView === 'form'" class="document-editor">
+    <!-- Sidebar -->
+    <div class="editor-sidebar">
+      <h3>{{ isEditing ? 'Edit' : 'Create' }}</h3>
+
+      <div class="sidebar-section">
+        <button (click)="loadServiceListTemplate()" class="btn btn-orange btn-block">
+          Load Service List
+        </button>
+      </div>
+
+      <div class="sidebar-section">
+        <h4>Tags</h4>
+        <div class="form-group">
+          <input
+            type="text"
+            [value]="currentLetter.tags?.join(', ')"
+            (input)="onTagsInputChange($event)"
+            placeholder="comma-separated"
+            class="form-control"
+          />
+        </div>
+      </div>
+
+      <div class="sidebar-actions">
+        <button (click)="cancelForm()" class="btn btn-secondary btn-block">Cancel</button>
+        <button (click)="saveLetter(true)" [disabled]="isSaving" class="btn btn-secondary btn-block">
+          Save as Draft
+        </button>
+        <button (click)="saveLetter(false)" [disabled]="isSaving" class="btn btn-primary btn-block">
+          {{ isSaving ? 'Saving...' : isEditing ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Simplified Letter Template (Single Content Box) -->
+    <div class="letter-template">
+      <div class="letter-container">
+        <!-- Letterhead -->
+        <div class="letterhead">
+          <h1>SHIV AGRI CONSULTANCY AND LABORATORY</h1>
+          <div class="consultant-details">
+            <div class="consultant-name">MR. ANILKUMAR HADVANI</div>
+            <div class="consultant-credentials">M.Sc. (Agri.)</div>
+            <div class="consultant-title">Agricultural Consultant</div>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="contact-line">
+          Mo. 97234 56866 / 92655 08385 / Email : anihadvani@yahoo.com
+        </div>
+
+        <!-- Address -->
+        <div class="address-line">
+          306, Nine Square, Golden City-1, Nr. Zanzarda Chokadi, Junagadh (Guj.)
+        </div>
+
+        <!-- Date -->
+        <div class="date-section">
+          Date : <input type="date" [(ngModel)]="currentLetter.date" class="date-input" />
+        </div>
+
+        <!-- Single Content Box -->
+        <textarea
+             class="letter-body"
+             [(ngModel)]="currentLetter.content"
+             placeholder="Click here to type your letter content..."
+             dir="ltr">
+        </textarea>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - {{invoiceNumber}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans', Arial, sans-serif;
+            padding: 15px;
+            background: white;
+            font-size: 14px;
+        }
+
+        .gujarati {
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+        }
+
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #000;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .header .company-details {
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .invoice-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .invoice-meta strong {
+            font-weight: 700;
+        }
+
+        .customer-info {
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .info-label {
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+            min-width: 100px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            flex: 1;
+            border-bottom: 1px solid #333;
+            padding-left: 10px;
+        }
+
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 12px;
+        }
+
+        .services-table th,
+        .services-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .services-table th {
+            background-color: #f5f5f5;
+            font-weight: 700;
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+        }
+
+        .services-table td:nth-child(1) {
+            width: 50px;
+            text-align: center;
+        }
+
+        .services-table td:nth-child(3),
+        .services-table td:nth-child(4),
+        .services-table td:nth-child(5) {
+            text-align: right;
+            width: 100px;
+        }
+
+        .totals-section {
+            margin-top: 20px;
+            float: right;
+            width: 300px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+
+        .total-row.grand-total {
+            font-weight: 700;
+            font-size: 15px;
+            border-top: 2px solid #000;
+            margin-top: 5px;
+            padding-top: 8px;
+        }
+
+        .signature-section {
+            clear: both;
+            margin-top: 150px;
+            text-align: right;
+            padding-right: 30px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin-left: auto;
+            margin-top: 40px;
+            padding-top: 5px;
+        }
+
+        .signature-name {
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .signature-credentials {
+            font-size: 12px;
+            margin-top: 3px;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="gujarati">શિવ એગ્રી કન્સલ્ટન્સી એન્ડ લેબોરેટરી</h1>
+            <div class="company-details gujarati">
+                ૩૦૬, નાઈન સ્ક્વેર, ગોલ્ડન સીટી-૧, ઝંઝારડા ચોકડી, જુનાગઢ (ગુજરાત)<br>
+                મો. ૯૭૨૩૪૫૬૮૬૬ / ૦૨૬૫૫૦૮૩૮૫
+            </div>
+        </div>
+
+        <!-- Invoice Meta -->
+        <div class="invoice-meta">
+            <div>
+                <strong class="gujarati">નં.</strong> {{invoiceNumber}}
+            </div>
+            <div>
+                <strong class="gujarati">કેશ / ડેબીટ મેમો</strong>
+            </div>
+            <div>
+                <strong class="gujarati">તા.</strong> {{date}}
+            </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="customer-info">
+            <div class="info-row">
+                <span class="info-label gujarati">નામ</span>
+                <span class="info-value">{{customerName}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label gujarati">સરનામું</span>
+                <span class="info-value">
+                    {{referenceNumber}}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label gujarati">ગામ</span>
+                <span class="info-value">{{village}}</span>
+                <span style="margin-left: 20px;" class="gujarati">સ્થળ</span>
+                <span class="info-value" style="max-width: 200px;">{{location}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label gujarati">તાલુકો</span>
+                <span class="info-value" style="max-width: 150px;"></span>
+                <span style="margin-left: 20px;" class="gujarati">જિલ્લો</span>
+                <span class="info-value" style="max-width: 150px;"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label gujarati">ફોન</span>
+                <span class="info-value" style="max-width: 200px;">{{phoneNumber}}</span>
+                <span style="margin-left: 20px;" class="gujarati">મો.</span>
+                <span class="info-value" style="max-width: 200px;">{{mobileNumber}}</span>
+            </div>
+        </div>
+
+        <!-- Services Table -->
+        <table class="services-table">
+            <thead>
+                <tr>
+                    <th class="gujarati">અ.નં.</th>
+                    <th class="gujarati">વિગત</th>
+                    <th class="gujarati">કિંમત</th>
+                    <th class="gujarati">નમૂનાની સંખ્યા</th>
+                    <th class="gujarati">કુલ રુ.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{itemsRows}}
+            </tbody>
+        </table>
+
+        <!-- Signature -->
+        <div class="signature-section">
+            <div class="signature-line">
+                <div class="signature-name gujarati">અનિલકુમાર હદવાણી</div>
+                <div class="signature-credentials">M.Sc. (Agri.)</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

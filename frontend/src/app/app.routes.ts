@@ -22,6 +22,10 @@ import { LoginComponent } from './pages/login/login';
 import { SoilTestingComponent } from './pages/soil-testing/soil-testing';
 import { WaterTestingComponent } from './pages/water-testing/water-testing';
 import { UserManagementComponent } from './pages/admin/user-management/user-management.component';
+import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work';
+import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
+import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
+import { LettersComponent } from './pages/managerial-work/letters/letters';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -46,6 +50,17 @@ export const routes: Routes = [
   { path: 'donation', component: DonationComponent },
   { path: 'soil-testing', component: SoilTestingComponent, canActivate: [authGuard] },
   { path: 'water-testing', component: WaterTestingComponent, canActivate: [authGuard] },
+  {
+    path: 'managerial-work',
+    component: ManagerialWorkComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: '', redirectTo: 'receipts', pathMatch: 'full' },
+      { path: 'receipts', component: ReceiptsComponent },
+      { path: 'invoices', component: InvoicesComponent },
+      { path: 'letters', component: LettersComponent },
+    ],
+  },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard] },
   { path: 'contact', component: ContactComponent },

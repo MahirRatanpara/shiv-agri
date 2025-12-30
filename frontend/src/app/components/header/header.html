@@ -20,6 +20,11 @@
         <li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
           <a class="nav-link" routerLink="/water-testing"> Water Testing </a>
         </li>
+        <li class="nav-item" *ngIf="isAuthenticated && hasManagerialWorkAccess">
+          <a class="nav-link" routerLink="/managerial-work">
+            <i class="fas fa-file-invoice"></i> Managerial Work
+          </a>
+        </li>
         <li class="nav-item" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
           <a class="nav-link" routerLink="/admin/users">
             <i class="fas fa-user-shield"></i> Admin Dashboard
