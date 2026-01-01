@@ -1,0 +1,174 @@
+.lab-testing-container {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+/* Navigation Tabs Styling - Clean and Modern */
+.lab-testing-nav {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-tabs-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.lab-testing-tabs {
+  border-bottom: none;
+  gap: 4px;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+
+.lab-testing-tabs .nav-item {
+  margin-bottom: 0;
+}
+
+.lab-testing-tabs .nav-link {
+  background-color: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #6b7280;
+  padding: 18px 24px;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.lab-testing-tabs .nav-link:hover:not(.active):not(.disabled) {
+  background-color: #f9fafb;
+  color: #374151;
+  border-bottom-color: #d1d5db;
+}
+
+.lab-testing-tabs .nav-link.active {
+  background-color: transparent;
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.lab-testing-tabs .nav-link.disabled {
+  background-color: transparent;
+  color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.lab-testing-tabs .nav-link i {
+  font-size: 16px;
+}
+
+.lab-testing-tabs .nav-link span {
+  white-space: nowrap;
+}
+
+.lab-testing-tabs .nav-link .badge {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+/* Content Area Styling */
+.lab-testing-content {
+  flex: 1;
+  background-color: #ffffff;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nav-tabs-wrapper {
+    padding: 0 12px;
+  }
+
+  .lab-testing-tabs {
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lab-testing-tabs::-webkit-scrollbar {
+    height: 2px;
+  }
+
+  .lab-testing-tabs::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+
+  .lab-testing-tabs::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+
+  .lab-testing-tabs .nav-link {
+    padding: 16px 20px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .lab-testing-tabs .nav-link i {
+    font-size: 15px;
+  }
+
+  .lab-testing-tabs .nav-link span {
+    display: inline;
+  }
+}
+
+@media (max-width: 576px) {
+  .lab-testing-tabs .nav-link {
+    padding: 14px 16px;
+    gap: 6px;
+  }
+
+  .lab-testing-tabs .nav-link span:not(.badge) {
+    font-size: 13px;
+  }
+
+  .lab-testing-tabs .nav-link i {
+    font-size: 14px;
+  }
+}
+
+/* Animation for content switching */
+.lab-testing-content > * {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Accessibility improvements */
+.lab-testing-tabs .nav-link:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.lab-testing-tabs .nav-link:focus:not(:focus-visible) {
+  outline: none;
+}
