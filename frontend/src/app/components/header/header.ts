@@ -20,8 +20,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   profileImageLoadError = false;
 
   // Permission flags for navigation items
-  hasSoilTestingAccess = false;
-  hasWaterTestingAccess = false;
+  hasLabTestingAccess = false;
   hasManagerialWorkAccess = false;
 
   constructor(
@@ -57,24 +56,19 @@ export class HeaderComponent implements AfterViewInit, OnInit {
    */
   private updatePermissions(): void {
     if (!this.isAuthenticated) {
-      this.hasSoilTestingAccess = false;
-      this.hasWaterTestingAccess = false;
+      this.hasLabTestingAccess = false;
       this.hasManagerialWorkAccess = false;
       return;
     }
 
-    // Check if user has ANY soil testing related permission
-    this.hasSoilTestingAccess = this.permissionService.hasAnyPermission([
+    // Check if user has ANY lab testing related permission (soil or water)
+    this.hasLabTestingAccess = this.permissionService.hasAnyPermission([
       'soil.sessions.view',
       'soil.sessions.create',
       'soil.sessions.update',
       'soil.samples.view',
       'soil.samples.create',
-      'soil.reports.download'
-    ]);
-
-    // Check if user has ANY water testing related permission
-    this.hasWaterTestingAccess = this.permissionService.hasAnyPermission([
+      'soil.reports.download',
       'water.sessions.view',
       'water.sessions.create',
       'water.sessions.update',

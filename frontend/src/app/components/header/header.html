@@ -14,11 +14,10 @@
         <li class="nav-item">
           <a class="nav-link" routerLink="/contact"> Contact </a>
         </li>
-        <li class="nav-item" *ngIf="isAuthenticated && hasSoilTestingAccess">
-          <a class="nav-link" routerLink="/soil-testing"> Soil Testing </a>
-        </li>
-        <li class="nav-item" *ngIf="isAuthenticated && hasWaterTestingAccess">
-          <a class="nav-link" routerLink="/water-testing"> Water Testing </a>
+        <li class="nav-item" *ngIf="isAuthenticated && hasLabTestingAccess">
+          <a class="nav-link" routerLink="/lab-testing">
+            <i class="fas fa-microscope"></i> Lab Testing
+          </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasManagerialWorkAccess">
           <a class="nav-link" routerLink="/managerial-work">

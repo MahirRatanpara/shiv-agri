@@ -1,0 +1,44 @@
+<div class="lab-testing-container">
+  <!-- Sub-module Navigation Tabs -->
+  <div class="lab-testing-nav">
+    <div class="nav-tabs-wrapper">
+      <ul class="nav nav-tabs lab-testing-tabs">
+        <li class="nav-item" *ngIf="hasSoilTestingAccess">
+          <a
+            class="nav-link"
+            [class.active]="isActive('soil-testing')"
+            (click)="navigateToSubModule('soil-testing')"
+            role="button"
+            tabindex="0">
+            <i class="fas fa-seedling"></i>
+            <span>Soil Testing</span>
+          </a>
+        </li>
+        <li class="nav-item" *ngIf="hasWaterTestingAccess">
+          <a
+            class="nav-link"
+            [class.active]="isActive('water-testing')"
+            (click)="navigateToSubModule('water-testing')"
+            role="button"
+            tabindex="0">
+            <i class="fas fa-tint"></i>
+            <span>Water Testing</span>
+          </a>
+        </li>
+        <!-- Placeholder for future Fertilizer Testing -->
+        <!-- <li class="nav-item disabled">
+          <a class="nav-link disabled" title="Coming Soon">
+            <i class="fas fa-flask"></i>
+            <span>Fertilizer Testing</span>
+            <span class="badge bg-secondary ms-2">Coming Soon</span>
+          </a>
+        </li> -->
+      </ul>
+    </div>
+  </div>
+
+  <!-- Sub-module Content Area -->
+  <div class="lab-testing-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>

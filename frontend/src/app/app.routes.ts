@@ -21,6 +21,7 @@ import { NotFoundComponent } from './pages/not-found/not-found';
 import { LoginComponent } from './pages/login/login';
 import { SoilTestingComponent } from './pages/soil-testing/soil-testing';
 import { WaterTestingComponent } from './pages/water-testing/water-testing';
+import { LabTestingComponent } from './pages/lab-testing/lab-testing';
 import { UserManagementComponent } from './pages/admin/user-management/user-management.component';
 import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work';
 import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
@@ -48,8 +49,18 @@ export const routes: Routes = [
   { path: 'gallery', component: GalleryComponent },
   { path: 'testimonials', component: TestimonialsComponent },
   { path: 'donation', component: DonationComponent },
-  { path: 'soil-testing', component: SoilTestingComponent, canActivate: [authGuard] },
-  { path: 'water-testing', component: WaterTestingComponent, canActivate: [authGuard] },
+  {
+    path: 'lab-testing',
+    component: LabTestingComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: '', redirectTo: 'soil-testing', pathMatch: 'full' },
+      { path: 'soil-testing', component: SoilTestingComponent },
+      { path: 'water-testing', component: WaterTestingComponent },
+      // TODO: Add fertilizer-testing route when implemented
+      // { path: 'fertilizer-testing', component: FertilizerTestingComponent },
+    ],
+  },
   {
     path: 'managerial-work',
     component: ManagerialWorkComponent,
