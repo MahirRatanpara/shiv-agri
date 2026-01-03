@@ -194,6 +194,272 @@ Ready for your review and testing.
 
 ---
 
+## FULL-STACK IMPLEMENTATION - BACKEND REQUIRED
+
+### **CRITICAL: ALWAYS IMPLEMENT BACKEND WITH FRONTEND**
+
+**DO NOT implement only frontend code. Every feature requires BOTH frontend AND backend implementation.**
+**While we are implementing a ticket, I want you to have a look at the Backend Description in the ticket and refer to the details and understand the big picture of the task.**
+**And after understanding the task, you can design the backend architecture and DB schema on your own, no need to follow the exact API and schema mentioned in the Ticket.**
+**Always Add proper logging for the Backend API Calls, and it should be extremely helpful for debugging.**
+
+### Backend Implementation Checklist
+
+
+When implementing ANY feature, ALWAYS include:
+
+1. **✅ API Endpoints**
+   - RESTful route design (GET, POST, PUT, DELETE, PATCH)
+   - Request validation and sanitization
+   - Proper HTTP status codes
+   - Error handling middleware
+
+2. **✅ Database Schema/Models**
+   - MongoDB schemas with proper validation
+   - Indexes for performance (especially for queries)
+   - Relationships between collections
+   - Data types and constraints
+
+3. **✅ Business Logic & Services**
+   - Service layer for reusable logic
+   - Data transformation and processing
+   - Validation rules
+   - Error handling
+
+4. **✅ Authentication & Authorization**
+   - JWT token validation where needed
+   - Role-based access control (RBAC)
+   - Permission checks for operations
+   - User context in requests
+
+5. **✅ Performance Optimization**
+   - Database query optimization
+   - Proper indexing strategy
+   - Response caching where applicable
+   - Pagination for large datasets
+   - Quick response times (aim for <200ms)
+
+### Architecture Guidelines
+
+**Backend Structure:**
+```
+backend/
+├── routes/
+│   ├── farm.routes.js          # API endpoint definitions
+│   ├── soil-test.routes.js
+│   └── user.routes.js
+├── controllers/
+│   ├── farm.controller.js      # Request handling logic
+│   ├── soil-test.controller.js
+│   └── user.controller.js
+├── services/
+│   ├── farm.service.js         # Business logic layer
+│   ├── soil-test.service.js
+│   └── user.service.js
+├── models/
+│   ├── Farm.model.js           # MongoDB schemas
+│   ├── SoilTest.model.js
+│   └── User.model.js
+├── middleware/
+│   ├── auth.middleware.js      # JWT validation
+│   ├── rbac.middleware.js      # Role checking
+│   └── validation.middleware.js
+└── utils/
+    ├── validators.js
+    └── helpers.js
+```
+
+### Example Implementation Pattern
+
+When implementing a feature like "Add Farm", include:
+
+**1. Frontend (Angular):**
+```typescript
+// farm-form.component.ts
+export class FarmFormComponent {
+  onSubmit() {
+    this.farmService.createFarm(this.farmData)
+      .subscribe(...);
+  }
+}
+
+// farm.service.ts
+export class FarmService {
+  createFarm(data: Farm) {
+    return this.http.post<Farm>('/api/farms', data);
+  }
+}
+```
+
+**2. Backend (Node.js/Express):**
+```javascript
+// routes/farm.routes.js
+router.post('/farms', 
+  authMiddleware.verifyToken,
+  rbacMiddleware.checkPermission('farm.create'),
+  farmController.createFarm
+);
+
+// controllers/farm.controller.js
+exports.createFarm = async (req, res) => {
+  try {
+    const farm = await farmService.createFarm(req.body, req.user);
+    res.status(201).json(farm);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// services/farm.service.js
+exports.createFarm = async (farmData, user) => {
+  // Validation
+  // Business logic
+  // Database operation
+  const farm = new Farm({ ...farmData, createdBy: user.id });
+  return await farm.save();
+};
+
+// models/Farm.model.js
+const farmSchema = new Schema({
+  name: { type: String, required: true, index: true },
+  location: { type: String, required: true },
+  area: { type: Number, required: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+  createdAt: { type: Date, default: Date.now, index: true }
+});
+```
+
+### Performance Optimization Examples
+
+**1. Database Indexing:**
+```javascript
+// Create compound indexes for common queries
+farmSchema.index({ createdBy: 1, createdAt: -1 });
+farmSchema.index({ location: 1, area: 1 });
+```
+
+**2. Query Optimization:**
+```javascript
+// Use projection to fetch only needed fields
+const farms = await Farm.find({ createdBy: userId })
+  .select('name location area')
+  .limit(20)
+  .lean(); // Convert to plain JS object for better performance
+```
+
+**3. Pagination:**
+```javascript
+exports.getFarms = async (page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+  const [farms, total] = await Promise.all([
+    Farm.find().skip(skip).limit(limit).lean(),
+    Farm.countDocuments()
+  ]);
+  return { farms, total, page, totalPages: Math.ceil(total / limit) };
+};
+```
+
+### RBAC Implementation Pattern
+
+**Permission-based access control:**
+```javascript
+// middleware/rbac.middleware.js
+exports.checkPermission = (permission) => {
+  return async (req, res, next) => {
+    const userRole = req.user.role;
+    
+    const permissions = {
+      admin: ['farm.create', 'farm.read', 'farm.update', 'farm.delete'],
+      fieldWorker: ['farm.read', 'soil-test.create'],
+      viewer: ['farm.read']
+    };
+    
+    if (permissions[userRole]?.includes(permission)) {
+      next();
+    } else {
+      res.status(403).json({ error: 'Insufficient permissions' });
+    }
+  };
+};
+```
+
+### API Response Standards
+
+**Consistent response format:**
+```javascript
+// Success response
+{
+  success: true,
+  data: { ... },
+  message: "Farm created successfully"
+}
+
+// Error response
+{
+  success: false,
+  error: "Validation failed",
+  details: [
+    { field: "name", message: "Name is required" }
+  ]
+}
+
+// Paginated response
+{
+  success: true,
+  data: [...],
+  pagination: {
+    page: 1,
+    limit: 20,
+    total: 156,
+    totalPages: 8
+  }
+}
+```
+
+### What to Include in Every Implementation
+
+**When implementing a ticket, ALWAYS create:**
+
+1. ✅ **Frontend Components** (Angular)
+   - Component TypeScript, HTML, SCSS
+   - Service for API calls
+   - Models/interfaces
+
+2. ✅ **Backend APIs** (Node.js/Express)
+   - Routes with proper middleware
+   - Controllers for request handling
+   - Services for business logic
+   - Models with schemas and indexes
+
+3. ✅ **Security & Permissions**
+   - JWT authentication checks
+   - RBAC permission validation
+   - Input validation and sanitization
+
+4. ✅ **Performance Considerations**
+   - Database indexes on frequently queried fields
+   - Efficient queries (projections, lean())
+   - Pagination for lists
+   - Caching strategy if applicable
+
+### Common Implementation Mistakes to AVOID
+
+❌ **DON'T**: Create only frontend without corresponding backend
+❌ **DON'T**: Skip authentication/authorization checks
+❌ **DON'T**: Forget to add database indexes
+❌ **DON'T**: Return entire documents when only few fields needed
+❌ **DON'T**: Skip input validation
+❌ **DON'T**: Use inefficient queries (N+1 problems)
+
+✅ **DO**: Implement complete full-stack feature
+✅ **DO**: Add proper RBAC checks
+✅ **DO**: Optimize queries with indexes and projections
+✅ **DO**: Validate all inputs
+✅ **DO**: Return consistent API responses
+✅ **DO**: Think about performance from the start
+
+---
+
 ## UX/UI EXCELLENCE - NON-NEGOTIABLE STANDARDS
 
 ### Design Philosophy
@@ -484,9 +750,9 @@ export const fadeSlideIn = trigger('fadeSlideIn', [
 1. User says: "start working on ticket SHI-XX"
 2. Check/switch to correct branch (feature/shiXX)
 3. Review ticket requirements in Linear
-4. Break down into implementation steps
+4. Break down into implementation steps (BOTH frontend AND backend)
 5. Confirm approach with user
-6. Implement with UX standards
+6. Implement with UX standards and backend architecture
 7. Show changes summary
 8. Wait for user review and commit
 
@@ -546,17 +812,21 @@ Show loading indicators for all async operations:
 ## IMPORTANT REMINDERS
 
 ### What NOT to Do (Token Saving Measures)
-1. ❌ **NO Documentation** - Don't create any .md files unless explicitly asked
-2. ❌ **NO Test Cases** - Don't write .spec.ts or any test files unless explicitly asked
-3. ❌ **NO Testing/Running** - Don't run npm commands, build, or test unless explicitly asked
-4. ❌ **NO Commits** - Don't commit or push; leave for developer review
-5. ❌ **NO Production Access** - Never log into production servers
+1. ❌ **NO Frontend-Only Implementation** - Never implement frontend without backend
+2. ❌ **NO Documentation** - Don't create any .md files unless explicitly asked
+3. ❌ **NO Test Cases** - Don't write .spec.ts or any test files unless explicitly asked
+4. ❌ **NO Testing/Running** - Don't run npm commands, build, or test unless explicitly asked
+5. ❌ **NO Commits** - Don't commit or push; leave for developer review
+6. ❌ **NO Production Access** - Never log into production servers
 
 ### What TO Do
-1. ✅ **Write production code only** - Implement the feature/fix requested
-2. ✅ **Apply UX standards** - Follow the responsive design and modern UI guidelines
-3. ✅ **Show brief summary** - List modified files and key changes
-4. ✅ **Wait for review** - Let developer test, commit, and push
+1. ✅ **Implement FULL-STACK** - Always create both frontend AND backend components
+2. ✅ **Apply backend architecture** - Routes, controllers, services, models with indexes
+3. ✅ **Add RBAC & security** - JWT validation and permission checks
+4. ✅ **Optimize for performance** - Database indexes, efficient queries, <200ms response
+5. ✅ **Apply UX standards** - Follow the responsive design and modern UI guidelines
+6. ✅ **Show brief summary** - List both frontend and backend files modified
+7. ✅ **Wait for review** - Let developer test, commit, and push
 
 ---
 
@@ -570,26 +840,44 @@ Current branch: [branch_name]
 Switched to: feature/[ticket_number]
 
 Implementation plan:
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+Frontend:
+- [Frontend step 1]
+- [Frontend step 2]
 
-Proceeding with implementation...
+Backend:
+- [API endpoint]
+- [Database model]
+- [Business logic]
+- [RBAC/permissions]
+
+Proceeding with full-stack implementation...
 ```
 
 ### When Changes Complete
 ```
 ✅ Implementation complete for [TICKET_NUMBER]
 
-Files modified:
-- [file1]
-- [file2]
-- [file3]
+Frontend files modified:
+- [component.ts]
+- [component.html]
+- [component.scss]
+- [service.ts]
+
+Backend files modified:
+- [routes.js]
+- [controller.js]
+- [service.js]
+- [model.js]
 
 Key changes:
-- [Change 1]
-- [Change 2]
-- [Change 3]
+Frontend:
+- [Frontend change 1]
+- [Frontend change 2]
+
+Backend:
+- [API endpoint created]
+- [Database schema added]
+- [RBAC implemented]
 
 Ready for your review and testing.
 
@@ -645,8 +933,23 @@ What would you prefer?
 
 Before marking any ticket complete:
 
-- [ ] All code changes made as requested
+**Frontend:**
+- [ ] Component/UI implementation complete
+- [ ] Service for API calls created
 - [ ] UX is modern, responsive, and accessible
+- [ ] Models/interfaces defined
+
+**Backend:**
+- [ ] API endpoints created with routes
+- [ ] Controllers implemented
+- [ ] Business logic in services
+- [ ] Database models/schemas with indexes
+- [ ] JWT authentication added (if needed)
+- [ ] RBAC permissions implemented
+- [ ] Input validation and error handling
+- [ ] Performance optimizations (indexes, pagination)
+
+**General:**
 - [ ] NO documentation files created (.md, README, etc.)
 - [ ] NO test cases written (.spec.ts, .test.ts, etc.)
 - [ ] NO testing or running performed (npm commands, builds, etc.)
@@ -661,12 +964,15 @@ Before marking any ticket complete:
 
 **This skill ensures Shivagri maintains professional development standards while delivering an exceptional user experience. Every line of code should reflect our commitment to quality, safety, and user satisfaction.**
 
-**CRITICAL - SIX ABSOLUTE RULES:**
-1. ❌ NO production server access (EVER)
-2. ❌ NO automatic commits or pushes
-3. ❌ NO documentation creation (unless explicitly requested)
-4. ❌ NO test case writing (unless explicitly requested)
-5. ❌ NO testing or running (unless explicitly requested)
-6. ✅ ALWAYS provide brief summaries and wait for developer review
+**CRITICAL - SEVEN ABSOLUTE RULES:**
+1. ✅ ALWAYS implement BOTH frontend AND backend (full-stack)
+2. ❌ NO production server access (EVER)
+3. ❌ NO automatic commits or pushes
+4. ❌ NO documentation creation (unless explicitly requested)
+5. ❌ NO test case writing (unless explicitly requested)
+6. ❌ NO testing or running (unless explicitly requested)
+7. ✅ ALWAYS provide brief summaries and wait for developer review
 
+**FULL-STACK IMPLEMENTATION IS MANDATORY.**
 **NO COMPROMISE on UX. NO EXCEPTIONS on production access. NO WASTED TOKENS on docs/tests.**
+**BACKEND ARCHITECTURE MUST BE OPTIMIZED FOR QUICK RESPONSES (<200ms).**

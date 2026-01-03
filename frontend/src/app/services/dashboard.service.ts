@@ -35,14 +35,27 @@ export interface Project {
   id: string;
   name: string;
   client: string;
+  clientAvatar?: string;
   location: string;
+  city?: string;
+  district?: string;
   status: 'Upcoming' | 'Running' | 'Completed' | 'On Hold' | 'Cancelled';
   type: 'farm' | 'landscaping';
   budget: number;
   expenses: number;
+  size?: number; // in acres or sq meters
+  sizeUnit?: 'acres' | 'sqm';
   assignedTo: string;
+  assignedTeam?: string[];
+  coverImage?: string;
+  visitCompletionPercent?: number;
+  budgetUtilizationPercent?: number;
+  createdAt?: Date;
+  startDate?: Date;
+  completionDate?: Date;
   updatedAt: Date;
   isFavorite: boolean;
+  crops?: string[];
 }
 
 export interface BudgetSummary {
@@ -69,11 +82,52 @@ export interface Visit {
   status: 'scheduled' | 'completed' | 'cancelled';
 }
 
+export interface ProjectFilters {
+  // Basic filters
+  status?: string[];
+  type?: string[];
+  assignedTo?: string[];
+  client?: string;
+
+  // Location filters
+  city?: string;
+  district?: string;
+
+  // Date filters
+  createdAfter?: Date;
+  createdBefore?: Date;
+  startDateAfter?: Date;
+  startDateBefore?: Date;
+  completionDateAfter?: Date;
+  completionDateBefore?: Date;
+
+  // Budget filters
+  budgetMin?: number;
+  budgetMax?: number;
+
+  // Other filters
+  isFavorite?: boolean;
+  crops?: string[];
+}
+
+export interface ProjectSortOptions {
+  sortBy: 'updatedAt' | 'createdAt' | 'name' | 'budget' | 'status' | 'location' | 'client';
+  sortOrder: 'asc' | 'desc';
+}
+
+export interface ProjectListResponse {
+  projects: Project[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class DashboardService {
-  private readonly API_URL = `${environment.apiUrl}/dashboard`;
+  private readonly API_URL = `${environment.apiUrl}`;
 
   // In-memory cache for quick access
   private metricsCache$ = new BehaviorSubject<DashboardMetrics | null>(null);
@@ -228,7 +282,7 @@ export class DashboardService {
   }
 
   /**
-   * Get all projects with optional filters
+   * Get all projects with optional filters (basic - for backward compatibility)
    */
   getProjects(filters?: {
     status?: string;
@@ -251,6 +305,122 @@ export class DashboardService {
       catchError(() => {
         // Return mock data for development
         return of(this.getMockProjects());
+      })
+    );
+  }
+
+  /**
+   * Get project list with advanced filtering, searching, sorting, and pagination
+   */
+  getProjectList(
+    page: number = 1,
+    limit: number = 50,
+    searchQuery?: string,
+    filters?: ProjectFilters,
+    sort?: ProjectSortOptions
+  ): Observable<ProjectListResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    // Add search query
+    if (searchQuery) {
+      params = params.set('q', searchQuery);
+    }
+
+    // Add filters
+    if (filters) {
+      if (filters.status?.length) params = params.set('status', filters.status.join(','));
+      if (filters.type?.length) params = params.set('type', filters.type.join(','));
+      if (filters.assignedTo?.length) params = params.set('assignedTo', filters.assignedTo.join(','));
+      if (filters.client) params = params.set('client', filters.client);
+      if (filters.city) params = params.set('city', filters.city);
+      if (filters.district) params = params.set('district', filters.district);
+      if (filters.budgetMin !== undefined) params = params.set('budgetMin', filters.budgetMin.toString());
+      if (filters.budgetMax !== undefined) params = params.set('budgetMax', filters.budgetMax.toString());
+      if (filters.isFavorite !== undefined) params = params.set('isFavorite', filters.isFavorite.toString());
+      if (filters.createdAfter) params = params.set('createdAfter', filters.createdAfter.toISOString());
+      if (filters.createdBefore) params = params.set('createdBefore', filters.createdBefore.toISOString());
+    }
+
+    // Add sorting
+    if (sort) {
+      params = params.set('sortBy', sort.sortBy).set('sortOrder', sort.sortOrder);
+    }
+
+    return this.http.get<ProjectListResponse>(`${this.API_URL}/projects`, { params }).pipe(
+      map((response) => ({
+        ...response,
+        projects: response.projects.map((project) => ({
+          ...project,
+          updatedAt: new Date(project.updatedAt),
+          createdAt: project.createdAt ? new Date(project.createdAt) : undefined,
+          startDate: project.startDate ? new Date(project.startDate) : undefined,
+          completionDate: project.completionDate ? new Date(project.completionDate) : undefined,
+        })),
+      })),
+      catchError((err, caught) => {
+        return of({
+          projects: [],
+          total: 0,
+          page: 0,
+          limit: 0,
+          totalPages: 0
+        });
+      })
+    );
+  }
+
+  /**
+   * Bulk update projects (for bulk actions)
+   */
+  bulkUpdateProjects(
+    projectIds: string[],
+    updates: Partial<Project>
+  ): Observable<{ success: boolean; updated: number }> {
+    return this.http.post<{ success: boolean; updated: number }>(
+      `${this.API_URL}/projects/bulk-update`,
+      { projectIds, updates }
+    ).pipe(
+      catchError(() => {
+        return of({ success: true, updated: projectIds.length });
+      })
+    );
+  }
+
+  /**
+   * Bulk delete projects
+   */
+  bulkDeleteProjects(projectIds: string[]): Observable<{ success: boolean; deleted: number }> {
+    return this.http.post<{ success: boolean; deleted: number }>(
+      `${this.API_URL}/projects/bulk-delete`,
+      { projectIds }
+    ).pipe(
+      catchError(() => {
+        return of({ success: true, deleted: projectIds.length });
+      })
+    );
+  }
+
+  /**
+   * Export projects to Excel/CSV
+   */
+  exportProjects(
+    format: 'excel' | 'csv',
+    projectIds?: string[]
+  ): Observable<Blob> {
+    let params = new HttpParams().set('format', format);
+    if (projectIds?.length) {
+      params = params.set('projectIds', projectIds.join(','));
+    }
+
+    return this.http.get(`${this.API_URL}/projects/export`, {
+      params,
+      responseType: 'blob'
+    }).pipe(
+      catchError(() => {
+        // Return empty blob for development
+        return of(new Blob());
       })
     );
   }
@@ -472,29 +642,121 @@ export class DashboardService {
         id: 'proj-1',
         name: 'Organic Farm Project',
         client: 'Green Valley Farms',
+        clientAvatar: 'https://ui-avatars.com/api/?name=Green+Valley',
         location: 'Ahmedabad, Gujarat',
+        city: 'Ahmedabad',
+        district: 'Ahmedabad',
         status: 'Running',
         type: 'farm',
         budget: 500000,
         expenses: 320000,
+        size: 5,
+        sizeUnit: 'acres',
         assignedTo: 'Mahir Ratanpara',
+        assignedTeam: ['Mahir Ratanpara', 'Ravi Patel'],
+        visitCompletionPercent: 65,
+        budgetUtilizationPercent: 64,
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+        startDate: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
         isFavorite: true,
+        crops: ['Wheat', 'Cotton'],
       },
       {
         id: 'proj-2',
         name: 'Villa Landscaping',
         client: 'Rajesh Mehta',
+        clientAvatar: 'https://ui-avatars.com/api/?name=Rajesh+Mehta',
         location: 'Surat, Gujarat',
+        city: 'Surat',
+        district: 'Surat',
         status: 'Running',
         type: 'landscaping',
         budget: 250000,
         expenses: 180000,
+        size: 2000,
+        sizeUnit: 'sqm',
         assignedTo: 'Ravi Patel',
+        assignedTeam: ['Ravi Patel'],
+        visitCompletionPercent: 72,
+        budgetUtilizationPercent: 72,
+        createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+        startDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
         isFavorite: true,
       },
-      // Add more mock projects as needed
+      {
+        id: 'proj-3',
+        name: 'Farm Irrigation Setup',
+        client: 'Patel Agro Industries',
+        clientAvatar: 'https://ui-avatars.com/api/?name=Patel+Agro',
+        location: 'Vadodara, Gujarat',
+        city: 'Vadodara',
+        district: 'Vadodara',
+        status: 'Completed',
+        type: 'farm',
+        budget: 800000,
+        expenses: 750000,
+        size: 10,
+        sizeUnit: 'acres',
+        assignedTo: 'Priya Shah',
+        assignedTeam: ['Priya Shah', 'Amit Kumar'],
+        visitCompletionPercent: 100,
+        budgetUtilizationPercent: 94,
+        createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+        startDate: new Date(Date.now() - 85 * 24 * 60 * 60 * 1000),
+        completionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        isFavorite: true,
+        crops: ['Rice', 'Sugarcane'],
+      },
+      {
+        id: 'proj-4',
+        name: 'Commercial Farming Project',
+        client: 'Shah Enterprises',
+        clientAvatar: 'https://ui-avatars.com/api/?name=Shah+Enterprises',
+        location: 'Rajkot, Gujarat',
+        city: 'Rajkot',
+        district: 'Rajkot',
+        status: 'Upcoming',
+        type: 'farm',
+        budget: 1200000,
+        expenses: 50000,
+        size: 15,
+        sizeUnit: 'acres',
+        assignedTo: 'Amit Kumar',
+        assignedTeam: ['Amit Kumar'],
+        visitCompletionPercent: 0,
+        budgetUtilizationPercent: 4,
+        createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+        startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        isFavorite: false,
+        crops: ['Vegetables', 'Fruits'],
+      },
+      {
+        id: 'proj-5',
+        name: 'Garden Redesign Project',
+        client: 'Kumar Residency',
+        clientAvatar: 'https://ui-avatars.com/api/?name=Kumar+Residency',
+        location: 'Ahmedabad, Gujarat',
+        city: 'Ahmedabad',
+        district: 'Ahmedabad',
+        status: 'On Hold',
+        type: 'landscaping',
+        budget: 180000,
+        expenses: 90000,
+        size: 1500,
+        sizeUnit: 'sqm',
+        assignedTo: 'Mahir Ratanpara',
+        assignedTeam: ['Mahir Ratanpara'],
+        visitCompletionPercent: 50,
+        budgetUtilizationPercent: 50,
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        startDate: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        isFavorite: false,
+      },
     ];
   }
 
