@@ -7,6 +7,22 @@ on:
       - 'backend/**'
       - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
+    inputs:
+      run_permission_sync:
+        description: 'Run database permissions sync after deployment'
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: 'Run permissions migration in dry-run mode (preview only)'
+        required: false
+        type: boolean
+        default: false
+      force_update:
+        description: 'Force update of system roles in permissions migration'
+        required: false
+        type: boolean
+        default: false
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/shiv-agri-api
@@ -69,4 +85,36 @@ jobs:
             docker compose -f docker-compose.prod.yml pull api
             docker compose -f docker-compose.prod.yml up -d api
             docker image prune -f
-            echo "API deployment completed successfully!"
+            echo "✅ API deployment completed successfully!"
+
+      - name: Create deployment summary
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "## API Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Permission Sync:** ${{ (github.event_name == 'push' || inputs.run_permission_sync == true) && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ API deployment completed successfully" >> $GITHUB_STEP_SUMMARY
+
+  # Call the deploy-permissions workflow after successful API deployment
+  sync-permissions:
+    name: Sync Database Permissions
+    needs: build-and-deploy
+    # Run if:
+    # 1. Previous job succeeded AND
+    # 2. On main branch AND
+    # 3. Either it's a push event (auto-sync) OR manual trigger with run_permission_sync=true
+    if: |
+      needs.build-and-deploy.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || inputs.run_permission_sync == true)
+    uses: ./.github/workflows/deploy-permissions.yml
+    secrets: inherit
+    with:
+      dry_run: ${{ github.event_name == 'push' && false || inputs.dry_run || false }}
+      force_update: ${{ inputs.force_update || false }}
+      triggered_by: 'deploy-api'

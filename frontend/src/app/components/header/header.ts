@@ -22,6 +22,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   // Permission flags for navigation items
   hasLabTestingAccess = false;
   hasManagerialWorkAccess = false;
+  hasFarmDashboardAccess = false;
 
   constructor(
     private authService: AuthService,
@@ -58,6 +59,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     if (!this.isAuthenticated) {
       this.hasLabTestingAccess = false;
       this.hasManagerialWorkAccess = false;
+      this.hasFarmDashboardAccess = false;
       return;
     }
 
@@ -82,6 +84,16 @@ export class HeaderComponent implements AfterViewInit, OnInit {
       'managerial.receipts.view',
       'managerial.invoices.view',
       'managerial.letters.view'
+    ]);
+
+    // Check if user has ANY farm management dashboard related permission
+    this.hasFarmDashboardAccess = this.permissionService.hasAnyPermission([
+      'farm.dashboard.view',
+      'farm.projects.view',
+      'farm.visits.view',
+      'farm.expenses.view',
+      'farm.budget.view',
+      'farm.activities.view'
     ]);
   }
 

@@ -353,6 +353,130 @@ permissions:
     action: delete
     description: Delete letter documents
 
+  # ==================== Farm Management Dashboard ====================
+  # Dashboard Access
+  - name: farm.dashboard.view
+    resource: farm-dashboard
+    action: view
+    description: View farm management dashboard and overview
+
+  # Projects Management (extends existing projects permissions)
+  - name: farm.projects.view
+    resource: farm-projects
+    action: view
+    description: View farm projects and their details
+
+  - name: farm.projects.create
+    resource: farm-projects
+    action: create
+    description: Create new farm projects
+
+  - name: farm.projects.update
+    resource: farm-projects
+    action: update
+    description: Update farm project information
+
+  - name: farm.projects.delete
+    resource: farm-projects
+    action: delete
+    description: Delete farm projects
+
+  # Visits Management
+  - name: farm.visits.view
+    resource: farm-visits
+    action: view
+    description: View farm visit schedules and records
+
+  - name: farm.visits.create
+    resource: farm-visits
+    action: create
+    description: Create and schedule farm visits
+
+  - name: farm.visits.update
+    resource: farm-visits
+    action: update
+    description: Update farm visit records
+
+  - name: farm.visits.delete
+    resource: farm-visits
+    action: delete
+    description: Delete farm visit records
+
+  - name: farm.visits.record
+    resource: farm-visits
+    action: record
+    description: Record farm visit observations and data
+
+  # Expenses Management
+  - name: farm.expenses.view
+    resource: farm-expenses
+    action: view
+    description: View farm project expenses
+
+  - name: farm.expenses.create
+    resource: farm-expenses
+    action: create
+    description: Add new farm project expenses
+
+  - name: farm.expenses.update
+    resource: farm-expenses
+    action: update
+    description: Update farm expense records
+
+  - name: farm.expenses.delete
+    resource: farm-expenses
+    action: delete
+    description: Delete farm expense records
+
+  # Budget Management
+  - name: farm.budget.view
+    resource: farm-budget
+    action: view
+    description: View farm project budgets and financial overview
+
+  - name: farm.budget.create
+    resource: farm-budget
+    action: create
+    description: Create and allocate farm project budgets
+
+  - name: farm.budget.update
+    resource: farm-budget
+    action: update
+    description: Update farm project budgets
+
+  - name: farm.budget.delete
+    resource: farm-budget
+    action: delete
+    description: Delete farm budget records
+
+  # Activities & Timeline
+  - name: farm.activities.view
+    resource: farm-activities
+    action: view
+    description: View farm project activities and timeline
+
+  # Documents & Files
+  - name: farm.documents.view
+    resource: farm-documents
+    action: view
+    description: View farm project documents
+
+  - name: farm.documents.upload
+    resource: farm-documents
+    action: upload
+    description: Upload farm project documents
+
+  - name: farm.documents.delete
+    resource: farm-documents
+    action: delete
+    description: Delete farm project documents
+
+  # Favorites Management
+  - name: farm.favorites.manage
+    resource: farm-favorites
+    action: manage
+    description: Add or remove projects from favorites
+
 # ============================================
 # ROLE DEFINITIONS
 # ============================================
@@ -456,6 +580,31 @@ roles:
       - managerial.letters.create
       - managerial.letters.update
       - managerial.letters.delete
+
+      # Farm Management Dashboard - Full Access
+      - farm.dashboard.view
+      - farm.projects.view
+      - farm.projects.create
+      - farm.projects.update
+      - farm.projects.delete
+      - farm.visits.view
+      - farm.visits.create
+      - farm.visits.update
+      - farm.visits.delete
+      - farm.visits.record
+      - farm.expenses.view
+      - farm.expenses.create
+      - farm.expenses.update
+      - farm.expenses.delete
+      - farm.budget.view
+      - farm.budget.create
+      - farm.budget.update
+      - farm.budget.delete
+      - farm.activities.view
+      - farm.documents.view
+      - farm.documents.upload
+      - farm.documents.delete
+      - farm.favorites.manage
 
   # ==================== USER ROLE (Client) ====================
   - name: user
@@ -590,3 +739,23 @@ roles:
       - managerial.letters.view
       - managerial.letters.create
       - managerial.letters.update
+
+      # Farm Management Dashboard - All permissions EXCEPT delete
+      - farm.dashboard.view
+      - farm.projects.view
+      - farm.projects.create
+      - farm.projects.update
+      - farm.visits.view
+      - farm.visits.create
+      - farm.visits.update
+      - farm.visits.record
+      - farm.expenses.view
+      - farm.expenses.create
+      - farm.expenses.update
+      - farm.budget.view
+      - farm.budget.create
+      - farm.budget.update
+      - farm.activities.view
+      - farm.documents.view
+      - farm.documents.upload
+      - farm.favorites.manage

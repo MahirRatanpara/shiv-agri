@@ -27,6 +27,7 @@ import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work
 import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
 import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
 import { LettersComponent } from './pages/managerial-work/letters/letters';
+import { FarmDashboardComponent } from './pages/farm-dashboard/farm-dashboard';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -72,6 +73,7 @@ export const routes: Routes = [
       { path: 'letters', component: LettersComponent },
     ],
   },
+  { path: 'farm-dashboard', component: FarmDashboardComponent, canActivate: [authGuard] },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard] },
   { path: 'contact', component: ContactComponent },
