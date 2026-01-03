@@ -20,7 +20,7 @@ on:
         type: string
         default: 'manual'
 
-  # Manual trigger - for standalone permissions updates
+  # Manual trigger only - no automatic push triggers
   workflow_dispatch:
     inputs:
       dry_run:
@@ -33,20 +33,6 @@ on:
         required: false
         type: boolean
         default: false
-
-  # Trigger ONLY when permissions.yml changes (not other backend files)
-  # If other backend files change, deploy-api will handle permissions sync
-  push:
-    branches:
-      - main
-    paths:
-      - 'backend/src/config/permissions.yml'
-      # Explicitly exclude other backend paths to prevent double-triggering
-      - '!backend/**/*.js'
-      - '!backend/**/*.ts'
-      - '!backend/**/*.json'
-      - '!backend/src/**'
-      - '!backend/package*.json'
 
 jobs:
   validate-and-deploy:
@@ -97,17 +83,7 @@ jobs:
             }
           "
 
-      - name: Copy permissions.yml to server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "backend/src/config/permissions.yml"
-          target: "/tmp/shiv-agri-permissions/"
-          strip_components: 3
-
-      - name: Deploy permissions to server
+      - name: Run permissions migration
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -133,33 +109,22 @@ jobs:
               sleep 10
             fi
 
-            # Create config directory in Docker if it doesn't exist
-            docker exec shivagri-api mkdir -p /app/src/config
-
-            # Copy permissions.yml from /tmp to Docker container
-            echo "📋 Copying permissions.yml to Docker container..."
-            docker cp /tmp/shiv-agri-permissions/permissions.yml shivagri-api:/app/src/config/permissions.yml
-
-            # Verify the file was copied
-            if docker exec shivagri-api test -f /app/src/config/permissions.yml; then
-              echo "✓ permissions.yml successfully copied to container"
-            else
-              echo "✗ Failed to copy permissions.yml to container"
-              exit 1
-            fi
-
             # Wait for container to be healthy
             echo "⏳ Waiting for API container to be ready..."
             sleep 5
 
+            # Verify permissions.yml exists in container (from Docker build)
+            if docker exec shivagri-api test -f /app/src/config/permissions.yml; then
+              echo "✓ permissions.yml found in container (from Docker image)"
+            else
+              echo "✗ permissions.yml not found in container"
+              echo "Note: permissions.yml should be included in the Docker image build"
+              exit 1
+            fi
+
             # Determine migration mode
             DRY_RUN="${{ inputs.dry_run }}"
             FORCE_UPDATE="${{ inputs.force_update }}"
-
-            # Default to regular migration when triggered by push
-            if [ "${{ github.event_name }}" == "push" ]; then
-              DRY_RUN="false"
-            fi
 
             if [ "$DRY_RUN" == "true" ]; then
               echo "🔍 Running migration in DRY RUN mode..."
@@ -174,23 +139,19 @@ jobs:
               docker exec shivagri-api npm run migrate:permissions
             fi
 
-            # Clean up temp file
-            rm -f /tmp/shiv-agri-permissions/permissions.yml
             echo "✅ Permission migration completed successfully!"
 
       - name: Create deployment summary
         run: |
-          TRIGGER_SOURCE="${{ inputs.triggered_by || github.event_name }}"
+          TRIGGER_SOURCE="${{ inputs.triggered_by || 'workflow_dispatch' }}"
 
           echo "## Permission Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TRIGGER_SOURCE" == "deploy-api" ]; then
             echo "**Mode:** Automatic (After API deployment)" >> $GITHUB_STEP_SUMMARY
-          elif [ "$TRIGGER_SOURCE" == "workflow_dispatch" ]; then
-            echo "**Mode:** Manual (Standalone)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Mode:** Automatic (Only permissions.yml changed)" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode:** Manual (Standalone)" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "**Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
@@ -200,6 +161,8 @@ jobs:
           echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Permission migration completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Using permissions.yml from Docker image (built from latest code)" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify on failure
         if: failure()
