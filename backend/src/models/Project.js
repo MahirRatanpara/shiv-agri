@@ -1,0 +1,399 @@
+const mongoose = require('mongoose');
+
+const projectSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Project name is required'],
+    trim: true,
+    index: true // For search functionality
+  },
+
+  projectType: {
+    type: String,
+    enum: ['farm', 'landscaping'],
+    required: [true, 'Project type is required'],
+    index: true // For filtering
+  },
+
+  status: {
+    type: String,
+    enum: ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled'],
+    default: 'Upcoming',
+    required: true,
+    index: true // For filtering
+  },
+
+  // Client Information
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true // For filtering by client
+  },
+  clientName: {
+    type: String,
+    required: [true, 'Client name is required'],
+    trim: true,
+    index: true // For search
+  },
+  clientAvatar: {
+    type: String
+  },
+  clientEmail: {
+    type: String,
+    lowercase: true,
+    trim: true
+  },
+  clientPhone: {
+    type: String
+  },
+
+  // Location Information
+  location: {
+    address: { type: String, trim: true },
+    city: { type: String, trim: true, index: true }, // Indexed for filtering
+    district: { type: String, trim: true },
+    state: { type: String, trim: true, index: true }, // Indexed for filtering
+    pincode: { type: String },
+    coordinates: {
+      latitude: Number,
+      longitude: Number
+    }
+  },
+
+  // Project Details
+  size: {
+    value: { type: Number },
+    unit: { type: String, enum: ['acres', 'sqm', 'hectares'] }
+  },
+
+  budget: {
+    type: Number,
+    required: [true, 'Budget is required'],
+    min: [0, 'Budget cannot be negative'],
+    index: true // For sorting and filtering
+  },
+
+  expenses: {
+    type: Number,
+    default: 0,
+    min: [0, 'Expenses cannot be negative']
+  },
+
+  // Computed field - will be calculated via aggregation
+  budgetUtilizationPercentage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+
+  // Team Assignment
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true // For filtering
+  },
+  assignedToName: {
+    type: String
+  },
+  assignedTeam: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true // For team member filtering
+  }],
+
+  // Dates
+  startDate: {
+    type: Date,
+    index: true // For date range filtering and sorting
+  },
+  completionDate: {
+    type: Date
+  },
+  expectedCompletionDate: {
+    type: Date
+  },
+
+  // Project Media
+  coverImage: {
+    type: String // URL to cover photo
+  },
+  thumbnailUrl: {
+    type: String // Thumbnail URL for faster loading
+  },
+  images: [{
+    url: String,
+    caption: String,
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+
+  // Project Specific Data
+  crops: [{
+    type: String,
+    trim: true
+  }],
+
+  soilType: {
+    type: String
+  },
+
+  irrigationType: {
+    type: String
+  },
+
+  description: {
+    type: String,
+    trim: true
+  },
+
+  notes: {
+    type: String,
+    trim: true
+  },
+
+  // Progress Tracking
+  visitCompletionPercentage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+
+  totalVisitsPlanned: {
+    type: Number,
+    default: 0
+  },
+
+  totalVisitsCompleted: {
+    type: Number,
+    default: 0
+  },
+
+  // User Preferences
+  isFavorite: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+
+  // Metadata
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+
+  lastUpdatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  tags: [{
+    type: String,
+    trim: true
+  }],
+
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium'
+  },
+
+  // Soft Delete
+  isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  deletedAt: {
+    type: Date
+  },
+
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
+}, {
+  timestamps: true, // Adds createdAt and updatedAt automatically
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// ========================
+// Indexes for Performance
+// ========================
+
+// Composite indexes for common filter combinations
+projectSchema.index({ status: 1, projectType: 1 });
+projectSchema.index({ status: 1, 'location.city': 1 });
+projectSchema.index({ projectType: 1, 'location.city': 1 });
+projectSchema.index({ assignedTo: 1, status: 1 });
+projectSchema.index({ createdBy: 1, status: 1 });
+projectSchema.index({ createdAt: -1 }); // For sorting by creation date
+projectSchema.index({ updatedAt: -1 }); // For sorting by update date (most common)
+projectSchema.index({ budget: -1 }); // For sorting by budget
+
+// Text index for full-text search
+projectSchema.index({
+  name: 'text',
+  clientName: 'text',
+  'location.city': 'text',
+  'location.district': 'text',
+  description: 'text',
+  crops: 'text'
+}, {
+  weights: {
+    name: 10,
+    clientName: 5,
+    'location.city': 3,
+    description: 1,
+    crops: 2
+  },
+  name: 'ProjectSearchIndex'
+});
+
+// Compound index for date range queries
+projectSchema.index({ startDate: 1, status: 1 });
+projectSchema.index({ createdAt: 1, isDeleted: 1 });
+
+// ========================
+// Virtual Fields
+// ========================
+
+projectSchema.virtual('fullLocation').get(function() {
+  if (!this.location) return '';
+  const parts = [
+    this.location.city,
+    this.location.district,
+    this.location.state
+  ].filter(Boolean);
+  return parts.join(', ');
+});
+
+projectSchema.virtual('budgetRemaining').get(function() {
+  return this.budget - (this.expenses || 0);
+});
+
+projectSchema.virtual('isOverBudget').get(function() {
+  return (this.expenses || 0) > this.budget;
+});
+
+projectSchema.virtual('daysToCompletion').get(function() {
+  if (!this.expectedCompletionDate) return null;
+  const today = new Date();
+  const diffTime = this.expectedCompletionDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+});
+
+projectSchema.virtual('isOverdue').get(function() {
+  if (!this.expectedCompletionDate || this.status === 'Completed') return false;
+  return new Date() > this.expectedCompletionDate;
+});
+
+// ========================
+// Instance Methods
+// ========================
+
+projectSchema.methods.calculateBudgetUtilization = function() {
+  if (!this.budget || this.budget === 0) return 0;
+  return Math.round((this.expenses / this.budget) * 100);
+};
+
+projectSchema.methods.calculateVisitCompletion = function() {
+  if (!this.totalVisitsPlanned || this.totalVisitsPlanned === 0) return 0;
+  return Math.round((this.totalVisitsCompleted / this.totalVisitsPlanned) * 100);
+};
+
+projectSchema.methods.addToFavorites = function(userId) {
+  if (!this.isFavorite.includes(userId)) {
+    this.isFavorite.push(userId);
+  }
+  return this.save();
+};
+
+projectSchema.methods.removeFromFavorites = function(userId) {
+  this.isFavorite = this.isFavorite.filter(id => !id.equals(userId));
+  return this.save();
+};
+
+projectSchema.methods.softDelete = function(userId) {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  this.deletedBy = userId;
+  return this.save();
+};
+
+// ========================
+// Static Methods
+// ========================
+
+projectSchema.statics.findActive = function() {
+  return this.find({ isDeleted: false });
+};
+
+projectSchema.statics.findByStatus = function(status) {
+  return this.find({ status, isDeleted: false });
+};
+
+projectSchema.statics.findByType = function(projectType) {
+  return this.find({ projectType, isDeleted: false });
+};
+
+projectSchema.statics.searchProjects = function(searchQuery, filters = {}) {
+  const query = { isDeleted: false };
+
+  // Text search
+  if (searchQuery) {
+    query.$text = { $search: searchQuery };
+  }
+
+  // Add filters
+  if (filters.status) query.status = Array.isArray(filters.status) ? { $in: filters.status } : filters.status;
+  if (filters.projectType) query.projectType = Array.isArray(filters.projectType) ? { $in: filters.projectType } : filters.projectType;
+  if (filters.city) query['location.city'] = filters.city;
+  if (filters.state) query['location.state'] = filters.state;
+  if (filters.assignedTo) query.assignedTo = filters.assignedTo;
+
+  return this.find(query);
+};
+
+// ========================
+// Pre-save Middleware
+// ========================
+
+projectSchema.pre('save', function(next) {
+  // Update computed fields
+  if (this.isModified('budget') || this.isModified('expenses')) {
+    this.budgetUtilizationPercentage = this.calculateBudgetUtilization();
+  }
+
+  if (this.isModified('totalVisitsPlanned') || this.isModified('totalVisitsCompleted')) {
+    this.visitCompletionPercentage = this.calculateVisitCompletion();
+  }
+
+  // Auto-generate thumbnail URL from cover image if not provided
+  if (this.coverImage && !this.thumbnailUrl) {
+    this.thumbnailUrl = this.coverImage; // In production, generate actual thumbnail
+  }
+
+  next();
+});
+
+// ========================
+// Query Middleware
+// ========================
+
+// Exclude soft-deleted projects by default
+projectSchema.pre(/^find/, function(next) {
+  // Only apply to queries that don't explicitly set isDeleted
+  if (!this.getQuery().hasOwnProperty('isDeleted')) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+  next();
+});
+
+const Project = mongoose.model('Project', projectSchema);
+
+module.exports = Project;

@@ -2,14 +2,37 @@
   <!-- Header Section -->
   <div class="dashboard-header">
     <div class="header-content">
-      <h1 class="dashboard-title">Farm Management Dashboard</h1>
-      <button class="btn-refresh" (click)="refreshDashboard()" [disabled]="isLoading">
-        <i class="fas fa-sync-alt" [class.spinning]="isLoading"></i>
-      </button>
+      <div class="header-left-section">
+        <h1 class="dashboard-title">
+          {{ showDashboardOverview ? 'Dashboard Overview' : 'Projects' }}
+        </h1>
+        <button
+          *ngIf="showDashboardOverview"
+          class="btn-back"
+          (click)="hideDashboard()"
+          title="Back to Projects"
+        >
+          <i class="fas fa-arrow-left"></i>
+          Back to Projects
+        </button>
+      </div>
+      <div class="header-actions">
+        <button
+          *ngIf="!showDashboardOverview"
+          class="btn-view-dashboard"
+          (click)="showDashboard()"
+        >
+          <i class="fas fa-chart-pie"></i>
+          Dashboard Overview
+        </button>
+        <button class="btn-refresh" (click)="refreshDashboard()" [disabled]="isLoading || isLoadingProjects">
+          <i class="fas fa-sync-alt" [class.spinning]="isLoading || isLoadingProjects"></i>
+        </button>
+      </div>
     </div>
 
-    <!-- Search Bar -->
-    <div class="search-container">
+    <!-- Search Bar (only show in projects list view) -->
+    <div class="search-container" *ngIf="showProjectsList">
       <div class="search-wrapper">
         <i class="fas fa-search search-icon"></i>
         <input
@@ -17,28 +40,11 @@
           class="search-input"
           placeholder="Search projects, clients, locations..."
           [(ngModel)]="searchQuery"
-          (input)="onSearchInput()"
+          (ngModelChange)="onSearchChange($event)"
         />
-
-        <!-- Search Results Dropdown -->
-        <div class="search-results" *ngIf="showSearchResults && searchResults.length > 0">
-          <div
-            class="search-result-item"
-            *ngFor="let result of searchResults"
-            (click)="onSearchResultClick(result)"
-          >
-            <div class="result-info">
-              <div class="result-name">{{ result.name }}</div>
-              <div class="result-meta">
-                <span class="result-client">{{ result.client }}</span>
-                <span class="result-location">{{ result.location }}</span>
-              </div>
-            </div>
-            <span class="badge" [ngClass]="'badge-' + result.status.toLowerCase()">
-              {{ result.status }}
-            </span>
-          </div>
-        </div>
+        <button *ngIf="searchQuery" class="clear-search" (click)="clearSearch()">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
       <!-- Filter Chips -->
@@ -90,8 +96,8 @@
     </button>
   </div>
 
-  <!-- Main Dashboard Content -->
-  <div class="dashboard-content" *ngIf="!showEmptyState">
+  <!-- Main Dashboard Content (only show when explicitly requested) -->
+  <div class="dashboard-content" *ngIf="showDashboardOverview && !showEmptyState">
     <!-- Statistics Cards -->
     <div class="stats-grid">
       <!-- Total Projects Card -->
@@ -386,6 +392,476 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects List View (SHI-37) -->
+  <div class="projects-list-view" *ngIf="showProjectsList">
+    <!-- Toolbar Section -->
+    <div class="projects-toolbar">
+      <div class="toolbar-left">
+        <!-- Filter Button -->
+        <button
+          class="btn btn-filter"
+          [class.active]="filterCount > 0"
+          (click)="toggleFilterDrawer()"
+        >
+          <i class="fas fa-filter"></i>
+          Filters
+          <span *ngIf="filterCount > 0" class="filter-badge">{{ filterCount }}</span>
+        </button>
+
+        <!-- Quick Filter Chips (Reusing existing filter chips) -->
+        <div class="quick-filters">
+          <button class="chip-btn" (click)="showMyProjects()">
+            <i class="fas fa-user"></i> My Projects
+          </button>
+          <button class="chip-btn" (click)="showActiveProjects()">
+            <i class="fas fa-play"></i> Active
+          </button>
+          <button class="chip-btn" (click)="showCompletedProjects()">
+            <i class="fas fa-check"></i> Completed
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Sort Dropdown -->
+        <div class="sort-control">
+          <label>Sort by:</label>
+          <select
+            class="sort-select"
+            [value]="currentSort.sortBy + '-' + currentSort.sortOrder"
+            (change)="onSortChange($any($event.target).value)"
+          >
+            <option *ngFor="let option of sortOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button
+            class="view-btn"
+            [class.active]="currentView === 'grid'"
+            (click)="setView('grid')"
+            title="Grid View"
+          >
+            <i class="fas fa-th"></i>
+          </button>
+          <button
+            class="view-btn"
+            [class.active]="currentView === 'list'"
+            (click)="setView('list')"
+            title="List View"
+          >
+            <i class="fas fa-list"></i>
+          </button>
+          <button
+            class="view-btn"
+            [class.active]="currentView === 'map'"
+            (click)="setView('map')"
+            title="Map View"
+          >
+            <i class="fas fa-map-marked-alt"></i>
+          </button>
+        </div>
+
+        <!-- Export Button -->
+        <button class="btn btn-export" (click)="exportAll()" [disabled]="isExporting">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Filters Display -->
+    <div class="active-filters" *ngIf="filterCount > 0">
+      <div class="active-filters-header">
+        <span class="filter-label">Active Filters:</span>
+        <button class="btn-link-small" (click)="clearAllFilters()">Clear All</button>
+      </div>
+      <div class="filter-chips-display">
+        <span
+          *ngFor="let status of selectedStatuses"
+          class="filter-chip-active"
+          [style.background]="getStatusBadgeColor(status)"
+        >
+          {{ status }}
+          <i class="fas fa-times" (click)="removeFilter('status', status)"></i>
+        </span>
+        <span *ngFor="let type of selectedTypes" class="filter-chip-active">
+          {{ type === 'farm' ? 'Farm' : 'Landscaping' }}
+          <i class="fas fa-times" (click)="removeFilter('type', type)"></i>
+        </span>
+        <span *ngFor="let member of selectedTeamMembers" class="filter-chip-active">
+          {{ member }}
+          <i class="fas fa-times" (click)="removeFilter('assignedTo', member)"></i>
+        </span>
+        <span *ngIf="selectedCity" class="filter-chip-active">
+          {{ selectedCity }}
+          <i class="fas fa-times" (click)="removeFilter('city')"></i>
+        </span>
+        <span *ngIf="budgetMin || budgetMax" class="filter-chip-active">
+          Budget: {{ formatCurrency(budgetMin || 0) }} - {{ formatCurrency(budgetMax || 999999999) }}
+          <i class="fas fa-times" (click)="removeFilter('budget')"></i>
+        </span>
+        <span *ngIf="showFavoritesOnly" class="filter-chip-active">
+          Favorites Only
+          <i class="fas fa-times" (click)="removeFilter('favorites')"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Filter Drawer -->
+    <div class="filter-drawer" [class.open]="showFilterDrawer">
+      <div class="filter-drawer-overlay" (click)="toggleFilterDrawer()"></div>
+      <div class="filter-drawer-content">
+        <div class="filter-drawer-header">
+          <h3>Filters</h3>
+          <button class="btn-close" (click)="toggleFilterDrawer()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="filter-drawer-body">
+          <!-- Status Filter -->
+          <div class="filter-group">
+            <label class="filter-group-label">Status</label>
+            <div class="checkbox-group">
+              <label *ngFor="let status of statusOptions" class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [checked]="selectedStatuses.includes(status)"
+                  (change)="toggleArrayFilter(selectedStatuses, status)"
+                />
+                <span>{{ status }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Project Type Filter -->
+          <div class="filter-group">
+            <label class="filter-group-label">Project Type</label>
+            <div class="checkbox-group">
+              <label *ngFor="let type of typeOptions" class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [checked]="selectedTypes.includes(type)"
+                  (change)="toggleArrayFilter(selectedTypes, type)"
+                />
+                <span>{{ type === 'farm' ? 'Farm' : 'Landscaping' }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Team Members Filter -->
+          <div class="filter-group">
+            <label class="filter-group-label">Team Members</label>
+            <div class="checkbox-group">
+              <label *ngFor="let member of teamMembers" class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [checked]="selectedTeamMembers.includes(member)"
+                  (change)="toggleArrayFilter(selectedTeamMembers, member)"
+                />
+                <span>{{ member }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- City Filter -->
+          <div class="filter-group">
+            <label class="filter-group-label">City</label>
+            <select class="filter-select" [(ngModel)]="selectedCity">
+              <option value="">All Cities</option>
+              <option *ngFor="let city of cities" [value]="city">{{ city }}</option>
+            </select>
+          </div>
+
+          <!-- Budget Range Filter -->
+          <div class="filter-group">
+            <label class="filter-group-label">Budget Range</label>
+            <div class="range-inputs">
+              <input
+                type="number"
+                class="range-input"
+                placeholder="Min"
+                [(ngModel)]="budgetMin"
+              />
+              <span>to</span>
+              <input
+                type="number"
+                class="range-input"
+                placeholder="Max"
+                [(ngModel)]="budgetMax"
+              />
+            </div>
+          </div>
+
+          <!-- Favorites Filter -->
+          <div class="filter-group">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="showFavoritesOnly" />
+              <span>Show Favorites Only</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-drawer-footer">
+          <button class="btn btn-secondary-full" (click)="clearFilters()">Clear All</button>
+          <button class="btn btn-primary-full" (click)="applyFilters()">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Actions Toolbar -->
+    <div class="bulk-actions-toolbar" *ngIf="showBulkActions">
+      <div class="bulk-actions-left">
+        <span class="selected-count">{{ selectedProjects.size }} selected</span>
+      </div>
+      <div class="bulk-actions-right">
+        <button class="btn btn-bulk" (click)="bulkExport()" [disabled]="bulkActionInProgress">
+          <i class="fas fa-download"></i>
+          Export Selected
+        </button>
+        <button class="btn btn-bulk" (click)="bulkArchive()" [disabled]="bulkActionInProgress">
+          <i class="fas fa-archive"></i>
+          Archive
+        </button>
+        <button class="btn btn-bulk-danger" (click)="bulkDelete()" [disabled]="bulkActionInProgress">
+          <i class="fas fa-trash"></i>
+          Delete
+        </button>
+        <button class="btn btn-link-small" (click)="clearSelection()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Projects Content -->
+    <div class="projects-content">
+      <!-- Loading State -->
+      <div class="loading-container" *ngIf="isLoadingProjects">
+        <div class="spinner"></div>
+        <p>Loading projects...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="projects-empty-state" *ngIf="showProjectsEmptyState && !isLoadingProjects">
+        <div class="empty-state-illustration">
+          <i class="fas fa-folder-open"></i>
+        </div>
+        <h3 class="empty-state-title">{{ emptyStateMessage }}</h3>
+        <button *ngIf="filterCount === 0 && !searchQuery" class="btn btn-primary-large" (click)="createNewProject()">
+          <i class="fas fa-plus"></i>
+          Create First Project
+        </button>
+        <button *ngIf="filterCount > 0 || searchQuery" class="btn btn-secondary" (click)="clearAllFilters()">
+          Clear Filters
+        </button>
+      </div>
+
+      <!-- Grid View -->
+      <div class="projects-grid" *ngIf="currentView === 'grid' && !isLoadingProjects && !showProjectsEmptyState">
+        <div
+          *ngFor="let project of projects"
+          class="project-card"
+          (click)="viewProject(project.id)"
+        >
+          <!-- Selection Checkbox -->
+          <div class="project-card-select" (click)="toggleSelection(project.id, $event)">
+            <input
+              type="checkbox"
+              [checked]="isSelected(project.id)"
+              (click)="$event.stopPropagation()"
+            />
+          </div>
+
+          <!-- Project Cover Image -->
+          <div class="project-card-image">
+            <img
+              *ngIf="project.coverImage"
+              [src]="project.coverImage"
+              [alt]="project.name"
+            />
+            <div *ngIf="!project.coverImage" class="placeholder-image">
+              <i class="fas fa-image"></i>
+            </div>
+
+            <!-- Favorite Button -->
+            <button
+              class="btn-favorite"
+              [class.active]="project.isFavorite"
+              (click)="toggleProjectFavorite(project, $event)"
+            >
+              <i class="fas fa-star"></i>
+            </button>
+          </div>
+
+          <!-- Project Info -->
+          <div class="project-card-body">
+            <h3 class="project-name">{{ project.name }}</h3>
+            <div class="project-client">
+              <i class="fas fa-user"></i>
+              {{ project.client }}
+            </div>
+            <div class="project-location">
+              <i class="fas fa-map-marker-alt"></i>
+              {{ project.location }}
+            </div>
+
+            <div class="project-meta">
+              <span class="badge" [ngClass]="'badge-' + project.status.toLowerCase()" [style.background]="getStatusBadgeColor(project.status)">
+                {{ project.status }}
+              </span>
+              <span class="project-type">
+                <i [class]="project.type === 'farm' ? 'fas fa-tractor' : 'fas fa-leaf'"></i>
+                {{ project.type === 'farm' ? 'Farm' : 'Landscaping' }}
+              </span>
+            </div>
+
+            <div class="project-stats">
+              <div class="stat">
+                <div class="stat-label">Budget</div>
+                <div class="stat-value">{{ formatCurrency(project.budget) }}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Size</div>
+                <div class="stat-value">{{ formatSize(project.size, project.sizeUnit) }}</div>
+              </div>
+            </div>
+
+            <div class="project-progress" *ngIf="project.visitCompletionPercent !== undefined">
+              <div class="progress-label">
+                <span>Visit Progress</span>
+                <span>{{ project.visitCompletionPercent }}%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" [style.width.%]="project.visitCompletionPercent"></div>
+              </div>
+            </div>
+
+            <div class="project-footer">
+              <span class="project-updated">{{ getTimeAgo(project.updatedAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div class="projects-list" *ngIf="currentView === 'list' && !isLoadingProjects && !showProjectsEmptyState">
+        <table class="projects-table">
+          <thead>
+            <tr>
+              <th class="col-select">
+                <input
+                  type="checkbox"
+                  [checked]="allSelected"
+                  [indeterminate]="someSelected"
+                  (change)="toggleSelectAll($event)"
+                />
+              </th>
+              <th class="col-name">Project Name</th>
+              <th class="col-client">Client</th>
+              <th class="col-location">Location</th>
+              <th class="col-status">Status</th>
+              <th class="col-type">Type</th>
+              <th class="col-budget">Budget</th>
+              <th class="col-size">Size</th>
+              <th class="col-updated">Last Updated</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let project of projects"
+              class="project-row"
+              (click)="viewProject(project.id)"
+            >
+              <td class="col-select" (click)="toggleSelection(project.id, $event)">
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(project.id)"
+                  (click)="$event.stopPropagation()"
+                />
+              </td>
+              <td class="col-name">
+                <div class="name-cell">
+                  <strong>{{ project.name }}</strong>
+                  <i *ngIf="project.isFavorite" class="fas fa-star favorite-icon"></i>
+                </div>
+              </td>
+              <td class="col-client">{{ project.client }}</td>
+              <td class="col-location">{{ project.location }}</td>
+              <td class="col-status">
+                <span class="badge" [style.background]="getStatusBadgeColor(project.status)">
+                  {{ project.status }}
+                </span>
+              </td>
+              <td class="col-type">
+                <i [class]="project.type === 'farm' ? 'fas fa-tractor' : 'fas fa-leaf'"></i>
+                {{ project.type === 'farm' ? 'Farm' : 'Landscaping' }}
+              </td>
+              <td class="col-budget">{{ formatCurrency(project.budget) }}</td>
+              <td class="col-size">{{ formatSize(project.size, project.sizeUnit) }}</td>
+              <td class="col-updated">{{ getTimeAgo(project.updatedAt) }}</td>
+              <td class="col-actions" (click)="$event.stopPropagation()">
+                <button
+                  class="btn-icon-small"
+                  (click)="toggleProjectFavorite(project, $event)"
+                  title="Toggle Favorite"
+                >
+                  <i class="fas fa-star" [class.active]="project.isFavorite"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Map View -->
+      <div class="projects-map" *ngIf="currentView === 'map' && !isLoadingProjects && !showProjectsEmptyState">
+        <div class="map-placeholder">
+          <i class="fas fa-map-marked-alt"></i>
+          <p>Map view coming soon...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!isLoadingProjects && !showProjectsEmptyState && totalPages > 1">
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage === 1"
+        (click)="previousPage()"
+      >
+        <i class="fas fa-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="pagination-pages">
+        <button
+          *ngFor="let page of pages"
+          class="pagination-page"
+          [class.active]="page === currentPage"
+          (click)="goToPage(page)"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        class="pagination-btn"
+        [disabled]="currentPage === totalPages"
+        (click)="nextPage()"
+      >
+        Next
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+      <div class="pagination-info">
+        Showing {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, totalProjectsCount) }} of {{ totalProjectsCount }}
       </div>
     </div>
   </div>
