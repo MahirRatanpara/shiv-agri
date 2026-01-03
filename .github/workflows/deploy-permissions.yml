@@ -34,13 +34,19 @@ on:
         type: boolean
         default: false
 
-  # Trigger on direct changes to permissions.yml only (not backend/**)
-  # When backend/** changes, this runs via deploy-api.yml workflow
+  # Trigger ONLY when permissions.yml changes (not other backend files)
+  # If other backend files change, deploy-api will handle permissions sync
   push:
     branches:
       - main
     paths:
       - 'backend/src/config/permissions.yml'
+      # Explicitly exclude other backend paths to prevent double-triggering
+      - '!backend/**/*.js'
+      - '!backend/**/*.ts'
+      - '!backend/**/*.json'
+      - '!backend/src/**'
+      - '!backend/package*.json'
 
 jobs:
   validate-and-deploy:
@@ -184,7 +190,7 @@ jobs:
           elif [ "$TRIGGER_SOURCE" == "workflow_dispatch" ]; then
             echo "**Mode:** Manual (Standalone)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "**Mode:** Automatic (permissions.yml changed)" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode:** Automatic (Only permissions.yml changed)" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "**Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
