@@ -1,6 +1,26 @@
 name: Deploy Database Permissions
 
 on:
+  # Called by deploy-api workflow after successful deployment
+  workflow_call:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (preview changes only)'
+        required: false
+        type: boolean
+        default: false
+      force_update:
+        description: 'Force update of system roles'
+        required: false
+        type: boolean
+        default: false
+      triggered_by:
+        description: 'Workflow that triggered this (for tracking)'
+        required: false
+        type: string
+        default: 'manual'
+
+  # Manual trigger - for standalone permissions updates
   workflow_dispatch:
     inputs:
       dry_run:
@@ -14,7 +34,8 @@ on:
         type: boolean
         default: false
 
-  # Trigger on changes to permissions.yml
+  # Trigger on direct changes to permissions.yml only (not backend/**)
+  # When backend/** changes, this runs via deploy-api.yml workflow
   push:
     branches:
       - main
@@ -70,8 +91,17 @@ jobs:
             }
           "
 
+      - name: Copy permissions.yml to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "backend/src/config/permissions.yml"
+          target: "/tmp/shiv-agri-permissions/"
+          strip_components: 3
+
       - name: Deploy permissions to server
-        if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -88,12 +118,29 @@ jobs:
               echo "⚠ Warning: .env file not found"
             fi
 
-            echo "🔄 Pulling latest API image..."
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-            docker compose -f docker-compose.prod.yml pull api
+            # Ensure API container is running
+            if ! docker ps | grep -q shivagri-api; then
+              echo "⚠️  API container is not running. Starting it now..."
+              echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+              docker compose -f docker-compose.prod.yml pull api
+              docker compose -f docker-compose.prod.yml up -d api
+              sleep 10
+            fi
 
-            echo "🔄 Restarting API container with new image..."
-            docker compose -f docker-compose.prod.yml up -d api
+            # Create config directory in Docker if it doesn't exist
+            docker exec shivagri-api mkdir -p /app/src/config
+
+            # Copy permissions.yml from /tmp to Docker container
+            echo "📋 Copying permissions.yml to Docker container..."
+            docker cp /tmp/shiv-agri-permissions/permissions.yml shivagri-api:/app/src/config/permissions.yml
+
+            # Verify the file was copied
+            if docker exec shivagri-api test -f /app/src/config/permissions.yml; then
+              echo "✓ permissions.yml successfully copied to container"
+            else
+              echo "✗ Failed to copy permissions.yml to container"
+              exit 1
+            fi
 
             # Wait for container to be healthy
             echo "⏳ Waiting for API container to be ready..."
@@ -121,18 +168,29 @@ jobs:
               docker exec shivagri-api npm run migrate:permissions
             fi
 
+            # Clean up temp file
+            rm -f /tmp/shiv-agri-permissions/permissions.yml
             echo "✅ Permission migration completed successfully!"
 
       - name: Create deployment summary
-        if: github.ref == 'refs/heads/main'
         run: |
+          TRIGGER_SOURCE="${{ inputs.triggered_by || github.event_name }}"
+
           echo "## Permission Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TRIGGER_SOURCE" == "deploy-api" ]; then
+            echo "**Mode:** Automatic (After API deployment)" >> $GITHUB_STEP_SUMMARY
+          elif [ "$TRIGGER_SOURCE" == "workflow_dispatch" ]; then
+            echo "**Mode:** Manual (Standalone)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Mode:** Automatic (permissions.yml changed)" >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "**Server:** ${{ secrets.SERVER_HOST }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Dry Run:** ${{ inputs.dry_run || 'false (auto-deploy)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run:** ${{ inputs.dry_run || 'false' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Force Update:** ${{ inputs.force_update || 'false' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Event:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Permission migration completed successfully" >> $GITHUB_STEP_SUMMARY
