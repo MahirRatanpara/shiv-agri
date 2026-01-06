@@ -6,8 +6,8 @@ import { CausesComponent } from './pages/causes/causes';
 import { CausesDetailsComponent } from './pages/causes-details/causes-details';
 import { BlogComponent } from './pages/blog/blog';
 import { BlogDetailsComponent } from './pages/blog-details/blog-details';
-import { ProjectsComponent } from './pages/projects/projects';
 import { ProjectDetailsComponent } from './pages/project-details/project-details';
+import { ProjectWizardComponent } from './pages/project-wizard/project-wizard';
 import { ShopComponent } from './pages/shop/shop';
 import { ShopDetailsComponent } from './pages/shop-details/shop-details';
 import { TeamComponent } from './pages/team/team';
@@ -41,7 +41,8 @@ export const routes: Routes = [
   { path: 'causes-details/:id', component: CausesDetailsComponent },
   { path: 'blog', component: BlogComponent },
   { path: 'blog-details/:id', component: BlogDetailsComponent },
-  { path: 'projects', component: ProjectsComponent },
+  { path: 'projects/new', component: ProjectWizardComponent, canActivate: [authGuard] },
+  { path: 'projects/edit/:id', component: ProjectWizardComponent, canActivate: [authGuard] },
   { path: 'project-details/:id', component: ProjectDetailsComponent },
   { path: 'shop', component: ShopComponent },
   { path: 'shop-details/:id', component: ShopDetailsComponent },

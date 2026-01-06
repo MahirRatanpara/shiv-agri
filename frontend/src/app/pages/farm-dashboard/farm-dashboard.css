@@ -1166,6 +1166,36 @@
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
 }
 
+.btn-create-new-project {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-new-project:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-create-new-project:active {
+  transform: translateY(0);
+}
+
+.btn-create-new-project i {
+  font-size: 18px;
+}
+
 .clear-search {
   position: absolute;
   right: 12px;

@@ -1,0 +1,433 @@
+<div class="wizard-container">
+  <!-- Header -->
+  <div class="wizard-header">
+    <h1 class="wizard-title">Create New Project</h1>
+    <div class="wizard-actions">
+      <button class="btn-secondary" (click)="saveDraft(false)" [disabled]="isSavingDraft">
+        {{ isSavingDraft ? 'Saving...' : 'Save as Draft' }}
+      </button>
+      <button class="btn-ghost" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Progress Stepper -->
+  <div class="stepper">
+    <div class="stepper-progress" [style.width.%]="progressPercentage"></div>
+    <div class="stepper-steps">
+      <div *ngFor="let step of [1,2,3,4,5,6]"
+           class="stepper-step"
+           [class.active]="currentStep === step"
+           [class.completed]="currentStep > step"
+           (click)="goToStep(step)">
+        <div class="step-number">{{ step }}</div>
+        <div class="step-label">
+          {{ step === 1 ? 'Basic Info' : step === 2 ? 'Location' : step === 3 ? 'Contacts' : step === 4 ? 'Budget' : step === 5 ? 'Crops' : 'Team' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step Content -->
+  <div class="wizard-content">
+
+    <!-- Step 1: Basic Information -->
+    <div *ngIf="currentStep === 1" class="wizard-step">
+      <h2>Basic Information</h2>
+
+      <div class="form-group">
+        <label>Project Name *</label>
+        <input type="text" class="form-control" [(ngModel)]="projectName" (ngModelChange)="triggerAutoSave()"
+               placeholder="Enter project name">
+        <span *ngIf="errors['projectName']" class="error">{{ errors['projectName'] }}</span>
+      </div>
+
+      <div class="form-group">
+        <label>Project Category *</label>
+        <div class="type-cards">
+          <div *ngFor="let category of categoryOptions"
+               class="type-card"
+               [class.selected]="projectCategory === category.value"
+               (click)="projectCategory = category.value; triggerAutoSave()">
+            <div class="type-icon"><i class="fas" [ngClass]="category.icon"></i></div>
+            <div class="type-name">{{ category.label }}</div>
+            <p class="type-description">{{ category.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Status *</label>
+        <select class="form-control" [(ngModel)]="status" (ngModelChange)="triggerAutoSave()">
+          <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <h3>Client Information</h3>
+
+      <div class="form-group">
+        <label>Client Name *</label>
+        <input type="text" class="form-control" [(ngModel)]="clientName" (ngModelChange)="triggerAutoSave()"
+               placeholder="Enter client name">
+        <span *ngIf="errors['clientName']" class="error">{{ errors['clientName'] }}</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mobile Number *</label>
+          <input type="tel" class="form-control" [(ngModel)]="clientPhone" (ngModelChange)="triggerAutoSave()"
+                 placeholder="1234567890">
+          <span *ngIf="errors['clientPhone']" class="error">{{ errors['clientPhone'] }}</span>
+        </div>
+        <div class="form-group">
+          <label>Alternative Contact</label>
+          <input type="tel" class="form-control" [(ngModel)]="alternativeContact" (ngModelChange)="triggerAutoSave()"
+                 placeholder="Alternative number">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-control" [(ngModel)]="clientEmail" (ngModelChange)="triggerAutoSave()"
+               placeholder="client@example.com">
+        <span *ngIf="errors['clientEmail']" class="error">{{ errors['clientEmail'] }}</span>
+      </div>
+    </div>
+
+    <!-- Step 2: Location & Land Details -->
+    <div *ngIf="currentStep === 2" class="wizard-step">
+      <h2>Location & Land Details</h2>
+
+      <div class="form-group">
+        <label>Address *</label>
+        <textarea class="form-control" [(ngModel)]="address" (ngModelChange)="triggerAutoSave()" rows="2"
+                  placeholder="Enter complete address"></textarea>
+        <span *ngIf="errors['address']" class="error">{{ errors['address'] }}</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>City/District *</label>
+          <input type="text" class="form-control" [(ngModel)]="city" (ngModelChange)="triggerAutoSave()"
+                 placeholder="City">
+          <span *ngIf="errors['city']" class="error">{{ errors['city'] }}</span>
+        </div>
+        <div class="form-group">
+          <label>State *</label>
+          <input type="text" class="form-control" [(ngModel)]="state" (ngModelChange)="triggerAutoSave()"
+                 placeholder="State">
+        </div>
+        <div class="form-group">
+          <label>Postal Code</label>
+          <input type="text" class="form-control" [(ngModel)]="postalCode" (ngModelChange)="triggerAutoSave()"
+                 placeholder="123456">
+        </div>
+      </div>
+
+      <!-- Map Coordinates -->
+      <h3>Map Location (Optional)</h3>
+      <p class="subtitle">Add coordinates to show project location on map</p>
+
+      <div class="info-box">
+        <i class="fas fa-lightbulb"></i>
+        <span>
+          <strong>How to get coordinates:</strong> Open Google Maps, right-click on the location, and click on the coordinates to copy them.
+          First number is latitude, second is longitude.
+        </span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="number" class="form-control" [(ngModel)]="latitude" (ngModelChange)="triggerAutoSave()"
+                 placeholder="e.g., 21.5225637" step="any" min="-90" max="90">
+          <small class="form-text">Range: -90 to +90 (North-South position)</small>
+          <span *ngIf="errors['latitude']" class="error">{{ errors['latitude'] }}</span>
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="number" class="form-control" [(ngModel)]="longitude" (ngModelChange)="triggerAutoSave()"
+                 placeholder="e.g., 70.4328088" step="any" min="-180" max="180">
+          <small class="form-text">Range: -180 to +180 (East-West position)</small>
+          <span *ngIf="errors['longitude']" class="error">{{ errors['longitude'] }}</span>
+        </div>
+      </div>
+
+      <!-- Invalid Coordinates Warning -->
+      <div *ngIf="hasInvalidCoordinates()" class="error-box">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>
+          <strong>Invalid coordinates!</strong> Please ensure latitude is between -90 and +90, and longitude is between -180 and +180.
+        </span>
+      </div>
+
+      <!-- Map Preview (similar to Contact page) -->
+      <div *ngIf="hasValidCoordinates()" class="map-preview-section">
+        <div class="map-wrapper">
+          <div class="map-overlay">
+            <div class="map-pulse"></div>
+          </div>
+          <div class="map-label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <span>{{ projectName || 'Project Location' }}</span>
+          </div>
+          <iframe
+            [src]="getMapEmbedUrl()"
+            class="google-map"
+            allowfullscreen
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+        </div>
+        <a [href]="getDirectionsUrl()" target="_blank" class="directions-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
+            <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
+          </svg>
+          Get Directions
+          <span class="btn-shine"></span>
+        </a>
+      </div>
+
+      <h3 *ngIf="projectCategory === 'FARM'">Land Details</h3>
+
+      <div *ngIf="projectCategory === 'FARM'" class="form-row">
+        <div class="form-group">
+          <label>Total Area</label>
+          <input type="number" class="form-control" [(ngModel)]="totalArea" (ngModelChange)="triggerAutoSave()"
+                 placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select class="form-control" [(ngModel)]="areaUnit" (ngModelChange)="triggerAutoSave()">
+            <option value="acres">Acres</option>
+            <option value="hectares">Hectares</option>
+            <option value="sqmeters">Sq Meters</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cultivable Area</label>
+          <input type="number" class="form-control" [(ngModel)]="cultivableArea" (ngModelChange)="triggerAutoSave()"
+                 placeholder="0">
+          <small *ngIf="cultivablePercentage">{{ cultivablePercentage }}% of total</small>
+        </div>
+      </div>
+
+      <div *ngIf="projectCategory === 'FARM'" class="form-row">
+        <div class="form-group">
+          <label>Soil Type</label>
+          <input type="text" class="form-control" [(ngModel)]="soilType" (ngModelChange)="triggerAutoSave()"
+                 placeholder="e.g., Clay, Loam, Sandy">
+        </div>
+        <div class="form-group">
+          <label>Irrigation System</label>
+          <select class="form-control" [(ngModel)]="irrigationSystem" (ngModelChange)="triggerAutoSave()">
+            <option value="">Select...</option>
+            <option *ngFor="let opt of irrigationOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Terrain Type</label>
+          <select class="form-control" [(ngModel)]="terrainType" (ngModelChange)="triggerAutoSave()">
+            <option value="">Select...</option>
+            <option *ngFor="let opt of terrainOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div *ngIf="projectCategory === 'FARM'" class="form-group">
+        <label>Water Sources</label>
+        <div class="checkbox-group">
+          <label *ngFor="let source of waterSourceOptions" class="checkbox-label">
+            <input type="checkbox" [checked]="waterSource.includes(source)" (change)="toggleWaterSource(source)">
+            <span>{{ source }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Contacts -->
+    <div *ngIf="currentStep === 3" class="wizard-step">
+      <h2>Contact Management</h2>
+      <p class="subtitle">Add contacts for this project (optional, can be added later)</p>
+
+      <div class="add-contact-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="form-control" [(ngModel)]="newContact.fullName" placeholder="Contact name">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" class="form-control" [(ngModel)]="newContact.phone" placeholder="1234567890">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Designation</label>
+            <input type="text" class="form-control" [(ngModel)]="newContact.designation" placeholder="e.g., Supervisor">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control" [(ngModel)]="newContact.email" placeholder="contact@example.com">
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select class="form-control" [(ngModel)]="newContact.role">
+              <option *ngFor="let role of contactRoles" [value]="role">{{ role }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="newContact.isPrimary">
+            <span>Primary Contact</span>
+          </label>
+          <button class="btn-primary" (click)="addContact()">Add Contact</button>
+        </div>
+      </div>
+
+      <div *ngIf="contacts.length > 0" class="contacts-list">
+        <h3>Added Contacts</h3>
+        <div *ngFor="let contact of contacts; let i = index" class="contact-card">
+          <div class="contact-info">
+            <h4>{{ contact.fullName }}
+              <span *ngIf="contact.isPrimary" class="badge-primary">Primary</span>
+            </h4>
+            <p>{{ contact.designation }} • {{ contact.role }}</p>
+            <p>📞 {{ contact.phone }} <span *ngIf="contact.email">• ✉️ {{ contact.email }}</span></p>
+          </div>
+          <div class="contact-actions">
+            <button class="btn-ghost btn-sm" (click)="setPrimaryContact(i)" *ngIf="!contact.isPrimary">Set Primary</button>
+            <button class="btn-danger btn-sm" (click)="removeContact(i)">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Budget & Timeline -->
+    <div *ngIf="currentStep === 4" class="wizard-step">
+      <h2>Budget & Project Timeline</h2>
+
+      <div class="form-group">
+        <label>Total Project Budget *</label>
+        <input type="number" class="form-control" [(ngModel)]="totalBudget" (ngModelChange)="onBudgetChange()"
+               placeholder="Enter total budget">
+        <span *ngIf="errors['totalBudget']" class="error">{{ errors['totalBudget'] }}</span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Project Duration (Years) *</label>
+          <input type="number" class="form-control" [(ngModel)]="numberOfYears" min="1"
+                 placeholder="Enter duration in years" (ngModelChange)="triggerAutoSave()">
+          <small class="form-text">How many years will this project run?</small>
+        </div>
+
+        <div class="form-group">
+          <label>Visits per Year *</label>
+          <input type="number" class="form-control" [(ngModel)]="visitFrequency" min="0"
+                 placeholder="Enter number of visits per year" (ngModelChange)="triggerAutoSave()">
+          <small class="form-text">How many visits will you make each year?</small>
+        </div>
+      </div>
+
+      <div *ngIf="numberOfYears && visitFrequency" class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <span>Total expected visits: <strong>{{ numberOfYears * visitFrequency }}</strong> visits over {{ numberOfYears }} year(s)</span>
+      </div>
+
+      <div *ngIf="totalBudget > 0" class="budget-section">
+        <div class="budget-header">
+          <h3>Budget Distribution</h3>
+          <button class="btn-secondary btn-sm" (click)="equalDistribution()">Equal Distribution</button>
+        </div>
+
+        <div class="budget-categories">
+          <div *ngFor="let category of budgetCategories; let i = index" class="budget-category">
+            <div class="category-name">{{ category.category }}</div>
+            <div class="category-inputs">
+              <input type="number" class="form-control" min="0" max="100"
+                     [(ngModel)]="category.percentage" (ngModelChange)="onPercentageChange(i)"
+                     placeholder="0">
+              <span class="input-addon">%</span>
+              <span class="category-amount">₹{{ category.amount | number:'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="budget-summary" [class.error]="totalBudgetPercentage !== 100 && totalBudgetPercentage !== 0">
+          <strong>Total: {{ totalBudgetPercentage }}%</strong>
+          <span *ngIf="totalBudgetPercentage !== 100 && totalBudgetPercentage > 0">(Must equal 100%)</span>
+        </div>
+        <span *ngIf="errors['budgetCategories']" class="error">{{ errors['budgetCategories'] }}</span>
+      </div>
+    </div>
+
+    <!-- Step 5: Crops/Plants (Optional) -->
+    <div *ngIf="currentStep === 5" class="wizard-step">
+      <h2>{{ projectCategory === 'FARM' ? 'Crop' : 'Plant' }} Selection</h2>
+      <p class="subtitle">Optional - You can add {{ projectCategory === 'FARM' ? 'crops' : 'plants' }} later</p>
+
+      <div class="add-crop-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ projectCategory === 'FARM' ? 'Crop' : 'Plant' }} Name</label>
+            <input type="text" class="form-control" [(ngModel)]="newCrop.name" placeholder="Enter name">
+          </div>
+          <div class="form-group" *ngIf="projectCategory === 'FARM'">
+            <label>Variety</label>
+            <input type="text" class="form-control" [(ngModel)]="newCrop.variety" placeholder="Variety">
+          </div>
+          <div class="form-group" *ngIf="projectCategory === 'FARM'">
+            <label>Season</label>
+            <select class="form-control" [(ngModel)]="newCrop.season">
+              <option value="">Select...</option>
+              <option *ngFor="let season of cropSeasons" [value]="season">{{ season }}</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" (click)="addCrop()">Add {{ projectCategory === 'FARM' ? 'Crop' : 'Plant' }}</button>
+      </div>
+
+      <div *ngIf="crops.length > 0" class="crops-list">
+        <h3>Added {{ projectCategory === 'FARM' ? 'Crops' : 'Plants' }}</h3>
+        <div *ngFor="let crop of crops; let i = index" class="crop-card">
+          <div class="crop-info">
+            <h4>{{ crop.name }}</h4>
+            <p *ngIf="crop.variety || crop.season">{{ crop.variety }} • {{ crop.season }}</p>
+          </div>
+          <button class="btn-danger btn-sm" (click)="removeCrop(i)">Remove</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6: Team Assignment (Optional) -->
+    <div *ngIf="currentStep === 6" class="wizard-step">
+      <h2>Team Assignment</h2>
+      <p class="subtitle">Optional - You can assign team members later</p>
+
+      <div class="form-group">
+        <label>Project Manager</label>
+        <select class="form-control" [(ngModel)]="projectManagerId">
+          <option value="">Select project manager...</option>
+          <!-- TODO: Load from users API -->
+        </select>
+      </div>
+
+      <p class="info-text">Team assignment can be configured after project creation from the project detail page.</p>
+    </div>
+
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="wizard-footer">
+    <button class="btn-secondary" (click)="previousStep()" [disabled]="currentStep === 1">
+      Previous
+    </button>
+    <div class="step-indicator">Step {{ currentStep }} of {{ totalSteps }}</div>
+    <button class="btn-primary" (click)="nextStep()" [disabled]="isSubmitting">
+      {{ currentStep === totalSteps ? (isSubmitting ? (isEditMode ? 'Updating' : 'Creating...') : (isEditMode ? 'Update Project' : 'Create Project')) : 'Next' }}
+    </button>
+  </div>
+</div>

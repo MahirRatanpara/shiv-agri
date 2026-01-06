@@ -39,7 +39,7 @@ const { authenticate, requirePermission } = require('../middleware/auth');
  */
 router.get('/',
   authenticate,
-  requirePermission('project.view'),
+  requirePermission('farm.projects.view'),
   projectController.getProjects
 );
 
@@ -51,7 +51,7 @@ router.get('/',
  */
 router.get('/stats',
   authenticate,
-  requirePermission('project.view'),
+  requirePermission('farm.projects.view'),
   projectController.getProjectStats
 );
 
@@ -76,8 +76,63 @@ router.get('/export',
  */
 router.get('/:id',
   authenticate,
-  requirePermission('project.view'),
+  requirePermission('farm.projects.view'),
   projectController.getProjectById
+);
+
+// ========================
+// Draft Management Routes
+// ========================
+
+/**
+ * @route   GET /api/projects/drafts/list
+ * @desc    Get user's draft projects
+ * @access  Private
+ */
+router.get('/drafts/list',
+  authenticate,
+  projectController.getUserDrafts
+);
+
+/**
+ * @route   GET /api/projects/drafts/:id
+ * @desc    Get specific draft by ID
+ * @access  Private
+ */
+router.get('/drafts/:id',
+  authenticate,
+  projectController.getDraft
+);
+
+/**
+ * @route   POST /api/projects/drafts
+ * @desc    Save project as draft
+ * @access  Private
+ */
+router.post('/drafts',
+  authenticate,
+  projectController.saveDraft
+);
+
+/**
+ * @route   PUT /api/projects/drafts/:id
+ * @desc    Update existing draft
+ * @access  Private
+ */
+router.put('/drafts/:id',
+  authenticate,
+  projectController.updateDraft
+);
+
+/**
+ * @route   POST /api/projects/drafts/:id/complete
+ * @desc    Convert draft to final project
+ * @access  Private
+ */
+router.post('/drafts/:id/complete',
+  authenticate,
+  requirePermission('project.create'),
+  projectController.completeDraft
 );
 
 // ========================
@@ -120,6 +175,16 @@ router.delete('/:id',
 );
 
 /**
+ * @route   DELETE /api/projects/:id/hard
+ * @desc    Permanently delete a project (admin only)
+ * @access  Private (Admin only)
+ */
+router.delete('/:id/hard',
+  authenticate,
+  projectController.hardDeleteProject
+);
+
+/**
  * @route   PATCH /api/projects/:id/favorite
  * @desc    Toggle favorite status for a project
  * @access  Private (all authenticated users)
@@ -127,6 +192,87 @@ router.delete('/:id',
 router.patch('/:id/favorite',
   authenticate,
   projectController.toggleFavorite
+);
+
+// ========================
+// Contact Management Routes
+// ========================
+
+/**
+ * @route   POST /api/projects/:id/contacts
+ * @desc    Add contact to project
+ * @access  Private
+ */
+router.post('/:id/contacts',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.addContact
+);
+
+/**
+ * @route   PUT /api/projects/:id/contacts/:contactId
+ * @desc    Update contact in project
+ * @access  Private
+ */
+router.put('/:id/contacts/:contactId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.updateContact
+);
+
+/**
+ * @route   DELETE /api/projects/:id/contacts/:contactId
+ * @desc    Remove contact from project
+ * @access  Private
+ */
+router.delete('/:id/contacts/:contactId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.removeContact
+);
+
+// ========================
+// Timeline & Milestone Routes
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/timeline
+ * @desc    Get project timeline with milestones
+ * @access  Private
+ */
+router.get('/:id/timeline',
+  authenticate,
+  requirePermission('farm.projects.view'),
+  projectController.getProjectTimeline
+);
+
+/**
+ * @route   POST /api/projects/:id/milestones
+ * @desc    Add milestone to project
+ * @access  Private
+ */
+router.post('/:id/milestones',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.addMilestone
+);
+
+// ========================
+// Activity Log Routes
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/activity
+ * @desc    Get project activity log
+ * @access  Private
+ * @query   {number} page - Page number
+ * @query   {number} limit - Items per page
+ * @query   {string} actionType - Filter by action type
+ */
+router.get('/:id/activity',
+  authenticate,
+  requirePermission('farm.projects.view'),
+  projectController.getProjectActivity
 );
 
 // ========================

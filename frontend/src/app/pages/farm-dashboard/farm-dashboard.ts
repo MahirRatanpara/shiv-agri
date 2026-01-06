@@ -11,13 +11,15 @@ import {
   ProjectSortOptions
 } from '../../services/dashboard.service';
 import { ToastService } from '../../services/toast.service';
+import { DashboardOverviewComponent } from '../../components/dashboard-overview/dashboard-overview';
+import { ProjectListComponent } from '../../components/project-list/project-list';
 
 type ViewMode = 'grid' | 'list' | 'map';
 
 @Component({
   selector: 'app-farm-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, DashboardOverviewComponent, ProjectListComponent],
   templateUrl: './farm-dashboard.html',
   styleUrls: ['./farm-dashboard.css'],
 })
@@ -352,7 +354,6 @@ export class FarmDashboardComponent implements OnInit, OnDestroy {
 
   // Chart interactions
   onChartSelect(event: any): void {
-    console.log('Chart selection:', event);
     // Filter projects by selected status
   }
 
@@ -381,7 +382,6 @@ export class FarmDashboardComponent implements OnInit, OnDestroy {
 
   onSearchResultClick(result: any): void {
     // Navigate to project details
-    console.log('Navigate to project:', result);
     this.showSearchResults = false;
     this.searchQuery = '';
   }
@@ -462,8 +462,8 @@ export class FarmDashboardComponent implements OnInit, OnDestroy {
 
   // Navigation
   createNewProject(): void {
-    // Navigate to project creation
-    console.log('Create new project');
+    // Navigate to project wizard
+    this.router.navigate(['/projects/new']);
   }
 
   viewAllProjects(): void {
@@ -473,22 +473,18 @@ export class FarmDashboardComponent implements OnInit, OnDestroy {
 
   viewProjectDetails(projectId: string): void {
     // Navigate to project details
-    console.log('View project:', projectId);
   }
 
   viewAllActivities(): void {
     // Navigate to activity log
-    console.log('View all activities');
   }
 
   viewFinancialDashboard(): void {
     // Navigate to financial dashboard
-    console.log('View financial dashboard');
   }
 
   recordVisit(visitId: string): void {
     // Navigate to visit recording
-    console.log('Record visit:', visitId);
   }
 
   // Utility methods
@@ -782,6 +778,14 @@ export class FarmDashboardComponent implements OnInit, OnDestroy {
 
   viewProject(projectId: string): void {
     this.router.navigate(['/project-details', projectId]);
+  }
+
+  handleFavoriteToggle(project: Project): void {
+    // The project-list component already handles the favorite toggle
+    // This is just for handling the event emission
+    this.toastService.success(
+      project.isFavorite ? 'Added to favorites' : 'Removed from favorites'
+    );
   }
 
   toggleProjectFavorite(project: Project, event: Event): void {
