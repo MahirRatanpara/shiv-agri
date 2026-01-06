@@ -8,10 +8,19 @@ const projectSchema = new mongoose.Schema({
     index: true // For search functionality
   },
 
+  // Project Category - First-class taxonomy entity
+  category: {
+    type: String,
+    enum: ['FARM', 'LANDSCAPING', 'GARDENING'],
+    required: [true, 'Project category is required'],
+    index: true, // For filtering performance
+    uppercase: true // Always store in uppercase for consistency
+  },
+
+  // Legacy field - kept for backward compatibility
   projectType: {
     type: String,
-    enum: ['farm', 'landscaping'],
-    required: [true, 'Project type is required'],
+    enum: ['farm', 'landscaping', 'gardening'],
     index: true // For filtering
   },
 
@@ -46,6 +55,9 @@ const projectSchema = new mongoose.Schema({
   clientPhone: {
     type: String
   },
+  alternativeContact: {
+    type: String
+  },
 
   // Location Information
   location: {
@@ -53,11 +65,17 @@ const projectSchema = new mongoose.Schema({
     city: { type: String, trim: true, index: true }, // Indexed for filtering
     district: { type: String, trim: true },
     state: { type: String, trim: true, index: true }, // Indexed for filtering
-    pincode: { type: String },
+    postalCode: { type: String },
+    pincode: { type: String }, // Keep for backward compatibility
     coordinates: {
-      latitude: Number,
-      longitude: Number
-    }
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: [Number] // [longitude, latitude] - GeoJSON format
+    },
+    mapUrl: { type: String } // Google Maps link
   },
 
   // Project Details
@@ -66,12 +84,31 @@ const projectSchema = new mongoose.Schema({
     unit: { type: String, enum: ['acres', 'sqm', 'hectares'] }
   },
 
+  // Land Details (for farms)
+  landDetails: {
+    totalArea: { type: Number },
+    areaUnit: { type: String, enum: ['acres', 'hectares', 'sqmeters'], default: 'acres' },
+    cultivableArea: { type: Number },
+    cultivablePercentage: { type: Number }, // Calculated field
+    soilType: { type: String },
+    waterSource: [{ type: String }], // Array: bore well, canal, river, rainwater
+    irrigationSystem: { type: String }, // drip, sprinkler, flood, mixed
+    terrainType: { type: String } // flat, sloped, hilly, mixed
+  },
+
+  // Budget Information with categories
   budget: {
     type: Number,
     required: [true, 'Budget is required'],
     min: [0, 'Budget cannot be negative'],
     index: true // For sorting and filtering
   },
+
+  budgetCategories: [{
+    category: { type: String }, // Materials, Labor, Equipment, etc.
+    percentage: { type: Number, min: 0, max: 100 },
+    amount: { type: Number, min: 0 }
+  }],
 
   expenses: {
     type: Number,
@@ -96,10 +133,40 @@ const projectSchema = new mongoose.Schema({
   assignedToName: {
     type: String
   },
+  projectManager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  fieldWorkers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  }],
+  consultants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  }],
   assignedTeam: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     index: true // For team member filtering
+  }],
+
+  // Contacts Array
+  contacts: [{
+    contactId: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+    fullName: { type: String, required: true },
+    designation: { type: String },
+    phone: { type: String, required: true },
+    email: { type: String, lowercase: true },
+    role: {
+      type: String,
+      enum: ['Owner', 'Manager', 'Architect', 'Supervisor', 'Worker', 'Consultant', 'Vendor', 'Other']
+    },
+    isPrimary: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true }
   }],
 
   // Dates
@@ -129,8 +196,12 @@ const projectSchema = new mongoose.Schema({
 
   // Project Specific Data
   crops: [{
-    type: String,
-    trim: true
+    name: { type: String, trim: true },
+    variety: { type: String, trim: true },
+    season: { type: String, enum: ['Kharif', 'Rabi', 'Zaid', 'Perennial', ''] },
+    plantingDate: { type: Date },
+    expectedHarvestDate: { type: Date },
+    area: { type: Number, min: 0 }
   }],
 
   soilType: {
@@ -151,6 +222,16 @@ const projectSchema = new mongoose.Schema({
     trim: true
   },
 
+  // Timeline & Milestones
+  milestones: [{
+    milestoneId: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+    name: { type: String, required: true },
+    date: { type: Date, required: true },
+    description: { type: String },
+    isCompleted: { type: Boolean, default: false },
+    completedAt: { type: Date }
+  }],
+
   // Progress Tracking
   visitCompletionPercentage: {
     type: Number,
@@ -168,6 +249,36 @@ const projectSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+
+  visitFrequency: {
+    type: Number, // Visits per year
+    default: 0
+  },
+
+  numberOfVisits: {
+    type: Number, // Total number of visits for the project
+    default: 0,
+    min: 0
+  },
+
+  numberOfYears: {
+    type: Number, // Total duration of project in years
+    default: 1,
+    min: 0
+  },
+
+  // Expense Tracking
+  expenseEntries: [{
+    expenseId: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+    description: { type: String, required: true, trim: true },
+    amount: { type: Number, required: true },
+    type: { type: String, enum: ['expense', 'income'], default: 'expense' }, // expense (subtract), income (add)
+    category: { type: String, trim: true }, // Materials, Labor, Equipment, etc.
+    date: { type: Date, default: Date.now },
+    notes: { type: String, trim: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+  }],
 
   // User Preferences
   isFavorite: [{
@@ -199,6 +310,24 @@ const projectSchema = new mongoose.Schema({
     default: 'medium'
   },
 
+  // Draft & Wizard Data
+  isDraft: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  draftData: {
+    type: mongoose.Schema.Types.Mixed // Store partial wizard data
+  },
+
+  wizardStep: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 6
+  },
+
   // Soft Delete
   isDeleted: {
     type: Boolean,
@@ -225,9 +354,18 @@ const projectSchema = new mongoose.Schema({
 // ========================
 
 // Composite indexes for common filter combinations
+// Category-based indexes (primary)
+projectSchema.index({ category: 1, status: 1 }); // Primary category + status filter
+projectSchema.index({ category: 1, 'location.city': 1 }); // Category + location filter
+projectSchema.index({ category: 1, createdBy: 1 }); // Category + user filter
+projectSchema.index({ category: 1, updatedAt: -1 }); // Category + recency
+
+// Legacy projectType indexes (for backward compatibility)
 projectSchema.index({ status: 1, projectType: 1 });
-projectSchema.index({ status: 1, 'location.city': 1 });
 projectSchema.index({ projectType: 1, 'location.city': 1 });
+
+// General indexes
+projectSchema.index({ status: 1, 'location.city': 1 });
 projectSchema.index({ assignedTo: 1, status: 1 });
 projectSchema.index({ createdBy: 1, status: 1 });
 projectSchema.index({ createdAt: -1 }); // For sorting by creation date
@@ -241,14 +379,14 @@ projectSchema.index({
   'location.city': 'text',
   'location.district': 'text',
   description: 'text',
-  crops: 'text'
+  'crops.name': 'text'
 }, {
   weights: {
     name: 10,
     clientName: 5,
     'location.city': 3,
     description: 1,
-    crops: 2
+    'crops.name': 2
   },
   name: 'ProjectSearchIndex'
 });
@@ -256,6 +394,15 @@ projectSchema.index({
 // Compound index for date range queries
 projectSchema.index({ startDate: 1, status: 1 });
 projectSchema.index({ createdAt: 1, isDeleted: 1 });
+
+// Geospatial index for location-based queries
+// Geospatial index - sparse means it only indexes documents with valid coordinates
+projectSchema.index({ 'location.coordinates': '2dsphere' }, { sparse: true });
+
+// Index for project manager and team queries
+projectSchema.index({ projectManager: 1, status: 1 });
+projectSchema.index({ fieldWorkers: 1 });
+projectSchema.index({ consultants: 1 });
 
 // ========================
 // Virtual Fields
@@ -351,7 +498,16 @@ projectSchema.statics.searchProjects = function(searchQuery, filters = {}) {
 
   // Add filters
   if (filters.status) query.status = Array.isArray(filters.status) ? { $in: filters.status } : filters.status;
+
+  // Category filter (primary)
+  if (filters.category) {
+    const categories = Array.isArray(filters.category) ? filters.category : [filters.category];
+    query.category = { $in: categories.map(cat => cat.toUpperCase()) };
+  }
+
+  // Legacy projectType filter (for backward compatibility)
   if (filters.projectType) query.projectType = Array.isArray(filters.projectType) ? { $in: filters.projectType } : filters.projectType;
+
   if (filters.city) query['location.city'] = filters.city;
   if (filters.state) query['location.state'] = filters.state;
   if (filters.assignedTo) query.assignedTo = filters.assignedTo;
@@ -362,6 +518,49 @@ projectSchema.statics.searchProjects = function(searchQuery, filters = {}) {
 // ========================
 // Pre-save Middleware
 // ========================
+
+// Sync category with projectType for backward compatibility
+projectSchema.pre('save', function(next) {
+  // If category is set but projectType is not, sync projectType from category
+  if (this.category && !this.projectType) {
+    this.projectType = this.category.toLowerCase();
+  }
+
+  // If projectType is set but category is not, sync category from projectType
+  if (this.projectType && !this.category) {
+    this.category = this.projectType.toUpperCase();
+  }
+
+  // Ensure category is always uppercase
+  if (this.category) {
+    this.category = this.category.toUpperCase();
+  }
+
+  next();
+});
+
+// Clean up incomplete coordinates before saving
+projectSchema.pre('save', function(next) {
+  // If coordinates exist but are incomplete (missing the coordinates array), remove them
+  if (this.location && this.location.coordinates) {
+    const coords = this.location.coordinates;
+
+    // Check if coordinates array is missing or empty
+    if (!coords.coordinates || !Array.isArray(coords.coordinates) || coords.coordinates.length === 0) {
+      // Remove the coordinates object entirely to avoid geospatial index errors
+      this.location.coordinates = undefined;
+    }
+    // Validate coordinates if they exist
+    else if (coords.coordinates.length !== 2 ||
+             typeof coords.coordinates[0] !== 'number' ||
+             typeof coords.coordinates[1] !== 'number') {
+      // Invalid coordinates format, remove them
+      this.location.coordinates = undefined;
+    }
+  }
+
+  next();
+});
 
 projectSchema.pre('save', function(next) {
   // Update computed fields

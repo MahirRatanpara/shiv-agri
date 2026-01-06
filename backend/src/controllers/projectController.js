@@ -1,4 +1,5 @@
 const projectService = require('../services/projectService');
+const draftService = require('../services/draftService');
 const {log} = require("winston");
 const logger = require('../utils/logger');
 
@@ -18,6 +19,10 @@ exports.getProjects = async (req, res) => {
       page,
       limit,
       search,
+      // Category filters (primary)
+      categoryInclude,
+      categoryExclude,
+      // Legacy projectType support
       projectType,
       status,
       city,
@@ -41,6 +46,14 @@ exports.getProjects = async (req, res) => {
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 50,
       search,
+      // Category filters
+      categoryInclude: categoryInclude ?
+        (typeof categoryInclude === 'string' ? categoryInclude.split(',') : categoryInclude) :
+        undefined,
+      categoryExclude: categoryExclude ?
+        (typeof categoryExclude === 'string' ? categoryExclude.split(',') : categoryExclude) :
+        undefined,
+      // Legacy projectType filter
       projectType: projectType ? (typeof projectType === 'string' ? [projectType] : projectType) : undefined,
       status: status ? (typeof status === 'string' ? status.split(',') : status) : undefined,
       city,
@@ -208,6 +221,39 @@ exports.deleteProject = async (req, res) => {
 };
 
 /**
+ * @route   DELETE /api/projects/:id/hard
+ * @desc    Permanently delete a project (admin only)
+ * @access  Private (Admin)
+ */
+exports.hardDeleteProject = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const result = await projectService.hardDeleteProject(req.params.id);
+
+    logger.info(`Project ${req.params.id} permanently deleted by admin ${req.user._id}`);
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Error permanently deleting project:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to permanently delete project',
+      message: error.message
+    });
+  }
+};
+
+/**
  * @route   PATCH /api/projects/:id/favorite
  * @desc    Toggle favorite status for a project
  * @access  Private
@@ -355,6 +401,382 @@ exports.exportProjects = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to export projects',
+      message: error.message
+    });
+  }
+};
+
+// ========================
+// Draft Management
+// ========================
+
+/**
+ * @route   POST /api/projects/drafts
+ * @desc    Save project as draft (creates project + draft or updates existing)
+ * @access  Private
+ */
+exports.saveDraft = async (req, res) => {
+  try {
+    const { wizardStep = 1, projectId, ...draftData } = req.body;
+
+    let result;
+
+    if (projectId) {
+      // Update existing draft
+      result = await draftService.updateDraft(projectId, draftData, wizardStep, req.user._id);
+      logger.info(`Draft updated for project ${projectId}, user ${req.user._id}, step ${wizardStep}`);
+    } else {
+      // Create new project with draft
+      result = await draftService.createProjectWithDraft(draftData, wizardStep, req.user._id);
+      logger.info(`New project with draft created for user ${req.user._id}, step ${wizardStep}`);
+    }
+
+    res.status(projectId ? 200 : 201).json({
+      success: true,
+      data: {
+        project: result.project,
+        draft: result.draft,
+        projectId: result.project._id
+      },
+      message: projectId ? 'Draft updated successfully' : 'Draft saved successfully'
+    });
+  } catch (error) {
+    console.error('Error saving draft:', error);
+
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: validationErrors.join(', '),
+        details: error.errors
+      });
+    }
+
+    res.status(400).json({
+      success: false,
+      error: 'Failed to save draft',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PUT /api/projects/drafts/:id
+ * @desc    Update existing draft (id is projectId)
+ * @access  Private
+ */
+exports.updateDraft = async (req, res) => {
+  try {
+    const { wizardStep = 1, ...draftData } = req.body;
+    const projectId = req.params.id;
+
+    const result = await draftService.updateDraft(
+      projectId,
+      draftData,
+      wizardStep,
+      req.user._id
+    );
+
+    logger.info(`Draft updated for project ${projectId}, step ${wizardStep}`);
+    res.status(200).json({
+      success: true,
+      data: {
+        project: result.project,
+        draft: result.draft,
+        projectId: result.project._id
+      },
+      message: 'Draft updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating draft:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update draft',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   GET /api/projects/drafts/list
+ * @desc    Get user's drafts
+ * @access  Private
+ */
+exports.getUserDrafts = async (req, res) => {
+  try {
+    const drafts = await draftService.getUserDrafts(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: drafts,
+      count: drafts.length
+    });
+  } catch (error) {
+    console.error('Error fetching drafts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch drafts',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   GET /api/projects/drafts/:id
+ * @desc    Get specific draft by project ID
+ * @access  Private
+ */
+exports.getDraft = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const draft = await draftService.getDraftByProjectId(projectId, req.user._id);
+
+    if (!draft) {
+      return res.status(404).json({
+        success: false,
+        error: 'Draft not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: draft
+    });
+  } catch (error) {
+    console.error('Error fetching draft:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch draft',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   POST /api/projects/drafts/:id/complete
+ * @desc    Convert draft to final project (id is projectId)
+ * @access  Private
+ */
+exports.completeDraft = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const project = await draftService.completeDraft(projectId, req.body, req.user._id);
+
+    logger.info(`Draft for project ${projectId} completed and project finalized`);
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Project created successfully'
+    });
+  } catch (error) {
+    console.error('Error completing draft:', error);
+
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        message: validationErrors.join(', '),
+        details: error.errors
+      });
+    }
+
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to complete draft',
+      message: error.message
+    });
+  }
+};
+
+// ========================
+// Contact Management
+// ========================
+
+/**
+ * @route   POST /api/projects/:id/contacts
+ * @desc    Add contact to project
+ * @access  Private
+ */
+exports.addContact = async (req, res) => {
+  try {
+    const project = await projectService.addContact(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Contact added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding contact:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to add contact',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PUT /api/projects/:id/contacts/:contactId
+ * @desc    Update contact in project
+ * @access  Private
+ */
+exports.updateContact = async (req, res) => {
+  try {
+    const project = await projectService.updateContact(
+      req.params.id,
+      req.params.contactId,
+      req.body,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Contact updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating contact:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update contact',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   DELETE /api/projects/:id/contacts/:contactId
+ * @desc    Remove contact from project
+ * @access  Private
+ */
+exports.removeContact = async (req, res) => {
+  try {
+    const project = await projectService.removeContact(
+      req.params.id,
+      req.params.contactId,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Contact removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing contact:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to remove contact',
+      message: error.message
+    });
+  }
+};
+
+// ========================
+// Timeline & Milestones
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/timeline
+ * @desc    Get project timeline
+ * @access  Private
+ */
+exports.getProjectTimeline = async (req, res) => {
+  try {
+    const timeline = await projectService.getProjectTimeline(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      data: timeline
+    });
+  } catch (error) {
+    console.error('Error fetching timeline:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to fetch timeline',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   POST /api/projects/:id/milestones
+ * @desc    Add milestone to project
+ * @access  Private
+ */
+exports.addMilestone = async (req, res) => {
+  try {
+    const project = await projectService.addMilestone(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Milestone added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding milestone:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to add milestone',
+      message: error.message
+    });
+  }
+};
+
+// ========================
+// Activity Log
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/activity
+ * @desc    Get project activity log
+ * @access  Private
+ */
+exports.getProjectActivity = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 50,
+      actionType = null
+    } = req.query;
+
+    const result = await projectService.getProjectActivity(
+      req.params.id,
+      parseInt(page),
+      parseInt(limit),
+      actionType
+    );
+
+    res.status(200).json({
+      success: true,
+      activities: result.activities,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    console.error('Error fetching activity log:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activity log',
       message: error.message
     });
   }

@@ -1,0 +1,291 @@
+<div class="dashboard-overview">
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <!-- Total Projects Card -->
+    <div class="stat-card stat-card-primary" (click)="onMetricCardClick('all')">
+      <div class="stat-icon">
+        <i class="fas fa-project-diagram"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Total Projects</div>
+        <div class="stat-value">
+          <ng-container *ngIf="!isLoadingMetrics; else skeleton">
+            <span class="animated-number">{{ totalProjects }}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Running Projects Card -->
+    <div class="stat-card stat-card-success" (click)="onMetricCardClick('running')">
+      <div class="stat-icon">
+        <i class="fas fa-play-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Running Projects</div>
+        <div class="stat-value">
+          <ng-container *ngIf="!isLoadingMetrics; else skeleton">
+            <span class="animated-number">{{ runningProjects }}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed This Month Card -->
+    <div class="stat-card stat-card-info" (click)="onMetricCardClick('completed')">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Completed This Month</div>
+        <div class="stat-value">
+          <ng-container *ngIf="!isLoadingMetrics; else skeleton">
+            <span class="animated-number">{{ completedThisMonth }}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Budget Card -->
+    <div class="stat-card stat-card-warning" (click)="onMetricCardClick('budget')">
+      <div class="stat-icon">
+        <i class="fas fa-rupee-sign"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Total Budget</div>
+        <div class="stat-value">
+          <ng-container *ngIf="!isLoadingMetrics; else skeleton">
+            <span class="animated-number">{{ formatCurrency(totalBudget) }}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Visits Card -->
+    <div class="stat-card stat-card-danger" (click)="onMetricCardClick('visits')">
+      <div class="stat-icon">
+        <i class="fas fa-calendar-alt"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Pending Visits</div>
+        <div class="stat-value">
+          <ng-container *ngIf="!isLoadingMetrics; else skeleton">
+            <span class="animated-number">{{ pendingVisits }}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="dashboard-grid">
+    <!-- Left Column -->
+    <div class="dashboard-left">
+      <!-- Project Status Distribution -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3 class="card-title">Project Status Distribution</h3>
+        </div>
+        <div class="card-body">
+          <ng-container *ngIf="!isLoadingChart; else chartSkeleton">
+            <div class="chart-container" *ngIf="projectStatusData.length > 0">
+              <div class="pie-chart-placeholder">
+                <div class="pie-chart-legend">
+                  <div
+                    class="legend-item"
+                    *ngFor="let item of projectStatusData"
+                    (click)="onChartSelect(item)"
+                  >
+                    <span
+                      class="legend-color"
+                      [style.background-color]="item.color"
+                    ></span>
+                    <span class="legend-label">{{ item.name }}</span>
+                    <span class="legend-value">{{ item.value }} ({{ item.percentage }}%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="no-data" *ngIf="projectStatusData.length === 0">
+              <i class="fas fa-chart-pie"></i>
+              <p>No data available</p>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Budget Overview -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3 class="card-title">Budget Overview</h3>
+          <button class="btn-link" (click)="viewFinancialDashboard()">
+            View Details
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="budget-summary">
+            <div class="budget-row">
+              <span class="budget-label">Total Allocated</span>
+              <span class="budget-amount">{{ formatCurrency(budgetSummary.totalAllocated) }}</span>
+            </div>
+            <div class="budget-row">
+              <span class="budget-label">Total Expenses</span>
+              <span class="budget-amount expense">{{ formatCurrency(budgetSummary.totalExpenses) }}</span>
+            </div>
+            <div class="budget-row budget-divider">
+              <span class="budget-label bold">Net Profit/Loss</span>
+              <span
+                class="budget-amount bold"
+                [ngClass]="getBudgetStatusClass()"
+              >
+                {{ formatCurrency(budgetSummary.netProfit) }}
+              </span>
+            </div>
+            <div class="budget-utilization">
+              <span class="budget-label">Budget Utilization</span>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  [style.width.%]="budgetSummary.utilizationPercentage"
+                  [ngClass]="getBudgetStatusClass()"
+                ></div>
+              </div>
+              <span class="budget-percentage">{{ budgetSummary.utilizationPercentage }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Favorite Projects -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-star"></i> Favorite Projects
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="favorite-projects-list" *ngIf="favoriteProjects.length > 0">
+            <div
+              class="favorite-project-item"
+              *ngFor="let project of favoriteProjects"
+            >
+              <div class="project-info">
+                <div class="project-name">{{ project.name }}</div>
+                <div class="project-meta">
+                  <span class="badge" [ngClass]="'badge-' + project.status.toLowerCase()">
+                    {{ project.status }}
+                  </span>
+                  <span class="project-updated">{{ getRelativeTime(project.updatedAt) }}</span>
+                </div>
+              </div>
+              <div class="project-actions">
+                <button
+                  class="btn-icon"
+                  (click)="viewProjectDetails(project.id)"
+                  title="View"
+                >
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button
+                  class="btn-icon"
+                  (click)="recordVisit(project.id)"
+                  title="Record Visit"
+                >
+                  <i class="fas fa-clipboard-check"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="no-data" *ngIf="favoriteProjects.length === 0">
+            <i class="fas fa-star"></i>
+            <p>No favorite projects yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="dashboard-right">
+      <!-- Recent Activity -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3 class="card-title">Recent Activity</h3>
+          <button class="btn-link" (click)="viewAllActivities()">
+            View All
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="activity-timeline" *ngIf="!isLoadingActivities && recentActivities.length > 0">
+            <div
+              class="activity-item"
+              *ngFor="let activity of recentActivities"
+            >
+              <div class="activity-icon">
+                <i class="fas" [ngClass]="getActivityIcon(activity.type)"></i>
+              </div>
+              <div class="activity-content">
+                <div class="activity-text">
+                  <span class="activity-user">{{ activity.userName }}</span>
+                  {{ activity.action }}
+                  <a
+                    [routerLink]="['/project-details', activity.projectId]"
+                    class="activity-project"
+                  >
+                    {{ activity.projectName }}
+                  </a>
+                </div>
+                <div class="activity-time">{{ getRelativeTime(activity.timestamp) }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="no-data" *ngIf="!isLoadingActivities && recentActivities.length === 0">
+            <i class="fas fa-history"></i>
+            <p>No recent activity</p>
+          </div>
+          <div class="skeleton-list" *ngIf="isLoadingActivities">
+            <div class="skeleton-item" *ngFor="let i of [1,2,3,4,5]"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Visits -->
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-calendar-check"></i> Upcoming Visits
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="visits-list" *ngIf="upcomingVisits.length > 0">
+            <div class="visit-item" *ngFor="let visit of upcomingVisits">
+              <div class="visit-date">
+                <div class="visit-day">{{ visit.date | date: 'd' }}</div>
+                <div class="visit-month">{{ visit.date | date: 'MMM' }}</div>
+              </div>
+              <div class="visit-info">
+                <div class="visit-project">{{ visit.projectName }}</div>
+                <div class="visit-meta">
+                  <span class="visit-type">{{ visit.type }}</span>
+                  <span class="visit-assignee">{{ visit.assignedTo }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="no-data" *ngIf="upcomingVisits.length === 0">
+            <i class="fas fa-calendar"></i>
+            <p>No upcoming visits</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Skeleton Templates -->
+<ng-template #skeleton>
+  <div class="skeleton-value"></div>
+</ng-template>
+
+<ng-template #chartSkeleton>
+  <div class="skeleton-chart"></div>
+</ng-template>

@@ -36,11 +36,16 @@ export interface Project {
   name: string;
   client: string;
   clientAvatar?: string;
-  location: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  location: Location;
   city?: string;
   district?: string;
   status: 'Upcoming' | 'Running' | 'Completed' | 'On Hold' | 'Cancelled';
-  type: 'farm' | 'landscaping';
+  // Category - First-class taxonomy
+  category: 'FARM' | 'LANDSCAPING' | 'GARDENING';
+  // Legacy type field (for backward compatibility)
+  type?: 'farm' | 'landscaping' | 'gardening';
   budget: number;
   expenses: number;
   size?: number; // in acres or sq meters
@@ -55,7 +60,17 @@ export interface Project {
   completionDate?: Date;
   updatedAt: Date;
   isFavorite: boolean;
+  isDraft?: boolean; // Draft status
   crops?: string[];
+}
+
+export interface Location {
+  address?: string,
+  city?: string,
+  state?: string,
+  postalCode?: string,
+  mapUrl?: string
+
 }
 
 export interface BudgetSummary {
@@ -83,9 +98,15 @@ export interface Visit {
 }
 
 export interface ProjectFilters {
+  // ============================
+  // CATEGORY FILTERS (Primary, Top-level)
+  // ============================
+  categoryInclude?: string[]; // Categories to include (IN)
+  categoryExclude?: string[]; // Categories to exclude (OUT)
+
   // Basic filters
   status?: string[];
-  type?: string[];
+  type?: string[]; // Legacy - for backward compatibility
   assignedTo?: string[];
   client?: string;
 
@@ -108,6 +129,7 @@ export interface ProjectFilters {
   // Other filters
   isFavorite?: boolean;
   crops?: string[];
+  showDrafts?: boolean | 'all'; // false (default): hide drafts, true: show only drafts, 'all': show all
 }
 
 export interface ProjectSortOptions {
@@ -325,13 +347,24 @@ export class DashboardService {
 
     // Add search query
     if (searchQuery) {
-      params = params.set('q', searchQuery);
+      params = params.set('search', searchQuery);
     }
 
     // Add filters
     if (filters) {
+      // ============================
+      // CATEGORY FILTERS (Applied First - Primary Constraint)
+      // ============================
+      if (filters.categoryInclude?.length) {
+        params = params.set('categoryInclude', filters.categoryInclude.join(','));
+      }
+      if (filters.categoryExclude?.length) {
+        params = params.set('categoryExclude', filters.categoryExclude.join(','));
+      }
+
+      // Other filters
       if (filters.status?.length) params = params.set('status', filters.status.join(','));
-      if (filters.type?.length) params = params.set('type', filters.type.join(','));
+      if (filters.type?.length) params = params.set('projectType', filters.type.join(',')); // Legacy support
       if (filters.assignedTo?.length) params = params.set('assignedTo', filters.assignedTo.join(','));
       if (filters.client) params = params.set('client', filters.client);
       if (filters.city) params = params.set('city', filters.city);
@@ -348,18 +381,24 @@ export class DashboardService {
       params = params.set('sortBy', sort.sortBy).set('sortOrder', sort.sortOrder);
     }
 
-    return this.http.get<ProjectListResponse>(`${this.API_URL}/projects`, { params }).pipe(
+    return this.http.get<any>(`${this.API_URL}/projects`, { params }).pipe(
       map((response) => ({
-        ...response,
-        projects: response.projects.map((project) => ({
+        projects: response.projects.map((project: any) => ({
           ...project,
+          id: project.id || project._id, // Map MongoDB _id to id
           updatedAt: new Date(project.updatedAt),
           createdAt: project.createdAt ? new Date(project.createdAt) : undefined,
           startDate: project.startDate ? new Date(project.startDate) : undefined,
           completionDate: project.completionDate ? new Date(project.completionDate) : undefined,
         })),
+        // Extract pagination fields from nested pagination object
+        total: response.pagination?.total || 0,
+        page: response.pagination?.page || 1,
+        limit: response.pagination?.limit || 50,
+        totalPages: response.pagination?.totalPages || 0
       })),
       catchError((err, caught) => {
+        console.error('Error loading projects:', err);
         return of({
           projects: [],
           total: 0,
@@ -512,7 +551,8 @@ export class DashboardService {
         id: 'proj-1',
         name: 'Organic Farm Project',
         client: 'Green Valley Farms',
-        location: 'Ahmedabad, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'FARM',
         status: 'Running',
         type: 'farm',
         budget: 500000,
@@ -525,7 +565,8 @@ export class DashboardService {
         id: 'proj-2',
         name: 'Villa Landscaping',
         client: 'Rajesh Mehta',
-        location: 'Surat, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'LANDSCAPING',
         status: 'Running',
         type: 'landscaping',
         budget: 250000,
@@ -538,7 +579,8 @@ export class DashboardService {
         id: 'proj-3',
         name: 'Farm Irrigation Setup',
         client: 'Patel Agro Industries',
-        location: 'Vadodara, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'FARM',
         status: 'Completed',
         type: 'farm',
         budget: 800000,
@@ -643,7 +685,8 @@ export class DashboardService {
         name: 'Organic Farm Project',
         client: 'Green Valley Farms',
         clientAvatar: 'https://ui-avatars.com/api/?name=Green+Valley',
-        location: 'Ahmedabad, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'FARM',
         city: 'Ahmedabad',
         district: 'Ahmedabad',
         status: 'Running',
@@ -667,7 +710,8 @@ export class DashboardService {
         name: 'Villa Landscaping',
         client: 'Rajesh Mehta',
         clientAvatar: 'https://ui-avatars.com/api/?name=Rajesh+Mehta',
-        location: 'Surat, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'LANDSCAPING',
         city: 'Surat',
         district: 'Surat',
         status: 'Running',
@@ -690,7 +734,8 @@ export class DashboardService {
         name: 'Farm Irrigation Setup',
         client: 'Patel Agro Industries',
         clientAvatar: 'https://ui-avatars.com/api/?name=Patel+Agro',
-        location: 'Vadodara, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'GARDENING',
         city: 'Vadodara',
         district: 'Vadodara',
         status: 'Completed',
@@ -715,8 +760,9 @@ export class DashboardService {
         name: 'Commercial Farming Project',
         client: 'Shah Enterprises',
         clientAvatar: 'https://ui-avatars.com/api/?name=Shah+Enterprises',
-        location: 'Rajkot, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
         city: 'Rajkot',
+        category: 'FARM',
         district: 'Rajkot',
         status: 'Upcoming',
         type: 'farm',
@@ -739,7 +785,8 @@ export class DashboardService {
         name: 'Garden Redesign Project',
         client: 'Kumar Residency',
         clientAvatar: 'https://ui-avatars.com/api/?name=Kumar+Residency',
-        location: 'Ahmedabad, Gujarat',
+        location: {city:'Ahmedabad, Gujarat'},
+        category: 'GARDENING',
         city: 'Ahmedabad',
         district: 'Ahmedabad',
         status: 'On Hold',
@@ -768,7 +815,316 @@ export class DashboardService {
       (project) =>
         project.name.toLowerCase().includes(lowerQuery) ||
         project.client.toLowerCase().includes(lowerQuery) ||
-        project.location.toLowerCase().includes(lowerQuery)
+        project.location.city?.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  // ========================
+  // Project Creation & Management
+  // ========================
+
+  /**
+   * Create new project
+   */
+  createProject(projectData: any): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects`,
+      projectData
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data ? {
+          ...response.data,
+          id: response.data.id || response.data._id, // Map MongoDB _id to id
+        } : null,
+      })),
+      catchError(() => {
+        // Mock success for development
+        const mockId = 'proj-new-' + Date.now();
+        return of({
+          success: true,
+          data: { id: mockId, _id: mockId, ...projectData },
+          message: 'Project created successfully'
+        });
+      })
+    );
+  }
+
+  /**
+   * Get project by ID with full details
+   */
+  getProjectById(projectId: string): Observable<{ success: boolean; data: any }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${this.API_URL}/projects/${projectId}`
+    ).pipe(
+      catchError(() => {
+        // Mock data for development
+        const mockProjects = this.getMockProjects();
+        const project = mockProjects.find(p => p.id === projectId) || mockProjects[0];
+        return of({ success: true, data: project });
+      })
+    );
+  }
+
+  /**
+   * Update existing project
+   */
+  updateProject(projectId: string, projectData: any): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.patch<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/${projectId}`,
+      projectData
+    ).pipe(
+      catchError(() => {
+        // Mock success for development
+        return of({
+          success: true,
+          data: { _id: projectId, ...projectData },
+          message: 'Project updated successfully'
+        });
+      })
+    );
+  }
+
+  // ========================
+  // Draft Management
+  // ========================
+
+  /**
+   * Save project as draft
+   */
+  saveProjectDraft(draftData: any, wizardStep: number, projectId?: string): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/drafts`,
+      { ...draftData, wizardStep, projectId }
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data ? {
+          ...response.data,
+          projectId: response.data.projectId || response.data.project?._id || response.data.project?.id,
+          project: response.data.project ? {
+            ...response.data.project,
+            id: response.data.project.id || response.data.project._id,
+          } : null,
+        } : null,
+      })),
+      catchError(() => {
+        // Mock success for development
+        const mockId = projectId || 'project-' + Date.now();
+        return of({
+          success: true,
+          data: {
+            projectId: mockId,
+            project: { id: mockId, _id: mockId, ...draftData },
+            draft: { ...draftData, wizardStep }
+          },
+          message: 'Draft saved successfully'
+        });
+      })
+    );
+  }
+
+  /**
+   * Update existing draft
+   */
+  updateProjectDraft(draftId: string, draftData: any, wizardStep: number): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.put<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/drafts/${draftId}`,
+      { ...draftData, wizardStep }
+    ).pipe(
+      catchError(() => {
+        // Mock success for development
+        return of({
+          success: true,
+          data: { _id: draftId, ...draftData, wizardStep },
+          message: 'Draft updated successfully'
+        });
+      })
+    );
+  }
+
+  /**
+   * Get user's draft projects
+   */
+  getUserDrafts(): Observable<{ success: boolean; data: any[]; count: number }> {
+    return this.http.get<{ success: boolean; data: any[]; count: number }>(
+      `${this.API_URL}/projects/drafts/list`
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data.map((draft: any) => ({
+          ...draft,
+          id: draft.id || draft._id, // Map MongoDB _id to id
+        })),
+      })),
+      catchError(() => {
+        // Mock empty drafts for development
+        return of({ success: true, data: [], count: 0 });
+      })
+    );
+  }
+
+  /**
+   * Get specific draft by project ID
+   */
+  getProjectDraft(projectId: string): Observable<{ success: boolean; data: any }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${this.API_URL}/projects/drafts/${projectId}`
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data ? {
+          ...response.data,
+          id: response.data.id || response.data._id, // Map MongoDB _id to id
+        } : null,
+      })),
+      catchError(() => {
+        // Mock draft for development
+        return of({ success: false, data: null });
+      })
+    );
+  }
+
+  /**
+   * Complete draft and convert to final project (using project ID)
+   */
+  completeDraft(projectId: string, projectData: any): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/drafts/${projectId}/complete`,
+      projectData
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data ? {
+          ...response.data,
+          id: response.data.id || response.data._id, // Map MongoDB _id to id
+        } : null,
+      })),
+      catchError(() => {
+        // Mock success for development
+        return of({
+          success: true,
+          data: { id: projectId, _id: projectId, ...projectData },
+          message: 'Project created successfully'
+        });
+      })
+    );
+  }
+
+  // ========================
+  // Project Details (for detail page)
+  // ========================
+
+  /**
+   * Get project details by ID
+   */
+  getProjectDetails(projectId: string): Observable<{ success: boolean; data: any }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${this.API_URL}/projects/${projectId}`
+    ).pipe(
+      map((response) => ({
+        ...response,
+        data: response.data ? {
+          ...response.data,
+          id: response.data.id || response.data._id, // Map MongoDB _id to id
+        } : null,
+      })),
+      catchError(() => {
+        // Mock data for development
+        return of({ success: false, data: null });
+      })
+    );
+  }
+
+  /**
+   * Delete project (soft delete)
+   */
+  deleteProject(projectId: string): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(
+      `${this.API_URL}/projects/${projectId}`
+    );
+  }
+
+  /**
+   * Permanently delete project (admin only)
+   */
+  hardDeleteProject(projectId: string): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(
+      `${this.API_URL}/projects/${projectId}/hard`
+    );
+  }
+
+  /**
+   * Get project activity log
+   */
+  getProjectActivity(projectId: string, page: number = 1, limit: number = 50): Observable<{ success: boolean; activities: any[]; pagination: any }> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this.http.get<{ success: boolean; activities: any[]; pagination: any }>(
+      `${this.API_URL}/projects/${projectId}/activity`,
+      { params }
+    ).pipe(
+      catchError(() => {
+        // Mock data for development
+        return of({
+          success: true,
+          activities: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0, hasNext: false, hasPrevious: false }
+        });
+      })
+    );
+  }
+
+  /**
+   * Get project timeline
+   */
+  getProjectTimeline(projectId: string): Observable<{ success: boolean; data: any }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${this.API_URL}/projects/${projectId}/timeline`
+    ).pipe(
+      catchError(() => {
+        // Mock data for development
+        return of({
+          success: true,
+          data: {
+            project: { name: 'Project', startDate: new Date(), expectedEndDate: new Date(), status: 'Running' },
+            milestones: [],
+            progress: { percentage: 0, totalDays: 0, elapsedDays: 0, remainingDays: 0 }
+          }
+        });
+      })
+    );
+  }
+
+  /**
+   * Add contact to project
+   */
+  addContact(projectId: string, contactData: any): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/${projectId}/contacts`,
+      contactData
+    ).pipe(
+      catchError(() => {
+        // Mock success for development
+        return of({ success: true, data: contactData, message: 'Contact added successfully' });
+      })
+    );
+  }
+
+  /**
+   * Add milestone to project
+   */
+  addMilestone(projectId: string, milestoneData: any): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/projects/${projectId}/milestones`,
+      milestoneData
+    ).pipe(
+      catchError(() => {
+        // Mock success for development
+        return of({ success: true, data: milestoneData, message: 'Milestone added successfully' });
+      })
     );
   }
 }

@@ -1,12 +1,813 @@
-<section class="wf100 p80">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        <div class="section-title-2 text-center">
-          <h2>Project Details</h2>
-          <p>This page is under construction. Content coming soon.</p>
+<div class="project-details-page">
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading project details...</p>
+    </div>
+  </div>
+
+  <!-- Project Content -->
+  <div *ngIf="!isLoading && project" class="project-content">
+
+    <!-- Hero Header with Cover Image -->
+    <div class="project-hero" [style.background-image]="project.coverImage ? 'url(' + project.coverImage + ')' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <div class="hero-header">
+          <button class="btn-icon btn-back" (click)="goBack()" title="Go back">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+
+          <div class="hero-actions">
+            <button class="btn-icon" (click)="openLocation()" title="View on map" *ngIf="project.location?.coordinates || project.location?.mapUrl">
+              <i class="fas fa-map-marker-alt"></i>
+            </button>
+            <button class="btn-icon" (click)="editProject()" title="Edit project">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-icon btn-delete" *hasPermission="'farm.projects.delete'" (click)="deleteProject()" title="Delete project">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero-info">
+          <div class="project-meta-badges">
+            <span class="badge badge-status" [style.background-color]="getStatusColor(project.status)">
+              {{ project.status }}
+            </span>
+            <span class="badge badge-category">
+              <i class="fas"
+                 [class.fa-tractor]="project.category === 'FARM'"
+                 [class.fa-tree]="project.category === 'LANDSCAPING'"
+                 [class.fa-leaf]="project.category === 'GARDENING'"></i>
+              {{ project.category | titlecase }}
+            </span>
+            <span class="badge badge-priority" [style.background-color]="getPriorityColor(project.priority)" *ngIf="project.priority">
+              <i class="fas fa-flag"></i>
+              {{ project.priority | titlecase }}
+            </span>
+          </div>
+
+          <h1 class="project-title">{{ project.name }}</h1>
+
+          <div class="project-quick-info">
+            <div class="quick-info-item" *ngIf="project.clientName">
+              <i class="fas fa-user"></i>
+              <span>{{ project.clientName }}</span>
+            </div>
+            <div class="quick-info-item" *ngIf="project.location?.city">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>{{ project.location?.city }}{{ project.location?.state ? ', ' + project.location?.state : '' }}</span>
+            </div>
+            <div class="quick-info-item" *ngIf="project.size">
+              <i class="fas fa-chart-area"></i>
+              <span>{{ project.size.value }} {{ project.size.unit }}</span>
+            </div>
+            <div class="quick-info-item" *ngIf="project.startDate">
+              <i class="fas fa-calendar"></i>
+              <span>Started {{ formatDate(project.startDate) }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Main Container -->
+    <div class="container">
+      <!-- Tab Navigation -->
+      <div class="tabs-navigation">
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'overview'"
+          (click)="setActiveTab('overview')">
+          <i class="fas fa-info-circle"></i>
+          Overview
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'team'"
+          (click)="setActiveTab('team')">
+          <i class="fas fa-users"></i>
+          Team & Contacts
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'timeline'"
+          (click)="setActiveTab('timeline')">
+          <i class="fas fa-tasks"></i>
+          Timeline
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+
+        <!-- Overview Tab -->
+        <div class="tab-pane" [class.active]="activeTab === 'overview'">
+          <div class="content-grid">
+            <!-- Left Column - Main Content -->
+            <div class="main-content">
+
+              <!-- Description Card -->
+              <div class="card" *ngIf="project.description">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-file-alt"></i>
+                    Project Description
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <p class="description-text">{{ project.description }}</p>
+                </div>
+              </div>
+
+              <!-- Location & Map Card -->
+              <div class="card card-map" *ngIf="project.location">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Project Location
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <!-- Location Address -->
+                  <div class="location-info" *ngIf="project.location.address || project.location.city">
+                    <div class="location-address">
+                      <p *ngIf="project.location.address">{{ project.location.address }}</p>
+                      <p *ngIf="project.location.city || project.location.district">
+                        {{ project.location.city }}{{ project.location.district ? ', ' + project.location.district : '' }}
+                      </p>
+                      <p *ngIf="project.location.state">
+                        {{ project.location.state }}{{ project.location.postalCode ? ' - ' + project.location.postalCode : '' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Map Section (Similar to Contact Page) -->
+                  <div class="map-section" *ngIf="project.location.coordinates?.coordinates">
+                    <div class="map-wrapper">
+                      <div class="map-overlay">
+                        <div class="map-pulse"></div>
+                      </div>
+                      <div class="map-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        <span>{{ project.name }}</span>
+                      </div>
+                      <iframe
+                        [src]="getMapEmbedUrl()"
+                        class="google-map"
+                        allowfullscreen
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade">
+                      </iframe>
+                    </div>
+
+                    <!-- Get Directions Button -->
+                    <a [href]="getDirectionsUrl()"
+                       target="_blank"
+                       class="directions-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="btn-icon-svg">
+                        <path d="M21.71 11.29l-9-9c-.39-.39-1.02-.39-1.41 0l-9 9c-.39.39-.39 1.02 0 1.41l9 9c.39.39 1.02.39 1.41 0l9-9c.39-.38.39-1.01 0-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/>
+                      </svg>
+                      Get Directions
+                      <span class="btn-shine"></span>
+                    </a>
+                  </div>
+
+                  <!-- No Location State -->
+                  <div class="no-location" *ngIf="!project.location.coordinates && !project.location.address">
+                    <i class="fas fa-map"></i>
+                    <p>No location data available</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Project Statistics -->
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-chart-line"></i>
+                    Project Statistics
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="project-stats-grid">
+                    <div class="stat-item">
+                      <div class="stat-icon-wrapper" style="background: rgba(76, 175, 80, 0.1);">
+                        <i class="fas fa-calendar-check" style="color: #4CAF50;"></i>
+                      </div>
+                      <div class="stat-details">
+                        <div class="stat-value">{{ project.numberOfVisits || 0 }}</div>
+                        <div class="stat-label">Number of Visits</div>
+                      </div>
+                    </div>
+
+                    <div class="stat-item">
+                      <div class="stat-icon-wrapper" style="background: rgba(33, 150, 243, 0.1);">
+                        <i class="fas fa-hourglass-half" style="color: #2196F3;"></i>
+                      </div>
+                      <div class="stat-details">
+                        <div class="stat-value">{{ project.numberOfYears || 0 }}</div>
+                        <div class="stat-label">Project Duration (Years)</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Phase 1: Timeline & Visit Planning -->
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Timeline & Visit Schedule
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="timeline-overview">
+                    <div class="timeline-stat-grid">
+                      <div class="timeline-stat">
+                        <div class="stat-circle" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                          <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="stat-info">
+                          <div class="stat-number">{{ project.numberOfYears || 0 }}</div>
+                          <div class="stat-text">Years Duration</div>
+                        </div>
+                      </div>
+
+                      <div class="timeline-stat">
+                        <div class="stat-circle" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                          <i class="fas fa-route"></i>
+                        </div>
+                        <div class="stat-info">
+                          <div class="stat-number">{{ getVisitsPerYear() }}</div>
+                          <div class="stat-text">Visits / Year</div>
+                        </div>
+                      </div>
+
+                      <div class="timeline-stat">
+                        <div class="stat-circle" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+                          <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                          <div class="stat-number">{{ getTotalProjectVisits() }}</div>
+                          <div class="stat-text">Total Visits</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Visit Progress Bar -->
+                    <div class="visit-progress-section">
+                      <div class="progress-info-row">
+                        <span class="progress-text">Visit Completion</span>
+                        <span class="progress-numbers">
+                          {{ project.totalVisitsCompleted }} / {{ project.totalVisitsPlanned }}
+                          <span class="progress-percent">({{ project.visitCompletionPercentage }}%)</span>
+                        </span>
+                      </div>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar"
+                             [style.width.%]="project.visitCompletionPercentage"
+                             [style.background]="'linear-gradient(90deg, #4CAF50 0%, #45a049 100%)'">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Phase 2: Budget & Expense Management -->
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-wallet"></i>
+                    Budget & Expenses
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <!-- Budget Overview -->
+                  <div class="budget-overview-grid">
+                    <div class="budget-card total-budget">
+                      <div class="budget-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                      </div>
+                      <div class="budget-details">
+                        <div class="budget-label">Total Budget</div>
+                        <div class="budget-amount">{{ formatCurrency(project.budget) }}</div>
+                      </div>
+                    </div>
+
+                    <div class="budget-card expenses">
+                      <div class="budget-icon">
+                        <i class="fas fa-arrow-down"></i>
+                      </div>
+                      <div class="budget-details">
+                        <div class="budget-label">Total Expenses</div>
+                        <div class="budget-amount expense-amount">{{ formatCurrency(getTotalExpenses()) }}</div>
+                      </div>
+                    </div>
+
+                    <div class="budget-card income">
+                      <div class="budget-icon">
+                        <i class="fas fa-arrow-up"></i>
+                      </div>
+                      <div class="budget-details">
+                        <div class="budget-label">Income/Returns</div>
+                        <div class="budget-amount income-amount">{{ formatCurrency(getTotalIncome()) }}</div>
+                      </div>
+                    </div>
+
+                    <div class="budget-card remaining">
+                      <div class="budget-icon">
+                        <i class="fas fa-piggy-bank"></i>
+                      </div>
+                      <div class="budget-details">
+                        <div class="budget-label">Remaining</div>
+                        <div class="budget-amount" [class.negative]="getRemainingBudget() < 0">
+                          {{ formatCurrency(getRemainingBudget()) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Budget Utilization Progress -->
+                  <div class="budget-utilization">
+                    <div class="progress-info-row">
+                      <span class="progress-text">Budget Utilization</span>
+                      <span class="progress-percent" [style.color]="getBudgetHealthColor()">
+                        {{ getBudgetUtilization() }}%
+                      </span>
+                    </div>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar"
+                           [style.width.%]="getBudgetUtilization()"
+                           [style.background-color]="getBudgetHealthColor()">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Expense Entries Table -->
+                  <div class="expense-entries" *ngIf="project.expenseEntries && project.expenseEntries.length > 0">
+                    <h3 class="section-subtitle">Recent Transactions</h3>
+                    <div class="expense-list">
+                      <div class="expense-item" *ngFor="let entry of project.expenseEntries.slice(-10).reverse()"
+                           [class.income-entry]="entry.type === 'income'">
+                        <div class="expense-icon">
+                          <i class="fas" [class.fa-minus-circle]="entry.type === 'expense'"
+                             [class.fa-plus-circle]="entry.type === 'income'"></i>
+                        </div>
+                        <div class="expense-content">
+                          <div class="expense-header">
+                            <span class="expense-desc">{{ entry.description }}</span>
+                            <span class="expense-amount" [class.negative]="entry.type === 'expense'" [class.positive]="entry.type === 'income'">
+                              {{ entry.type === 'expense' ? '-' : '+' }}{{ formatCurrency(entry.amount) }}
+                            </span>
+                          </div>
+                          <div class="expense-meta">
+                            <span class="expense-date">{{ formatDate(entry.date) }}</span>
+                            <span class="expense-category" *ngIf="entry.category">{{ entry.category }}</span>
+                          </div>
+                          <div class="expense-notes" *ngIf="entry.notes">{{ entry.notes }}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="no-expenses" *ngIf="!project.expenseEntries || project.expenseEntries.length === 0">
+                      <i class="fas fa-receipt"></i>
+                      <p>No expense entries yet</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Land Details (for farms) -->
+              <div class="card" *ngIf="project.landDetails && project.category === 'FARM'">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-map"></i>
+                    Land Details
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="info-grid">
+                    <div class="info-item" *ngIf="project.landDetails.totalArea">
+                      <span class="info-label">Total Area</span>
+                      <span class="info-value">{{ project.landDetails.totalArea }} {{ project.landDetails.areaUnit }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="project.landDetails.cultivableArea">
+                      <span class="info-label">Cultivable Area</span>
+                      <span class="info-value">{{ project.landDetails.cultivableArea }} {{ project.landDetails.areaUnit }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="project.landDetails.cultivablePercentage">
+                      <span class="info-label">Cultivable %</span>
+                      <span class="info-value">{{ project.landDetails.cultivablePercentage }}%</span>
+                    </div>
+                    <div class="info-item" *ngIf="project.landDetails.soilType">
+                      <span class="info-label">Soil Type</span>
+                      <span class="info-value">{{ project.landDetails.soilType }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="project.landDetails.terrainType">
+                      <span class="info-label">Terrain</span>
+                      <span class="info-value">{{ project.landDetails.terrainType | titlecase }}</span>
+                    </div>
+                    <div class="info-item" *ngIf="project.landDetails.irrigationSystem">
+                      <span class="info-label">Irrigation</span>
+                      <span class="info-value">{{ project.landDetails.irrigationSystem | titlecase }}</span>
+                    </div>
+                  </div>
+
+                  <div class="water-sources" *ngIf="project.landDetails.waterSource && project.landDetails.waterSource.length > 0">
+                    <span class="info-label">Water Sources:</span>
+                    <div class="tag-list">
+                      <span class="tag" *ngFor="let source of project.landDetails.waterSource">{{ source }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Crops Information -->
+              <div class="card" *ngIf="project.crops && project.crops.length > 0">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-seedling"></i>
+                    Crops
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="crops-grid">
+                    <div class="crop-card" *ngFor="let crop of project.crops">
+                      <div class="crop-header">
+                        <i class="fas fa-leaf crop-icon"></i>
+                        <h3 class="crop-name">{{ crop.name }}</h3>
+                      </div>
+                      <div class="crop-details">
+                        <div class="crop-detail" *ngIf="crop.variety">
+                          <span class="detail-label">Variety:</span>
+                          <span class="detail-value">{{ crop.variety }}</span>
+                        </div>
+                        <div class="crop-detail" *ngIf="crop.season">
+                          <span class="detail-label">Season:</span>
+                          <span class="detail-value">{{ crop.season }}</span>
+                        </div>
+                        <div class="crop-detail" *ngIf="crop.area">
+                          <span class="detail-label">Area:</span>
+                          <span class="detail-value">{{ crop.area }} {{ project.landDetails?.areaUnit || 'acres' }}</span>
+                        </div>
+                        <div class="crop-detail" *ngIf="crop.plantingDate">
+                          <span class="detail-label">Planted:</span>
+                          <span class="detail-value">{{ formatDate(crop.plantingDate) }}</span>
+                        </div>
+                        <div class="crop-detail" *ngIf="crop.expectedHarvestDate">
+                          <span class="detail-label">Harvest:</span>
+                          <span class="detail-value">{{ formatDate(crop.expectedHarvestDate) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Project Images Gallery -->
+              <div class="card" *ngIf="project.images && project.images.length > 0">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-images"></i>
+                    Project Gallery
+                  </h2>
+                  <button class="btn btn-sm btn-secondary" (click)="toggleImageGallery()" *ngIf="project.images.length > 6">
+                    {{ showAllImages ? 'Show Less' : 'View All (' + project.images.length + ')' }}
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="image-gallery">
+                    <div class="gallery-item" *ngFor="let image of getVisibleImages()">
+                      <img [src]="image.url" [alt]="image.caption || 'Project image'" class="gallery-image">
+                      <div class="gallery-caption" *ngIf="image.caption">{{ image.caption }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Notes -->
+              <div class="card" *ngIf="project.notes">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-sticky-note"></i>
+                    Notes
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <p class="notes-text">{{ project.notes }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="sidebar">
+
+              <!-- Client Information -->
+              <div class="card card-client">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-user-circle"></i>
+                    Client Information
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="client-profile">
+                    <div class="client-avatar" *ngIf="project.clientAvatar; else defaultAvatar">
+                      <img [src]="project.clientAvatar" [alt]="project.clientName">
+                    </div>
+                    <ng-template #defaultAvatar>
+                      <div class="client-avatar default-avatar">
+                        <i class="fas fa-user"></i>
+                      </div>
+                    </ng-template>
+                    <h3 class="client-name">{{ project.clientName }}</h3>
+                  </div>
+
+                  <div class="client-contacts">
+                    <div class="contact-item" *ngIf="project.clientPhone">
+                      <i class="fas fa-phone"></i>
+                      <a [href]="'tel:' + project.clientPhone">{{ project.clientPhone }}</a>
+                    </div>
+                    <div class="contact-item" *ngIf="project.clientEmail">
+                      <i class="fas fa-envelope"></i>
+                      <a [href]="'mailto:' + project.clientEmail">{{ project.clientEmail }}</a>
+                    </div>
+                    <div class="contact-item" *ngIf="project.alternativeContact">
+                      <i class="fas fa-phone-alt"></i>
+                      <a [href]="'tel:' + project.alternativeContact">{{ project.alternativeContact }}</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progress Tracking -->
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-chart-pie"></i>
+                    Progress
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <!-- Visit Progress -->
+                  <div class="progress-section">
+                    <div class="progress-info">
+                      <span class="progress-label">Visits Completion</span>
+                      <span class="progress-value">{{ project.visitCompletionPercentage }}%</span>
+                    </div>
+                    <div class="circular-progress">
+                      <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e0e0" stroke-width="8"></circle>
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#4CAF50" stroke-width="8"
+                                [attr.stroke-dasharray]="(project.visitCompletionPercentage * 2.827) + ' 282.7'"
+                                stroke-linecap="round"
+                                transform="rotate(-90 50 50)"></circle>
+                        <text x="50" y="50" text-anchor="middle" dy="7" font-size="20" font-weight="bold" fill="#4CAF50">
+                          {{ project.visitCompletionPercentage }}%
+                        </text>
+                      </svg>
+                    </div>
+                    <div class="visits-count">
+                      {{ project.totalVisitsCompleted }} / {{ project.totalVisitsPlanned }} visits completed
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Project Timeline Info -->
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Timeline
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="timeline-info">
+                    <div class="timeline-item" *ngIf="project.startDate">
+                      <span class="timeline-label">Start Date</span>
+                      <span class="timeline-value">{{ formatDate(project.startDate) }}</span>
+                    </div>
+                    <div class="timeline-item" *ngIf="project.expectedCompletionDate">
+                      <span class="timeline-label">Expected End</span>
+                      <span class="timeline-value">{{ formatDate(project.expectedCompletionDate) }}</span>
+                    </div>
+                    <div class="timeline-item" *ngIf="project.completionDate">
+                      <span class="timeline-label">Completed On</span>
+                      <span class="timeline-value">{{ formatDate(project.completionDate) }}</span>
+                    </div>
+                    <div class="timeline-item">
+                      <span class="timeline-label">Created</span>
+                      <span class="timeline-value">{{ formatDate(project.createdAt) }}</span>
+                    </div>
+                    <div class="timeline-item">
+                      <span class="timeline-label">Last Updated</span>
+                      <span class="timeline-value">{{ formatDateTime(project.updatedAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <div class="card" *ngIf="project.tags && project.tags.length > 0">
+                <div class="card-header">
+                  <h2 class="card-title">
+                    <i class="fas fa-tags"></i>
+                    Tags
+                  </h2>
+                </div>
+                <div class="card-body">
+                  <div class="tag-list">
+                    <span class="tag" *ngFor="let tag of project.tags">{{ tag }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team & Contacts Tab -->
+        <div class="tab-pane" [class.active]="activeTab === 'team'">
+          <div class="team-content">
+
+            <!-- Assigned Team -->
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-users"></i>
+                  Assigned Team
+                </h2>
+              </div>
+              <div class="card-body">
+                <div class="team-members">
+                  <div class="team-member" *ngIf="project.projectManager">
+                    <div class="member-avatar">
+                      <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="member-info">
+                      <div class="member-name">{{ project.projectManager.name }}</div>
+                      <div class="member-role">Project Manager</div>
+                    </div>
+                  </div>
+
+                  <div class="team-member" *ngFor="let worker of project.fieldWorkers">
+                    <div class="member-avatar">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <div class="member-info">
+                      <div class="member-name">{{ worker.name }}</div>
+                      <div class="member-role">Field Worker</div>
+                    </div>
+                  </div>
+
+                  <div class="team-member" *ngFor="let consultant of project.consultants">
+                    <div class="member-avatar">
+                      <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="member-info">
+                      <div class="member-name">{{ consultant.name }}</div>
+                      <div class="member-role">Consultant</div>
+                    </div>
+                  </div>
+
+                  <div class="no-data" *ngIf="!project.projectManager && (!project.fieldWorkers || project.fieldWorkers.length === 0) && (!project.consultants || project.consultants.length === 0)">
+                    <i class="fas fa-users-slash"></i>
+                    <p>No team members assigned</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contacts -->
+            <div class="card" *ngIf="getActiveContacts().length > 0">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-address-book"></i>
+                  Project Contacts
+                </h2>
+              </div>
+              <div class="card-body">
+                <div class="contacts-list">
+                  <div class="contact-card" *ngFor="let contact of getActiveContacts()" [class.primary]="contact.isPrimary">
+                    <div class="contact-header">
+                      <div class="contact-avatar">
+                        <i class="fas fa-user"></i>
+                      </div>
+                      <div class="contact-info">
+                        <h3 class="contact-name">
+                          {{ contact.fullName }}
+                          <span class="primary-badge" *ngIf="contact.isPrimary">Primary</span>
+                        </h3>
+                        <p class="contact-role" *ngIf="contact.designation || contact.role">
+                          {{ contact.designation || contact.role }}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="contact-details">
+                      <div class="contact-detail">
+                        <i class="fas fa-phone"></i>
+                        <a [href]="'tel:' + contact.phone">{{ contact.phone }}</a>
+                      </div>
+                      <div class="contact-detail" *ngIf="contact.email">
+                        <i class="fas fa-envelope"></i>
+                        <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline Tab -->
+        <div class="tab-pane" [class.active]="activeTab === 'timeline'">
+          <div class="timeline-content">
+
+            <!-- Upcoming Milestones -->
+            <div class="card" *ngIf="getUpcomingMilestones().length > 0">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-flag"></i>
+                  Upcoming Milestones
+                </h2>
+              </div>
+              <div class="card-body">
+                <div class="milestones-list">
+                  <div class="milestone-item" *ngFor="let milestone of getUpcomingMilestones()">
+                    <div class="milestone-marker upcoming">
+                      <i class="fas fa-circle"></i>
+                    </div>
+                    <div class="milestone-content">
+                      <h3 class="milestone-name">{{ milestone.name }}</h3>
+                      <p class="milestone-date">{{ formatDate(milestone.date) }}</p>
+                      <p class="milestone-description" *ngIf="milestone.description">{{ milestone.description }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Completed Milestones -->
+            <div class="card" *ngIf="getCompletedMilestones().length > 0">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-check-circle"></i>
+                  Completed Milestones
+                </h2>
+              </div>
+              <div class="card-body">
+                <div class="milestones-list">
+                  <div class="milestone-item completed" *ngFor="let milestone of getCompletedMilestones()">
+                    <div class="milestone-marker completed">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    <div class="milestone-content">
+                      <h3 class="milestone-name">{{ milestone.name }}</h3>
+                      <p class="milestone-date">
+                        Completed on {{ formatDate(milestone.completedAt) }}
+                      </p>
+                      <p class="milestone-description" *ngIf="milestone.description">{{ milestone.description }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Milestones -->
+            <div class="card" *ngIf="(!project.milestones || project.milestones.length === 0)">
+              <div class="card-body">
+                <div class="no-data">
+                  <i class="fas fa-tasks"></i>
+                  <p>No milestones defined for this project</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
-</section>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && !project" class="error-state">
+    <div class="error-content">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h2>Project Not Found</h2>
+      <p>The project you're looking for doesn't exist or has been deleted.</p>
+      <button class="btn btn-primary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+        Go Back to Dashboard
+      </button>
+    </div>
+  </div>
+</div>

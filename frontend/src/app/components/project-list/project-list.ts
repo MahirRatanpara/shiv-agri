@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,26 +11,39 @@ import {
   ProjectSortOptions
 } from '../../services/dashboard.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
 
 type ViewMode = 'grid' | 'list' | 'map';
 
 @Component({
-  selector: 'app-projects',
+  selector: 'app-project-list',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
-  templateUrl: './projects.html',
-  styleUrl: './projects.css',
+  templateUrl: './project-list.html',
+  styleUrl: './project-list.css'
 })
-export class ProjectsComponent implements OnInit, OnDestroy {
+export class ProjectListComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private searchSubject$ = new Subject<string>();
+
+  // Input properties for customization
+  @Input() showToolbar = true;
+  @Input() showSummaryStats = true;
+  @Input() defaultViewMode: ViewMode = 'grid';
+  @Input() initialFilters: ProjectFilters = {};
+  @Input() compactMode = false;
+
+  // Output events
+  @Output() projectClick = new EventEmitter<Project>();
+  @Output() favoriteToggle = new EventEmitter<Project>();
 
   // View state
   currentView: ViewMode = 'grid';
   showFilterDrawer = false;
 
   // Data
-  projects: Project[] = [];
+  allProjects: Project[] = []; // All projects from API
+  projects: Project[] = []; // Filtered projects for display
   selectedProjects = new Set<string>();
 
   // Loading states
@@ -46,18 +59,28 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   // Available filter options
   statusOptions = ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled'];
-  typeOptions = ['farm', 'landscaping'];
-  teamMembers = ['Mahir Ratanpara', 'Ravi Patel', 'Priya Shah', 'Amit Kumar'];
+
+  // Category options (Primary taxonomy)
+  categoryOptions: Array<{ value: 'FARM' | 'LANDSCAPING' | 'GARDENING'; label: string; icon: string; color: string }> = [
+    { value: 'FARM', label: 'Farm', icon: 'fa-tractor', color: '#4CAF50' },
+    { value: 'LANDSCAPING', label: 'Landscaping', icon: 'fa-leaf', color: '#8BC34A' },
+    { value: 'GARDENING', label: 'Gardening', icon: 'fa-seedling', color: '#66BB6A' }
+  ];
+
   cities = ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'];
 
   // Selected filters (for UI binding)
   selectedStatuses: string[] = [];
-  selectedTypes: string[] = [];
-  selectedTeamMembers: string[] = [];
+
+  // Category filters (Primary filters - always visible at top)
+  // Simple toggle: click to filter by category, click again to remove
+  selectedCategories: string[] = [];
+
   selectedCity = '';
   budgetMin?: number;
   budgetMax?: number;
   showFavoritesOnly = false;
+  showDrafts = false; // Toggle for showing draft projects
 
   // Sorting
   currentSort: ProjectSortOptions = {
@@ -71,8 +94,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     { label: 'Name (Z-A)', value: 'name-desc' },
     { label: 'Budget (High to Low)', value: 'budget-desc' },
     { label: 'Budget (Low to High)', value: 'budget-asc' },
-    { label: 'Status', value: 'status-asc' },
-    { label: 'Location', value: 'location-asc' },
   ];
 
   // Pagination
@@ -106,10 +127,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   constructor(
     private dashboardService: DashboardService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.currentView = this.defaultViewMode;
+    this.activeFilters = { ...this.initialFilters };
     this.setupSearch();
     this.loadProjects();
     this.loadViewPreference();
@@ -152,7 +176,11 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.projects = response.projects;
+          this.allProjects = response.projects;
+
+          // Filter projects based on showDrafts toggle
+          this.filterProjectsByDraftStatus();
+
           this.totalProjects = response.total;
           this.totalPages = response.totalPages;
           this.currentPage = response.page;
@@ -169,8 +197,18 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       });
   }
 
+  filterProjectsByDraftStatus(): void {
+    if (this.showDrafts) {
+      // Show only draft projects
+      this.projects = this.allProjects.filter(p => p.isDraft === true);
+    } else {
+      // Show only non-draft projects
+      this.projects = this.allProjects.filter(p => !p.isDraft);
+    }
+  }
+
   calculateSummaryStats(): void {
-    this.totalBudget = this.projects.reduce((sum, p) => sum + p.budget, 0);
+    this.totalBudget = this.projects.reduce((sum, p) => sum + (p.budget || 0), 0);
     this.activeProjects = this.projects.filter(p => p.status === 'Running').length;
     this.completedProjects = this.projects.filter(p => p.status === 'Completed').length;
   }
@@ -178,7 +216,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   updateEmptyState(): void {
     if (this.projects.length === 0) {
       this.showEmptyState = true;
-      if (this.searchQuery) {
+      if (this.showDrafts) {
+        this.emptyStateMessage = 'No draft projects found';
+      } else if (this.searchQuery) {
         this.emptyStateMessage = `No projects found matching "${this.searchQuery}"`;
       } else if (this.filterCount > 0) {
         this.emptyStateMessage = 'No projects match these filters';
@@ -213,13 +253,18 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.activeFilters = {
+      // ============================
+      // CATEGORY FILTERS (Primary - Applied First)
+      // ============================
+      categoryInclude: this.selectedCategories.length > 0 ? this.selectedCategories : undefined,
+
+      // Secondary filters
       status: this.selectedStatuses.length > 0 ? this.selectedStatuses : undefined,
-      type: this.selectedTypes.length > 0 ? this.selectedTypes : undefined,
-      assignedTo: this.selectedTeamMembers.length > 0 ? this.selectedTeamMembers : undefined,
       city: this.selectedCity || undefined,
       budgetMin: this.budgetMin,
       budgetMax: this.budgetMax,
       isFavorite: this.showFavoritesOnly ? true : undefined
+      // Note: showDrafts is handled client-side, not passed to API
     };
 
     this.calculateFilterCount();
@@ -228,10 +273,17 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.showFilterDrawer = false;
   }
 
+  toggleDrafts(): void {
+    this.showDrafts = !this.showDrafts;
+    // Re-filter the already loaded projects without making new API call
+    this.filterProjectsByDraftStatus();
+    this.calculateSummaryStats();
+    this.updateEmptyState();
+  }
+
   clearFilters(): void {
     this.selectedStatuses = [];
-    this.selectedTypes = [];
-    this.selectedTeamMembers = [];
+    this.selectedCategories = [];
     this.selectedCity = '';
     this.budgetMin = undefined;
     this.budgetMax = undefined;
@@ -254,14 +306,9 @@ export class ProjectsComponent implements OnInit, OnDestroy {
           this.selectedStatuses = this.selectedStatuses.filter(s => s !== value);
         }
         break;
-      case 'type':
+      case 'category':
         if (value) {
-          this.selectedTypes = this.selectedTypes.filter(t => t !== value);
-        }
-        break;
-      case 'assignedTo':
-        if (value) {
-          this.selectedTeamMembers = this.selectedTeamMembers.filter(m => m !== value);
+          this.selectedCategories = this.selectedCategories.filter(c => c !== value);
         }
         break;
       case 'city':
@@ -280,12 +327,39 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   calculateFilterCount(): void {
     this.filterCount = 0;
+    // Count category filters
+    if (this.activeFilters.categoryInclude?.length) this.filterCount += this.activeFilters.categoryInclude.length;
+    // Count other filters
     if (this.activeFilters.status?.length) this.filterCount += this.activeFilters.status.length;
-    if (this.activeFilters.type?.length) this.filterCount += this.activeFilters.type.length;
-    if (this.activeFilters.assignedTo?.length) this.filterCount += this.activeFilters.assignedTo.length;
     if (this.activeFilters.city) this.filterCount++;
     if (this.activeFilters.budgetMin !== undefined || this.activeFilters.budgetMax !== undefined) this.filterCount++;
     if (this.activeFilters.isFavorite) this.filterCount++;
+  }
+
+  // ========================
+  // Category Filter Methods
+  // ========================
+
+  toggleCategory(category: string): void {
+    const index = this.selectedCategories.indexOf(category);
+    if (index > -1) {
+      // Remove category (unapply filter)
+      this.selectedCategories.splice(index, 1);
+    } else {
+      // Add category (apply filter)
+      this.selectedCategories.push(category);
+    }
+    // Immediately apply filters
+    this.applyFilters();
+  }
+
+  isCategorySelected(category: string): boolean {
+    return this.selectedCategories.includes(category);
+  }
+
+  getCategoryLabel(categoryValue: string): string {
+    const category = this.categoryOptions.find(c => c.value === categoryValue);
+    return category ? category.label : categoryValue;
   }
 
   toggleArrayFilter(array: string[], value: string): void {
@@ -295,22 +369,6 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     } else {
       array.push(value);
     }
-  }
-
-  // Quick filters
-  showMyProjects(): void {
-    this.selectedTeamMembers = ['Mahir Ratanpara']; // TODO: Get current user
-    this.applyFilters();
-  }
-
-  showActiveProjects(): void {
-    this.selectedStatuses = ['Running'];
-    this.applyFilters();
-  }
-
-  showCompletedProjects(): void {
-    this.selectedStatuses = ['Completed'];
-    this.applyFilters();
   }
 
   // ========================
@@ -348,8 +406,22 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   // Project Actions
   // ========================
 
-  viewProject(projectId: string): void {
-    this.router.navigate(['/project-details', projectId]);
+  viewProject(project: Project): void {
+    // Don't navigate to details for draft projects (only via resume button)
+    if (project.isDraft) {
+      return;
+    }
+    this.projectClick.emit(project);
+    this.router.navigate(['/project-details', project.id]);
+  }
+
+  resumeDraft(project: Project, event: Event): void {
+    event.stopPropagation();
+
+    // Navigate with project ID as query param so wizard can load full draft data from API
+    this.router.navigate(['/projects/new'], {
+      queryParams: { projectId: project.id }
+    });
   }
 
   toggleFavorite(project: Project, event: Event): void {
@@ -360,6 +432,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           project.isFavorite = !project.isFavorite;
+          this.favoriteToggle.emit(project);
           this.toastService.success(
             project.isFavorite ? 'Added to favorites' : 'Removed from favorites'
           );
@@ -368,6 +441,41 @@ export class ProjectsComponent implements OnInit, OnDestroy {
           this.toastService.error('Failed to update favorite');
         }
       });
+  }
+
+  deleteProject(project: Project, event: Event): void {
+    event.stopPropagation();
+
+    // Confirm deletion
+    const projectType = project.isDraft ? 'draft' : 'project';
+    const confirmMessage = `Are you sure you want to permanently delete this ${projectType}: "${project.name}"?\n\nThis action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Call the hard delete endpoint (admin only)
+    this.dashboardService.hardDeleteProject(project.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.toastService.success(response.message || 'Project deleted successfully');
+          // Remove from local array
+          this.projects = this.projects.filter(p => p.id !== project.id);
+          this.allProjects = this.allProjects.filter(p => p.id !== project.id);
+          this.calculateSummaryStats();
+          this.updateEmptyState();
+        },
+        error: (err) => {
+          console.error('Error deleting project:', err);
+          this.toastService.error(err.error?.error || 'Failed to delete project');
+        }
+      });
+  }
+
+  isAdmin(): boolean {
+    const currentUser = this.authService.currentUserValue;
+    return currentUser?.role === 'admin';
   }
 
   // ========================
@@ -386,114 +494,13 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     this.showBulkActions = this.selectedProjects.size > 0;
   }
 
-  toggleSelectAll(event: Event): void {
-    const checkbox = event.target as HTMLInputElement;
-
-    if (checkbox.checked) {
-      this.projects.forEach(p => this.selectedProjects.add(p.id));
-    } else {
-      this.selectedProjects.clear();
-    }
-
-    this.showBulkActions = this.selectedProjects.size > 0;
-  }
-
-  isSelected(projectId: string): boolean {
-    return this.selectedProjects.has(projectId);
-  }
-
-  get allSelected(): boolean {
-    return this.projects.length > 0 && this.projects.every(p => this.selectedProjects.has(p.id));
-  }
-
-  get someSelected(): boolean {
-    return this.selectedProjects.size > 0 && !this.allSelected;
-  }
-
   clearSelection(): void {
     this.selectedProjects.clear();
     this.showBulkActions = false;
   }
 
-  bulkExport(): void {
-    this.exportProjects(Array.from(this.selectedProjects));
-  }
-
-  bulkArchive(): void {
-    if (confirm(`Archive ${this.selectedProjects.size} selected projects?`)) {
-      this.bulkActionInProgress = true;
-
-      this.dashboardService.bulkUpdateProjects(
-        Array.from(this.selectedProjects),
-        { status: 'Cancelled' }
-      )
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (result) => {
-          this.toastService.success(`${result.updated} projects archived`);
-          this.clearSelection();
-          this.loadProjects();
-          this.bulkActionInProgress = false;
-        },
-        error: () => {
-          this.toastService.error('Failed to archive projects');
-          this.bulkActionInProgress = false;
-        }
-      });
-    }
-  }
-
-  bulkDelete(): void {
-    if (confirm(`Delete ${this.selectedProjects.size} selected projects? This cannot be undone.`)) {
-      this.bulkActionInProgress = true;
-
-      this.dashboardService.bulkDeleteProjects(Array.from(this.selectedProjects))
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (result) => {
-            this.toastService.success(`${result.deleted} projects deleted`);
-            this.clearSelection();
-            this.loadProjects();
-            this.bulkActionInProgress = false;
-          },
-          error: () => {
-            this.toastService.error('Failed to delete projects');
-            this.bulkActionInProgress = false;
-          }
-        });
-    }
-  }
-
-  // ========================
-  // Export
-  // ========================
-
-  exportProjects(projectIds?: string[]): void {
-    this.isExporting = true;
-
-    this.dashboardService.exportProjects('excel', projectIds)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `projects_${new Date().toISOString().split('T')[0]}.xlsx`;
-          link.click();
-          window.URL.revokeObjectURL(url);
-
-          this.toastService.success('Projects exported successfully');
-          this.isExporting = false;
-        },
-        error: () => {
-          this.toastService.error('Failed to export projects');
-          this.isExporting = false;
-        }
-      });
-  }
-
-  exportAll(): void {
-    this.exportProjects();
+  isSelected(projectId: string): boolean {
+    return this.selectedProjects.has(projectId);
   }
 
   // ========================
@@ -556,7 +563,7 @@ export class ProjectsComponent implements OnInit, OnDestroy {
   }
 
   getTimeAgo(date: Date): string {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
 
     const intervals: { [key: string]: number } = {
       year: 31536000,
