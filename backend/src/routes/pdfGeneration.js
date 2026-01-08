@@ -25,10 +25,12 @@ router.post('/sample/:sampleId', async (req, res) => {
     // Generate PDF
     const pdfBuffer = await pdfGeneratorService.generateSinglePDF(sample);
 
-    // Set response headers
+    // Set response headers with proper filename encoding
     const fileName = `Soil_Report_${sample.farmersName?.replace(/\s+/g, '_') || 'Unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="report.pdf"; filename*=UTF-8''${encodedFileName}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`PDF generated and sent for sample: ${sampleId}`);
@@ -144,10 +146,12 @@ router.post('/session/:sessionId/combined', async (req, res) => {
     // Generate combined PDF
     const pdfBuffer = await pdfGeneratorService.generateCombinedPDF(samples);
 
-    // Set response headers
+    // Set response headers with proper filename encoding
     const fileName = `Soil_Reports_Combined_${session.date}_v${session.version}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="combined_report.pdf"; filename*=UTF-8''${encodedFileName}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Combined PDF generated for session: ${sessionId}, samples: ${samples.length}`);
@@ -186,8 +190,10 @@ router.post('/samples/multiple', async (req, res) => {
       const pdfBuffer = await pdfGeneratorService.generateCombinedPDF(samples);
 
       const fileName = `Soil_Reports_Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+      const encodedFileName = encodeURIComponent(fileName);
+
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="combined_report.pdf"; filename*=UTF-8''${encodedFileName}`);
       res.setHeader('Content-Length', pdfBuffer.length);
 
       logger.info(`Combined PDF generated for ${samples.length} samples`);
@@ -236,8 +242,10 @@ router.post('/receipt/:receiptId', async (req, res) => {
     const pdfBuffer = await pdfGeneratorService.generateReceiptPDF(receipt);
 
     const fileName = `Receipt_${receipt.receiptNumber}_${receipt.customerName?.replace(/\s+/g, '_') || 'Unknown'}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="receipt.pdf"; filename*=UTF-8''${encodedFileName}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Receipt PDF generated and sent: ${receiptId}`);
@@ -269,8 +277,10 @@ router.post('/invoice/:invoiceId', async (req, res) => {
     const pdfBuffer = await pdfGeneratorService.generateInvoicePDF(invoice);
 
     const fileName = `Invoice_${invoice.invoiceNumber}_${invoice.customerName?.replace(/\s+/g, '_') || 'Unknown'}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="invoice.pdf"; filename*=UTF-8''${encodedFileName}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Invoice PDF generated and sent: ${invoiceId}`);
@@ -302,8 +312,10 @@ router.post('/letter/:letterId', async (req, res) => {
     const pdfBuffer = await pdfGeneratorService.generateLetterPDF(letter);
 
     const fileName = `Letter_${letter.letterNumber || 'Draft'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const encodedFileName = encodeURIComponent(fileName);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="letter.pdf"; filename*=UTF-8''${encodedFileName}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Letter PDF generated and sent: ${letterId}`);
