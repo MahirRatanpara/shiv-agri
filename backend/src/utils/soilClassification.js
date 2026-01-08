@@ -253,7 +253,7 @@ function generateFinalDeduction(ph, ec) {
     }
 
     // Rule 2: pH > 8.2 => છાણિયા ખાતર નો વપરાશ વધારવો, જીપ્સમ નો વપરાશ કરવો, ક્ષાર પ્રતિકારક પાકો નું વાવેતર કરવું.
-    if (ph > 8.2) {
+    if (ph >= 8.2) {
         return {
             finalDeduction: "છાણિયા ખાતર નો વપરાશ વધારવો, જીપ્સમ નો વપરાશ કરવો, ક્ષાર પ્રતિકારક પાકો નું વાવેતર કરવું.",
             finalDeductionEn: "Increase use of organic manure, use gypsum, grow salt-resistant crops."
