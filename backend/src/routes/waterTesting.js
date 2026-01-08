@@ -253,10 +253,12 @@ router.post('/samples/:sampleId/pdf', async (req, res) => {
     // Generate PDF
     const pdfBuffer = await pdfGenerator.generateWaterPDF(sampleWithClassifications);
 
-    // Set response headers
+    // Set response headers with proper filename encoding
     const filename = `water-report-${sample.farmersName || 'sample'}-${sample.sessionDate || new Date().toISOString().split('T')[0]}.pdf`;
+    const encodedFilename = encodeURIComponent(filename);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="water_report.pdf"; filename*=UTF-8''${encodedFilename}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Water PDF generated successfully for sample: ${req.params.sampleId}`);
@@ -338,10 +340,12 @@ router.post('/sessions/:sessionId/pdf-combined', async (req, res) => {
     // Generate combined PDF
     const pdfBuffer = await pdfGenerator.generateCombinedWaterPDF(samplesWithClassifications);
 
-    // Set response headers
+    // Set response headers with proper filename encoding
     const filename = `water-reports-combined-${session.date}-v${session.version}.pdf`;
+    const encodedFilename = encodeURIComponent(filename);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="water_reports_combined.pdf"; filename*=UTF-8''${encodedFilename}`);
     res.setHeader('Content-Length', pdfBuffer.length);
 
     logger.info(`Combined water PDF generated successfully for session: ${req.params.sessionId} (${samples.length} samples)`);
