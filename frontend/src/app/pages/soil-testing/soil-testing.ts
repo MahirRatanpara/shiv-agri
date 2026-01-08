@@ -47,6 +47,20 @@ export class SoilTestingComponent implements OnInit {
   // Column Definitions
   colDefs: ColDef<SoilTestingData>[] = [
     {
+      headerName: '',
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      width: 50,
+      minWidth: 50,
+      maxWidth: 50,
+      pinned: 'left',
+      lockPosition: true,
+      suppressMovable: true,
+      sortable: false,
+      filter: false,
+      resizable: false,
+    },
+    {
       field: 'farmersName',
       headerName: "Farmer's Name",
       editable: true,
@@ -56,8 +70,6 @@ export class SoilTestingComponent implements OnInit {
       pinned: 'left',
       autoHeight: true,
       wrapText: true,
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
     },
     {
       field: 'mobileNo',
@@ -249,15 +261,6 @@ export class SoilTestingComponent implements OnInit {
       editable: true,
       filter: true,
       minWidth: 140,
-    },
-    {
-      field: 'finalDeduction',
-      headerName: 'Final Deduction',
-      editable: false,
-      filter: true,
-      minWidth: 200,
-      cellEditor: 'agLargeTextCellEditor',
-      cellEditorPopup: true,
     },
     {
       headerName: 'Actions',
@@ -509,6 +512,9 @@ export class SoilTestingComponent implements OnInit {
     this.gridApi = params.api;
     // Auto-size all columns based on content
     params.api.autoSizeAllColumns(false);
+
+    // Ensure grid can scroll horizontally
+    params.api.sizeColumnsToFit();
   }
 
   onCellValueChanged(event: CellValueChangedEvent) {
@@ -575,6 +581,12 @@ export class SoilTestingComponent implements OnInit {
     this.rowData.push(newRow);
     this.gridApi.applyTransaction({ add: [newRow] });
 
+    // Ensure horizontal scrolling is enabled after adding row
+    setTimeout(() => {
+      if (this.gridApi) {
+        this.gridApi.ensureIndexVisible(this.rowData.length - 1);
+      }
+    }, 100);
   }
 
   deleteSelectedRows() {
