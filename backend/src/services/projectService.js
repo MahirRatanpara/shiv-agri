@@ -822,6 +822,154 @@ class ProjectService {
   }
 
   // ========================
+  // Transaction Management
+  // ========================
+
+  /**
+   * Get project transactions with pagination and summary
+   */
+  async getProjectTransactions(projectId, page = 1, limit = 20, sortBy = 'date', sortOrder = 'desc') {
+    const project = await Project.findById(projectId)
+      .select('expenseEntries budget expenses')
+      .lean();
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Use model method for pagination
+    const projectDoc = await Project.findById(projectId);
+    const result = projectDoc.getTransactionsPaginated(page, limit, sortBy, sortOrder);
+
+    // Calculate summary
+    const totalCredits = project.expenseEntries
+      .filter(entry => entry.type === 'credit')
+      .reduce((sum, entry) => sum + entry.amount, 0);
+
+    const totalDebits = project.expenseEntries
+      .filter(entry => entry.type === 'debit')
+      .reduce((sum, entry) => sum + entry.amount, 0);
+
+    const netExpense = totalDebits - totalCredits;
+    const budgetRemaining = project.budget - netExpense;
+    const budgetUtilization = project.budget > 0 ? Math.round((netExpense / project.budget) * 100) : 0;
+
+    return {
+      transactions: result.transactions,
+      pagination: result.pagination,
+      summary: {
+        totalCredits,
+        totalDebits,
+        netExpense,
+        budget: project.budget,
+        budgetRemaining,
+        budgetUtilization,
+        transactionCount: project.expenseEntries.length
+      }
+    };
+  }
+
+  /**
+   * Add transaction to project
+   */
+  async addTransaction(projectId, transactionData, userId) {
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Add transaction using model method
+    await project.addTransaction(transactionData, userId);
+
+    // Log activity
+    const ActivityLog = require('../models/ActivityLog');
+    await ActivityLog.logActivity(
+      projectId,
+      userId,
+      'transaction_added',
+      `Added ${transactionData.type} transaction: ₹${transactionData.amount}`,
+      { transactionData }
+    );
+
+    // Get the newly added transaction (last one in array)
+    const transaction = project.expenseEntries[project.expenseEntries.length - 1];
+
+    return {
+      project,
+      transaction
+    };
+  }
+
+  /**
+   * Update transaction in project
+   */
+  async updateTransaction(projectId, transactionId, updateData, userId) {
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Update transaction using model method
+    await project.updateTransaction(transactionId, updateData, userId);
+
+    // Log activity
+    const ActivityLog = require('../models/ActivityLog');
+    await ActivityLog.logActivity(
+      projectId,
+      userId,
+      'transaction_updated',
+      `Updated transaction: ${transactionId}`,
+      { transactionId, updateData }
+    );
+
+    // Get the updated transaction
+    const transaction = project.expenseEntries.id(transactionId);
+
+    return {
+      project,
+      transaction
+    };
+  }
+
+  /**
+   * Remove transaction from project
+   */
+  async removeTransaction(projectId, transactionId, userId) {
+    const project = await Project.findById(projectId);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Get transaction details before removing (for logging)
+    const transaction = project.expenseEntries.id(transactionId);
+    const transactionDetails = transaction ? {
+      description: transaction.description,
+      amount: transaction.amount,
+      type: transaction.type
+    } : null;
+
+    // Remove transaction using model method
+    await project.removeTransaction(transactionId);
+
+    // Log activity
+    const ActivityLog = require('../models/ActivityLog');
+    await ActivityLog.logActivity(
+      projectId,
+      userId,
+      'transaction_removed',
+      `Removed transaction: ${transactionDetails?.description || transactionId}`,
+      { transactionId, transactionDetails }
+    );
+
+    return {
+      project
+    };
+  }
+
+  // ========================
   // Activity Log
   // ========================
 

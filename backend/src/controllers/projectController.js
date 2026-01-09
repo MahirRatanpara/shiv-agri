@@ -744,6 +744,193 @@ exports.addMilestone = async (req, res) => {
 };
 
 // ========================
+// Transaction Management
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/transactions
+ * @desc    Get project transactions with pagination
+ * @access  Private
+ */
+exports.getProjectTransactions = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = 'date',
+      sortOrder = 'desc'
+    } = req.query;
+
+    logger.info(`Fetching transactions for project ${req.params.id}, page ${page}, limit ${limit}`);
+
+    const result = await projectService.getProjectTransactions(
+      req.params.id,
+      parseInt(page),
+      parseInt(limit),
+      sortBy,
+      sortOrder
+    );
+
+    res.status(200).json({
+      success: true,
+      transactions: result.transactions,
+      pagination: result.pagination,
+      summary: result.summary
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to fetch transactions',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   POST /api/projects/:id/transactions
+ * @desc    Add transaction to project
+ * @access  Private
+ */
+exports.addTransaction = async (req, res) => {
+  try {
+    const { description, amount, type, category, date, notes } = req.body;
+
+    // Validation
+    if (!description || !amount || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        details: 'description, amount, and type are required'
+      });
+    }
+
+    if (!['debit', 'credit'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type',
+        details: 'type must be either "debit" or "credit"'
+      });
+    }
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount',
+        details: 'amount must be greater than 0'
+      });
+    }
+
+    logger.info(`Adding transaction to project ${req.params.id}: ${type} ₹${amount}`);
+
+    const result = await projectService.addTransaction(
+      req.params.id,
+      { description, amount, type, category, date, notes },
+      req.user._id
+    );
+
+    res.status(201).json({
+      success: true,
+      data: result.project,
+      transaction: result.transaction,
+      message: 'Transaction added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding transaction:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to add transaction',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/transactions/:transactionId
+ * @desc    Update transaction in project
+ * @access  Private
+ */
+exports.updateTransaction = async (req, res) => {
+  try {
+    const { description, amount, type, category, date, notes } = req.body;
+
+    // Validation
+    if (type && !['debit', 'credit'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type',
+        details: 'type must be either "debit" or "credit"'
+      });
+    }
+
+    if (amount !== undefined && amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount',
+        details: 'amount must be greater than 0'
+      });
+    }
+
+    logger.info(`Updating transaction ${req.params.transactionId} in project ${req.params.id}`);
+
+    const result = await projectService.updateTransaction(
+      req.params.id,
+      req.params.transactionId,
+      { description, amount, type, category, date, notes },
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result.project,
+      transaction: result.transaction,
+      message: 'Transaction updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update transaction',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   DELETE /api/projects/:id/transactions/:transactionId
+ * @desc    Remove transaction from project
+ * @access  Private
+ */
+exports.removeTransaction = async (req, res) => {
+  try {
+    logger.info(`Removing transaction ${req.params.transactionId} from project ${req.params.id}`);
+
+    const result = await projectService.removeTransaction(
+      req.params.id,
+      req.params.transactionId,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result.project,
+      message: 'Transaction removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing transaction:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to remove transaction',
+      message: error.message
+    });
+  }
+};
+
+// ========================
 // Activity Log
 // ========================
 

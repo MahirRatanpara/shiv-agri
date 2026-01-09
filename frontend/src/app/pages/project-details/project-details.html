@@ -99,6 +99,13 @@
           <i class="fas fa-tasks"></i>
           Timeline
         </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'transactions'"
+          (click)="setActiveTab('transactions')">
+          <i class="fas fa-receipt"></i>
+          Transactions
+        </button>
       </div>
 
       <!-- Tab Content -->
@@ -288,6 +295,12 @@
                     <i class="fas fa-wallet"></i>
                     Budget & Expenses
                   </h2>
+                  <div class="card-actions" *hasPermission="'project.update'">
+                    <button class="btn btn-primary btn-sm" (click)="openAddTransactionModal()">
+                      <i class="fas fa-plus"></i>
+                      Add Transaction
+                    </button>
+                  </div>
                 </div>
                 <div class="card-body">
                   <!-- Budget Overview -->
@@ -307,8 +320,8 @@
                         <i class="fas fa-arrow-down"></i>
                       </div>
                       <div class="budget-details">
-                        <div class="budget-label">Total Expenses</div>
-                        <div class="budget-amount expense-amount">{{ formatCurrency(getTotalExpenses()) }}</div>
+                        <div class="budget-label">Total Debits</div>
+                        <div class="budget-amount expense-amount">{{ formatCurrency(getTotalDebits()) }}</div>
                       </div>
                     </div>
 
@@ -317,8 +330,8 @@
                         <i class="fas fa-arrow-up"></i>
                       </div>
                       <div class="budget-details">
-                        <div class="budget-label">Income/Returns</div>
-                        <div class="budget-amount income-amount">{{ formatCurrency(getTotalIncome()) }}</div>
+                        <div class="budget-label">Total Credits</div>
+                        <div class="budget-amount income-amount">{{ formatCurrency(getTotalCredits()) }}</div>
                       </div>
                     </div>
 
@@ -351,21 +364,27 @@
                     </div>
                   </div>
 
-                  <!-- Expense Entries Table -->
-                  <div class="expense-entries" *ngIf="project.expenseEntries && project.expenseEntries.length > 0">
-                    <h3 class="section-subtitle">Recent Transactions</h3>
-                    <div class="expense-list">
-                      <div class="expense-item" *ngFor="let entry of project.expenseEntries.slice(-10).reverse()"
-                           [class.income-entry]="entry.type === 'income'">
+                  <!-- Recent Transactions -->
+                  <div class="expense-entries">
+                    <div class="section-header-row">
+                      <h3 class="section-subtitle">Recent Transactions</h3>
+                      <button class="btn btn-link" (click)="setActiveTab('transactions')" *ngIf="project.expenseEntries && project.expenseEntries.length > 0">
+                        View All <i class="fas fa-arrow-right"></i>
+                      </button>
+                    </div>
+
+                    <div class="expense-list" *ngIf="project.expenseEntries && project.expenseEntries.length > 0">
+                      <div class="expense-item" *ngFor="let entry of project.expenseEntries.slice(-5).reverse()"
+                           [class.income-entry]="entry.type === 'credit'">
                         <div class="expense-icon">
-                          <i class="fas" [class.fa-minus-circle]="entry.type === 'expense'"
-                             [class.fa-plus-circle]="entry.type === 'income'"></i>
+                          <i class="fas" [class.fa-minus-circle]="entry.type === 'debit'"
+                             [class.fa-plus-circle]="entry.type === 'credit'"></i>
                         </div>
                         <div class="expense-content">
                           <div class="expense-header">
                             <span class="expense-desc">{{ entry.description }}</span>
-                            <span class="expense-amount" [class.negative]="entry.type === 'expense'" [class.positive]="entry.type === 'income'">
-                              {{ entry.type === 'expense' ? '-' : '+' }}{{ formatCurrency(entry.amount) }}
+                            <span class="expense-amount" [class.negative]="entry.type === 'debit'" [class.positive]="entry.type === 'credit'">
+                              {{ entry.type === 'debit' ? '-' : '+' }}{{ formatCurrency(entry.amount) }}
                             </span>
                           </div>
                           <div class="expense-meta">
@@ -379,7 +398,7 @@
 
                     <div class="no-expenses" *ngIf="!project.expenseEntries || project.expenseEntries.length === 0">
                       <i class="fas fa-receipt"></i>
-                      <p>No expense entries yet</p>
+                      <p>No transactions yet. Click "Add Transaction" to get started.</p>
                     </div>
                   </div>
                 </div>
@@ -794,6 +813,269 @@
           </div>
         </div>
 
+        <!-- Transactions Tab -->
+        <div class="tab-pane" [class.active]="activeTab === 'transactions'">
+          <div class="transactions-content">
+
+            <!-- Budget Summary Card -->
+            <div class="card" *ngIf="transactionSummary">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-chart-pie"></i>
+                  Budget Summary
+                </h2>
+                <div class="card-actions" *hasPermission="'project.update'">
+                  <button class="btn btn-primary" (click)="openAddTransactionModal()">
+                    <i class="fas fa-plus"></i>
+                    Add Transaction
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="budget-overview-grid">
+                  <div class="budget-summary-item">
+                    <div class="summary-icon budget-icon">
+                      <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="summary-details">
+                      <span class="summary-label">Total Budget</span>
+                      <span class="summary-value">{{ formatCurrency(transactionSummary.budget) }}</span>
+                    </div>
+                  </div>
+                  <div class="budget-summary-item">
+                    <div class="summary-icon debit-icon">
+                      <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="summary-details">
+                      <span class="summary-label">Total Debits</span>
+                      <span class="summary-value debit">{{ formatCurrency(transactionSummary.totalDebits) }}</span>
+                    </div>
+                  </div>
+                  <div class="budget-summary-item">
+                    <div class="summary-icon credit-icon">
+                      <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="summary-details">
+                      <span class="summary-label">Total Credits</span>
+                      <span class="summary-value credit">{{ formatCurrency(transactionSummary.totalCredits) }}</span>
+                    </div>
+                  </div>
+                  <div class="budget-summary-item">
+                    <div class="summary-icon remaining-icon">
+                      <i class="fas fa-piggy-bank"></i>
+                    </div>
+                    <div class="summary-details">
+                      <span class="summary-label">Remaining</span>
+                      <span class="summary-value" [class.negative]="transactionSummary.budgetRemaining < 0">
+                        {{ formatCurrency(transactionSummary.budgetRemaining) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transactions List -->
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <i class="fas fa-list"></i>
+                  All Transactions
+                  <span class="count-badge" *ngIf="transactionPagination">
+                    ({{ transactionPagination.total }})
+                  </span>
+                </h2>
+              </div>
+              <div class="card-body">
+                <!-- Loading State -->
+                <div *ngIf="isLoadingTransactions" class="loading-state">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <p>Loading transactions...</p>
+                </div>
+
+                <!-- Transactions Table -->
+                <div *ngIf="!isLoadingTransactions && transactions.length > 0" class="transactions-table-container">
+                  <table class="transactions-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th class="text-right">Amount</th>
+                        <th class="text-center" *hasPermission="'project.update'">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let transaction of transactions" [class]="getTransactionTypeClass(transaction.type)">
+                        <td class="transaction-date">{{ formatDate(transaction.date) }}</td>
+                        <td class="transaction-description">
+                          <div class="description-content">
+                            <strong>{{ transaction.description }}</strong>
+                            <small *ngIf="transaction.notes" class="transaction-notes">{{ transaction.notes }}</small>
+                          </div>
+                        </td>
+                        <td class="transaction-category">
+                          <span class="category-badge" *ngIf="transaction.category">{{ transaction.category }}</span>
+                          <span class="no-category" *ngIf="!transaction.category">-</span>
+                        </td>
+                        <td class="transaction-type">
+                          <span class="type-badge" [class]="transaction.type">
+                            <i class="fas" [class.fa-arrow-down]="transaction.type === 'debit'" [class.fa-arrow-up]="transaction.type === 'credit'"></i>
+                            {{ getTransactionTypeLabel(transaction.type) }}
+                          </span>
+                        </td>
+                        <td class="transaction-amount text-right">
+                          <span [class.negative]="transaction.type === 'debit'" [class.positive]="transaction.type === 'credit'">
+                            {{ transaction.type === 'debit' ? '-' : '+' }}{{ formatCurrency(transaction.amount) }}
+                          </span>
+                        </td>
+                        <td class="transaction-actions text-center" *hasPermission="'project.update'">
+                          <button class="btn-icon" (click)="openEditTransactionModal(transaction)" title="Edit">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn-icon btn-danger" (click)="deleteTransaction(transaction)" title="Delete">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="!isLoadingTransactions && transactions.length === 0" class="no-data">
+                  <i class="fas fa-receipt"></i>
+                  <p>No transactions found</p>
+                  <button class="btn btn-primary" (click)="openAddTransactionModal()" *hasPermission="'project.update'">
+                    <i class="fas fa-plus"></i>
+                    Add Your First Transaction
+                  </button>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" *ngIf="transactionPagination && transactionPagination.totalPages > 1">
+                  <button class="pagination-btn" (click)="prevTransactionPage()" [disabled]="!transactionPagination.hasPrev">
+                    <i class="fas fa-chevron-left"></i>
+                    Previous
+                  </button>
+                  <span class="pagination-info">
+                    Page {{ transactionPagination.page }} of {{ transactionPagination.totalPages }}
+                  </span>
+                  <button class="pagination-btn" (click)="nextTransactionPage()" [disabled]="!transactionPagination.hasNext">
+                    Next
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction Modal -->
+  <div class="modal-overlay" *ngIf="showTransactionModal" (click)="closeTransactionModal()">
+    <div class="modal-dialog transaction-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <i class="fas fa-receipt"></i>
+          {{ isEditMode ? 'Edit Transaction' : 'Add New Transaction' }}
+        </h2>
+        <button class="modal-close" (click)="closeTransactionModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form class="transaction-form">
+          <div class="form-group">
+            <label for="transactionDesc" class="form-label required">Description</label>
+            <input
+              type="text"
+              id="transactionDesc"
+              class="form-control"
+              [(ngModel)]="transactionForm.description"
+              name="description"
+              placeholder="e.g., Equipment Purchase, Labor Payment"
+              required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="transactionAmount" class="form-label required">Amount (₹)</label>
+              <input
+                type="number"
+                id="transactionAmount"
+                class="form-control"
+                [(ngModel)]="transactionForm.amount"
+                name="amount"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required>
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="transactionType" class="form-label required">Type</label>
+              <select
+                id="transactionType"
+                class="form-control"
+                [(ngModel)]="transactionForm.type"
+                name="type"
+                required>
+                <option value="debit">Debit (Expense)</option>
+                <option value="credit">Credit (Income)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="transactionCategory" class="form-label">Category</label>
+              <input
+                type="text"
+                id="transactionCategory"
+                class="form-control"
+                [(ngModel)]="transactionForm.category"
+                name="category"
+                placeholder="e.g., Materials, Labor, Equipment">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="transactionDate" class="form-label">Date</label>
+              <input
+                type="date"
+                id="transactionDate"
+                class="form-control"
+                [(ngModel)]="transactionForm.date"
+                name="date">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="transactionNotes" class="form-label">Notes</label>
+            <textarea
+              id="transactionNotes"
+              class="form-control"
+              [(ngModel)]="transactionForm.notes"
+              name="notes"
+              rows="3"
+              placeholder="Additional notes or details..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeTransactionModal()" [disabled]="isSavingTransaction">
+          Cancel
+        </button>
+        <button class="btn btn-primary" (click)="saveTransaction()" [disabled]="isSavingTransaction">
+          <i class="fas fa-spinner fa-spin" *ngIf="isSavingTransaction"></i>
+          <i class="fas fa-save" *ngIf="!isSavingTransaction"></i>
+          {{ isEditMode ? 'Update' : 'Save' }} Transaction
+        </button>
       </div>
     </div>
   </div>
