@@ -16,22 +16,22 @@
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasLabTestingAccess">
           <a class="nav-link" routerLink="/lab-testing">
-            <i class="fas fa-microscope"></i> Lab Testing
+            <i class="fas fa-microscope"></i> Lab
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasFarmDashboardAccess">
           <a class="nav-link" routerLink="/farm-dashboard">
-            <i class="fas fa-tractor"></i> Farm Dashboard
+            <i class="fas fa-tractor"></i> Farms
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasManagerialWorkAccess">
           <a class="nav-link" routerLink="/managerial-work">
-            <i class="fas fa-file-invoice"></i> Managerial Work
+            <i class="fas fa-file-invoice"></i> Managerial
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
           <a class="nav-link" routerLink="/admin/users">
-            <i class="fas fa-user-shield"></i> Admin Dashboard
+            <i class="fas fa-user-shield"></i> Admin
           </a>
         </li>
       </ul>
@@ -52,7 +52,6 @@
             <span *ngIf="!currentUser.profilePhoto || profileImageLoadError" class="user-avatar-placeholder">
               {{ currentUser.name.charAt(0).toUpperCase() }}
             </span>
-            {{ currentUser.name }}
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated">
