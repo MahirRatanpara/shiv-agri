@@ -267,18 +267,8 @@ const projectSchema = new mongoose.Schema({
     min: 0
   },
 
-  // Expense Tracking
-  expenseEntries: [{
-    expenseId: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
-    description: { type: String, required: true, trim: true },
-    amount: { type: Number, required: true },
-    type: { type: String, enum: ['expense', 'income'], default: 'expense' }, // expense (subtract), income (add)
-    category: { type: String, trim: true }, // Materials, Labor, Equipment, etc.
-    date: { type: Date, default: Date.now },
-    notes: { type: String, trim: true },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now }
-  }],
+  // Note: Transactions are now stored in a separate Transaction collection
+  // The expenses field below is automatically updated when transactions are created/updated/deleted
 
   // User Preferences
   isFavorite: [{
@@ -472,6 +462,9 @@ projectSchema.methods.softDelete = function(userId) {
   return this.save();
 };
 
+// Note: Transaction methods have been moved to the separate Transaction model
+// Transactions are now managed via the TransactionService
+
 // ========================
 // Static Methods
 // ========================
@@ -563,6 +556,9 @@ projectSchema.pre('save', function(next) {
 });
 
 projectSchema.pre('save', function(next) {
+  // Note: Expenses are now automatically updated by the Transaction model
+  // when transactions are created/updated/deleted
+
   // Update computed fields
   if (this.isModified('budget') || this.isModified('expenses')) {
     this.budgetUtilizationPercentage = this.calculateBudgetUtilization();

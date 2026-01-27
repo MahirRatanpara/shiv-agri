@@ -258,6 +258,66 @@ router.post('/:id/milestones',
 );
 
 // ========================
+// Transaction Management Routes
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/transactions
+ * @desc    Get project transactions with pagination
+ * @access  Private
+ * @query   {number} page - Page number (default: 1)
+ * @query   {number} limit - Items per page (default: 20, max: 100)
+ * @query   {string} sortBy - Sort field: date/amount/type (default: date)
+ * @query   {string} sortOrder - Sort order: asc/desc (default: desc)
+ */
+router.get('/:id/transactions',
+  authenticate,
+  requirePermission('farm.projects.view'),
+  projectController.getProjectTransactions
+);
+
+/**
+ * @route   POST /api/projects/:id/transactions
+ * @desc    Add transaction to project
+ * @access  Private
+ * @body    {
+ *            description: string (required),
+ *            amount: number (required),
+ *            type: 'debit' | 'credit' (required),
+ *            category: string (optional),
+ *            date: Date (optional),
+ *            notes: string (optional)
+ *          }
+ */
+router.post('/:id/transactions',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.addTransaction
+);
+
+/**
+ * @route   PATCH /api/projects/:id/transactions/:transactionId
+ * @desc    Update transaction in project
+ * @access  Private
+ */
+router.patch('/:id/transactions/:transactionId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.updateTransaction
+);
+
+/**
+ * @route   DELETE /api/projects/:id/transactions/:transactionId
+ * @desc    Remove transaction from project
+ * @access  Private
+ */
+router.delete('/:id/transactions/:transactionId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.removeTransaction
+);
+
+// ========================
 // Activity Log Routes
 // ========================
 

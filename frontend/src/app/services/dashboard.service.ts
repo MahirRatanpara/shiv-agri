@@ -1127,4 +1127,127 @@ export class DashboardService {
       })
     );
   }
+
+  // ========================
+  // Transaction Management (NEW: Separate Document API)
+  // ========================
+
+  /**
+   * Get project transactions with pagination
+   * NEW: Transactions are now in a separate collection
+   */
+  getProjectTransactions(
+    projectId: string,
+    page: number = 1,
+    limit: number = 20,
+    sortBy: string = 'date',
+    sortOrder: string = 'desc'
+  ): Observable<{ success: boolean; transactions: any[]; pagination: any; summary: any }> {
+    const params = new HttpParams()
+      .set('projectId', projectId)
+      .set('page', page.toString())
+      .set('limit', limit.toString())
+      .set('sortBy', sortBy)
+      .set('sortOrder', sortOrder);
+
+    return this.http.get<{ success: boolean; transactions: any[]; pagination: any; summary: any }>(
+      `${this.API_URL}/transactions`,
+      { params }
+    ).pipe(
+      catchError(() => {
+        // Mock data for development
+        return of({
+          success: true,
+          transactions: [],
+          pagination: { total: 0, page: 1, limit, totalPages: 0, hasNext: false, hasPrev: false },
+          summary: {
+            totalCredits: 0,
+            totalDebits: 0,
+            netExpense: 0,
+            budget: 0,
+            budgetRemaining: 0,
+            budgetUtilization: 0,
+            transactionCount: 0
+          }
+        });
+      })
+    );
+  }
+
+  /**
+   * Add transaction
+   * NEW: Creates transaction as separate document
+   */
+  addTransaction(
+    projectId: string,
+    transactionData: {
+      description: string;
+      amount: number;
+      type: 'debit' | 'credit';
+      category?: string;
+      date?: Date;
+      notes?: string;
+    }
+  ): Observable<{ success: boolean; data: any; message: string }> {
+    return this.http.post<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/transactions`,
+      { projectId, ...transactionData }
+    ).pipe(
+      catchError((error) => {
+        console.error('Error adding transaction:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Update transaction
+   * NEW: Updates transaction via transaction ID
+   */
+  updateTransaction(
+    projectId: string,
+    transactionId: string,
+    updateData: {
+      description?: string;
+      amount?: number;
+      type?: 'debit' | 'credit';
+      category?: string;
+      date?: Date;
+      notes?: string;
+    }
+  ): Observable<{ success: boolean; data: any; message: string }> {
+    const params = new HttpParams().set('projectId', projectId);
+
+    return this.http.patch<{ success: boolean; data: any; message: string }>(
+      `${this.API_URL}/transactions/${transactionId}`,
+      updateData,
+      { params }
+    ).pipe(
+      catchError((error) => {
+        console.error('Error updating transaction:', error);
+        throw error;
+      })
+    );
+  }
+
+  /**
+   * Delete transaction
+   * NEW: Deletes transaction via transaction ID
+   */
+  deleteTransaction(
+    projectId: string,
+    transactionId: string
+  ): Observable<{ success: boolean; message: string }> {
+    const params = new HttpParams().set('projectId', projectId);
+
+    return this.http.delete<{ success: boolean; message: string }>(
+      `${this.API_URL}/transactions/${transactionId}`,
+      { params }
+    ).pipe(
+      catchError((error) => {
+        console.error('Error deleting transaction:', error);
+        throw error;
+      })
+    );
+  }
 }
