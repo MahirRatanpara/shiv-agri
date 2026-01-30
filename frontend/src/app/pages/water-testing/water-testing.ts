@@ -61,6 +61,14 @@ export class WaterTestingComponent implements OnInit {
       resizable: false,
     },
     {
+      field: 'sampleNumber',
+      headerName: 'Sample No.',
+      editable: true,
+      filter: true,
+      minWidth: 120,
+      pinned: 'left',
+    },
+    {
       field: 'farmersName',
       headerName: "Farmer's Name",
       editable: true,
@@ -582,6 +590,7 @@ export class WaterTestingComponent implements OnInit {
 
   addNewRow() {
     const newRow: WaterTestingData = {
+      sampleNumber: '',
       farmersName: '',
       mobileNo: '',
       location: '',
@@ -645,6 +654,7 @@ export class WaterTestingComponent implements OnInit {
       if (node.data) {
         // Get all values from the grid
         const completeData: WaterTestingData = {
+          sampleNumber: this.gridApi.getValue('sampleNumber', node) || '',
           farmersName: this.gridApi.getValue('farmersName', node) || '',
           mobileNo: this.gridApi.getValue('mobileNo', node) || '',
           location: this.gridApi.getValue('location', node) || '',

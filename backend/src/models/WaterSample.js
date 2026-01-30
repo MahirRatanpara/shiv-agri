@@ -17,6 +17,12 @@ const sampleSchema = new mongoose.Schema({
     required: true
   },
 
+  // Sample number (user-entered for PDF)
+  sampleNumber: {
+    type: String,
+    trim: true
+  },
+
   // Farmer/Location information
   farmersName: {
     type: String,
