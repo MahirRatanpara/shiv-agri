@@ -168,7 +168,6 @@ export class WaterTestingComponent implements OnInit {
       headerName: 'Ca+Mg Diff',
       editable: false,
       filter: 'agNumberColumnFilter',
-      cellDataType: 'number',
       minWidth: 130,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
