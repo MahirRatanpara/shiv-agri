@@ -145,7 +145,7 @@ class PDFGeneratorService {
             '{{naLevel}}': formatNumber(data.na, 2),
             '{{caMgLevel}}': formatNumber(data.caMg, 2),
             '{{sarLevel}}': formatNumber(data.sar, 2),
-            '{{classification}}': getValue(data.classification),
+            '{{waterClass}}': getValue(data.waterClass),
             '{{co3Hco3Level}}': formatNumber(data.co3Hco3, 2),
             '{{rscLevel}}': formatNumber(data.rsc, 2),
 
