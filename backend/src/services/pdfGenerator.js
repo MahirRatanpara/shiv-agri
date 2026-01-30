@@ -726,8 +726,16 @@ class PDFGeneratorService {
             </tr>
         `;
 
+        // Map invoice type to Gujarati label
+        const invoiceTypeLabels = {
+            'cash': 'કેશ મેમો',
+            'debit_memo': 'ડેબીટ મેમો'
+        };
+        const invoiceTypeLabel = invoiceTypeLabels[data.invoiceType] || 'કેશ મેમો';
+
         const replacements = {
             '{{invoiceNumber}}': data.invoiceNumber || '',
+            '{{invoiceType}}': invoiceTypeLabel,
             '{{date}}': formatDate(data.date),
             '{{customerName}}': data.customerName || '',
             '{{referenceNumber}}': data.referenceNumber || '',

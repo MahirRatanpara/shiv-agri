@@ -373,6 +373,21 @@
   background: #fff9e6;
 }
 
+.invoice-type-select {
+  border: none;
+  border-bottom: 1px solid #333;
+  padding: 2px 5px;
+  font-size: 13px;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.invoice-type-select:focus {
+  outline: none;
+  background: #fff9e6;
+}
+
 .customer-info {
   margin-bottom: 15px;
   font-size: 13px;
