@@ -8,6 +8,7 @@ import { environment } from '../environments/environment';
  */
 export interface WaterTestingData {
   _id?: string;
+  sampleNumber?: string; // User-entered sample number for PDF
   farmersName: string;
   mobileNo: string;
   location: string;

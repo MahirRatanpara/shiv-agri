@@ -9,6 +9,7 @@ import { environment } from '../environments/environment';
  */
 export interface SoilTestingData {
   _id?: string; // Added for referenced samples
+  sampleNumber?: string; // User-entered sample number for PDF
   farmersName: string;
   mobileNo: string;
   location: string;

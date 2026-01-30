@@ -84,7 +84,7 @@ class PDFGeneratorService {
             '{{taluka}}': getValue(data.taluka),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
             '{{cropName}}': getValue(data.cropName),
-            '{{sampleId}}': getValue(data._id || ''),
+            '{{sampleId}}': getValue(data.sampleNumber || ''),
 
             // Soil measurements (observations)
             '{{phLevel}}': formatNumber(data.ph, 2),
@@ -137,7 +137,7 @@ class PDFGeneratorService {
             '{{taluka}}': getValue(data.taluka),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
             '{{boreWellType}}': getValue(data.boreWellType),
-            '{{sampleId}}': getValue(data._id || ''),
+            '{{sampleId}}': getValue(data.sampleNumber || ''),
 
             // Water measurements (observations)
             '{{phLevel}}': formatNumber(data.ph, 2),
