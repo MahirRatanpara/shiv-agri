@@ -319,7 +319,7 @@ textarea.form-control {
 }
 
 .letterhead {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .letterhead h1 {
@@ -327,33 +327,8 @@ textarea.form-control {
   font-weight: 700;
   color: #8B6F47;
   letter-spacing: 3px;
-  margin: 0 0 10px 0;
+  margin: 0;
   text-align: left;
-}
-
-.letterhead .consultant-details {
-  text-align: right;
-  margin-top: -40px;
-  margin-bottom: 10px;
-}
-
-.letterhead .consultant-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 2px;
-}
-
-.letterhead .consultant-credentials {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 2px;
-}
-
-.letterhead .consultant-title {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 2px;
 }
 
 .contact-line {
@@ -493,19 +468,30 @@ textarea.letter-body::placeholder {
 }
 
 .signature-section {
-  margin-top: 50px;
+  margin-top: 60px;
+  text-align: right;
 }
 
 .signature-section .closing {
-  margin-bottom: 60px;
-}
-
-.signature-section .signature-line {
-  font-weight: 600;
+  margin-bottom: 50px;
 }
 
 .signature-section .signature-name {
-  margin-top: 5px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.signature-section .signature-credentials {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 2px;
+}
+
+.signature-section .signature-title {
+  font-size: 14px;
+  color: #555;
 }
 
 
