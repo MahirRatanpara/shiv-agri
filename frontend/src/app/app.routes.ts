@@ -58,7 +58,9 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'soil-testing', pathMatch: 'full' },
       { path: 'soil-testing', component: SoilTestingComponent },
+      { path: 'soil-testing/session/:sessionId', component: SoilTestingComponent },
       { path: 'water-testing', component: WaterTestingComponent },
+      { path: 'water-testing/session/:sessionId', component: WaterTestingComponent },
       // TODO: Add fertilizer-testing route when implemented
       // { path: 'fertilizer-testing', component: FertilizerTestingComponent },
     ],

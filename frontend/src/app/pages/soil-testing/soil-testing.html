@@ -24,6 +24,26 @@
       </div>
     </div>
 
+    <!-- Loading Session from URL -->
+    <div class="session-card" *ngIf="isLoadingSession && !sessionActive">
+      <div class="session-info">
+        <h2><i class="fas fa-spinner fa-spin"></i> Loading Session...</h2>
+        <p>Please wait while we load your session</p>
+      </div>
+    </div>
+
+    <!-- Session Load Error -->
+    <div class="session-card error-card" *ngIf="sessionLoadError && !sessionActive && !isLoadingSession">
+      <div class="session-info">
+        <h2><i class="fas fa-exclamation-triangle"></i> Session Error</h2>
+        <p class="error-message">{{ sessionLoadError }}</p>
+      </div>
+      <button class="btn btn-primary btn-lg" (click)="goToDashboard()">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </button>
+    </div>
+
     <!-- Backend Disconnected State -->
     <div class="session-card error-card" *ngIf="!isLoading && !isBackendConnected && !sessionActive">
       <div class="session-info">
@@ -90,6 +110,9 @@
               </div>
             </div>
             <div class="session-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)" title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
               <button class="btn btn-sm btn-info" (click)="resumeSession(session)">
                 <i class="fas fa-play"></i>
                 Resume
@@ -153,6 +176,9 @@
               </div>
             </div>
             <div class="session-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)" title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
               <button class="btn btn-sm btn-secondary" (click)="resumeSession(session)">
                 <i class="fas fa-eye"></i>
                 View
@@ -184,6 +210,14 @@
         <span class="session-meta-compact">
           {{ currentSession?.date | date:'mediumDate' }} • v{{ currentSession?.version }}
         </span>
+        <!-- Copy Link Button -->
+        <button
+          class="btn-copy-link-compact"
+          (click)="copySessionLink()"
+          title="Copy session link to clipboard">
+          <i class="fas fa-link"></i>
+          <span class="copy-link-text">Copy Link</span>
+        </button>
       </div>
 
       <!-- Compact State Navigation -->

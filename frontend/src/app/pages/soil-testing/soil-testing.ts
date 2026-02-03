@@ -1,5 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   ColDef,
@@ -22,8 +25,14 @@ import { SessionStateManager, SessionStatus } from '../../models/session-state.m
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
 })
-export class SoilTestingComponent implements OnInit {
+export class SoilTestingComponent implements OnInit, OnDestroy {
   private gridApi!: GridApi;
+  private destroy$ = new Subject<void>();
+
+  // URL-based session tracking
+  sessionIdFromUrl: string | null = null;
+  isLoadingSession: boolean = false;
+  sessionLoadError: string | null = null;
 
   // Session Management
   currentSession: Session | null = null;
@@ -329,16 +338,37 @@ export class SoilTestingComponent implements OnInit {
   constructor(
     private soilTestingService: SoilTestingService,
     private pdfService: PdfService,
-    private toastService: ToastService
-  ) {
-
-
-  }
+    private toastService: ToastService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-
     // Check backend connectivity first
     this.checkBackendConnection();
+
+    // Subscribe to route params for session ID
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const sessionId = params['sessionId'];
+      if (sessionId && sessionId !== this.sessionIdFromUrl) {
+        this.sessionIdFromUrl = sessionId;
+        // Only load session from URL after backend is connected and sessions are loaded
+        if (this.isBackendConnected && this.allSessions.length > 0) {
+          this.loadSessionFromUrl(sessionId);
+        }
+      } else if (!sessionId && this.sessionActive) {
+        // If navigating back to dashboard from an active session
+        this.sessionActive = false;
+        this.currentSession = null;
+        this.rowData = [];
+        this.sessionIdFromUrl = null;
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   checkBackendConnection() {
@@ -373,9 +403,12 @@ export class SoilTestingComponent implements OnInit {
         const completedCount = sessions.filter(s => s.status === 'completed').length;
         this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
 
+        // If we have a session ID from URL, load it now
+        if (this.sessionIdFromUrl && !this.sessionActive) {
+          this.loadSessionFromUrl(this.sessionIdFromUrl);
+        }
       },
       error: (error) => {
-
         this.isBackendConnected = false;
       }
     });
@@ -465,14 +498,20 @@ export class SoilTestingComponent implements OnInit {
 
     this.soilTestingService.createSession(newSession).subscribe({
       next: (session) => {
-
         this.currentSession = session;
         this.sessionActive = true;
         this.rowData = [];
         this.todaySessionCount = version;
+
+        // Navigate to the session URL
+        if (session._id) {
+          this.sessionIdFromUrl = session._id;
+          this.router.navigate(['/lab-testing/soil-testing/session', session._id], {
+            replaceUrl: true
+          });
+        }
       },
       error: (error) => {
-
         this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
         this.isBackendConnected = false;
       }
@@ -693,13 +732,115 @@ export class SoilTestingComponent implements OnInit {
       this.currentSession = null;
       this.rowData = [];
       this.hasSelectedRows = false;
+      this.sessionIdFromUrl = null;
+
+      // Navigate back to dashboard
+      this.router.navigate(['/lab-testing/soil-testing']);
 
       // Reload sessions
       this.loadSessions();
-      this.toastService.success(`✅ Session ${sessionDate} v${sessionVersion} saved and closed`, 4000);
+      this.toastService.success(`Session ${sessionDate} v${sessionVersion} saved and closed`, 4000);
     } catch (error) {
-      this.toastService.error('❌ Failed to save session');
+      this.toastService.error('Failed to save session');
     }
+  }
+
+  /**
+   * Navigate to dashboard
+   */
+  goToDashboard() {
+    this.sessionIdFromUrl = null;
+    this.sessionLoadError = null;
+    this.router.navigate(['/lab-testing/soil-testing']);
+  }
+
+  /**
+   * Load a session from URL parameter
+   */
+  loadSessionFromUrl(sessionId: string) {
+    this.isLoadingSession = true;
+    this.sessionLoadError = null;
+
+    this.soilTestingService.getSession(sessionId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (session) => {
+        this.isLoadingSession = false;
+        if (session) {
+          this.resumeSession(session);
+        } else {
+          this.handleSessionNotFound(sessionId);
+        }
+      },
+      error: (error) => {
+        this.isLoadingSession = false;
+        this.handleSessionLoadError(sessionId, error);
+      }
+    });
+  }
+
+  /**
+   * Handle session not found error
+   */
+  private handleSessionNotFound(sessionId: string) {
+    this.sessionLoadError = `Session not found: ${sessionId}`;
+    this.toastService.error('Session not found. It may have been deleted.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/soil-testing']);
+  }
+
+  /**
+   * Handle session load error
+   */
+  private handleSessionLoadError(sessionId: string, error: any) {
+    console.error('Error loading session:', error);
+    this.sessionLoadError = `Failed to load session: ${error.message || 'Unknown error'}`;
+    this.toastService.error('Failed to load session. Please try again.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/soil-testing']);
+  }
+
+  /**
+   * Copy the session link to clipboard
+   */
+  copySessionLink(session?: Session) {
+    const targetSession = session || this.currentSession;
+    if (!targetSession?._id) {
+      this.toastService.warning('No session to share');
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const sessionUrl = `${baseUrl}/lab-testing/soil-testing/session/${targetSession._id}`;
+
+    navigator.clipboard.writeText(sessionUrl).then(() => {
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    }).catch((err) => {
+      console.error('Failed to copy link:', err);
+      // Fallback for older browsers
+      this.fallbackCopyToClipboard(sessionUrl);
+    });
+  }
+
+  /**
+   * Fallback method for copying to clipboard (older browsers)
+   */
+  private fallbackCopyToClipboard(text: string) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    } catch (err) {
+      this.toastService.error('Failed to copy link. Please copy manually.');
+    }
+    document.body.removeChild(textArea);
   }
 
   /**
@@ -714,12 +855,20 @@ export class SoilTestingComponent implements OnInit {
     // Initialize state manager with current status
     this.initializeStateManager();
 
+    // Update URL to include session ID (only if not already there)
+    if (session._id && this.sessionIdFromUrl !== session._id) {
+      this.sessionIdFromUrl = session._id;
+      this.router.navigate(['/lab-testing/soil-testing/session', session._id], {
+        replaceUrl: true
+      });
+    }
+
     // Update grid editability after grid is ready
     setTimeout(() => {
       this.updateGridEditability();
     }, 100);
 
-    this.toastService.success(`📂 Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
+    this.toastService.success(`Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
   }
 
   getTodaySessionCount(): number {

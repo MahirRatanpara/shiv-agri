@@ -1459,3 +1459,72 @@
     min-width: 100px;
   }
 }
+
+/* Copy Link Button - Outline style for session list */
+.btn-outline-secondary {
+  background: transparent;
+  border: 1px solid #6c757d;
+  color: #6c757d;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-outline-secondary i {
+  font-size: 0.9rem;
+}
+
+/* Copy Link Button - Compact bar style */
+.btn-copy-link-compact {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s ease;
+  margin-left: 1rem;
+}
+
+.btn-copy-link-compact:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-copy-link-compact i {
+  font-size: 0.85rem;
+}
+
+.copy-link-text {
+  font-weight: 500;
+}
+
+/* Session actions alignment */
+.session-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Responsive: Hide copy link text on smaller screens */
+@media (max-width: 768px) {
+  .copy-link-text {
+    display: none;
+  }
+
+  .btn-copy-link-compact {
+    padding: 0.4rem;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+  }
+}
