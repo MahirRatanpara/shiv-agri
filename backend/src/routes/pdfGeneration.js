@@ -74,7 +74,7 @@ router.get('/sample/:sampleId/preview', async (req, res) => {
 });
 
 /**
- * Generate bulk PDFs for a session (returns individual PDFs as ZIP)
+ * Generate bulk PDFs for a session (returns individual PDFs as JSON with base64 - LEGACY)
  * POST /api/pdf/session/:sessionId/bulk
  */
 router.post('/session/:sessionId/bulk', async (req, res) => {
@@ -96,11 +96,10 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
       return res.status(404).json({ error: 'No samples found in this session' });
     }
 
-    // Generate PDFs
+    // Generate PDFs (now uses parallel processing)
     const pdfs = await pdfGeneratorService.generateBulkPDFs(samples);
 
-    // For now, return the array of PDFs as JSON with base64 encoding
-    // In production, you might want to create a ZIP file
+    // Return the array of PDFs as JSON with base64 encoding
     const result = pdfs.map(pdf => ({
       sampleId: pdf.sampleId,
       farmerName: pdf.farmerName,
@@ -117,6 +116,83 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
   } catch (error) {
     logger.error(`Error generating bulk PDFs: ${error.message}`);
     res.status(500).json({ error: 'Failed to generate bulk PDFs' });
+  }
+});
+
+/**
+ * Stream bulk PDFs for a session - each PDF streamed as multipart
+ * POST /api/pdf/session/:sessionId/stream
+ *
+ * Response format: multipart/mixed with each part being a PDF file
+ * Each part has headers: Content-Type, Content-Disposition, X-Farmer-Name, X-Sample-Id, X-Index, X-Total
+ */
+router.post('/session/:sessionId/stream', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    logger.info(`Streaming PDF generation requested for session: ${sessionId}`);
+
+    // Fetch session and samples
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      logger.warn(`Session not found: ${sessionId}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const samples = await SoilSample.find({ sessionId }).sort({ createdAt: 1 });
+    if (samples.length === 0) {
+      logger.warn(`No samples found for session: ${sessionId}`);
+      return res.status(404).json({ error: 'No samples found in this session' });
+    }
+
+    const total = samples.length;
+    const boundary = `----PDFBoundary${Date.now()}`;
+
+    // Set multipart response headers
+    res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`);
+    res.setHeader('X-Total-Count', total);
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    logger.info(`Starting streaming generation for ${total} PDFs`);
+
+    // Use the streaming generator
+    let index = 0;
+    for await (const pdf of pdfGeneratorService.generateBulkPDFsStream(samples, 'soil')) {
+      const farmerName = pdf.farmerName || 'Unknown';
+      const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
+      const encodedFilename = encodeURIComponent(filename);
+
+      // Write multipart boundary and headers
+      res.write(`\r\n--${boundary}\r\n`);
+      res.write(`Content-Type: application/pdf\r\n`);
+      res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
+      res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+      res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
+      res.write(`X-Index: ${index}\r\n`);
+      res.write(`X-Total: ${total}\r\n`);
+      res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
+      res.write(`\r\n`);
+
+      // Write PDF buffer
+      res.write(pdf.buffer);
+
+      index++;
+      logger.debug(`Streamed PDF ${index}/${total}: ${farmerName}`);
+    }
+
+    // Write final boundary
+    res.write(`\r\n--${boundary}--\r\n`);
+    res.end();
+
+    logger.info(`Streaming completed for session: ${sessionId}, sent ${index} PDFs`);
+
+  } catch (error) {
+    logger.error(`Error streaming PDFs: ${error.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to stream PDFs' });
+    } else {
+      res.end();
+    }
   }
 });
 

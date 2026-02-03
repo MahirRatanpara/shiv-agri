@@ -390,6 +390,86 @@ router.post('/sessions/:sessionId/pdfs', async (req, res) => {
 });
 
 /**
+ * Stream bulk PDFs for a session - each PDF streamed as multipart
+ * POST /api/water-testing/sessions/:sessionId/pdfs-stream
+ *
+ * Response format: multipart/mixed with each part being a PDF file
+ * Each part has headers: Content-Type, Content-Disposition, X-Farmer-Name, X-Sample-Id, X-Index, X-Total
+ */
+router.post('/sessions/:sessionId/pdfs-stream', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    logger.info(`Streaming PDF generation requested for water session: ${sessionId}`);
+
+    // Fetch session and samples
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      logger.warn(`Water session not found: ${sessionId}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const samples = await WaterSample.find({ sessionId }).sort({ createdAt: 1 });
+    if (samples.length === 0) {
+      logger.warn(`No samples found for water session: ${sessionId}`);
+      return res.status(404).json({ error: 'No samples found in this session' });
+    }
+
+    // Add classifications to all samples
+    const samplesWithClassifications = samples.map(s => addClassifications(s.toObject()));
+
+    const total = samplesWithClassifications.length;
+    const boundary = `----PDFBoundary${Date.now()}`;
+
+    // Set multipart response headers
+    res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`);
+    res.setHeader('X-Total-Count', total);
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    logger.info(`Starting streaming generation for ${total} water PDFs`);
+
+    // Use the streaming generator
+    let index = 0;
+    for await (const pdf of pdfGenerator.generateBulkPDFsStream(samplesWithClassifications, 'water')) {
+      const farmerName = pdf.farmerName || 'Unknown';
+      const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
+      const encodedFilename = encodeURIComponent(filename);
+
+      // Write multipart boundary and headers
+      res.write(`\r\n--${boundary}\r\n`);
+      res.write(`Content-Type: application/pdf\r\n`);
+      res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
+      res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+      res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
+      res.write(`X-Index: ${index}\r\n`);
+      res.write(`X-Total: ${total}\r\n`);
+      res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
+      res.write(`\r\n`);
+
+      // Write PDF buffer
+      res.write(pdf.buffer);
+
+      index++;
+      logger.debug(`Streamed water PDF ${index}/${total}: ${farmerName}`);
+    }
+
+    // Write final boundary
+    res.write(`\r\n--${boundary}--\r\n`);
+    res.end();
+
+    logger.info(`Streaming completed for water session: ${sessionId}, sent ${index} PDFs`);
+
+  } catch (error) {
+    logger.error(`Error streaming water PDFs: ${error.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to stream PDFs' });
+    } else {
+      res.end();
+    }
+  }
+});
+
+/**
  * Generate combined PDF for all samples in a session
  * POST /api/water-testing/sessions/:sessionId/pdf-combined
  */

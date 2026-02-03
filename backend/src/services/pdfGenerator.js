@@ -3,6 +3,9 @@ const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/logger');
 
+// Concurrency limit for parallel PDF generation
+const MAX_CONCURRENT_PDFS = 5;
+
 class PDFGeneratorService {
     constructor() {
         this.soilTemplatePath = path.join(__dirname, '../../templates/soil-report.html');
@@ -11,6 +14,27 @@ class PDFGeneratorService {
         this.invoiceTemplatePath = path.join(__dirname, '../../templates/invoice.html');
         this.letterTemplatePath = path.join(__dirname, '../../templates/letter.html');
         this.browser = null;
+
+        // Template cache for faster access
+        this.templateCache = {};
+
+        // Font CSS to inject (cached)
+        this.fontCSS = `
+            @font-face {
+                font-family: 'Noto Sans Gujarati';
+                src: url('https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2') format('woff2');
+                font-weight: 400;
+                font-style: normal;
+                font-display: swap;
+            }
+            @font-face {
+                font-family: 'Noto Sans Gujarati';
+                src: url('https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2') format('woff2');
+                font-weight: 700;
+                font-style: normal;
+                font-display: swap;
+            }
+        `;
     }
 
     /**
@@ -25,11 +49,42 @@ class PDFGeneratorService {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--font-render-hinting=none'
                 ]
             });
+
+            // Pre-cache templates
+            await this.preloadTemplates();
         }
         return this.browser;
+    }
+
+    /**
+     * Pre-load templates into memory cache
+     */
+    async preloadTemplates() {
+        try {
+            logger.info('Pre-loading PDF templates into cache');
+            this.templateCache.soil = await fs.readFile(this.soilTemplatePath, 'utf-8');
+            this.templateCache.water = await fs.readFile(this.waterTemplatePath, 'utf-8');
+
+            // Try to load optional templates
+            try {
+                this.templateCache.receipt = await fs.readFile(this.receiptTemplatePath, 'utf-8');
+            } catch (e) { /* optional */ }
+            try {
+                this.templateCache.invoice = await fs.readFile(this.invoiceTemplatePath, 'utf-8');
+            } catch (e) { /* optional */ }
+            try {
+                this.templateCache.letter = await fs.readFile(this.letterTemplatePath, 'utf-8');
+            } catch (e) { /* optional */ }
+
+            logger.info('Templates pre-loaded successfully');
+        } catch (error) {
+            logger.error(`Failed to preload templates: ${error.message}`);
+        }
     }
 
     /**
@@ -44,13 +99,19 @@ class PDFGeneratorService {
     }
 
     /**
-     * Load and process HTML template
+     * Load and process HTML template (uses cache if available)
      * @param {string} type - Type of template ('soil' or 'water')
      */
     async loadTemplate(type = 'soil') {
+        // Return from cache if available
+        if (this.templateCache[type]) {
+            return this.templateCache[type];
+        }
+
         try {
             const templatePath = type === 'water' ? this.waterTemplatePath : this.soilTemplatePath;
             const template = await fs.readFile(templatePath, 'utf-8');
+            this.templateCache[type] = template;
             return template;
         } catch (error) {
             logger.error(`Failed to load HTML template (${type}): ${error.message}`);
@@ -166,7 +227,7 @@ class PDFGeneratorService {
     }
 
     /**
-     * Generate a single PDF from sample data
+     * Generate a single PDF from sample data (optimized)
      */
     async generateSinglePDF(sampleData) {
         const browser = await this.initBrowser();
@@ -179,20 +240,16 @@ class PDFGeneratorService {
             const template = await this.loadTemplate();
             const html = this.fillTemplate(template, sampleData);
 
-            // Set content and wait for fonts to load
-            await page.setContent(html, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+            // Inject font CSS directly into HTML to avoid network request
+            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
+            // Set content with optimized wait conditions
+            await page.setContent(htmlWithFonts, {
+                waitUntil: 'domcontentloaded'
             });
 
-            // Add Google Fonts for Gujarati support
-            await page.addStyleTag({
-                content: `
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-        `
-            });
-
-            // Wait a bit for fonts to load
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Reduced wait for font rendering (100ms instead of 500ms)
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Generate PDF
             const pdfBuffer = await page.pdf({
@@ -218,66 +275,123 @@ class PDFGeneratorService {
     }
 
     /**
-     * Generate multiple PDFs (bulk generation)
+     * Generate a single PDF quickly (used in parallel generation)
+     * @private
      */
-    async generateBulkPDFs(samplesArray) {
-        const browser = await this.initBrowser();
-        const pdfs = [];
+    async _generateSinglePDFOptimized(browser, sample, type = 'soil') {
+        const page = await browser.newPage();
 
         try {
-            logger.info(`Generating ${samplesArray.length} PDFs in bulk`);
+            const template = await this.loadTemplate(type);
+            const html = type === 'water'
+                ? this.fillWaterTemplate(template, sample)
+                : this.fillTemplate(template, sample);
 
-            for (let i = 0; i < samplesArray.length; i++) {
-                const sample = samplesArray[i];
-                const page = await browser.newPage();
+            // Inject font CSS directly
+            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
 
-                try {
-                    const template = await this.loadTemplate();
-                    const html = this.fillTemplate(template, sample);
+            await page.setContent(htmlWithFonts, {
+                waitUntil: 'domcontentloaded'
+            });
 
-                    await page.setContent(html, {
-                        waitUntil: ['networkidle0', 'domcontentloaded']
-                    });
+            // Minimal wait for font rendering
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-                    await page.addStyleTag({
-                        content: `
-              @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-            `
-                    });
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+            });
 
-                    await new Promise(resolve => setTimeout(resolve, 500));
+            return {
+                sampleId: sample._id,
+                farmerName: sample.farmersName,
+                buffer: pdfBuffer
+            };
+        } finally {
+            await page.close();
+        }
+    }
 
-                    const pdfBuffer = await page.pdf({
-                        format: 'A4',
-                        printBackground: true,
-                        margin: {
-                            top: '0mm',
-                            right: '0mm',
-                            bottom: '0mm',
-                            left: '0mm'
-                        }
-                    });
+    /**
+     * Process samples in chunks with concurrency control
+     * @private
+     */
+    async _processInParallel(samples, type, concurrency = MAX_CONCURRENT_PDFS) {
+        const browser = await this.initBrowser();
+        const results = [];
 
-                    pdfs.push({
-                        sampleId: sample._id,
-                        farmerName: sample.farmersName,
-                        buffer: pdfBuffer
-                    });
+        // Process in chunks
+        for (let i = 0; i < samples.length; i += concurrency) {
+            const chunk = samples.slice(i, i + concurrency);
+            const chunkPromises = chunk.map(sample =>
+                this._generateSinglePDFOptimized(browser, sample, type)
+            );
 
-                    logger.debug(`Generated PDF ${i + 1}/${samplesArray.length}`);
+            const chunkResults = await Promise.all(chunkPromises);
+            results.push(...chunkResults);
 
-                } finally {
-                    await page.close();
-                }
-            }
+            logger.debug(`Generated PDFs ${i + 1}-${Math.min(i + concurrency, samples.length)}/${samples.length}`);
+        }
 
-            logger.info(`Successfully generated ${pdfs.length} PDFs`);
-            return pdfs;
+        return results;
+    }
 
+    /**
+     * Generate multiple PDFs in parallel (optimized bulk generation)
+     */
+    async generateBulkPDFs(samplesArray) {
+        try {
+            logger.info(`Generating ${samplesArray.length} PDFs in parallel (concurrency: ${MAX_CONCURRENT_PDFS})`);
+            const startTime = Date.now();
+
+            const results = await this._processInParallel(samplesArray, 'soil');
+
+            const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+            logger.info(`Successfully generated ${results.length} PDFs in ${duration}s`);
+
+            return results;
         } catch (error) {
             logger.error(`Error in bulk PDF generation: ${error.message}`);
             throw error;
         }
+    }
+
+    /**
+     * Generate PDFs with streaming support - yields each PDF as it's generated
+     * @param {Array} samplesArray - Array of sample data
+     * @param {string} type - 'soil' or 'water'
+     * @param {Function} onProgress - Callback called with each PDF: (pdf, index, total)
+     */
+    async *generateBulkPDFsStream(samplesArray, type = 'soil', onProgress = null) {
+        const browser = await this.initBrowser();
+        const total = samplesArray.length;
+
+        logger.info(`Starting streaming PDF generation for ${total} samples (type: ${type})`);
+        const startTime = Date.now();
+
+        // Process in parallel chunks but yield results as they complete
+        for (let i = 0; i < samplesArray.length; i += MAX_CONCURRENT_PDFS) {
+            const chunk = samplesArray.slice(i, i + MAX_CONCURRENT_PDFS);
+            const chunkPromises = chunk.map((sample, idx) =>
+                this._generateSinglePDFOptimized(browser, sample, type)
+                    .then(result => ({ ...result, index: i + idx }))
+            );
+
+            // Wait for all in chunk to complete
+            const chunkResults = await Promise.all(chunkPromises);
+
+            // Yield each result
+            for (const result of chunkResults) {
+                if (onProgress) {
+                    onProgress(result, result.index, total);
+                }
+                yield result;
+            }
+        }
+
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        logger.info(`Streaming PDF generation completed in ${duration}s`);
     }
 
     /**
@@ -304,17 +418,14 @@ class PDFGeneratorService {
                 }
             });
 
+            // Inject font CSS
+            combinedHtml = combinedHtml.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
             await page.setContent(combinedHtml, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+                waitUntil: 'domcontentloaded'
             });
 
-            await page.addStyleTag({
-                content: `
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-        `
-            });
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             const pdfBuffer = await page.pdf({
                 format: 'A4',
@@ -354,20 +465,15 @@ class PDFGeneratorService {
             const template = await this.loadTemplate('water');
             const html = this.fillWaterTemplate(template, sampleData);
 
-            // Set content and wait for fonts to load
-            await page.setContent(html, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+            // Inject font CSS directly
+            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
+            await page.setContent(htmlWithFonts, {
+                waitUntil: 'domcontentloaded'
             });
 
-            // Add Google Fonts for Gujarati support
-            await page.addStyleTag({
-                content: `
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-        `
-            });
-
-            // Wait a bit for fonts to load
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Reduced wait
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Generate PDF
             const pdfBuffer = await page.pdf({
@@ -393,62 +499,19 @@ class PDFGeneratorService {
     }
 
     /**
-     * Generate multiple water PDFs (bulk generation)
+     * Generate multiple water PDFs in parallel (optimized)
      */
     async generateBulkWaterPDFs(samplesArray) {
-        const browser = await this.initBrowser();
-        const pdfs = [];
-
         try {
-            logger.info(`Generating ${samplesArray.length} water PDFs in bulk`);
+            logger.info(`Generating ${samplesArray.length} water PDFs in parallel (concurrency: ${MAX_CONCURRENT_PDFS})`);
+            const startTime = Date.now();
 
-            for (let i = 0; i < samplesArray.length; i++) {
-                const sample = samplesArray[i];
-                const page = await browser.newPage();
+            const results = await this._processInParallel(samplesArray, 'water');
 
-                try {
-                    const template = await this.loadTemplate('water');
-                    const html = this.fillWaterTemplate(template, sample);
+            const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+            logger.info(`Successfully generated ${results.length} water PDFs in ${duration}s`);
 
-                    await page.setContent(html, {
-                        waitUntil: ['networkidle0', 'domcontentloaded']
-                    });
-
-                    await page.addStyleTag({
-                        content: `
-              @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-            `
-                    });
-
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                    const pdfBuffer = await page.pdf({
-                        format: 'A4',
-                        printBackground: true,
-                        margin: {
-                            top: '0mm',
-                            right: '0mm',
-                            bottom: '0mm',
-                            left: '0mm'
-                        }
-                    });
-
-                    pdfs.push({
-                        sampleId: sample._id,
-                        farmerName: sample.farmersName,
-                        buffer: pdfBuffer
-                    });
-
-                    logger.debug(`Generated water PDF ${i + 1}/${samplesArray.length}`);
-
-                } finally {
-                    await page.close();
-                }
-            }
-
-            logger.info(`Successfully generated ${pdfs.length} water PDFs`);
-            return pdfs;
-
+            return results;
         } catch (error) {
             logger.error(`Error in bulk water PDF generation: ${error.message}`);
             throw error;
@@ -479,17 +542,14 @@ class PDFGeneratorService {
                 }
             });
 
+            // Inject font CSS
+            combinedHtml = combinedHtml.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
             await page.setContent(combinedHtml, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+                waitUntil: 'domcontentloaded'
             });
 
-            await page.addStyleTag({
-                content: `
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-        `
-            });
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             const pdfBuffer = await page.pdf({
                 format: 'A4',
@@ -525,11 +585,11 @@ class PDFGeneratorService {
         try {
             logger.info(`Generating receipt PDF for: ${receiptData.receiptNumber || 'unknown'}`);
 
-            const template = await fs.readFile(this.receiptTemplatePath, 'utf-8');
+            const template = this.templateCache.receipt || await fs.readFile(this.receiptTemplatePath, 'utf-8');
             const html = this.fillReceiptTemplate(template, receiptData);
 
             await page.setContent(html, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+                waitUntil: 'domcontentloaded'
             });
 
             await page.addStyleTag({
@@ -538,7 +598,7 @@ class PDFGeneratorService {
                 `
             });
 
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             // Get the actual receipt width (let height adapt naturally)
             const width = await page.evaluate(() => {
@@ -645,22 +705,17 @@ class PDFGeneratorService {
         try {
             logger.info(`Generating invoice PDF for: ${invoiceData.invoiceNumber || 'unknown'}`);
 
-            const template = await fs.readFile(this.invoiceTemplatePath, 'utf-8');
+            const template = this.templateCache.invoice || await fs.readFile(this.invoiceTemplatePath, 'utf-8');
             const html = this.fillInvoiceTemplate(template, invoiceData);
 
-            await page.setContent(html, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+            // Inject font CSS
+            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
+            await page.setContent(htmlWithFonts, {
+                waitUntil: 'domcontentloaded'
             });
 
-            // Add both English and Gujarati fonts
-            await page.addStyleTag({
-                content: `
-                    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
-                    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-                `
-            });
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             const pdfBuffer = await page.pdf({
                 format: 'A4',
@@ -771,11 +826,11 @@ class PDFGeneratorService {
         try {
             logger.info(`Generating letter PDF for: ${letterData.letterNumber || 'unknown'}`);
 
-            const template = await fs.readFile(this.letterTemplatePath, 'utf-8');
+            const template = this.templateCache.letter || await fs.readFile(this.letterTemplatePath, 'utf-8');
             const html = this.fillLetterTemplate(template, letterData);
 
             await page.setContent(html, {
-                waitUntil: ['networkidle0', 'domcontentloaded']
+                waitUntil: 'domcontentloaded'
             });
 
             await page.addStyleTag({
@@ -784,7 +839,7 @@ class PDFGeneratorService {
                 `
             });
 
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             const pdfBuffer = await page.pdf({
                 format: 'A4',

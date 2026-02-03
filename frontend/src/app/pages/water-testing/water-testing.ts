@@ -1143,34 +1143,28 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Download all PDFs individually (one by one with delay)
+   * Download all PDFs using streaming with progress widget
    */
   async downloadAllPdfs() {
+    if (this.rowData.length === 0) {
+      this.toastService.warning('⚠️ No data available to generate reports');
+      return;
+    }
+
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.warning('⚠️ Please save the session first before generating PDFs');
+      return;
+    }
+
     try {
-      if (this.rowData.length === 0) {
-        this.toastService.warning('⚠️ No data available to generate reports');
-        return;
-      }
-
-      if (!this.currentSession || !this.currentSession._id) {
-        this.toastService.warning('⚠️ Please save the session first before generating PDFs');
-        return;
-      }
-
-      const totalReports = this.rowData.length;
-      this.toastService.info(`📄 Generating ${totalReports} water reports... Please wait`, 0);
-
-
       await this.saveCurrentSession();
 
-      await this.pdfService.downloadBulkWaterPDFs(this.currentSession._id);
+      // Use streaming endpoint - progress is handled by the download progress widget
+      await this.pdfService.streamBulkWaterPDFs(this.currentSession._id);
 
-      this.toastService.clear();
-      this.toastService.success(`✅ All ${totalReports} water reports downloaded successfully!`, 5000);
     } catch (error) {
-
-      this.toastService.clear();
-      this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
+      console.error('Error downloading PDFs:', error);
+      // Error is already handled by the progress widget
     }
   }
 

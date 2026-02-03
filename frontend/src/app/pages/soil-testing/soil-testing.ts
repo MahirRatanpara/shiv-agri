@@ -1124,7 +1124,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Download all PDFs (individual files)
+   * Download all PDFs (individual files) using streaming with progress widget
    */
   async downloadAllPdfs() {
     if (this.rowData.length === 0) {
@@ -1133,10 +1133,6 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const totalReports = this.rowData.length;
-      this.toastService.info(`📄 Generating ${totalReports} soil reports... Please wait`, 0);
-
-
       // STEP 1: Save session to database and wait for completion
       await this.saveCurrentSession();
 
@@ -1145,16 +1141,13 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
         throw new Error('Session ID not found. Please save the session first.');
       }
 
-      // STEP 3: Generate bulk PDFs using backend service
-      await this.pdfService.downloadBulkSessionPDFs(this.currentSession._id);
+      // STEP 3: Generate bulk PDFs using streaming endpoint
+      // Progress is now handled by the download progress widget
+      await this.pdfService.streamBulkSessionPDFs(this.currentSession._id);
 
-
-      this.toastService.clear();
-      this.toastService.success(`✅ All ${totalReports} soil reports downloaded successfully!`, 5000);
     } catch (error) {
-
-      this.toastService.clear();
-      this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
+      console.error('Error downloading PDFs:', error);
+      // Error is already handled by the progress widget
     }
   }
 
