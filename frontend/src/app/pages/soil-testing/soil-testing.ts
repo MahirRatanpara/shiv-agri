@@ -12,6 +12,7 @@ import { SoilTestingService, Session, SoilTestingData } from '../../services/soi
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
 
 @Component({
   selector: 'app-soil-testing',
@@ -32,16 +33,41 @@ export class SoilTestingComponent implements OnInit {
   todaySessionCount: number = 0;
   isBackendConnected: boolean = false;
   isLoading: boolean = true;
+  hasSelectedRows: boolean = false;
+
+  // State Management
+  stateManager: SessionStateManager = new SessionStateManager('started');
+  readonly allStates = SessionStateManager.getAllStates();
 
   // Pagination for session history
   currentPage: number = 1;
   pageSize: number = 10;
   totalPages: number = 0;
 
-  get paginatedSessions(): Session[] {
+  // Completed sessions pagination
+  completedPage: number = 1;
+  completedPageSize: number = 10;
+  completedTotalPages: number = 0;
+  showCompletedSessions: boolean = false;
+
+  get activeSessions(): Session[] {
+    return this.allSessions.filter(s => s.status !== 'completed');
+  }
+
+  get completedSessions(): Session[] {
+    return this.allSessions.filter(s => s.status === 'completed');
+  }
+
+  get paginatedActiveSessions(): Session[] {
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
-    return this.allSessions.slice(startIndex, endIndex);
+    return this.activeSessions.slice(startIndex, endIndex);
+  }
+
+  get paginatedCompletedSessions(): Session[] {
+    const startIndex = (this.completedPage - 1) * this.completedPageSize;
+    const endIndex = startIndex + this.completedPageSize;
+    return this.completedSessions.slice(startIndex, endIndex);
   }
 
   // Column Definitions
@@ -340,7 +366,12 @@ export class SoilTestingComponent implements OnInit {
     this.soilTestingService.getAllSessions().subscribe({
       next: (sessions) => {
         this.allSessions = sessions;
-        this.totalPages = Math.ceil(sessions.length / this.pageSize);
+        // Calculate pagination for active sessions
+        const activeCount = sessions.filter(s => s.status !== 'completed').length;
+        this.totalPages = Math.ceil(activeCount / this.pageSize);
+        // Calculate pagination for completed sessions
+        const completedCount = sessions.filter(s => s.status === 'completed').length;
+        this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
 
       },
       error: (error) => {
@@ -350,11 +381,38 @@ export class SoilTestingComponent implements OnInit {
     });
   }
 
-  resumeSession(session: Session) {
-    this.currentSession = session;
-    this.sessionActive = true;
-    this.rowData = session.data || [];
+  toggleCompletedSessions() {
+    this.showCompletedSessions = !this.showCompletedSessions;
+  }
 
+  nextCompletedPage() {
+    if (this.completedPage < this.completedTotalPages) {
+      this.completedPage++;
+    }
+  }
+
+  prevCompletedPage() {
+    if (this.completedPage > 1) {
+      this.completedPage--;
+    }
+  }
+
+  getStatusLabel(status: string | undefined): string {
+    if (!status) return 'Unknown';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.label;
+  }
+
+  getStatusColor(status: string | undefined): string {
+    if (!status) return '#999';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.color;
+  }
+
+  getStatusIcon(status: string | undefined): string {
+    if (!status) return 'fa-question';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.icon;
   }
 
   nextPage() {
@@ -421,86 +479,247 @@ export class SoilTestingComponent implements OnInit {
     });
   }
 
-  saveAndExit() {
-    if (!this.currentSession || !this.currentSession._id) {
-      this.toastService.show('No active session to save', 'warning');
+  // ===== STATE MANAGEMENT METHODS =====
+
+  /**
+   * Initialize state manager when session loads
+   */
+  private initializeStateManager() {
+    if (this.currentSession?.status) {
+      this.stateManager = new SessionStateManager(this.currentSession.status);
+    } else {
+      this.stateManager = new SessionStateManager('started');
+    }
+  }
+
+  /**
+   * Check if can perform an action based on current state
+   */
+  canPerformAction(action: 'addRow' | 'uploadExcel' | 'deleteSelected' | 'downloadPDFs' | 'editData'): boolean {
+    return this.stateManager.canPerformAction(action);
+  }
+
+  /**
+   * Get current state label for display
+   */
+  getCurrentStateLabel(): string {
+    return this.stateManager.getCurrentState().label;
+  }
+
+  /**
+   * Get current state icon
+   */
+  getCurrentStateIcon(): string {
+    return this.stateManager.getCurrentState().icon;
+  }
+
+  /**
+   * Get current state color
+   */
+  getCurrentStateColor(): string {
+    return this.stateManager.getCurrentState().color;
+  }
+
+  /**
+   * Get current state description
+   */
+  getCurrentStateDescription(): string {
+    return this.stateManager.getCurrentState().description;
+  }
+
+  /**
+   * Check if can move to next state
+   */
+  canMoveToNextState(): boolean {
+    return this.stateManager.getNextState() !== null;
+  }
+
+  /**
+   * Check if can move to previous state
+   */
+  canMoveToPreviousState(): boolean {
+    return this.stateManager.getPreviousState() !== null;
+  }
+
+  /**
+   * Get progress percentage for progress bar
+   */
+  getStateProgress(): number {
+    return this.stateManager.getStateProgress();
+  }
+
+  /**
+   * Check if current state is active (for styling)
+   */
+  isStateActive(status: SessionStatus): boolean {
+    return this.currentSession?.status === status;
+  }
+
+  /**
+   * Check if state is completed (for styling)
+   */
+  isStateCompleted(status: SessionStatus): boolean {
+    const states: SessionStatus[] = ['started', 'details', 'ready', 'completed'];
+    const currentIndex = states.indexOf(this.currentSession?.status || 'started');
+    const targetIndex = states.indexOf(status);
+    return targetIndex < currentIndex;
+  }
+
+  /**
+   * Transition to next state
+   */
+  async nextState() {
+    if (!this.currentSession?._id) {
+      this.toastService.warning('⚠️ No active session');
       return;
     }
 
-    // Get all row data from the grid with calculated values
-    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+    const nextStatus = this.stateManager.getNextState();
+    if (!nextStatus) {
+      this.toastService.warning('⚠️ Already at final state');
+      return;
+    }
 
-    const updates = {
-      endTime: null as any, // Explicitly remove endTime to mark as in-progress
-      data: allGridData
-    };
+    try {
+      // Save current data first
+      await this.saveCurrentSession();
 
-
-    this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
-      next: (session) => {
-
-        // Update the session in allSessions array
-        const index = this.allSessions.findIndex(s => s._id === session._id);
-        if (index !== -1) {
-          this.allSessions[index] = session;
-        } else {
-          this.allSessions.unshift(session);
+      // Transition to next state
+      this.soilTestingService.updateSessionStatus(this.currentSession._id, nextStatus).subscribe({
+        next: (session) => {
+          this.currentSession = session;
+          this.stateManager.transitionTo(nextStatus);
+          this.updateGridEditability(); // Lock/unlock grid based on new state
+          this.toastService.success(`✅ Moved to ${this.stateManager.getCurrentState().label} state`, 3000);
+        },
+        error: (err) => {
+          this.toastService.error('❌ Failed to update state');
         }
+      });
+    } catch (error) {
+      this.toastService.error('❌ Failed to save session data');
+    }
+  }
 
-        this.currentSession = null;
-        this.sessionActive = false;
-        this.rowData = [];
+  /**
+   * Transition to previous state
+   */
+  previousState() {
+    if (!this.currentSession?._id) {
+      this.toastService.warning('⚠️ No active session');
+      return;
+    }
 
-        // Reload sessions from backend to ensure sync
-        this.loadSessions();
-        this.loadTodaySessionCount();
+    const prevStatus = this.stateManager.getPreviousState();
+    if (!prevStatus) {
+      this.toastService.warning('⚠️ Already at first state');
+      return;
+    }
+
+    this.soilTestingService.updateSessionStatus(this.currentSession._id, prevStatus).subscribe({
+      next: (session) => {
+        this.currentSession = session;
+        this.stateManager.transitionTo(prevStatus);
+        this.updateGridEditability(); // Lock/unlock grid based on new state
+        this.toastService.success(`✅ Moved to ${this.stateManager.getCurrentState().label} state`, 3000);
       },
-      error: (error) => {
-
-        this.toastService.show('Failed to save session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
+      error: (err) => {
+        this.toastService.error('❌ Failed to update state');
       }
     });
   }
 
-  completeSession() {
+  /**
+   * Get available state transitions from current state
+   */
+  getAvailableTransitions(): { status: SessionStatus; config: any }[] {
+    const currentState = this.stateManager.getCurrentState();
+    return this.allStates.filter(state =>
+      currentState.canTransitionTo.includes(state.status)
+    );
+  }
+
+  /**
+   * Transition to a specific state
+   */
+  async transitionToState(targetStatus: SessionStatus) {
     if (!this.currentSession || !this.currentSession._id) {
-      this.toastService.show('No active session to complete', 'warning');
+      this.toastService.warning('⚠️ No active session');
       return;
     }
 
-    // Get all row data from the grid with calculated values
-    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+    if (!this.stateManager.canTransitionTo(targetStatus)) {
+      this.toastService.warning('⚠️ Cannot transition to this state', 3000);
+      return;
+    }
 
-    const updates = {
-      endTime: new Date().toISOString(),
-      data: allGridData
-    };
+    try {
+      // Save current data first
+      await this.saveCurrentSession();
 
-
-    this.soilTestingService.updateSession(this.currentSession._id, updates).subscribe({
-      next: (session) => {
-
-        // Update the session in allSessions array
-        const index = this.allSessions.findIndex(s => s._id === session._id);
-        if (index !== -1) {
-          this.allSessions[index] = session;
-        } else {
-          this.allSessions.unshift(session);
+      // Then transition to new state
+      this.soilTestingService.updateSessionStatus(this.currentSession._id, targetStatus).subscribe({
+        next: (session) => {
+          this.currentSession = session;
+          this.stateManager.transitionTo(targetStatus);
+          this.updateGridEditability(); // Lock/unlock grid based on new state
+          this.toastService.success(`✅ Moved to ${this.getCurrentStateLabel()} state`, 3000);
+        },
+        error: (error) => {
+          this.toastService.error('❌ Failed to update session state', 4000);
         }
+      });
+    } catch (error) {
+      this.toastService.error('❌ Failed to save session data');
+    }
+  }
 
-        this.currentSession = null;
-        this.sessionActive = false;
-        this.rowData = [];
+  /**
+   * Close session and save as draft
+   */
+  async closeSession() {
+    if (!this.currentSession?._id) {
+      return;
+    }
 
-        // Reload sessions from backend to ensure sync
-        this.loadSessions();
-        this.loadTodaySessionCount();
-      },
-      error: (error) => {
+    try {
+      // Save current data as draft
+      await this.saveCurrentSession();
 
-        this.toastService.show('Failed to complete session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
-      }
-    });
+      // Close session UI
+      this.sessionActive = false;
+      const sessionDate = this.currentSession.date;
+      const sessionVersion = this.currentSession.version;
+      this.currentSession = null;
+      this.rowData = [];
+      this.hasSelectedRows = false;
+
+      // Reload sessions
+      this.loadSessions();
+      this.toastService.success(`✅ Session ${sessionDate} v${sessionVersion} saved and closed`, 4000);
+    } catch (error) {
+      this.toastService.error('❌ Failed to save session');
+    }
+  }
+
+  /**
+   * Resume a session and initialize state manager
+   */
+  resumeSession(session: Session) {
+    this.currentSession = session;
+    this.sessionActive = true;
+    this.rowData = session.data || [];
+    this.hasSelectedRows = false;
+
+    // Initialize state manager with current status
+    this.initializeStateManager();
+
+    // Update grid editability after grid is ready
+    setTimeout(() => {
+      this.updateGridEditability();
+    }, 100);
+
+    this.toastService.success(`📂 Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
   }
 
   getTodaySessionCount(): number {
@@ -523,6 +742,32 @@ export class SoilTestingComponent implements OnInit {
 
     // Ensure grid can scroll horizontally
     params.api.sizeColumnsToFit();
+
+    // Update grid editability based on current state
+    this.updateGridEditability();
+  }
+
+  /**
+   * Update grid editability based on current state
+   */
+  updateGridEditability() {
+    if (!this.gridApi) return;
+
+    const canEdit = this.stateManager.canPerformAction('editData');
+
+    // Update all column definitions to enable/disable editing
+    const updatedColDefs = this.colDefs.map(col => {
+      // Skip columns that should never be editable (calculated fields, actions, checkboxes)
+      if (col.valueGetter || col.cellRenderer || col.checkboxSelection) {
+        return col;
+      }
+
+      // For all user input columns, set editable based on current state
+      return { ...col, editable: canEdit };
+    });
+
+    this.colDefs = updatedColDefs;
+    this.gridApi.setGridOption('columnDefs', this.colDefs);
   }
 
   onCellValueChanged(event: CellValueChangedEvent) {
@@ -560,6 +805,11 @@ export class SoilTestingComponent implements OnInit {
 
     // Auto-resize the column that was edited
     event.api.autoSizeColumns([colId], false);
+  }
+
+  onSelectionChanged() {
+    const selectedRows = this.gridApi.getSelectedRows();
+    this.hasSelectedRows = selectedRows.length > 0;
   }
 
   addNewRow() {
@@ -611,12 +861,6 @@ export class SoilTestingComponent implements OnInit {
       this.gridApi.applyTransaction({ remove: selectedRows });
 
     }
-  }
-
-  exportToCsv() {
-    this.gridApi.exportDataAsCsv({
-      fileName: `soil-testing-${new Date().toISOString().split('T')[0]}.csv`,
-    });
   }
 
   /**
@@ -768,39 +1012,6 @@ export class SoilTestingComponent implements OnInit {
   /**
    * Download all data as a single combined PDF
    */
-  async downloadCombinedPdf() {
-    if (this.rowData.length === 0) {
-      this.toastService.warning('⚠️ No data available to generate reports');
-      return;
-    }
-
-    try {
-      const totalReports = this.rowData.length;
-      this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
-
-
-      // STEP 1: Save session to database and wait for completion
-      await this.saveCurrentSession();
-
-      // STEP 2: Verify we have a session ID
-      if (!this.currentSession?._id) {
-        throw new Error('Session ID not found. Please save the session first.');
-      }
-
-      // STEP 3: Generate combined PDF using backend service
-      const filename = `જમીન ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
-      await this.pdfService.downloadCombinedSessionPDF(this.currentSession._id, filename);
-
-
-      this.toastService.clear();
-      this.toastService.success(`✅ Combined soil report with ${totalReports} samples downloaded successfully!`, 5000);
-    } catch (error) {
-
-      this.toastService.clear();
-      this.toastService.error('❌ Failed to generate combined PDF report. Please try again.', 5000);
-    }
-  }
-
   /**
    * Preview PDF in new tab (optional utility)
    */
@@ -821,6 +1032,186 @@ export class SoilTestingComponent implements OnInit {
     } catch (error) {
 
       this.toastService.show('Failed to preview PDF report', 'error');
+    }
+  }
+
+  // ===== EXCEL UPLOAD METHODS =====
+
+  /**
+   * Handle Excel file selection
+   */
+  onExcelFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+    this.uploadExcelFile(file);
+
+    // Reset input so the same file can be selected again
+    input.value = '';
+  }
+
+  /**
+   * Upload Excel file and update/append data to grid
+   */
+  private async uploadExcelFile(file: File) {
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.error('Please start a session before uploading Excel file', 4000);
+      return;
+    }
+
+    // Validate file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    if (!validTypes.includes(file.type)) {
+      this.toastService.error('Please upload a valid Excel file (.xlsx or .xls)', 4000);
+      return;
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      this.toastService.error('File size must be less than 5MB', 4000);
+      return;
+    }
+
+    this.toastService.info('📤 Processing Excel file...', 3000);
+
+    try {
+      // Read and parse Excel file using xlsx library
+      const XLSX = await import('xlsx');
+      const reader = new FileReader();
+
+      reader.onload = async (e: any) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+
+          if (jsonData.length < 2) {
+            this.toastService.error('Excel file is empty or has no data rows', 4000);
+            return;
+          }
+
+          // Parse Excel data (skip header row)
+          const excelRows = [];
+          for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (!row[0]) continue; // Skip if no sample number
+
+            excelRows.push({
+              sampleNumber: row[0]?.toString().trim() || '',
+              farmersName: row[1]?.toString().trim() || '',
+              mobileNo: row[2]?.toString().trim() || '',
+              location: row[3]?.toString().trim() || '',
+              farmsName: row[4]?.toString().trim() || '',
+              taluka: row[5]?.toString().trim() || ''
+            });
+          }
+
+          if (excelRows.length === 0) {
+            this.toastService.error('No valid data found in Excel file', 4000);
+            return;
+          }
+
+          // Create a map of existing samples by sample number
+          const existingSamplesMap = new Map<string, SoilTestingData>();
+          this.rowData.forEach(sample => {
+            if (sample.sampleNumber) {
+              existingSamplesMap.set(sample.sampleNumber.trim(), sample);
+            }
+          });
+
+          let updatedCount = 0;
+          let addedCount = 0;
+
+          // Process each Excel row
+          excelRows.forEach(excelRow => {
+            const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
+
+            if (existingSample) {
+              // Only update farmer details, keep test values unchanged
+              existingSample.farmersName = excelRow.farmersName;
+              existingSample.mobileNo = excelRow.mobileNo;
+              existingSample.location = excelRow.location;
+              existingSample.farmsName = excelRow.farmsName;
+              existingSample.taluka = excelRow.taluka;
+
+              updatedCount++;
+            } else {
+              // Add new sample
+              const newSample: SoilTestingData = {
+                sampleNumber: excelRow.sampleNumber,
+                farmersName: excelRow.farmersName,
+                mobileNo: excelRow.mobileNo,
+                location: excelRow.location,
+                farmsName: excelRow.farmsName,
+                taluka: excelRow.taluka,
+                ph: null,
+                ec: null,
+                ocBlank: null,
+                ocStart: null,
+                ocEnd: null,
+                p2o5R: null,
+                k2oR: null,
+                p2o5: null,
+                k2o: null,
+                cropName: '',
+                finalDeduction: ''
+              };
+              this.rowData.push(newSample);
+              addedCount++;
+            }
+          });
+
+          // Sort samples by sample number in ascending order
+          this.rowData.sort((a, b) => {
+            const sampleA = a.sampleNumber?.toLowerCase() || '';
+            const sampleB = b.sampleNumber?.toLowerCase() || '';
+            return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
+          // Refresh the grid
+          this.gridApi.setGridOption('rowData', this.rowData);
+
+          // Save to backend
+          await this.saveCurrentSession();
+
+          this.toastService.success(
+            `✅ Excel imported successfully! Updated: ${updatedCount}, Added: ${addedCount}`,
+            5000
+          );
+
+        } catch (error) {
+          console.error('Error parsing Excel file:', error);
+          this.toastService.error('Failed to parse Excel file. Please check the format.', 5000);
+        }
+      };
+
+      reader.onerror = () => {
+        this.toastService.error('Failed to read Excel file', 4000);
+      };
+
+      reader.readAsArrayBuffer(file);
+
+    } catch (error) {
+      console.error('Error uploading Excel:', error);
+      this.toastService.error('Failed to upload Excel file. Please try again.', 4000);
+    }
+  }
+
+  /**
+   * Trigger file input click
+   */
+  triggerExcelUpload() {
+    const fileInput = document.getElementById('excelFileInput') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
     }
   }
 
