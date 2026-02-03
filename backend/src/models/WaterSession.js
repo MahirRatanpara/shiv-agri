@@ -21,8 +21,8 @@ const sessionSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed', 'archived'],
-    default: 'active',
+    enum: ['started', 'details', 'ready', 'completed'],
+    default: 'started',
     index: true
   },
   sampleCount: {

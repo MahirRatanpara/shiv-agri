@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
+import { DownloadProgressService } from './download-progress.service';
 
 export interface BulkPDFResponse {
   count: number;
@@ -18,7 +19,10 @@ export interface BulkPDFResponse {
 export class PdfService {
   private apiUrl = `${environment.apiUrl}/pdf`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private downloadProgress: DownloadProgressService
+  ) {}
 
   /**
    * Generate and download PDF for a single sample
@@ -212,6 +216,211 @@ export class PdfService {
    */
   checkHealth(): Observable<{ status: string; service: string }> {
     return this.http.get<{ status: string; service: string }>(`${this.apiUrl}/health`);
+  }
+
+  // =============== STREAMING PDF METHODS ===============
+
+  /**
+   * Get auth headers for fetch requests
+   */
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
+
+  /**
+   * Stream and download bulk PDFs for a soil testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkSessionPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${this.apiUrl}/session/${sessionId}/stream`;
+    await this.processStreamingPDFs(url, 'જમીન ચકાસણી', 'Downloading Soil Reports', onProgress);
+  }
+
+  /**
+   * Stream and download bulk PDFs for a water testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkWaterPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/water-testing/sessions/${sessionId}/pdfs-stream`;
+    await this.processStreamingPDFs(url, 'પાણી ચકાસણી', 'Downloading Water Reports', onProgress);
+  }
+
+  /**
+   * Process multipart streaming PDF response with progress tracking
+   */
+  private async processStreamingPDFs(
+    url: string,
+    filePrefix: string,
+    progressTitle: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
+        }
+      });
+
+      if (!response.ok) {
+        this.downloadProgress.error(`Server error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('Content-Type') || '';
+      const totalCount = parseInt(response.headers.get('X-Total-Count') || '0', 10);
+
+      // Start progress tracking
+      this.downloadProgress.start(progressTitle, totalCount);
+
+      // Extract boundary from Content-Type header
+      const boundaryMatch = contentType.match(/boundary=(.+)/);
+      if (!boundaryMatch) {
+        this.downloadProgress.error('Invalid response format');
+        throw new Error('No boundary found in multipart response');
+      }
+      const boundary = boundaryMatch[1];
+
+      // Read the response as array buffer and parse multipart
+      const arrayBuffer = await response.arrayBuffer();
+      const parts = this.parseMultipartResponse(arrayBuffer, boundary);
+
+      // Download each PDF
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const farmerName = part.headers['x-farmer-name']
+          ? decodeURIComponent(part.headers['x-farmer-name'])
+          : 'Unknown';
+        const filename = `${filePrefix} - ${farmerName}.pdf`;
+
+        // Create blob and download
+        const buffer = new ArrayBuffer(part.data.length);
+        new Uint8Array(buffer).set(part.data);
+        const blob = new Blob([buffer], { type: 'application/pdf' });
+        this.downloadPDF(blob, filename);
+
+        // Update progress (both service and callback)
+        this.downloadProgress.update(i + 1, farmerName);
+        if (onProgress) {
+          onProgress(i + 1, totalCount || parts.length, farmerName);
+        }
+
+        // Small delay between downloads to avoid browser blocking
+        if (i < parts.length - 1) {
+          await this.delay(100);
+        }
+      }
+
+      // Mark as completed
+      this.downloadProgress.complete();
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Download failed';
+      this.downloadProgress.error(errorMessage);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse multipart response into individual parts
+   */
+  private parseMultipartResponse(
+    arrayBuffer: ArrayBuffer,
+    boundary: string
+  ): { headers: Record<string, string>; data: Uint8Array }[] {
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const decoder = new TextDecoder();
+    const parts: { headers: Record<string, string>; data: Uint8Array }[] = [];
+
+    // Convert to string to find boundaries (only for boundary finding, not data)
+    const fullText = decoder.decode(uint8Array);
+    const boundaryDelimiter = `--${boundary}`;
+    const endBoundary = `--${boundary}--`;
+
+    // Find all boundary positions
+    let pos = 0;
+    const boundaryPositions: number[] = [];
+
+    while (true) {
+      const idx = fullText.indexOf(boundaryDelimiter, pos);
+      if (idx === -1) break;
+      boundaryPositions.push(idx);
+      pos = idx + boundaryDelimiter.length;
+    }
+
+    // Process each part between boundaries
+    for (let i = 0; i < boundaryPositions.length - 1; i++) {
+      const partStart = boundaryPositions[i] + boundaryDelimiter.length;
+      const partEnd = boundaryPositions[i + 1];
+
+      // Skip the final boundary marker
+      const partText = fullText.substring(partStart, partEnd);
+      if (partText.trim().startsWith('--')) continue;
+
+      // Find the header/body separator (\r\n\r\n)
+      const headerEndIdx = partText.indexOf('\r\n\r\n');
+      if (headerEndIdx === -1) continue;
+
+      // Parse headers
+      const headerText = partText.substring(0, headerEndIdx);
+      const headers: Record<string, string> = {};
+
+      headerText.split('\r\n').forEach(line => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
+        const colonIdx = trimmedLine.indexOf(':');
+        if (colonIdx > 0) {
+          const key = trimmedLine.substring(0, colonIdx).trim().toLowerCase();
+          const value = trimmedLine.substring(colonIdx + 1).trim();
+          headers[key] = value;
+        }
+      });
+
+      // Calculate byte offsets for binary data
+      const encoder = new TextEncoder();
+      const partStartBytes = encoder.encode(fullText.substring(0, partStart)).length;
+      const headerBytes = encoder.encode(partText.substring(0, headerEndIdx + 4)).length;
+      const dataStartBytes = partStartBytes + headerBytes;
+
+      // Get content length from header or calculate from boundaries
+      const contentLength = parseInt(headers['content-length'] || '0', 10);
+      let dataEndBytes: number;
+
+      if (contentLength > 0) {
+        dataEndBytes = dataStartBytes + contentLength;
+      } else {
+        // Calculate from next boundary position
+        dataEndBytes = encoder.encode(fullText.substring(0, partEnd)).length;
+        // Remove trailing \r\n
+        while (dataEndBytes > dataStartBytes && (uint8Array[dataEndBytes - 1] === 10 || uint8Array[dataEndBytes - 1] === 13)) {
+          dataEndBytes--;
+        }
+      }
+
+      // Extract binary data
+      const data = uint8Array.slice(dataStartBytes, dataEndBytes);
+
+      if (data.length > 0) {
+        parts.push({ headers, data });
+      }
+    }
+
+    return parts;
+  }
+
+  /**
+   * Helper to create a delay
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // =============== WATER TESTING PDF METHODS ===============

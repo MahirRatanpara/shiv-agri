@@ -1,13 +1,43 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
 const { addClassifications } = require('../utils/soilClassification');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel' // .xls
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
+    }
+  }
+});
+
 logger.info('Soil Testing routes initialized - Using referenced mode with separate collections');
 logger.info('Soil classification system enabled');
+
+// Helper function to sort samples by sample number naturally
+const sortSamplesByNumber = (samples) => {
+  return samples.sort((a, b) => {
+    const sampleA = (a.sampleNumber || '').toLowerCase();
+    const sampleB = (b.sampleNumber || '').toLowerCase();
+    return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};
 
 // All routes require authentication
 router.use(authenticate);
@@ -20,7 +50,8 @@ router.get('/sessions', requirePermission('soil.sessions.view'), async (req, res
     const sessionsWithSamples = [];
     for (const session of sessions) {
       const sessionObj = session.toObject();
-      const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+      let samples = await SoilSample.find({ sessionId: session._id });
+      samples = sortSamplesByNumber(samples);
       sessionObj.data = samples;
       sessionsWithSamples.push(sessionObj);
     }
@@ -42,7 +73,8 @@ router.get('/sessions/date/:date', requirePermission('soil.sessions.view'), asyn
     const sessionsWithSamples = [];
     for (const session of sessions) {
       const sessionObj = session.toObject();
-      const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+      let samples = await SoilSample.find({ sessionId: session._id });
+      samples = sortSamplesByNumber(samples);
       sessionObj.data = samples;
       sessionsWithSamples.push(sessionObj);
     }
@@ -77,7 +109,8 @@ router.get('/sessions/:id', requirePermission('soil.sessions.view'), async (req,
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     logger.debug(`Retrieved session ${req.params.id} with ${samples.length} samples`);
 
     const sessionObj = session.toObject();
@@ -105,7 +138,7 @@ router.post('/sessions', requirePermission('soil.sessions.create'), async (req, 
       date,
       version,
       startTime: startTime || new Date(),
-      status: 'active',
+      status: 'started',
       sampleCount: 0,
       lastActivity: new Date()
     });
@@ -139,8 +172,8 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
     // Handle endTime update
     if ('endTime' in req.body) {
       session.endTime = endTime;
-      session.status = endTime ? 'completed' : 'active';
-      logger.debug(`Session ${req.params.id} status changed to ${session.status}`);
+      // Note: Status is now managed separately via PATCH /sessions/:id/status endpoint
+      logger.debug(`Session ${req.params.id} endTime updated to ${endTime}`);
     }
 
     // Handle sample updates
@@ -180,8 +213,9 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
     const updatedSession = await session.save();
     logger.info(`Session ${req.params.id} updated successfully`);
 
-    // Fetch samples and return
-    const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    // Fetch samples and return (sorted by sample number)
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     const sessionObj = updatedSession.toObject();
     sessionObj.data = samples;
 
@@ -189,6 +223,47 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
   } catch (error) {
     logger.error(`Error updating session ${req.params.id}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: 'Failed to update session' });
+  }
+});
+
+// Update session status (state transitions)
+router.patch('/sessions/:id/status', requirePermission('soil.sessions.update'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['started', 'details', 'ready', 'completed'];
+
+    if (!status || !validStatuses.includes(status)) {
+      logger.warn(`Invalid status provided: ${status}`);
+      return res.status(400).json({ error: 'Invalid status. Must be one of: started, details, ready, completed' });
+    }
+
+    const session = await SoilSession.findById(req.params.id);
+    if (!session) {
+      logger.warn(`Session not found for status update: ${req.params.id}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const oldStatus = session.status;
+    session.status = status;
+
+    // Update endTime when completing
+    if (status === 'completed' && !session.endTime) {
+      session.endTime = new Date();
+    }
+
+    const updatedSession = await session.save();
+    logger.info(`Session ${req.params.id} status changed: ${oldStatus} → ${status}`);
+
+    // Fetch samples and return
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
+    const sessionObj = updatedSession.toObject();
+    sessionObj.data = samples;
+
+    res.json(sessionObj);
+  } catch (error) {
+    logger.error(`Error updating session status ${req.params.id}: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update session status' });
   }
 });
 
@@ -228,5 +303,181 @@ router.get('/sessions/today/count', async (req, res) => {
     res.status(500).json({ error: 'Failed to count sessions' });
   }
 });
+
+// Upload Excel file to update/append samples in a session
+router.post('/sessions/:id/upload-excel',
+  requirePermission('soil.sessions.update'),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const sessionId = req.params.id;
+
+      // Check if file was uploaded
+      if (!req.file) {
+        logger.warn('Excel upload attempted without file');
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      logger.info(`Processing Excel upload for session ${sessionId}, file size: ${req.file.size} bytes`);
+
+      // Check if session exists
+      const session = await SoilSession.findById(sessionId);
+      if (!session) {
+        logger.warn(`Session not found for Excel upload: ${sessionId}`);
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Parse Excel file
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+
+      if (!worksheet) {
+        logger.error('No worksheet found in Excel file');
+        return res.status(400).json({ error: 'No worksheet found in Excel file' });
+      }
+
+      // Get existing samples for this session
+      const existingSamples = await SoilSample.find({ sessionId });
+      const existingSamplesMap = new Map();
+      existingSamples.forEach(sample => {
+        if (sample.sampleNumber) {
+          existingSamplesMap.set(sample.sampleNumber.trim(), sample);
+        }
+      });
+
+      logger.debug(`Found ${existingSamples.length} existing samples in session`);
+
+      // Parse Excel rows (skip header row)
+      const excelData = [];
+      const errors = [];
+      let rowIndex = 0;
+
+      worksheet.eachRow((row, rowNumber) => {
+        // Skip header row
+        if (rowNumber === 1) {
+          return;
+        }
+
+        rowIndex++;
+
+        try {
+          // Extract data from Excel columns
+          // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka
+          const sampleNumber = row.getCell(1).value?.toString().trim() || '';
+          const farmersName = row.getCell(2).value?.toString().trim() || '';
+          const mobileNo = row.getCell(3).value?.toString().trim() || '';
+          const location = row.getCell(4).value?.toString().trim() || '';
+          const farmsName = row.getCell(5).value?.toString().trim() || '';
+          const taluka = row.getCell(6).value?.toString().trim() || '';
+
+          // Validate required fields
+          if (!sampleNumber) {
+            errors.push(`Row ${rowNumber}: Sample Number is required`);
+            return;
+          }
+
+          if (!farmersName) {
+            errors.push(`Row ${rowNumber}: Farmer's Name is required`);
+            return;
+          }
+
+          excelData.push({
+            sampleNumber,
+            farmersName,
+            mobileNo,
+            location,
+            farmsName,
+            taluka,
+            rowNumber
+          });
+        } catch (error) {
+          logger.error(`Error parsing row ${rowNumber}: ${error.message}`);
+          errors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      });
+
+      logger.info(`Parsed ${excelData.length} rows from Excel file`);
+
+      if (errors.length > 0) {
+        logger.warn(`Excel parsing completed with ${errors.length} errors`);
+        return res.status(400).json({
+          error: 'Some rows could not be processed',
+          details: errors,
+          processedCount: excelData.length
+        });
+      }
+
+      if (excelData.length === 0) {
+        logger.warn('No valid data found in Excel file');
+        return res.status(400).json({ error: 'No valid data found in Excel file' });
+      }
+
+      // Process each row: update existing or create new
+      let updatedCount = 0;
+      let addedCount = 0;
+
+      for (const excelRow of excelData) {
+        const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
+
+        if (existingSample) {
+          // Only update farmer details, keep test values unchanged
+          existingSample.farmersName = excelRow.farmersName;
+          existingSample.mobileNo = excelRow.mobileNo;
+          existingSample.location = excelRow.location;
+          existingSample.farmsName = excelRow.farmsName;
+          existingSample.taluka = excelRow.taluka;
+
+          await existingSample.save();
+          updatedCount++;
+
+          logger.debug(`Updated farmer details for sample: ${excelRow.sampleNumber}`);
+        } else {
+          // Create new sample
+          const newSample = new SoilSample({
+            sessionId: session._id,
+            sessionDate: session.date,
+            sessionVersion: session.version,
+            sampleNumber: excelRow.sampleNumber,
+            farmersName: excelRow.farmersName,
+            mobileNo: excelRow.mobileNo,
+            location: excelRow.location,
+            farmsName: excelRow.farmsName,
+            taluka: excelRow.taluka
+          });
+
+          await newSample.save();
+          addedCount++;
+
+          logger.debug(`Added new sample: ${excelRow.sampleNumber}`);
+        }
+      }
+
+      // Update session metadata
+      session.sampleCount = await SoilSample.countDocuments({ sessionId });
+      session.lastActivity = new Date();
+      await session.save();
+
+      logger.info(`Excel upload successful for session ${sessionId} - Updated: ${updatedCount}, Added: ${addedCount}`);
+
+      res.json({
+        success: true,
+        message: 'Excel data processed successfully',
+        updated: updatedCount,
+        added: addedCount,
+        total: updatedCount + addedCount
+      });
+
+    } catch (error) {
+      logger.error(`Error processing Excel upload: ${error.message}`, { stack: error.stack });
+
+      if (error.message.includes('Only Excel files')) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.status(500).json({ error: 'Failed to process Excel file' });
+    }
+  }
+);
 
 module.exports = router;

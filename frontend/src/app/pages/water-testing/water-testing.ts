@@ -1,5 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   ColDef,
@@ -12,6 +15,7 @@ import { WaterTestingService, Session, WaterTestingData } from '../../services/w
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
 
 @Component({
   selector: 'app-water-testing',
@@ -21,8 +25,14 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   templateUrl: './water-testing.html',
   styleUrls: ['./water-testing.css'],
 })
-export class WaterTestingComponent implements OnInit {
+export class WaterTestingComponent implements OnInit, OnDestroy {
   private gridApi!: GridApi;
+  private destroy$ = new Subject<void>();
+
+  // URL-based session tracking
+  sessionIdFromUrl: string | null = null;
+  isLoadingSession: boolean = false;
+  sessionLoadError: string | null = null;
 
   // Session Management
   currentSession: Session | null = null;
@@ -32,16 +42,41 @@ export class WaterTestingComponent implements OnInit {
   todaySessionCount: number = 0;
   isBackendConnected: boolean = false;
   isLoading: boolean = true;
+  hasSelectedRows: boolean = false;
+
+  // State Management
+  stateManager: SessionStateManager = new SessionStateManager('started');
+  readonly allStates = SessionStateManager.getAllStates();
 
   // Pagination for session history
   currentPage: number = 1;
   pageSize: number = 10;
   totalPages: number = 0;
 
-  get paginatedSessions(): Session[] {
+  // Completed sessions pagination
+  completedPage: number = 1;
+  completedPageSize: number = 10;
+  completedTotalPages: number = 0;
+  showCompletedSessions: boolean = false;
+
+  get activeSessions(): Session[] {
+    return this.allSessions.filter(s => s.status !== 'completed');
+  }
+
+  get completedSessions(): Session[] {
+    return this.allSessions.filter(s => s.status === 'completed');
+  }
+
+  get paginatedActiveSessions(): Session[] {
     const startIndex = (this.currentPage - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
-    return this.allSessions.slice(startIndex, endIndex);
+    return this.activeSessions.slice(startIndex, endIndex);
+  }
+
+  get paginatedCompletedSessions(): Session[] {
+    const startIndex = (this.completedPage - 1) * this.completedPageSize;
+    const endIndex = startIndex + this.completedPageSize;
+    return this.completedSessions.slice(startIndex, endIndex);
   }
 
   // Column Definitions
@@ -328,16 +363,37 @@ export class WaterTestingComponent implements OnInit {
   constructor(
     private waterTestingService: WaterTestingService,
     private pdfService: PdfService,
-    private toastService: ToastService
-  ) {
-
-
-  }
+    private toastService: ToastService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
-
     // Check backend connectivity first
     this.checkBackendConnection();
+
+    // Subscribe to route params for session ID
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const sessionId = params['sessionId'];
+      if (sessionId && sessionId !== this.sessionIdFromUrl) {
+        this.sessionIdFromUrl = sessionId;
+        // Only load session from URL after backend is connected and sessions are loaded
+        if (this.isBackendConnected && this.allSessions.length > 0) {
+          this.loadSessionFromUrl(sessionId);
+        }
+      } else if (!sessionId && this.sessionActive) {
+        // If navigating back to dashboard from an active session
+        this.sessionActive = false;
+        this.currentSession = null;
+        this.rowData = [];
+        this.sessionIdFromUrl = null;
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   checkBackendConnection() {
@@ -365,21 +421,187 @@ export class WaterTestingComponent implements OnInit {
     this.waterTestingService.getAllSessions().subscribe({
       next: (sessions) => {
         this.allSessions = sessions;
-        this.totalPages = Math.ceil(sessions.length / this.pageSize);
+        // Calculate pagination for active sessions
+        const activeCount = sessions.filter(s => s.status !== 'completed').length;
+        this.totalPages = Math.ceil(activeCount / this.pageSize);
+        // Calculate pagination for completed sessions
+        const completedCount = sessions.filter(s => s.status === 'completed').length;
+        this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
 
+        // If we have a session ID from URL, load it now
+        if (this.sessionIdFromUrl && !this.sessionActive) {
+          this.loadSessionFromUrl(this.sessionIdFromUrl);
+        }
       },
       error: (error) => {
-
         this.isBackendConnected = false;
       }
     });
+  }
+
+  toggleCompletedSessions() {
+    this.showCompletedSessions = !this.showCompletedSessions;
+  }
+
+  nextCompletedPage() {
+    if (this.completedPage < this.completedTotalPages) {
+      this.completedPage++;
+    }
+  }
+
+  prevCompletedPage() {
+    if (this.completedPage > 1) {
+      this.completedPage--;
+    }
+  }
+
+  getStatusLabel(status: string | undefined): string {
+    if (!status) return 'Unknown';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.label;
+  }
+
+  getStatusColor(status: string | undefined): string {
+    if (!status) return '#999';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.color;
+  }
+
+  getStatusIcon(status: string | undefined): string {
+    if (!status) return 'fa-question';
+    const stateConfig = this.stateManager.getStateConfig(status as SessionStatus);
+    return stateConfig.icon;
+  }
+
+  /**
+   * Navigate to dashboard
+   */
+  goToDashboard() {
+    this.sessionIdFromUrl = null;
+    this.sessionLoadError = null;
+    this.router.navigate(['/lab-testing/water-testing']);
+  }
+
+  /**
+   * Load a session from URL parameter
+   */
+  loadSessionFromUrl(sessionId: string) {
+    this.isLoadingSession = true;
+    this.sessionLoadError = null;
+
+    this.waterTestingService.getSession(sessionId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (session) => {
+        this.isLoadingSession = false;
+        if (session) {
+          this.resumeSession(session);
+        } else {
+          this.handleSessionNotFound(sessionId);
+        }
+      },
+      error: (error) => {
+        this.isLoadingSession = false;
+        this.handleSessionLoadError(sessionId, error);
+      }
+    });
+  }
+
+  /**
+   * Handle session not found error
+   */
+  private handleSessionNotFound(sessionId: string) {
+    this.sessionLoadError = `Session not found: ${sessionId}`;
+    this.toastService.error('Session not found. It may have been deleted.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/water-testing']);
+  }
+
+  /**
+   * Handle session load error
+   */
+  private handleSessionLoadError(sessionId: string, error: any) {
+    console.error('Error loading session:', error);
+    this.sessionLoadError = `Failed to load session: ${error.message || 'Unknown error'}`;
+    this.toastService.error('Failed to load session. Please try again.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/water-testing']);
+  }
+
+  /**
+   * Copy the session link to clipboard
+   */
+  copySessionLink(session?: Session) {
+    const targetSession = session || this.currentSession;
+    if (!targetSession?._id) {
+      this.toastService.warning('No session to share');
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const sessionUrl = `${baseUrl}/lab-testing/water-testing/session/${targetSession._id}`;
+
+    navigator.clipboard.writeText(sessionUrl).then(() => {
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    }).catch((err) => {
+      console.error('Failed to copy link:', err);
+      // Fallback for older browsers
+      this.fallbackCopyToClipboard(sessionUrl);
+    });
+  }
+
+  /**
+   * Fallback method for copying to clipboard (older browsers)
+   */
+  private fallbackCopyToClipboard(text: string) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    } catch (err) {
+      this.toastService.error('Failed to copy link. Please copy manually.');
+    }
+    document.body.removeChild(textArea);
   }
 
   resumeSession(session: Session) {
     this.currentSession = session;
     this.sessionActive = true;
     this.rowData = session.data || [];
+    this.initializeStateManager();
 
+    // Update URL to include session ID (only if not already there)
+    if (session._id && this.sessionIdFromUrl !== session._id) {
+      this.sessionIdFromUrl = session._id;
+      this.router.navigate(['/lab-testing/water-testing/session', session._id], {
+        replaceUrl: true
+      });
+    }
+
+    // Update grid editability after grid is ready
+    setTimeout(() => {
+      this.updateGridEditability();
+    }, 100);
+
+    this.toastService.success(`Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
+  }
+
+  /**
+   * Initialize state manager with current session status
+   */
+  private initializeStateManager() {
+    if (this.currentSession && this.currentSession.status) {
+      this.stateManager = new SessionStateManager(this.currentSession.status);
+    } else {
+      this.stateManager = new SessionStateManager('started');
+    }
   }
 
   nextPage() {
@@ -429,26 +651,37 @@ export class WaterTestingComponent implements OnInit {
       data: []
     };
 
-
     this.waterTestingService.createSession(newSession).subscribe({
       next: (session) => {
-
         this.currentSession = session;
         this.sessionActive = true;
         this.rowData = [];
         this.todaySessionCount = version;
+        this.initializeStateManager();
+
+        // Navigate to the session URL
+        if (session._id) {
+          this.sessionIdFromUrl = session._id;
+          this.router.navigate(['/lab-testing/water-testing/session', session._id], {
+            replaceUrl: true
+          });
+        }
       },
       error: (error) => {
-
         this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
         this.isBackendConnected = false;
       }
     });
   }
 
-  saveAndExit() {
+  // ===== STATE MANAGEMENT METHODS =====
+
+  /**
+   * Close session (save draft and exit)
+   */
+  closeSession() {
     if (!this.currentSession || !this.currentSession._id) {
-      this.toastService.show('No active session to save', 'warning');
+      this.toastService.show('No active session to close', 'warning');
       return;
     }
 
@@ -456,14 +689,11 @@ export class WaterTestingComponent implements OnInit {
     const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
 
     const updates = {
-      endTime: null as any, // Explicitly remove endTime to mark as in-progress
       data: allGridData
     };
 
-
     this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
       next: (session) => {
-
         // Update the session in allSessions array
         const index = this.allSessions.findIndex(s => s._id === session._id);
         if (index !== -1) {
@@ -475,57 +705,182 @@ export class WaterTestingComponent implements OnInit {
         this.currentSession = null;
         this.sessionActive = false;
         this.rowData = [];
+        this.sessionIdFromUrl = null;
+
+        // Navigate back to dashboard
+        this.router.navigate(['/lab-testing/water-testing']);
 
         // Reload sessions from backend to ensure sync
         this.loadSessions();
         this.loadTodaySessionCount();
+        this.toastService.success('Session saved as draft', 3000);
       },
       error: (error) => {
-
         this.toastService.show('Failed to save session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
       }
     });
   }
 
-  completeSession() {
-    if (!this.currentSession || !this.currentSession._id) {
-      this.toastService.show('No active session to complete', 'warning');
+  /**
+   * Check if an action is allowed in the current state
+   */
+  canPerformAction(action: 'addRow' | 'uploadExcel' | 'deleteSelected' | 'downloadPDFs'): boolean {
+    return this.stateManager.canPerformAction(action);
+  }
+
+  /**
+   * Get current state label
+   */
+  getCurrentStateLabel(): string {
+    return this.stateManager.getCurrentState().label;
+  }
+
+  /**
+   * Get current state icon
+   */
+  getCurrentStateIcon(): string {
+    return this.stateManager.getCurrentState().icon;
+  }
+
+  /**
+   * Get current state color
+   */
+  getCurrentStateColor(): string {
+    return this.stateManager.getCurrentState().color;
+  }
+
+  /**
+   * Get current state description
+   */
+  getCurrentStateDescription(): string {
+    return this.stateManager.getCurrentState().description;
+  }
+
+  /**
+   * Check if can move to next state
+   */
+  canMoveToNextState(): boolean {
+    return this.stateManager.getNextState() !== null;
+  }
+
+  /**
+   * Check if can move to previous state
+   */
+  canMoveToPreviousState(): boolean {
+    return this.stateManager.getPreviousState() !== null;
+  }
+
+  /**
+   * Get state progress percentage
+   */
+  getStateProgress(): number {
+    return this.stateManager.getStateProgress();
+  }
+
+  /**
+   * Check if a specific state is active
+   */
+  isStateActive(status: SessionStatus): boolean {
+    return this.currentSession?.status === status;
+  }
+
+  /**
+   * Check if a specific state is completed
+   */
+  isStateCompleted(status: SessionStatus): boolean {
+    const states: SessionStatus[] = ['started', 'details', 'ready', 'completed'];
+    const currentIndex = states.indexOf(this.currentSession?.status || 'started');
+    const targetIndex = states.indexOf(status);
+    return targetIndex < currentIndex;
+  }
+
+  /**
+   * Move to next state
+   */
+  nextState() {
+    const nextState = this.stateManager.getNextState();
+    if (!nextState || !this.currentSession || !this.currentSession._id) {
       return;
     }
 
-    // Get all row data from the grid with calculated values
-    const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
-
-    const updates = {
-      endTime: new Date().toISOString(),
-      data: allGridData
-    };
-
-
-    this.waterTestingService.updateSession(this.currentSession._id, updates).subscribe({
+    this.waterTestingService.updateSessionStatus(this.currentSession._id, nextState).subscribe({
       next: (session) => {
-
-        // Update the session in allSessions array
-        const index = this.allSessions.findIndex(s => s._id === session._id);
-        if (index !== -1) {
-          this.allSessions[index] = session;
-        } else {
-          this.allSessions.unshift(session);
-        }
-
-        this.currentSession = null;
-        this.sessionActive = false;
-        this.rowData = [];
-
-        // Reload sessions from backend to ensure sync
-        this.loadSessions();
-        this.loadTodaySessionCount();
+        this.currentSession = session;
+        this.stateManager.transitionTo(nextState);
+        this.updateGridEditability(); // Lock/unlock grid based on new state
+        this.toastService.success(`Moved to ${this.getCurrentStateLabel()} state`, 3000);
       },
       error: (error) => {
-
-        this.toastService.show('Failed to complete session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
+        this.toastService.error('Failed to update session state: ' + (error.error?.error || error.message), 4000);
       }
     });
+  }
+
+  /**
+   * Move to previous state
+   */
+  previousState() {
+    const previousState = this.stateManager.getPreviousState();
+    if (!previousState || !this.currentSession || !this.currentSession._id) {
+      return;
+    }
+
+    this.waterTestingService.updateSessionStatus(this.currentSession._id, previousState).subscribe({
+      next: (session) => {
+        this.currentSession = session;
+        this.stateManager.transitionTo(previousState);
+        this.updateGridEditability(); // Lock/unlock grid based on new state
+        this.toastService.success(`Moved to ${this.getCurrentStateLabel()} state`, 3000);
+      },
+      error: (error) => {
+        this.toastService.error('Failed to update session state: ' + (error.error?.error || error.message), 4000);
+      }
+    });
+  }
+
+  /**
+   * Get available state transitions from current state
+   */
+  getAvailableTransitions(): { status: SessionStatus; config: any }[] {
+    const currentState = this.stateManager.getCurrentState();
+    return this.allStates.filter(state =>
+      currentState.canTransitionTo.includes(state.status)
+    );
+  }
+
+  /**
+   * Transition to a specific state
+   */
+  async transitionToState(targetStatus: SessionStatus) {
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.warning('No active session');
+      return;
+    }
+
+    if (!this.stateManager.canTransitionTo(targetStatus)) {
+      this.toastService.warning('Cannot transition to this state', 3000);
+      return;
+    }
+
+    try {
+      // Save current data first
+      await this.saveCurrentSession();
+
+      // Then transition to new state
+      this.waterTestingService.updateSessionStatus(this.currentSession._id, targetStatus).subscribe({
+        next: (session) => {
+          this.currentSession = session;
+          this.stateManager.transitionTo(targetStatus);
+          this.updateGridEditability(); // Lock/unlock grid based on new state
+          this.toastService.success(`Moved to ${this.getCurrentStateLabel()} state`, 3000);
+        },
+        error: (error) => {
+          this.toastService.error('Failed to update session state', 4000);
+        }
+      });
+    } catch (error) {
+      this.toastService.error('Failed to save session data');
+    }
   }
 
   getTodaySessionCount(): number {
@@ -548,6 +903,32 @@ export class WaterTestingComponent implements OnInit {
 
     // Ensure grid can scroll horizontally
     params.api.sizeColumnsToFit();
+
+    // Update grid editability based on current state
+    this.updateGridEditability();
+  }
+
+  /**
+   * Update grid editability based on current state
+   */
+  updateGridEditability() {
+    if (!this.gridApi) return;
+
+    const canEdit = this.stateManager.canPerformAction('editData');
+
+    // Update all column definitions to enable/disable editing
+    const updatedColDefs = this.colDefs.map(col => {
+      // Skip columns that should never be editable (calculated fields, actions, checkboxes)
+      if (col.valueGetter || col.cellRenderer || col.checkboxSelection) {
+        return col;
+      }
+
+      // For all user input columns, set editable based on current state
+      return { ...col, editable: canEdit };
+    });
+
+    this.colDefs = updatedColDefs;
+    this.gridApi.setGridOption('columnDefs', this.colDefs);
   }
 
   onCellValueChanged(event: CellValueChangedEvent) {
@@ -585,6 +966,11 @@ export class WaterTestingComponent implements OnInit {
 
     // Auto-resize the column that was edited
     event.api.autoSizeColumns([colId], false);
+  }
+
+  onSelectionChanged() {
+    const selectedRows = this.gridApi.getSelectedRows();
+    this.hasSelectedRows = selectedRows.length > 0;
   }
 
   addNewRow() {
@@ -636,12 +1022,6 @@ export class WaterTestingComponent implements OnInit {
       this.gridApi.applyTransaction({ remove: selectedRows });
 
     }
-  }
-
-  exportToCsv() {
-    this.gridApi.exportDataAsCsv({
-      fileName: `water-testing-${new Date().toISOString().split('T')[0]}.csv`,
-    });
   }
 
   /**
@@ -763,67 +1143,209 @@ export class WaterTestingComponent implements OnInit {
   }
 
   /**
-   * Download all PDFs individually (one by one with delay)
+   * Download all PDFs using streaming with progress widget
    */
   async downloadAllPdfs() {
+    if (this.rowData.length === 0) {
+      this.toastService.warning('⚠️ No data available to generate reports');
+      return;
+    }
+
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.warning('⚠️ Please save the session first before generating PDFs');
+      return;
+    }
+
     try {
-      if (this.rowData.length === 0) {
-        this.toastService.warning('⚠️ No data available to generate reports');
-        return;
-      }
-
-      if (!this.currentSession || !this.currentSession._id) {
-        this.toastService.warning('⚠️ Please save the session first before generating PDFs');
-        return;
-      }
-
-      const totalReports = this.rowData.length;
-      this.toastService.info(`📄 Generating ${totalReports} water reports... Please wait`, 0);
-
-
       await this.saveCurrentSession();
 
-      await this.pdfService.downloadBulkWaterPDFs(this.currentSession._id);
+      // Use streaming endpoint - progress is handled by the download progress widget
+      await this.pdfService.streamBulkWaterPDFs(this.currentSession._id);
 
-      this.toastService.clear();
-      this.toastService.success(`✅ All ${totalReports} water reports downloaded successfully!`, 5000);
     } catch (error) {
+      console.error('Error downloading PDFs:', error);
+      // Error is already handled by the progress widget
+    }
+  }
 
-      this.toastService.clear();
-      this.toastService.error('❌ Failed to generate all reports. Some reports may not have been downloaded.', 6000);
+  // ===== EXCEL UPLOAD METHODS =====
+
+  /**
+   * Handle Excel file selection
+   */
+  onExcelFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+    this.uploadExcelFile(file);
+
+    // Reset input so the same file can be selected again
+    input.value = '';
+  }
+
+  /**
+   * Upload Excel file and update/append data to grid
+   */
+  private async uploadExcelFile(file: File) {
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.error('Please start a session before uploading Excel file', 4000);
+      return;
+    }
+
+    // Validate file type
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    if (!validTypes.includes(file.type)) {
+      this.toastService.error('Please upload a valid Excel file (.xlsx or .xls)', 4000);
+      return;
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      this.toastService.error('File size must be less than 5MB', 4000);
+      return;
+    }
+
+    this.toastService.info('📤 Processing Excel file...', 3000);
+
+    try {
+      // Read and parse Excel file using xlsx library
+      const XLSX = await import('xlsx');
+      const reader = new FileReader();
+
+      reader.onload = async (e: any) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+
+          if (jsonData.length < 2) {
+            this.toastService.error('Excel file is empty or has no data rows', 4000);
+            return;
+          }
+
+          // Parse Excel data (skip header row)
+          const excelRows = [];
+          for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (!row[0]) continue; // Skip if no sample number
+
+            excelRows.push({
+              sampleNumber: row[0]?.toString().trim() || '',
+              farmersName: row[1]?.toString().trim() || '',
+              mobileNo: row[2]?.toString().trim() || '',
+              location: row[3]?.toString().trim() || '',
+              farmsName: row[4]?.toString().trim() || '',
+              taluka: row[5]?.toString().trim() || '',
+              boreWellType: row[6]?.toString().trim() || ''
+            });
+          }
+
+          if (excelRows.length === 0) {
+            this.toastService.error('No valid data found in Excel file', 4000);
+            return;
+          }
+
+          // Create a map of existing samples by sample number
+          const existingSamplesMap = new Map<string, WaterTestingData>();
+          this.rowData.forEach(sample => {
+            if (sample.sampleNumber) {
+              existingSamplesMap.set(sample.sampleNumber.trim(), sample);
+            }
+          });
+
+          let updatedCount = 0;
+          let addedCount = 0;
+
+          // Process each Excel row
+          excelRows.forEach(excelRow => {
+            const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
+
+            if (existingSample) {
+              // Only update farmer details, keep test values unchanged
+              existingSample.farmersName = excelRow.farmersName;
+              existingSample.mobileNo = excelRow.mobileNo;
+              existingSample.location = excelRow.location;
+              existingSample.farmsName = excelRow.farmsName;
+              existingSample.taluka = excelRow.taluka;
+              existingSample.boreWellType = excelRow.boreWellType;
+
+              updatedCount++;
+            } else {
+              // Add new sample
+              const newSample: WaterTestingData = {
+                sampleNumber: excelRow.sampleNumber,
+                farmersName: excelRow.farmersName,
+                mobileNo: excelRow.mobileNo,
+                location: excelRow.location,
+                farmsName: excelRow.farmsName,
+                taluka: excelRow.taluka,
+                boreWellType: excelRow.boreWellType,
+                ph: null,
+                ec: null,
+                caMgBlank: null,
+                caMgStart: null,
+                caMgEnd: null,
+                classification: '',
+                co3Hco3: null,
+                finalDeduction: ''
+              };
+              this.rowData.push(newSample);
+              addedCount++;
+            }
+          });
+
+          // Sort samples by sample number in ascending order
+          this.rowData.sort((a, b) => {
+            const sampleA = a.sampleNumber?.toLowerCase() || '';
+            const sampleB = b.sampleNumber?.toLowerCase() || '';
+            return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
+          // Refresh the grid
+          this.gridApi.setGridOption('rowData', this.rowData);
+
+          // Save to backend
+          await this.saveCurrentSession();
+
+          this.toastService.success(
+            `✅ Excel imported successfully! Updated: ${updatedCount}, Added: ${addedCount}`,
+            5000
+          );
+
+        } catch (error) {
+          console.error('Error parsing Excel file:', error);
+          this.toastService.error('Failed to parse Excel file. Please check the format.', 5000);
+        }
+      };
+
+      reader.onerror = () => {
+        this.toastService.error('Failed to read Excel file', 4000);
+      };
+
+      reader.readAsArrayBuffer(file);
+
+    } catch (error) {
+      console.error('Error uploading Excel:', error);
+      this.toastService.error('Failed to upload Excel file. Please try again.', 4000);
     }
   }
 
   /**
-   * Download all data as a single combined PDF
+   * Trigger file input click
    */
-  async downloadCombinedPdf() {
-    try {
-      if (this.rowData.length === 0) {
-        this.toastService.warning('⚠️ No data available to generate reports');
-        return;
-      }
-
-      if (!this.currentSession || !this.currentSession._id) {
-        this.toastService.warning('⚠️ Please save the session first before generating PDFs');
-        return;
-      }
-
-      const totalReports = this.rowData.length;
-      this.toastService.info(`📄 Creating combined PDF with ${totalReports} reports... Please wait`, 0);
-
-
-      await this.saveCurrentSession();
-
-      const filename = `પાણી ચકાસણી - Combined_${this.currentSession.date}_v${this.currentSession.version}.pdf`;
-      await this.pdfService.downloadCombinedWaterSessionPDF(this.currentSession._id, filename);
-
-      this.toastService.clear();
-      this.toastService.success(`✅ Combined water report with ${totalReports} samples downloaded successfully!`, 5000);
-    } catch (error) {
-
-      this.toastService.clear();
-      this.toastService.error('❌ Failed to generate combined PDF. Please try again.', 5000);
+  triggerExcelUpload() {
+    const fileInput = document.getElementById('waterExcelFileInput') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
     }
   }
+
 }

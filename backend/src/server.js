@@ -14,7 +14,8 @@ connectDB();
 // Middleware
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:4200',
-  credentials: true
+  credentials: true,
+  exposedHeaders: ['X-Total-Count', 'Content-Disposition']
 }));
 app.use(cookieParser());
 app.use(express.json());

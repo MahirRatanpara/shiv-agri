@@ -57,7 +57,7 @@ export interface Session {
   version: number;
   startTime: string;
   endTime?: string;
-  status?: 'active' | 'completed' | 'archived'; // New field
+  status?: 'started' | 'details' | 'ready' | 'completed'; // Session lifecycle status
   sampleCount?: number; // New field - denormalized count
   lastActivity?: string; // New field - tracks when session was last modified
   data: SoilTestingData[]; // Populated from SoilTestSample collection
@@ -123,6 +123,11 @@ export class SoilTestingService {
   updateSession(id: string, updates: { endTime?: string; data?: SoilTestingData[] }): Observable<Session> {
 
     return this.http.put<Session>(`${this.apiUrl}/sessions/${id}`, updates);
+  }
+
+  // Update session status (state transitions)
+  updateSessionStatus(id: string, status: 'started' | 'details' | 'ready' | 'completed'): Observable<Session> {
+    return this.http.patch<Session>(`${this.apiUrl}/sessions/${id}/status`, { status });
   }
 
   // Delete a session

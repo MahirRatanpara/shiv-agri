@@ -1,6 +1,6 @@
 <div class="water-testing-container">
-  <!-- Page Header -->
-  <div class="page-header">
+  <!-- Page Header - Hidden during active session -->
+  <div class="page-header" *ngIf="!sessionActive">
     <div class="container">
       <div class="header-content">
         <div class="title-section">
@@ -22,6 +22,26 @@
         <h2><i class="fas fa-spinner fa-spin"></i> Connecting to Backend...</h2>
         <p>Please wait while we connect to the server</p>
       </div>
+    </div>
+
+    <!-- Loading Session from URL -->
+    <div class="session-card" *ngIf="isLoadingSession && !sessionActive">
+      <div class="session-info">
+        <h2><i class="fas fa-spinner fa-spin"></i> Loading Session...</h2>
+        <p>Please wait while we load your session</p>
+      </div>
+    </div>
+
+    <!-- Session Load Error -->
+    <div class="session-card error-card" *ngIf="sessionLoadError && !sessionActive && !isLoadingSession">
+      <div class="session-info">
+        <h2><i class="fas fa-exclamation-triangle"></i> Session Error</h2>
+        <p class="error-message">{{ sessionLoadError }}</p>
+      </div>
+      <button class="btn btn-primary btn-lg" (click)="goToDashboard()">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </button>
     </div>
 
     <!-- Backend Disconnected State -->
@@ -54,18 +74,83 @@
         </button>
       </div>
 
-      <!-- Session History -->
+      <!-- Active Sessions -->
       <div class="session-history-card">
         <div class="history-header">
           <h3>
-            <i class="fas fa-history"></i>
-            Session History
+            <i class="fas fa-tasks"></i>
+            Active Sessions
           </h3>
-          <span class="session-count">{{ allSessions.length }} total sessions</span>
+          <span class="session-count">{{ activeSessions.length }} active</span>
         </div>
 
-        <div class="sessions-list" *ngIf="allSessions.length > 0">
-          <div class="session-item" *ngFor="let session of paginatedSessions">
+        <div class="sessions-list" *ngIf="activeSessions.length > 0">
+          <div class="session-item" *ngFor="let session of paginatedActiveSessions">
+            <div class="session-main-info">
+              <div class="session-badge-info">
+                <span class="session-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ session.date | date:'mediumDate' }}
+                </span>
+                <span class="session-version">Version {{ session.version }}</span>
+              </div>
+              <div class="session-metadata">
+                <span class="session-time">
+                  <i class="fas fa-clock"></i>
+                  {{ session.startTime | date:'shortTime' }}
+                </span>
+                <span class="session-records">
+                  <i class="fas fa-database"></i>
+                  {{ session.data.length || 0 }} records
+                </span>
+                <span class="session-status-badge" [style.background-color]="getStatusColor(session.status)">
+                  <i class="fas {{ getStatusIcon(session.status) }}"></i>
+                  {{ getStatusLabel(session.status) }}
+                </span>
+              </div>
+            </div>
+            <div class="session-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)" title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
+              <button class="btn btn-sm btn-info" (click)="resumeSession(session)">
+                <i class="fas fa-play"></i>
+                Resume
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="activeSessions.length === 0">
+          <i class="fas fa-check-double"></i>
+          <p>No active sessions</p>
+          <p class="empty-hint">All sessions are completed or start a new one</p>
+        </div>
+
+        <!-- Pagination for Active Sessions -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Completed Sessions Dropdown -->
+      <div class="completed-sessions-card" *ngIf="completedSessions.length > 0">
+        <div class="completed-header" (click)="toggleCompletedSessions()">
+          <div class="completed-title">
+            <i class="fas fa-archive"></i>
+            <span>Completed Sessions ({{ completedSessions.length }})</span>
+          </div>
+          <i class="fas" [class.fa-chevron-down]="!showCompletedSessions" [class.fa-chevron-up]="showCompletedSessions"></i>
+        </div>
+
+        <div class="completed-sessions-list" *ngIf="showCompletedSessions">
+          <div class="session-item" *ngFor="let session of paginatedCompletedSessions">
             <div class="session-main-info">
               <div class="session-badge-info">
                 <span class="session-date">
@@ -84,97 +169,146 @@
                   <i class="fas fa-database"></i>
                   {{ session.data.length || 0 }} records
                 </span>
-                <span class="session-status" [ngClass]="session.endTime ? 'completed' : 'in-progress'">
-                  <i [class]="session.endTime ? 'fas fa-check-circle' : 'fas fa-circle'"></i>
-                  {{ session.endTime ? 'Completed' : 'In Progress' }}
+                <span class="session-status-badge completed-badge">
+                  <i class="fas fa-flag-checkered"></i>
+                  Completed
                 </span>
               </div>
             </div>
             <div class="session-actions">
-              <button class="btn btn-sm btn-info" (click)="resumeSession(session)">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)" title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
+              <button class="btn btn-sm btn-secondary" (click)="resumeSession(session)">
                 <i class="fas fa-eye"></i>
-                View/Resume
+                View
               </button>
             </div>
           </div>
-        </div>
 
-        <div class="empty-state" *ngIf="allSessions.length === 0">
-          <i class="fas fa-inbox"></i>
-          <p>No sessions found</p>
-          <p class="empty-hint">Click "Start New Session" to create your first session</p>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination" *ngIf="totalPages > 1">
-          <button class="pagination-btn" (click)="prevPage()" [disabled]="currentPage === 1">
-            <i class="fas fa-chevron-left"></i>
-          </button>
-          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">
-            <i class="fas fa-chevron-right"></i>
-          </button>
+          <!-- Pagination for Completed Sessions -->
+          <div class="pagination" *ngIf="completedTotalPages > 1">
+            <button class="pagination-btn" (click)="prevCompletedPage()" [disabled]="completedPage === 1">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="page-info">Page {{ completedPage }} of {{ completedTotalPages }}</span>
+            <button class="pagination-btn" (click)="nextCompletedPage()" [disabled]="completedPage === completedTotalPages">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Active Session Header -->
-    <div class="active-session-header" *ngIf="sessionActive">
-      <div class="session-badge">
-        <i class="fas fa-circle pulse-icon"></i>
-        <span>Active Session</span>
-      </div>
-      <div class="session-metadata">
-        <span class="session-date" *ngIf="currentSession">
-          <i class="fas fa-calendar"></i>
-          {{ getFormattedDate(currentSession.date) }}
+    <!-- Compact Active Session Bar -->
+    <div class="compact-session-bar" *ngIf="sessionActive">
+      <div class="session-info-compact">
+        <span class="session-badge-compact">
+          <i class="fas fa-circle pulse-icon"></i>
+          Active Session
         </span>
-        <span class="session-version">
-          <i class="fas fa-hashtag"></i>
-          Version {{ currentSession?.version }}
+        <span class="session-meta-compact">
+          {{ currentSession?.date | date:'mediumDate' }} • v{{ currentSession?.version }}
         </span>
-        <span class="session-time">
-          <i class="fas fa-clock"></i>
-          Started: {{ currentSession?.startTime | date:'short' }}
-        </span>
-      </div>
-      <div class="session-actions-header">
-        <button *hasPermission="'water.sessions.update'" class="btn btn-warning" (click)="saveAndExit()">
-          <i class="fas fa-save"></i>
-          Save & Exit
-        </button>
-        <button *hasPermission="'water.sessions.update'" class="btn btn-success" (click)="completeSession()">
-          <i class="fas fa-check-circle"></i>
-          Complete Session
+        <!-- Copy Link Button -->
+        <button
+          class="btn-copy-link-compact"
+          (click)="copySessionLink()"
+          title="Copy session link to clipboard">
+          <i class="fas fa-link"></i>
+          <span class="copy-link-text">Copy Link</span>
         </button>
       </div>
+
+      <!-- Compact State Navigation -->
+      <div class="state-nav-compact">
+        <span class="current-state-chip" [style.background-color]="getCurrentStateColor()">
+          <i class="fas {{ getCurrentStateIcon() }}"></i>
+          {{ getCurrentStateLabel() }}
+        </span>
+
+        <!-- Available State Transitions -->
+        <div class="available-states" *hasPermission="'water.sessions.update'">
+          <span class="transition-label">Move to:</span>
+          <button
+            *ngFor="let state of getAvailableTransitions()"
+            class="state-chip"
+            [style.background-color]="state.config.color"
+            (click)="transitionToState(state.status)"
+            [title]="state.config.description">
+            <i class="fas {{ state.config.icon }}"></i>
+            {{ state.config.label }}
+          </button>
+          <span class="no-transitions" *ngIf="getAvailableTransitions().length === 0">
+            No more transitions available
+          </span>
+        </div>
+      </div>
+
+      <!-- Close Button -->
+      <button
+        *hasPermission="'water.sessions.update'"
+        class="btn-close-compact"
+        (click)="closeSession()"
+        title="Save and close session">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
 
     <!-- Toolbar -->
     <div class="toolbar" *ngIf="sessionActive">
       <div class="toolbar-left">
-        <button *hasPermission="'water.samples.create'" class="btn btn-primary" (click)="addNewRow()">
-          <i class="fas fa-plus"></i>
-          Add Row
-        </button>
-        <button *hasPermission="'water.samples.delete'" class="btn btn-danger" (click)="deleteSelectedRows()">
-          <i class="fas fa-trash"></i>
-          Delete Selected
-        </button>
+        <!-- Add Row - Only in Started and Details states -->
+        <ng-container *ngIf="canPerformAction('addRow')">
+          <button
+            *hasPermission="'water.samples.create'"
+            class="btn btn-primary"
+            (click)="addNewRow()">
+            <i class="fas fa-plus"></i>
+            Add Row
+          </button>
+        </ng-container>
+
+        <!-- Upload Excel - Only in Details state -->
+        <ng-container *ngIf="canPerformAction('uploadExcel')">
+          <button
+            *hasPermission="'water.sessions.update'"
+            class="btn btn-success"
+            (click)="triggerExcelUpload()">
+            <i class="fas fa-file-excel"></i>
+            Upload Excel
+          </button>
+        </ng-container>
+
+        <!-- Delete Selected - Only in Started and Details states -->
+        <ng-container *ngIf="canPerformAction('deleteSelected') && hasSelectedRows">
+          <button *hasPermission="'water.samples.delete'" class="btn btn-danger" (click)="deleteSelectedRows()">
+            <i class="fas fa-trash"></i>
+            Delete Selected
+          </button>
+        </ng-container>
+
+        <!-- Hidden file input for Excel upload -->
+        <input
+          type="file"
+          id="waterExcelFileInput"
+          accept=".xlsx,.xls"
+          (change)="onExcelFileSelected($event)"
+          style="display: none;"
+        />
       </div>
+
       <div class="toolbar-right">
-        <button *hasPermission="'water.samples.view'" class="btn btn-info" (click)="exportToCsv()">
-          <i class="fas fa-file-csv"></i>
-          Export to CSV
-        </button>
-        <button *hasPermission="'water.reports.download'" class="btn btn-pdf" (click)="downloadAllPdfs()">
-          <i class="fas fa-file-pdf"></i>
-          Download All PDFs
-        </button>
-        <button *hasPermission="'water.reports.download'" class="btn btn-pdf-combined" (click)="downloadCombinedPdf()">
-          <i class="fas fa-file-archive"></i>
-          Download Combined PDF
-        </button>
+        <!-- Download PDFs - Only in Ready and Completed states -->
+        <ng-container *ngIf="canPerformAction('downloadPDFs')">
+          <button
+            *hasPermission="'water.reports.download'"
+            class="btn btn-pdf"
+            (click)="downloadAllPdfs()">
+            <i class="fas fa-file-pdf"></i>
+            Download All PDFs
+          </button>
+        </ng-container>
       </div>
     </div>
 
@@ -192,6 +326,7 @@
         [paginationPageSizeSelector]="[10, 20, 50, 100]"
         (gridReady)="onGridReady($event)"
         (cellValueChanged)="onCellValueChanged($event)"
+        (selectionChanged)="onSelectionChanged()"
         [enableCellChangeFlash]="true"
         [suppressMovableColumns]="false"
         [enableRangeSelection]="true"
