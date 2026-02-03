@@ -159,8 +159,9 @@ export class DownloadProgressComponent implements OnInit, OnDestroy {
 
   private startTime: number = 0;
   private completedTimes: number[] = [];
+  private autoMinimizeTimer: any;
 
-  constructor(private downloadProgressService: DownloadProgressService) {}
+  constructor(private downloadProgressService: DownloadProgressService) { }
 
   ngOnInit(): void {
     this.downloadProgressService.progress$
@@ -172,6 +173,7 @@ export class DownloadProgressComponent implements OnInit, OnDestroy {
           this.completedTimes = [];
           this.recentFiles = [];
           this.isMinimized = false;
+          if (this.autoMinimizeTimer) clearTimeout(this.autoMinimizeTimer);
         }
 
         // Track completed files for time estimation
@@ -187,11 +189,19 @@ export class DownloadProgressComponent implements OnInit, OnDestroy {
           }
         }
 
+        // Auto-minimize after 5 seconds of completion
+        if (progress.isCompleted && !this.progress?.isCompleted && !progress.hasError) {
+          this.autoMinimizeTimer = setTimeout(() => {
+            this.isMinimized = true;
+          }, 5000);
+        }
+
         this.progress = progress;
       });
   }
 
   ngOnDestroy(): void {
+    if (this.autoMinimizeTimer) clearTimeout(this.autoMinimizeTimer);
     this.destroy$.next();
     this.destroy$.complete();
   }

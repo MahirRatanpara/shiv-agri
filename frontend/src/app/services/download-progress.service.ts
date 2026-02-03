@@ -73,11 +73,12 @@ export class DownloadProgressService {
     });
 
     // Auto-hide after 5 seconds
-    setTimeout(() => {
-      if (this.progressSubject.value.isCompleted) {
-        this.reset();
-      }
-    }, 5000);
+    // Auto-hide disabled - user must close manually
+    // setTimeout(() => {
+    //   if (this.progressSubject.value.isCompleted) {
+    //     this.reset();
+    //   }
+    // }, 5000);
   }
 
   /**
