@@ -253,7 +253,10 @@ export class PdfService {
   }
 
   /**
-   * Process multipart streaming PDF response with progress tracking
+   * Process multipart streaming PDF response with progress tracking.
+   * Phase 1: Receive ALL PDFs from the stream (no file downloads during streaming).
+   * Phase 2: Download all collected PDFs one by one after stream is complete.
+   * This prevents the browser from aborting the fetch connection when download links are clicked.
    */
   private async processStreamingPDFs(
     url: string,
@@ -262,6 +265,8 @@ export class PdfService {
     onProgress?: (current: number, total: number, farmerName: string) => void
   ): Promise<void> {
     try {
+      this.downloadProgress.start(progressTitle + ' - Generating...', 0);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -278,8 +283,8 @@ export class PdfService {
       const contentType = response.headers.get('Content-Type') || '';
       const totalCount = parseInt(response.headers.get('X-Total-Count') || '0', 10);
 
-      // Start progress tracking
-      this.downloadProgress.start(progressTitle, totalCount);
+      // Update progress with actual total
+      this.downloadProgress.start(progressTitle + ' - Generating...', totalCount);
 
       // Extract boundary from Content-Type header
       const boundaryMatch = contentType.match(/boundary=(.+)/);
@@ -289,33 +294,39 @@ export class PdfService {
       }
       const boundary = boundaryMatch[1];
 
-      // Read the response as array buffer and parse multipart
+      // ---- Phase 1: Receive all PDFs from server (no downloads yet) ----
       const arrayBuffer = await response.arrayBuffer();
-      const parts = this.parseMultipartResponse(arrayBuffer, boundary);
+      const collectedPDFs = this.parseMultipartResponse(arrayBuffer, boundary);
 
-      // Download each PDF
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        const farmerName = part.headers['x-farmer-name']
-          ? decodeURIComponent(part.headers['x-farmer-name'])
-          : 'Unknown';
-        const filename = `${filePrefix} - ${farmerName}.pdf`;
+      console.log(`[PDF] Received ${collectedPDFs.length}/${totalCount} PDFs from server`);
 
-        // Create blob and download
-        const buffer = new ArrayBuffer(part.data.length);
-        new Uint8Array(buffer).set(part.data);
+      if (collectedPDFs.length === 0) {
+        this.downloadProgress.error('No PDFs received from server');
+        throw new Error('No PDFs received from server');
+      }
+
+      // ---- Phase 2: Download all PDFs one by one ----
+      this.downloadProgress.start(progressTitle, collectedPDFs.length);
+
+      for (let i = 0; i < collectedPDFs.length; i++) {
+        const pdf = collectedPDFs[i];
+        const filename = `${filePrefix} - ${pdf.farmerName}.pdf`;
+
+        // Create blob and trigger download
+        const buffer = new ArrayBuffer(pdf.data.length);
+        new Uint8Array(buffer).set(pdf.data);
         const blob = new Blob([buffer], { type: 'application/pdf' });
         this.downloadPDF(blob, filename);
 
-        // Update progress (both service and callback)
-        this.downloadProgress.update(i + 1, farmerName);
+        // Update progress
+        this.downloadProgress.update(i + 1, pdf.farmerName);
         if (onProgress) {
-          onProgress(i + 1, totalCount || parts.length, farmerName);
+          onProgress(i + 1, collectedPDFs.length, pdf.farmerName);
         }
 
-        // Small delay between downloads to avoid browser blocking
-        if (i < parts.length - 1) {
-          await this.delay(100);
+        // Delay between downloads to avoid browser blocking
+        if (i < collectedPDFs.length - 1) {
+          await this.delay(500);
         }
       }
 
@@ -330,91 +341,85 @@ export class PdfService {
   }
 
   /**
-   * Parse multipart response into individual parts
+   * Parse multipart response into individual PDF parts
    */
   private parseMultipartResponse(
     arrayBuffer: ArrayBuffer,
     boundary: string
-  ): { headers: Record<string, string>; data: Uint8Array }[] {
+  ): { farmerName: string; data: Uint8Array }[] {
     const uint8Array = new Uint8Array(arrayBuffer);
-    const decoder = new TextDecoder();
-    const parts: { headers: Record<string, string>; data: Uint8Array }[] = [];
+    const results: { farmerName: string; data: Uint8Array }[] = [];
+    const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
 
-    // Convert to string to find boundaries (only for boundary finding, not data)
-    const fullText = decoder.decode(uint8Array);
-    const boundaryDelimiter = `--${boundary}`;
-    const endBoundary = `--${boundary}--`;
-
-    // Find all boundary positions
-    let pos = 0;
+    // Find all boundary positions by scanning raw bytes
     const boundaryPositions: number[] = [];
-
-    while (true) {
-      const idx = fullText.indexOf(boundaryDelimiter, pos);
-      if (idx === -1) break;
-      boundaryPositions.push(idx);
-      pos = idx + boundaryDelimiter.length;
+    for (let i = 0; i <= uint8Array.length - boundaryBytes.length; i++) {
+      let match = true;
+      for (let j = 0; j < boundaryBytes.length; j++) {
+        if (uint8Array[i + j] !== boundaryBytes[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        boundaryPositions.push(i);
+        i += boundaryBytes.length - 1; // skip past this boundary
+      }
     }
 
-    // Process each part between boundaries
+    console.log(`[PDF] Found ${boundaryPositions.length} boundaries`);
+
+    // Process each part between consecutive boundaries
     for (let i = 0; i < boundaryPositions.length - 1; i++) {
-      const partStart = boundaryPositions[i] + boundaryDelimiter.length;
+      const partStart = boundaryPositions[i] + boundaryBytes.length;
       const partEnd = boundaryPositions[i + 1];
 
-      // Skip the final boundary marker
-      const partText = fullText.substring(partStart, partEnd);
-      if (partText.trim().startsWith('--')) continue;
+      // Find the header/body separator (\r\n\r\n) in this part
+      let headerEnd = -1;
+      for (let j = partStart; j < partEnd - 3; j++) {
+        if (uint8Array[j] === 13 && uint8Array[j+1] === 10 &&
+            uint8Array[j+2] === 13 && uint8Array[j+3] === 10) {
+          headerEnd = j;
+          break;
+        }
+      }
 
-      // Find the header/body separator (\r\n\r\n)
-      const headerEndIdx = partText.indexOf('\r\n\r\n');
-      if (headerEndIdx === -1) continue;
+      if (headerEnd === -1) continue;
 
-      // Parse headers
-      const headerText = partText.substring(0, headerEndIdx);
+      // Parse headers (text portion only)
+      const headerText = new TextDecoder().decode(uint8Array.slice(partStart, headerEnd));
       const headers: Record<string, string> = {};
-
       headerText.split('\r\n').forEach(line => {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) return;
-        const colonIdx = trimmedLine.indexOf(':');
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const colonIdx = trimmed.indexOf(':');
         if (colonIdx > 0) {
-          const key = trimmedLine.substring(0, colonIdx).trim().toLowerCase();
-          const value = trimmedLine.substring(colonIdx + 1).trim();
-          headers[key] = value;
+          headers[trimmed.substring(0, colonIdx).trim().toLowerCase()] =
+            trimmed.substring(colonIdx + 1).trim();
         }
       });
 
-      // Calculate byte offsets for binary data
-      const encoder = new TextEncoder();
-      const partStartBytes = encoder.encode(fullText.substring(0, partStart)).length;
-      const headerBytes = encoder.encode(partText.substring(0, headerEndIdx + 4)).length;
-      const dataStartBytes = partStartBytes + headerBytes;
-
-      // Get content length from header or calculate from boundaries
-      const contentLength = parseInt(headers['content-length'] || '0', 10);
-      let dataEndBytes: number;
-
-      if (contentLength > 0) {
-        dataEndBytes = dataStartBytes + contentLength;
-      } else {
-        // Calculate from next boundary position
-        dataEndBytes = encoder.encode(fullText.substring(0, partEnd)).length;
-        // Remove trailing \r\n
-        while (dataEndBytes > dataStartBytes && (uint8Array[dataEndBytes - 1] === 10 || uint8Array[dataEndBytes - 1] === 13)) {
-          dataEndBytes--;
-        }
+      // Extract binary PDF data (after \r\n\r\n, before next boundary's preceding \r\n)
+      const dataStart = headerEnd + 4;
+      let dataEnd = partEnd;
+      // Trim trailing \r\n before the next boundary
+      while (dataEnd > dataStart && (uint8Array[dataEnd - 1] === 10 || uint8Array[dataEnd - 1] === 13)) {
+        dataEnd--;
       }
 
-      // Extract binary data
-      const data = uint8Array.slice(dataStartBytes, dataEndBytes);
+      const data = uint8Array.slice(dataStart, dataEnd);
+      if (data.length === 0) continue;
 
-      if (data.length > 0) {
-        parts.push({ headers, data });
-      }
+      const farmerName = headers['x-farmer-name']
+        ? decodeURIComponent(headers['x-farmer-name'])
+        : 'Unknown';
+
+      results.push({ farmerName, data });
     }
 
-    return parts;
+    return results;
   }
+
 
   /**
    * Helper to create a delay

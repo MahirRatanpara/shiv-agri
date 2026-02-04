@@ -127,6 +127,8 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
  * Each part has headers: Content-Type, Content-Disposition, X-Farmer-Name, X-Sample-Id, X-Index, X-Total
  */
 router.post('/session/:sessionId/stream', async (req, res) => {
+  let clientDisconnected = false;
+
   try {
     const { sessionId } = req.params;
 
@@ -148,46 +150,85 @@ router.post('/session/:sessionId/stream', async (req, res) => {
     const total = samples.length;
     const boundary = `----PDFBoundary${Date.now()}`;
 
-    // Set multipart response headers
+    // Monitor client connection
+    req.on('close', () => {
+      clientDisconnected = true;
+      logger.warn(`Client disconnected during PDF streaming for session: ${sessionId}`);
+    });
+
+    // Set multipart response headers with keep-alive
     res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`);
     res.setHeader('X-Total-Count', total);
     res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Keep-Alive', 'timeout=600'); // 10 minutes
+
+    // Disable timeout for this request (large file streaming)
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000); // 10 minutes
 
     logger.info(`Starting streaming generation for ${total} PDFs`);
 
     // Use the streaming generator
     let index = 0;
     for await (const pdf of pdfGeneratorService.generateBulkPDFsStream(samples, 'soil')) {
+      // Check if client disconnected
+      if (clientDisconnected) {
+        logger.warn(`Stopping PDF generation - client disconnected at ${index}/${total}`);
+        break;
+      }
+
       const farmerName = pdf.farmerName || 'Unknown';
       const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
       const encodedFilename = encodeURIComponent(filename);
 
-      // Write multipart boundary and headers
-      res.write(`\r\n--${boundary}\r\n`);
-      res.write(`Content-Type: application/pdf\r\n`);
-      res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
-      res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
-      res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
-      res.write(`X-Index: ${index}\r\n`);
-      res.write(`X-Total: ${total}\r\n`);
-      res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
-      res.write(`\r\n`);
+      try {
+        logger.info(`[PDF Stream] Sending PDF ${index + 1}/${total}: ${farmerName} (${pdf.buffer.length} bytes)`);
 
-      // Write PDF buffer
-      res.write(pdf.buffer);
+        // Write multipart boundary and headers
+        res.write(`\r\n--${boundary}\r\n`);
+        res.write(`Content-Type: application/pdf\r\n`);
+        res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
+        res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+        res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
+        res.write(`X-Index: ${index}\r\n`);
+        res.write(`X-Total: ${total}\r\n`);
+        res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
+        res.write(`\r\n`);
 
-      index++;
-      logger.debug(`Streamed PDF ${index}/${total}: ${farmerName}`);
+        // Write PDF buffer
+        const writeSuccess = res.write(pdf.buffer);
+        if (!writeSuccess) {
+          logger.warn(`[PDF Stream] Backpressure detected, waiting for drain...`);
+          await new Promise(resolve => res.once('drain', resolve));
+        }
+
+        // Flush to ensure data is sent immediately
+        if (res.flush && typeof res.flush === 'function') {
+          res.flush();
+        }
+
+        index++;
+        logger.info(`[PDF Stream] Successfully sent PDF ${index}/${total}`);
+      } catch (writeError) {
+        logger.error(`Error writing PDF ${index}/${total}: ${writeError.message}`);
+        clientDisconnected = true;
+        break;
+      }
     }
 
-    // Write final boundary
-    res.write(`\r\n--${boundary}--\r\n`);
-    res.end();
-
-    logger.info(`Streaming completed for session: ${sessionId}, sent ${index} PDFs`);
+    // Only write final boundary if not disconnected
+    if (!clientDisconnected) {
+      res.write(`\r\n--${boundary}--\r\n`);
+      res.end();
+      logger.info(`Streaming completed for session: ${sessionId}, sent ${index}/${total} PDFs`);
+    } else {
+      logger.warn(`Streaming incomplete for session: ${sessionId}, sent ${index}/${total} PDFs before disconnect`);
+      res.end();
+    }
 
   } catch (error) {
-    logger.error(`Error streaming PDFs: ${error.message}`);
+    logger.error(`Error streaming PDFs: ${error.message}`, { stack: error.stack });
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to stream PDFs' });
     } else {
