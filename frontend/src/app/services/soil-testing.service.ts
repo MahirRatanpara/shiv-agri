@@ -84,7 +84,7 @@ export interface SamplePaginationResponse {
 export class SoilTestingService {
   private apiUrl = `${environment.apiUrl}/soil-testing`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Get all sessions
   getAllSessions(): Observable<Session[]> {
@@ -186,13 +186,31 @@ export class SoilTestingService {
   }
 
   /**
-   * Bulk delete samples
+   * Bulk update samples (upsert)
    * @param sessionId - The session ID
-   * @param sampleIds - Array of sample IDs to delete
+   * @param samples - Array of samples to update/insert
    */
+  bulkUpdateSamples(sessionId: string, samples: SoilTestingData[]): Observable<{ message: string; count: number }> {
+    return this.http.patch<{ message: string; count: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+      samples
+    });
+  }
+
   deleteSamplesBulk(sessionId: string, sampleIds: string[]): Observable<{ message: string; deletedCount: number }> {
     return this.http.delete<{ message: string; deletedCount: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
       body: { sampleIds }
     });
+  }
+
+  /**
+   * Upload Excel file for session
+   */
+  uploadExcel(sessionId: string, file: File): Observable<{ message: string; updated: number; added: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ message: string; updated: number; added: number }>(
+      `${this.apiUrl}/sessions/${sessionId}/upload-excel`,
+      formData
+    );
   }
 }

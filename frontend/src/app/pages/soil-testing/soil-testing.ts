@@ -49,9 +49,15 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   readonly allStates = SessionStateManager.getAllStates();
 
   // Pagination for session history
-  currentPage: number = 1;
-  pageSize: number = 10;
+  historyPage: number = 1;
+  historyPageSize: number = 10;
   totalPages: number = 0;
+
+  // Infinite Scroll State
+  gridCurrentPage: number = 1;
+  gridPageSize: number = 20;
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
 
   // Completed sessions pagination
   completedPage: number = 1;
@@ -68,8 +74,8 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   }
 
   get paginatedActiveSessions(): Session[] {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
+    const startIndex = (this.historyPage - 1) * this.historyPageSize;
+    const endIndex = startIndex + this.historyPageSize;
     return this.activeSessions.slice(startIndex, endIndex);
   }
 
@@ -341,7 +347,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
     private toastService: ToastService,
     private route: ActivatedRoute,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Check backend connectivity first
@@ -398,7 +404,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
         this.allSessions = sessions;
         // Calculate pagination for active sessions
         const activeCount = sessions.filter(s => s.status !== 'completed').length;
-        this.totalPages = Math.ceil(activeCount / this.pageSize);
+        this.totalPages = Math.ceil(activeCount / this.historyPageSize);
         // Calculate pagination for completed sessions
         const completedCount = sessions.filter(s => s.status === 'completed').length;
         this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
@@ -449,20 +455,20 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   }
 
   nextPage() {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage++;
+    if (this.historyPage < this.totalPages) {
+      this.historyPage++;
     }
   }
 
   prevPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
+    if (this.historyPage > 1) {
+      this.historyPage--;
     }
   }
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
+      this.historyPage = page;
     }
   }
 
@@ -849,8 +855,13 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   resumeSession(session: Session) {
     this.currentSession = session;
     this.sessionActive = true;
-    this.rowData = session.data || [];
+    this.rowData = []; // Start empty, load paginated
     this.hasSelectedRows = false;
+
+    // Reset infinite scroll state
+    this.gridCurrentPage = 1;
+    this.hasMoreData = true;
+    this.isLoadingMore = false;
 
     // Initialize state manager with current status
     this.initializeStateManager();
@@ -863,12 +874,77 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       });
     }
 
+    // Load first page of data
+    if (session._id) {
+      this.loadMoreSamples();
+    }
+
     // Update grid editability after grid is ready
     setTimeout(() => {
       this.updateGridEditability();
     }, 100);
 
     this.toastService.success(`Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
+  }
+
+  /**
+   * Load next page of samples
+   */
+  loadMoreSamples() {
+    if (this.isLoadingMore || !this.hasMoreData || !this.currentSession?._id) return;
+
+    this.isLoadingMore = true;
+
+    this.soilTestingService.getSamplesForSession(
+      this.currentSession._id,
+      this.gridCurrentPage,
+      this.gridPageSize
+    ).subscribe({
+      next: (response) => {
+        const newSamples = response.samples;
+
+        if (newSamples.length < this.gridPageSize) {
+          this.hasMoreData = false;
+        }
+
+        if (this.gridCurrentPage === 1) {
+          this.rowData = newSamples;
+          if (this.gridApi) {
+            this.gridApi.setGridOption('rowData', this.rowData);
+          }
+        } else {
+          // Append new samples
+          this.rowData = [...this.rowData, ...newSamples];
+          if (this.gridApi) {
+            this.gridApi.applyTransaction({ add: newSamples });
+          }
+        }
+
+        this.gridCurrentPage++;
+        this.isLoadingMore = false;
+      },
+      error: (err) => {
+        console.error('Error loading samples', err);
+        this.isLoadingMore = false;
+        this.toastService.error('Failed to load more samples');
+      }
+    });
+  }
+
+  /**
+   * Handle grid body scroll for infinite loading
+   */
+  onBodyScroll(event: any) {
+    if (event.direction === 'vertical') {
+      const api = event.api;
+      const lastDisplayedRow = api.getLastDisplayedRow();
+      const totalRows = api.getDisplayedRowCount();
+
+      // If user scrolled near the bottom (last 5 rows), load more
+      if (lastDisplayedRow >= totalRows - 5) {
+        this.loadMoreSamples();
+      }
+    }
   }
 
   getTodaySessionCount(): number {
@@ -1000,15 +1076,32 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   deleteSelectedRows() {
     const selectedRows = this.gridApi.getSelectedRows();
     if (selectedRows.length > 0) {
-      // Remove from rowData array
+      if (!confirm(`Delete ${selectedRows.length} rows?`)) return;
+
+      const idsToDelete = selectedRows.map(r => r._id).filter(id => !!id) as string[];
+
+      // If we have IDs, delete from backend
+      if (idsToDelete.length > 0 && this.currentSession?._id) {
+        this.soilTestingService.deleteSamplesBulk(this.currentSession._id, idsToDelete).subscribe({
+          next: () => {
+            this.toastService.success(`Deleted ${idsToDelete.length} rows`);
+          },
+          error: () => this.toastService.error('Failed to delete rows')
+        });
+      }
+
+      // Always remove from grid
+      this.gridApi.applyTransaction({ remove: selectedRows });
+
+      // Also remove from rowData array to keep sync
       selectedRows.forEach(row => {
         const index = this.rowData.indexOf(row);
         if (index > -1) {
           this.rowData.splice(index, 1);
         }
       });
-      this.gridApi.applyTransaction({ remove: selectedRows });
 
+      this.hasSelectedRows = false;
     }
   }
 
@@ -1054,7 +1147,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Save current session data silently (without exiting)
+   * Save current session data silently (or with refresh)
    */
   private async saveCurrentSession(): Promise<void> {
     if (!this.currentSession || !this.currentSession._id) {
@@ -1063,21 +1156,30 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
     const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
 
-    const updates = {
-      data: allGridData
-    };
+    if (allGridData.length === 0) {
+      return Promise.resolve();
+    }
 
     return new Promise((resolve, reject) => {
-      this.soilTestingService.updateSession(this.currentSession!._id!, updates).subscribe({
-        next: (session) => {
+      this.soilTestingService.bulkUpdateSamples(this.currentSession!._id!, allGridData).subscribe({
+        next: (response) => {
+          // After save, we should refresh the data to ensure we have IDs for new rows
+          // and correct calculations from backend if any
 
-          // Update current session with saved data
-          this.currentSession = session;
-          this.rowData = session.data || [];
+          // Note: If we just saved, we might want to keep the user's scroll position?
+          // For now, refreshing the list is safest to sync IDs.
+
+          this.rowData = [];
+          this.gridCurrentPage = 1;
+          this.hasMoreData = true;
+          this.isLoadingMore = false;
+
+          // Reload
+          this.loadMoreSamples();
+
           resolve();
         },
         error: (error) => {
-
           reject(error);
         }
       });
@@ -1196,7 +1298,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Upload Excel file and update/append data to grid
+   * Upload Excel file and update/append data to grid (Server Side)
    */
   private async uploadExcelFile(file: File) {
     if (!this.currentSession || !this.currentSession._id) {
@@ -1224,126 +1326,27 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
     this.toastService.info('📤 Processing Excel file...', 3000);
 
     try {
-      // Read and parse Excel file using xlsx library
-      const XLSX = await import('xlsx');
-      const reader = new FileReader();
-
-      reader.onload = async (e: any) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
-
-          if (jsonData.length < 2) {
-            this.toastService.error('Excel file is empty or has no data rows', 4000);
-            return;
-          }
-
-          // Parse Excel data (skip header row)
-          const excelRows = [];
-          for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (!row[0]) continue; // Skip if no sample number
-
-            excelRows.push({
-              sampleNumber: row[0]?.toString().trim() || '',
-              farmersName: row[1]?.toString().trim() || '',
-              mobileNo: row[2]?.toString().trim() || '',
-              location: row[3]?.toString().trim() || '',
-              farmsName: row[4]?.toString().trim() || '',
-              taluka: row[5]?.toString().trim() || ''
-            });
-          }
-
-          if (excelRows.length === 0) {
-            this.toastService.error('No valid data found in Excel file', 4000);
-            return;
-          }
-
-          // Create a map of existing samples by sample number
-          const existingSamplesMap = new Map<string, SoilTestingData>();
-          this.rowData.forEach(sample => {
-            if (sample.sampleNumber) {
-              existingSamplesMap.set(sample.sampleNumber.trim(), sample);
-            }
-          });
-
-          let updatedCount = 0;
-          let addedCount = 0;
-
-          // Process each Excel row
-          excelRows.forEach(excelRow => {
-            const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
-
-            if (existingSample) {
-              // Only update farmer details, keep test values unchanged
-              existingSample.farmersName = excelRow.farmersName;
-              existingSample.mobileNo = excelRow.mobileNo;
-              existingSample.location = excelRow.location;
-              existingSample.farmsName = excelRow.farmsName;
-              existingSample.taluka = excelRow.taluka;
-
-              updatedCount++;
-            } else {
-              // Add new sample
-              const newSample: SoilTestingData = {
-                sampleNumber: excelRow.sampleNumber,
-                farmersName: excelRow.farmersName,
-                mobileNo: excelRow.mobileNo,
-                location: excelRow.location,
-                farmsName: excelRow.farmsName,
-                taluka: excelRow.taluka,
-                ph: null,
-                ec: null,
-                ocBlank: null,
-                ocStart: null,
-                ocEnd: null,
-                p2o5R: null,
-                k2oR: null,
-                p2o5: null,
-                k2o: null,
-                cropName: '',
-                finalDeduction: ''
-              };
-              this.rowData.push(newSample);
-              addedCount++;
-            }
-          });
-
-          // Sort samples by sample number in ascending order
-          this.rowData.sort((a, b) => {
-            const sampleA = a.sampleNumber?.toLowerCase() || '';
-            const sampleB = b.sampleNumber?.toLowerCase() || '';
-            return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
-          });
-
-          // Refresh the grid
-          this.gridApi.setGridOption('rowData', this.rowData);
-
-          // Save to backend
-          await this.saveCurrentSession();
-
+      this.soilTestingService.uploadExcel(this.currentSession._id, file).subscribe({
+        next: (response) => {
           this.toastService.success(
-            `✅ Excel imported successfully! Updated: ${updatedCount}, Added: ${addedCount}`,
+            `✅ Excel imported successfully! Updated: ${response.updated}, Added: ${response.added}`,
             5000
           );
 
-        } catch (error) {
-          console.error('Error parsing Excel file:', error);
-          this.toastService.error('Failed to parse Excel file. Please check the format.', 5000);
+          // Refresh data (clear and reload)
+          this.rowData = [];
+          this.gridCurrentPage = 1;
+          this.hasMoreData = true;
+          this.isLoadingMore = false;
+          this.loadMoreSamples();
+        },
+        error: (error) => {
+          console.error('Error uploading Excel:', error);
+          this.toastService.error(error.error?.error || 'Failed to upload Excel file');
         }
-      };
-
-      reader.onerror = () => {
-        this.toastService.error('Failed to read Excel file', 4000);
-      };
-
-      reader.readAsArrayBuffer(file);
-
+      });
     } catch (error) {
-      console.error('Error uploading Excel:', error);
-      this.toastService.error('Failed to upload Excel file. Please try again.', 4000);
+      this.toastService.error('Failed to initiate upload');
     }
   }
 

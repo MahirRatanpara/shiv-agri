@@ -552,6 +552,132 @@ router.post('/sessions/:sessionId/pdf-combined', async (req, res) => {
   }
 });
 
+// Get paginated samples for a session
+router.get('/sessions/:sessionId/samples', requirePermission('water.sessions.view'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const samples = await WaterSample.find({ sessionId })
+      .sort({ createdAt: 1 })
+      .collation({ locale: 'en_US', numericOrdering: true })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await WaterSample.countDocuments({ sessionId });
+
+    res.json({
+      samples,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error(`Error fetching paginated water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch samples' });
+  }
+});
+
+// Bulk update/upsert samples (Safe Update for Infinite Scroll)
+router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.update'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { samples } = req.body;
+
+    if (!samples || !Array.isArray(samples)) {
+      return res.status(400).json({ error: 'Samples array is required' });
+    }
+
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    logger.info(`Bulk updating ${samples.length} water samples for session ${sessionId}`);
+
+    const operations = samples.map(sampleData => {
+      // Calculate classifications
+      const sampleWithClassifications = addClassifications(sampleData);
+
+      if (sampleData._id) {
+        // Update existing
+        return {
+          updateOne: {
+            filter: { _id: sampleData._id, sessionId },
+            update: { $set: { ...sampleWithClassifications, sessionId } }
+          }
+        };
+      } else {
+        // Insert new
+        return {
+          insertOne: {
+            document: {
+              ...sampleWithClassifications,
+              sessionId,
+              sessionDate: session.date,
+              sessionVersion: session.version
+            }
+          }
+        };
+      }
+    });
+
+    if (operations.length > 0) {
+      await WaterSample.bulkWrite(operations);
+    }
+
+    // Update session metadata
+    session.sampleCount = await WaterSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({ message: 'Samples updated successfully', count: samples.length });
+  } catch (error) {
+    logger.error(`Error bulk updating water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update samples' });
+  }
+});
+
+// Bulk delete samples
+router.delete('/sessions/:sessionId/samples', requirePermission('water.samples.delete'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { sampleIds } = req.body;
+
+    if (!sampleIds || !Array.isArray(sampleIds) || sampleIds.length === 0) {
+      return res.status(400).json({ error: 'Sample IDs array is required' });
+    }
+
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const result = await WaterSample.deleteMany({
+      _id: { $in: sampleIds },
+      sessionId // Ensure we only delete from this session
+    });
+
+    // Update session metadata
+    session.sampleCount = await WaterSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples deleted successfully',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    logger.error(`Error deleting water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to delete samples' });
+  }
+});
+
 // Upload Excel file to update/append samples in a session
 router.post('/sessions/:id/upload-excel',
   requirePermission('water.sessions.update'),
