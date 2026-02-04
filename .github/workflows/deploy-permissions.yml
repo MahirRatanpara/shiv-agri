@@ -99,6 +99,10 @@ jobs:
             else
               echo "⚠ Warning: .env file not found"
             fi
+            
+            # Wait for container to be healthy
+            echo "⏳ Waiting for API container to be ready..."
+            sleep 20
 
             # Ensure API container is running
             if ! docker ps | grep -q shivagri-api; then
@@ -108,10 +112,6 @@ jobs:
               docker compose -f docker-compose.prod.yml up -d api
               sleep 10
             fi
-
-            # Wait for container to be healthy
-            echo "⏳ Waiting for API container to be ready..."
-            sleep 5
 
             # Verify permissions.yml exists in container (from Docker build)
             if docker exec shivagri-api test -f /app/src/config/permissions.yml; then

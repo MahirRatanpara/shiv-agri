@@ -304,6 +304,136 @@ router.get('/sessions/today/count', async (req, res) => {
   }
 });
 
+// Get paginated samples for a session
+router.get('/sessions/:sessionId/samples', requirePermission('soil.sessions.view'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const samples = await SoilSample.find({ sessionId })
+      .sort({ createdAt: 1 }) // Use natural creation order or handle numeric sort here?
+      // Note: sortSamplesByNumber is expensive for pagination as it requires fetching all.
+      // We'll stick to DB sort for efficiency in pagination.
+      // Alternatively, we used to sort manually. For infinite scroll, consistent order is key.
+      .collation({ locale: 'en_US', numericOrdering: true }) // Natural sort on MongoDB if sampleNumber indexed/available?
+      // sampleNumber might not be unique or set initially. createdAt is safer for stability.
+      .skip(skip)
+      .limit(limit);
+
+    const total = await SoilSample.countDocuments({ sessionId });
+
+    res.json({
+      samples,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error(`Error fetching paginated samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch samples' });
+  }
+});
+
+// Bulk update/upsert samples (Safe Update for Infinite Scroll)
+router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.update'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { samples } = req.body;
+
+    if (!samples || !Array.isArray(samples)) {
+      return res.status(400).json({ error: 'Samples array is required' });
+    }
+
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    logger.info(`Bulk updating ${samples.length} samples for session ${sessionId}`);
+
+    const operations = samples.map(sampleData => {
+      // Calculate classifications
+      const sampleWithClassifications = addClassifications(sampleData);
+
+      if (sampleData._id) {
+        // Update existing
+        return {
+          updateOne: {
+            filter: { _id: sampleData._id, sessionId },
+            update: { $set: { ...sampleWithClassifications, sessionId } }
+          }
+        };
+      } else {
+        // Insert new
+        return {
+          insertOne: {
+            document: {
+              ...sampleWithClassifications,
+              sessionId,
+              sessionDate: session.date,
+              sessionVersion: session.version
+            }
+          }
+        };
+      }
+    });
+
+    if (operations.length > 0) {
+      await SoilSample.bulkWrite(operations);
+    }
+
+    // Update session metadata
+    session.sampleCount = await SoilSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({ message: 'Samples updated successfully', count: samples.length });
+  } catch (error) {
+    logger.error(`Error bulk updating samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update samples' });
+  }
+});
+
+// Bulk delete samples
+router.delete('/sessions/:sessionId/samples', requirePermission('soil.samples.delete'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { sampleIds } = req.body;
+
+    if (!sampleIds || !Array.isArray(sampleIds) || sampleIds.length === 0) {
+      return res.status(400).json({ error: 'Sample IDs array is required' });
+    }
+
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const result = await SoilSample.deleteMany({
+      _id: { $in: sampleIds },
+      sessionId // Ensure we only delete from this session
+    });
+
+    // Update session metadata
+    session.sampleCount = await SoilSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples deleted successfully',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    logger.error(`Error deleting samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to delete samples' });
+  }
+});
+
 // Upload Excel file to update/append samples in a session
 router.post('/sessions/:id/upload-excel',
   requirePermission('soil.sessions.update'),
