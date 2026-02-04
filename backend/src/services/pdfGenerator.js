@@ -359,6 +359,7 @@ class PDFGeneratorService {
 
     /**
      * Generate PDFs with streaming support - yields each PDF as it's generated
+     * Uses smaller batch size (2) to keep data flowing and prevent timeouts
      * @param {Array} samplesArray - Array of sample data
      * @param {string} type - 'soil' or 'water'
      * @param {Function} onProgress - Callback called with each PDF: (pdf, index, total)
@@ -366,28 +367,43 @@ class PDFGeneratorService {
     async *generateBulkPDFsStream(samplesArray, type = 'soil', onProgress = null) {
         const browser = await this.initBrowser();
         const total = samplesArray.length;
+        const STREAM_CONCURRENCY = MAX_CONCURRENT_PDFS;
 
-        logger.info(`Starting streaming PDF generation for ${total} samples (type: ${type})`);
+        logger.info(`Starting streaming PDF generation for ${total} samples (type: ${type}, concurrency: ${STREAM_CONCURRENCY})`);
         const startTime = Date.now();
 
-        // Process in parallel chunks but yield results as they complete
-        for (let i = 0; i < samplesArray.length; i += MAX_CONCURRENT_PDFS) {
-            const chunk = samplesArray.slice(i, i + MAX_CONCURRENT_PDFS);
+        // Process in smaller parallel chunks to keep data flowing
+        for (let i = 0; i < samplesArray.length; i += STREAM_CONCURRENCY) {
+            const chunk = samplesArray.slice(i, i + STREAM_CONCURRENCY);
+            const batchNum = Math.floor(i/STREAM_CONCURRENCY) + 1;
+            const totalBatches = Math.ceil(total/STREAM_CONCURRENCY);
+
+            logger.info(`Starting batch ${batchNum}/${totalBatches}: PDFs ${i + 1}-${Math.min(i + STREAM_CONCURRENCY, total)}`);
+
             const chunkPromises = chunk.map((sample, idx) =>
                 this._generateSinglePDFOptimized(browser, sample, type)
                     .then(result => ({ ...result, index: i + idx }))
+                    .catch(error => {
+                        logger.error(`Error generating PDF for sample ${i + idx}: ${error.message}`);
+                        return null;
+                    })
             );
 
             // Wait for all in chunk to complete
             const chunkResults = await Promise.all(chunkPromises);
 
-            // Yield each result
+            // Yield each result (skip nulls from errors)
             for (const result of chunkResults) {
+                if (!result) continue;
+
                 if (onProgress) {
                     onProgress(result, result.index, total);
                 }
+                logger.info(`Generated and yielding PDF ${result.index + 1}/${total}`);
                 yield result;
             }
+
+            logger.info(`Completed batch ${batchNum}/${totalBatches}`);
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
