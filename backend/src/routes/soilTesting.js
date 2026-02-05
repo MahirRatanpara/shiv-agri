@@ -356,35 +356,51 @@ router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.up
 
     logger.info(`Bulk updating ${samples.length} samples for session ${sessionId}`);
 
-    const operations = samples.map(sampleData => {
+    const FertilizerSample = require('../models/FertilizerSample');
+    const FertilizerSession = require('../models/FertilizerSession');
+
+    // Process each sample and handle fertilizer linking
+    const updatedSamples = [];
+    for (const sampleData of samples) {
       // Calculate classifications
       const sampleWithClassifications = addClassifications(sampleData);
 
+      let savedSample;
       if (sampleData._id) {
+        // Get existing sample to check cropType change
+        const existingSample = await SoilSample.findById(sampleData._id);
+
         // Update existing
-        return {
-          updateOne: {
-            filter: { _id: sampleData._id, sessionId },
-            update: { $set: { ...sampleWithClassifications, sessionId } }
-          }
-        };
+        savedSample = await SoilSample.findOneAndUpdate(
+          { _id: sampleData._id, sessionId },
+          { $set: { ...sampleWithClassifications, sessionId } },
+          { new: true }
+        );
+
+        // Handle crop type changes
+        if (existingSample && savedSample) {
+          await handleCropTypeChange(existingSample, savedSample, session);
+          // Reload sample to get updated fertilizerSampleId
+          savedSample = await SoilSample.findById(savedSample._id);
+        }
       } else {
         // Insert new
-        return {
-          insertOne: {
-            document: {
-              ...sampleWithClassifications,
-              sessionId,
-              sessionDate: session.date,
-              sessionVersion: session.version
-            }
-          }
-        };
-      }
-    });
+        savedSample = await SoilSample.create({
+          ...sampleWithClassifications,
+          sessionId,
+          sessionDate: session.date,
+          sessionVersion: session.version
+        });
 
-    if (operations.length > 0) {
-      await SoilSample.bulkWrite(operations);
+        // If new sample has cropType, create fertilizer sample
+        if (savedSample.cropType && savedSample.cropType !== '') {
+          await createLinkedFertilizerSample(savedSample, session);
+          // Reload sample to get updated fertilizerSampleId
+          savedSample = await SoilSample.findById(savedSample._id);
+        }
+      }
+
+      updatedSamples.push(savedSample);
     }
 
     // Update session metadata
@@ -392,12 +408,115 @@ router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.up
     session.lastActivity = new Date();
     await session.save();
 
-    res.json({ message: 'Samples updated successfully', count: samples.length });
+    res.json({
+      message: 'Samples updated successfully',
+      count: samples.length,
+      samples: updatedSamples
+    });
   } catch (error) {
     logger.error(`Error bulk updating samples: ${error.message}`);
     res.status(500).json({ error: 'Failed to update samples' });
   }
 });
+
+/**
+ * Handle crop type changes for soil-fertilizer linking
+ */
+async function handleCropTypeChange(existingSample, updatedSample, soilSession) {
+  const FertilizerSample = require('../models/FertilizerSample');
+  const FertilizerSession = require('../models/FertilizerSession');
+
+  const oldCropType = existingSample.cropType || '';
+  const newCropType = updatedSample.cropType || '';
+
+  // Case 1: Crop type removed - delete linked fertilizer sample
+  if (oldCropType !== '' && newCropType === '') {
+    if (existingSample.fertilizerSampleId) {
+      await FertilizerSample.findByIdAndDelete(existingSample.fertilizerSampleId);
+      updatedSample.fertilizerSampleId = null;
+      await updatedSample.save();
+      logger.info(`Deleted linked fertilizer sample ${existingSample.fertilizerSampleId}`);
+    }
+  }
+  // Case 2: Crop type added - create fertilizer sample
+  else if (oldCropType === '' && newCropType !== '') {
+    await createLinkedFertilizerSample(updatedSample, soilSession);
+  }
+  // Case 3: Crop type changed - update existing or create new
+  else if (oldCropType !== '' && newCropType !== '' && oldCropType !== newCropType) {
+    if (existingSample.fertilizerSampleId) {
+      // Update existing fertilizer sample with new type
+      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
+        type: newCropType,
+        farmerName: updatedSample.farmersName,
+        sampleNumber: updatedSample.sampleNumber,
+        cropName: updatedSample.cropName
+      });
+      logger.info(`Updated fertilizer sample type to ${newCropType}`);
+    } else {
+      // Create new fertilizer sample
+      await createLinkedFertilizerSample(updatedSample, soilSession);
+    }
+  }
+  // Case 4: Crop type unchanged but other fields changed - sync data
+  else if (oldCropType !== '' && newCropType !== '' && oldCropType === newCropType) {
+    if (existingSample.fertilizerSampleId) {
+      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
+        farmerName: updatedSample.farmersName,
+        sampleNumber: updatedSample.sampleNumber,
+        cropName: updatedSample.cropName
+      });
+    }
+  }
+}
+
+/**
+ * Create a linked fertilizer sample
+ */
+async function createLinkedFertilizerSample(soilSample, soilSession) {
+  const FertilizerSample = require('../models/FertilizerSample');
+  const FertilizerSession = require('../models/FertilizerSession');
+
+  // Find or create fertilizer session for the same date/version
+  let fertilizerSession = await FertilizerSession.findOne({
+    date: soilSession.date,
+    version: soilSession.version
+  });
+
+  if (!fertilizerSession) {
+    fertilizerSession = await FertilizerSession.create({
+      date: soilSession.date,
+      version: soilSession.version,
+      startTime: soilSession.startTime || new Date(),
+      status: 'started',
+      sampleCount: 0,
+      lastActivity: new Date()
+    });
+    logger.info(`Created fertilizer session ${fertilizerSession._id} for ${soilSession.date} v${soilSession.version}`);
+  }
+
+  // Create fertilizer sample
+  const fertilizerSample = await FertilizerSample.create({
+    sessionId: fertilizerSession._id,
+    sessionDate: soilSession.date,
+    sessionVersion: soilSession.version,
+    type: soilSample.cropType,
+    sampleNumber: soilSample.sampleNumber,
+    farmerName: soilSample.farmersName,
+    cropName: soilSample.cropName,
+    soilSampleId: soilSample._id
+  });
+
+  // Link back to soil sample
+  soilSample.fertilizerSampleId = fertilizerSample._id;
+  await soilSample.save();
+
+  // Update fertilizer session count
+  fertilizerSession.sampleCount = await FertilizerSample.countDocuments({ sessionId: fertilizerSession._id });
+  await fertilizerSession.save();
+
+  logger.info(`Created linked fertilizer sample ${fertilizerSample._id} for soil sample ${soilSample._id}`);
+}
 
 // Bulk delete samples
 router.delete('/sessions/:sessionId/samples', requirePermission('soil.samples.delete'), async (req, res) => {
@@ -414,9 +533,28 @@ router.delete('/sessions/:sessionId/samples', requirePermission('soil.samples.de
       return res.status(404).json({ error: 'Session not found' });
     }
 
+    // Get samples to delete and their linked fertilizer samples
+    const samplesToDelete = await SoilSample.find({
+      _id: { $in: sampleIds },
+      sessionId
+    });
+
+    // Collect fertilizer sample IDs to delete
+    const FertilizerSample = require('../models/FertilizerSample');
+    const fertilizerIdsToDelete = samplesToDelete
+      .map(s => s.fertilizerSampleId)
+      .filter(id => id != null);
+
+    // Delete linked fertilizer samples
+    if (fertilizerIdsToDelete.length > 0) {
+      await FertilizerSample.deleteMany({ _id: { $in: fertilizerIdsToDelete } });
+      logger.info(`Deleted ${fertilizerIdsToDelete.length} linked fertilizer samples`);
+    }
+
+    // Delete soil samples
     const result = await SoilSample.deleteMany({
       _id: { $in: sampleIds },
-      sessionId // Ensure we only delete from this session
+      sessionId
     });
 
     // Update session metadata
@@ -609,5 +747,41 @@ router.post('/sessions/:id/upload-excel',
     }
   }
 );
+
+// Get soil data for a specific sample (for fertilizer testing popup)
+router.get('/samples/:sampleId/soil-data', async (req, res) => {
+  try {
+    const { sampleId } = req.params;
+
+    const sample = await SoilSample.findById(sampleId);
+    if (!sample) {
+      return res.status(404).json({ error: 'Sample not found' });
+    }
+
+    // Return only the relevant soil data
+    const soilData = {
+      sampleNumber: sample.sampleNumber,
+      farmersName: sample.farmersName,
+      cropName: sample.cropName,
+      ph: sample.ph,
+      ec: sample.ec,
+      ocPercent: sample.ocPercent,
+      p2o5: sample.p2o5,
+      k2o: sample.k2o,
+      organicMatter: sample.organicMatter,
+      // Classification results
+      phResult: sample.phResult,
+      ecResult: sample.ecResult,
+      nitrogenResult: sample.nitrogenResult,
+      phosphorusResult: sample.phosphorusResult,
+      potashResult: sample.potashResult
+    };
+
+    res.json(soilData);
+  } catch (error) {
+    logger.error(`Error fetching soil data: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch soil data' });
+  }
+});
 
 module.exports = router;

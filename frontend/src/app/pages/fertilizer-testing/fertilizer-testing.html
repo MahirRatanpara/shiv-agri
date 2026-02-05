@@ -1,0 +1,332 @@
+<div class="fertilizer-testing-container">
+  <!-- Page Header - Hidden during active session -->
+  <div class="page-header" *ngIf="!sessionActive">
+    <div class="container">
+      <div class="header-content">
+        <div class="title-section">
+          <h1 class="page-title">
+            <i class="fas fa-flask"></i>
+            Fertilizer Testing Dashboard
+          </h1>
+          <p class="page-subtitle">Manage fertilizer recommendations and testing sessions</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container-fluid main-content">
+    <!-- Loading State -->
+    <div class="session-card" *ngIf="isLoading">
+      <div class="session-info">
+        <h2><i class="fas fa-spinner fa-spin"></i> Connecting to Backend...</h2>
+        <p>Please wait while we connect to the server</p>
+      </div>
+    </div>
+
+    <!-- Loading Session from URL -->
+    <div class="session-card" *ngIf="isLoadingSession && !sessionActive">
+      <div class="session-info">
+        <h2><i class="fas fa-spinner fa-spin"></i> Loading Session...</h2>
+        <p>Please wait while we load your session</p>
+      </div>
+    </div>
+
+    <!-- Session Load Error -->
+    <div class="session-card error-card" *ngIf="sessionLoadError && !sessionActive && !isLoadingSession">
+      <div class="session-info">
+        <h2><i class="fas fa-exclamation-triangle"></i> Session Error</h2>
+        <p class="error-message">{{ sessionLoadError }}</p>
+      </div>
+      <button class="btn btn-primary btn-lg" (click)="goToDashboard()">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </button>
+    </div>
+
+    <!-- Backend Disconnected State -->
+    <div class="session-card error-card" *ngIf="!isLoading && !isBackendConnected && !sessionActive">
+      <div class="session-info">
+        <h2><i class="fas fa-exclamation-triangle"></i> Backend Connection Failed</h2>
+        <p class="error-message">Cannot connect to the backend server.</p>
+        <p class="error-message">Please ensure the backend is running on <strong>http://localhost:3000</strong></p>
+        <p class="session-details">
+          <strong>To start the backend:</strong>
+        </p>
+        <code style="display: block; margin: 1rem 0; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+          cd backend<br>
+          npm start
+        </code>
+      </div>
+      <button class="btn btn-info btn-lg" (click)="checkBackendConnection()">
+        <i class="fas fa-sync"></i>
+        Retry Connection
+      </button>
+    </div>
+
+    <!-- Session Management -->
+    <div class="session-management" *ngIf="!isLoading && isBackendConnected && !sessionActive">
+      <!-- Quick Actions Bar -->
+      <div class="quick-actions">
+        <button *hasPermission="'soil.sessions.create'" class="btn btn-primary" (click)="startNewSession()"
+          [disabled]="!isBackendConnected">
+          <i class="fas fa-plus"></i>
+          Start New Session
+        </button>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="session-history-card">
+        <div class="history-header">
+          <h3>
+            <i class="fas fa-tasks"></i>
+            Active Sessions
+          </h3>
+          <span class="session-count">{{ activeSessions.length }} active</span>
+        </div>
+
+        <div class="sessions-list" *ngIf="activeSessions.length > 0">
+          <div class="session-item" *ngFor="let session of paginatedActiveSessions">
+            <div class="session-main-info">
+              <div class="session-badge-info">
+                <span class="session-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ session.date | date:'mediumDate' }}
+                </span>
+                <span class="session-version">Version {{ session.version }}</span>
+              </div>
+              <div class="session-metadata">
+                <span class="session-time">
+                  <i class="fas fa-clock"></i>
+                  {{ session.startTime | date:'shortTime' }}
+                </span>
+                <span class="session-records">
+                  <i class="fas fa-database"></i>
+                  {{ session.sampleCount || 0 }} samples
+                </span>
+                <span class="session-status-badge" [style.background-color]="getStatusColor(session.status)">
+                  <i class="fas {{ getStatusIcon(session.status) }}"></i>
+                  {{ getStatusLabel(session.status) }}
+                </span>
+              </div>
+            </div>
+            <div class="session-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)"
+                title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
+              <button class="btn btn-sm btn-info" (click)="resumeSession(session)">
+                <i class="fas fa-play"></i>
+                Resume
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="activeSessions.length === 0">
+          <i class="fas fa-check-double"></i>
+          <p>No active sessions</p>
+          <p class="empty-hint">All sessions are completed or start a new one</p>
+        </div>
+
+        <!-- Pagination for Active Sessions -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <button class="pagination-btn" (click)="prevPage()" [disabled]="historyPage === 1">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="page-info">Page {{ historyPage }} of {{ totalPages }}</span>
+          <button class="pagination-btn" (click)="nextPage()" [disabled]="historyPage === totalPages">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Completed Sessions Dropdown -->
+      <div class="completed-sessions-card" *ngIf="completedSessions.length > 0">
+        <div class="completed-header" (click)="toggleCompletedSessions()">
+          <div class="completed-title">
+            <i class="fas fa-archive"></i>
+            <span>Completed Sessions ({{ completedSessions.length }})</span>
+          </div>
+          <i class="fas" [class.fa-chevron-down]="!showCompletedSessions"
+            [class.fa-chevron-up]="showCompletedSessions"></i>
+        </div>
+
+        <div class="completed-sessions-list" *ngIf="showCompletedSessions">
+          <div class="session-item" *ngFor="let session of paginatedCompletedSessions">
+            <div class="session-main-info">
+              <div class="session-badge-info">
+                <span class="session-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ session.date | date:'mediumDate' }}
+                </span>
+                <span class="session-version">Version {{ session.version }}</span>
+              </div>
+              <div class="session-metadata">
+                <span class="session-time">
+                  <i class="fas fa-clock"></i>
+                  {{ session.startTime | date:'shortTime' }}
+                  <span *ngIf="session.endTime"> - {{ session.endTime | date:'shortTime' }}</span>
+                </span>
+                <span class="session-records">
+                  <i class="fas fa-database"></i>
+                  {{ session.sampleCount || 0 }} samples
+                </span>
+                <span class="session-status-badge completed-badge">
+                  <i class="fas fa-flag-checkered"></i>
+                  Completed
+                </span>
+              </div>
+            </div>
+            <div class="session-actions">
+              <button class="btn btn-sm btn-outline-secondary" (click)="copySessionLink(session)"
+                title="Copy session link">
+                <i class="fas fa-link"></i>
+              </button>
+              <button class="btn btn-sm btn-secondary" (click)="resumeSession(session)">
+                <i class="fas fa-eye"></i>
+                View
+              </button>
+            </div>
+          </div>
+
+          <!-- Pagination for Completed Sessions -->
+          <div class="pagination" *ngIf="completedTotalPages > 1">
+            <button class="pagination-btn" (click)="prevCompletedPage()" [disabled]="completedPage === 1">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="page-info">Page {{ completedPage }} of {{ completedTotalPages }}</span>
+            <button class="pagination-btn" (click)="nextCompletedPage()"
+              [disabled]="completedPage === completedTotalPages">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compact Active Session Bar -->
+    <div class="compact-session-bar" *ngIf="sessionActive">
+      <div class="session-info-compact">
+        <span class="session-badge-compact">
+          <i class="fas fa-circle pulse-icon"></i>
+          Active Session
+        </span>
+        <span class="session-meta-compact">
+          {{ currentSession?.date | date:'mediumDate' }} • v{{ currentSession?.version }}
+        </span>
+        <!-- Copy Link Button -->
+        <button class="btn-copy-link-compact" (click)="copySessionLink()" title="Copy session link to clipboard">
+          <i class="fas fa-link"></i>
+          <span class="copy-link-text">Copy Link</span>
+        </button>
+      </div>
+
+      <!-- Compact State Navigation -->
+      <div class="state-nav-compact">
+        <span class="current-state-chip" [style.background-color]="getCurrentStateColor()">
+          <i class="fas {{ getCurrentStateIcon() }}"></i>
+          {{ getCurrentStateLabel() }}
+        </span>
+
+        <!-- Available State Transitions -->
+        <div class="available-states" *hasPermission="'soil.sessions.update'">
+          <span class="transition-label">Move to:</span>
+          <button *ngFor="let state of getAvailableTransitions()" class="state-chip"
+            [style.background-color]="state.config.color" (click)="transitionToState(state.status)"
+            [title]="state.config.description">
+            <i class="fas {{ state.config.icon }}"></i>
+            {{ state.config.label }}
+          </button>
+          <span class="no-transitions" *ngIf="getAvailableTransitions().length === 0">
+            No more transitions available
+          </span>
+        </div>
+      </div>
+
+      <!-- Close Button -->
+      <button *hasPermission="'soil.sessions.update'" class="btn-close-compact" (click)="closeSession()"
+        title="Save and close session">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Crop Type Tabs (Fertilizer-Specific) -->
+    <div class="crop-type-tabs" *ngIf="sessionActive">
+      <button
+        class="tab-btn"
+        [class.active]="activeCropType === 'normal'"
+        (click)="switchCropType('normal')">
+        <i class="fas fa-seedling"></i>
+        <span>Normal Crop</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeCropType === 'small-fruit'"
+        (click)="switchCropType('small-fruit')">
+        <i class="fas fa-apple-alt"></i>
+        <span>Small Fruit</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeCropType === 'large-fruit'"
+        (click)="switchCropType('large-fruit')">
+        <i class="fas fa-tree"></i>
+        <span>Large Fruit</span>
+      </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" *ngIf="sessionActive">
+      <div class="toolbar-left">
+        <span class="toolbar-info">
+          <i class="fas fa-info-circle"></i>
+          Fertilizer entries are linked from Soil Testing
+        </span>
+      </div>
+
+      <div class="toolbar-right">
+        <!-- Download PDFs - Only in Generate Reports and Completed states -->
+        <ng-container *ngIf="canPerformAction('downloadPDFs')">
+          <button *hasPermission="'soil.reports.download'" class="btn btn-pdf" (click)="downloadAllPdfs()">
+            <i class="fas fa-file-pdf"></i>
+            Download All PDFs
+          </button>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Soil Data Bar (Horizontal) - Above Grid -->
+    <div class="soil-data-bar" *ngIf="showSoilDataPopup && currentSoilData">
+      <div class="soil-params-compact">
+        <span class="param-compact">pH: <strong>{{ currentSoilData.ph || '-' }}</strong></span>
+        <span class="param-separator">|</span>
+        <span class="param-compact">EC: <strong>{{ currentSoilData.ec || '-' }}</strong></span>
+        <span class="param-separator">|</span>
+        <span class="param-compact">OC%: <strong>{{ currentSoilData.ocPercent || '-' }}</strong></span>
+        <span class="param-separator">|</span>
+        <span class="param-compact">P₂O₅: <strong>{{ currentSoilData.p2o5 || '-' }}</strong></span>
+        <span class="param-separator">|</span>
+        <span class="param-compact">K₂O: <strong>{{ currentSoilData.k2o || '-' }}</strong></span>
+        <span class="param-separator">|</span>
+        <span class="param-compact">OM: <strong>{{ currentSoilData.organicMatter || '-' }}</strong></span>
+      </div>
+      <button class="btn-close-bar-compact" (click)="closeSoilPopup()" title="Close">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- AG Grid -->
+    <div class="grid-wrapper" *ngIf="sessionActive">
+      <ag-grid-angular class="ag-theme-alpine fertilizer-testing-grid" [rowData]="rowData" [columnDefs]="colDefs"
+        [defaultColDef]="defaultColDef" [animateRows]="true" [rowSelection]="'multiple'"
+        (gridReady)="onGridReady($event)" (cellValueChanged)="onCellValueChanged($event)"
+        (selectionChanged)="onSelectionChanged()" (bodyScroll)="onBodyScroll($event)"
+        (cellClicked)="onCellClicked($event)" (cellEditingStarted)="onCellEditingStarted($event)"
+        (cellEditingStopped)="onCellEditingStopped($event)" (rowClicked)="onRowClicked($event)"
+        [enableCellChangeFlash]="true" [suppressMovableColumns]="false" [enableRangeSelection]="true"
+        [enableCharts]="true" [sideBar]="true" [singleClickEdit]="true" [suppressHorizontalScroll]="false"
+        [alwaysShowHorizontalScroll]="false" [suppressRowClickSelection]="true"></ag-grid-angular>
+    </div>
+  </div>
+</div>

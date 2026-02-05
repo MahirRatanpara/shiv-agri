@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const soilTestingRoutes = require('./soilTesting');
 const waterTestingRoutes = require('./waterTesting');
+const fertilizerTestingRoutes = require('./fertilizerTesting');
 const pdfGenerationRoutes = require('./pdfGeneration');
 const rolesRoutes = require('./roles');
 const usersRoutes = require('./users');
@@ -19,6 +20,9 @@ router.get('/health', (req, res) => {
 
 // Soil Testing routes
 router.use('/soil-testing', soilTestingRoutes);
+
+// Fertilizer Testing routes
+router.use('/fertilizer-testing', fertilizerTestingRoutes);
 
 // Water Testing routes
 router.use('/water-testing', waterTestingRoutes);

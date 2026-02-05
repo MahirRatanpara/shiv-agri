@@ -103,9 +103,23 @@ const sampleSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  cropType: {
+    type: String,
+    enum: ['normal', 'small-fruit', 'large-fruit', ''],
+    default: '',
+    trim: true
+  },
   finalDeduction: {
     type: String,
     trim: true
+  },
+
+  // Link to fertilizer sample
+  fertilizerSampleId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FertilizerSample',
+    default: null,
+    index: true
   },
 
   // Classification Results (Gujarati)
