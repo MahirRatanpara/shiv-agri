@@ -10,6 +10,9 @@ class PDFGeneratorService {
     constructor() {
         this.soilTemplatePath = path.join(__dirname, '../../templates/soil-report.html');
         this.waterTemplatePath = path.join(__dirname, '../../templates/water-report.html');
+        this.fertilizerNormalTemplatePath = path.join(__dirname, '../../templates/normal-fertilizer-report.html');
+        this.fertilizerSmallFruitTemplatePath = path.join(__dirname, '../../templates/small-fruit-tree-report-simple.html');
+        this.fertilizerLargeFruitTemplatePath = path.join(__dirname, '../../templates/large-fruit-crop-report.html');
         this.receiptTemplatePath = path.join(__dirname, '../../templates/receipt.html');
         this.invoiceTemplatePath = path.join(__dirname, '../../templates/invoice.html');
         this.letterTemplatePath = path.join(__dirname, '../../templates/letter.html');
@@ -70,6 +73,15 @@ class PDFGeneratorService {
             this.templateCache.soil = await fs.readFile(this.soilTemplatePath, 'utf-8');
             this.templateCache.water = await fs.readFile(this.waterTemplatePath, 'utf-8');
 
+            // Load fertilizer templates
+            try {
+                this.templateCache.fertilizer_normal = await fs.readFile(this.fertilizerNormalTemplatePath, 'utf-8');
+                this.templateCache.fertilizer_small_fruit = await fs.readFile(this.fertilizerSmallFruitTemplatePath, 'utf-8');
+                this.templateCache.fertilizer_large_fruit = await fs.readFile(this.fertilizerLargeFruitTemplatePath, 'utf-8');
+            } catch (e) {
+                logger.warn('Fertilizer templates not found, will load on demand');
+            }
+
             // Try to load optional templates
             try {
                 this.templateCache.receipt = await fs.readFile(this.receiptTemplatePath, 'utf-8');
@@ -102,20 +114,38 @@ class PDFGeneratorService {
      * Load and process HTML template (uses cache if available)
      * @param {string} type - Type of template ('soil' or 'water')
      */
-    async loadTemplate(type = 'soil') {
+    async loadTemplate(type = 'soil', cropType = 'normal') {
+        // For fertilizer templates, use crop-specific cache key
+        const cacheKey = type === 'fertilizer' ? `${type}_${cropType}` : type;
+
         // Return from cache if available
-        if (this.templateCache[type]) {
-            return this.templateCache[type];
+        if (this.templateCache[cacheKey]) {
+            return this.templateCache[cacheKey];
         }
 
         try {
-            const templatePath = type === 'water' ? this.waterTemplatePath : this.soilTemplatePath;
+            let templatePath;
+            if (type === 'water') {
+                templatePath = this.waterTemplatePath;
+            } else if (type === 'fertilizer') {
+                // Select template based on crop type
+                if (cropType === 'small-fruit') {
+                    templatePath = this.fertilizerSmallFruitTemplatePath;
+                } else if (cropType === 'large-fruit') {
+                    templatePath = this.fertilizerLargeFruitTemplatePath;
+                } else {
+                    templatePath = this.fertilizerNormalTemplatePath;
+                }
+            } else {
+                templatePath = this.soilTemplatePath;
+            }
+
             const template = await fs.readFile(templatePath, 'utf-8');
-            this.templateCache[type] = template;
+            this.templateCache[cacheKey] = template;
             return template;
         } catch (error) {
-            logger.error(`Failed to load HTML template (${type}): ${error.message}`);
-            throw new Error(`PDF template not found for type: ${type}`);
+            logger.error(`Failed to load HTML template (${type}, ${cropType}): ${error.message}`);
+            throw new Error(`PDF template not found for type: ${type}, cropType: ${cropType}`);
         }
     }
 
@@ -227,6 +257,66 @@ class PDFGeneratorService {
     }
 
     /**
+     * Fill fertilizer template with sample data
+     * Handles all three crop types: normal, small-fruit, large-fruit
+     */
+    fillFertilizerTemplate(template, data) {
+        let html = template;
+
+        // Helper function to format numbers - returns empty string for missing values
+        const formatNumber = (value, decimals = 0) => {
+            if (value === null || value === undefined || value === '' || isNaN(value)) return '';
+            const num = Number(value);
+            if (isNaN(num)) return '';
+            return num.toFixed(decimals);
+        };
+
+        // Helper function to safely get value - returns empty string for missing values
+        const getValue = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            return String(value);
+        };
+
+        // Basic placeholders (common to all types)
+        const replacements = {
+            '{{sampleNumber}}': getValue(data.sampleNumber),
+            '{{farmerName}}': getValue(data.farmerName),
+            '{{cropName}}': getValue(data.cropName),
+            '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
+        };
+
+        // Add all data fields as replacements (handles all column names dynamically)
+        Object.keys(data).forEach(key => {
+            if (key !== '_id' && key !== '__v' && key !== 'sessionId' && key !== 'type' && key !== 'createdAt' && key !== 'updatedAt') {
+                const value = data[key];
+                const placeholder = `{{${key}}}`;
+
+                // Format numbers if they are numeric
+                if (typeof value === 'number') {
+                    replacements[placeholder] = formatNumber(value, 0);
+                } else if (value !== null && value !== undefined && value !== '') {
+                    replacements[placeholder] = getValue(value);
+                } else {
+                    // For missing/empty values, set to empty string
+                    replacements[placeholder] = '';
+                }
+            }
+        });
+
+        // Replace all placeholders
+        Object.entries(replacements).forEach(([placeholder, value]) => {
+            const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            html = html.replace(new RegExp(escapedPlaceholder, 'g'), value);
+        });
+
+        // Replace any remaining unreplaced placeholders with empty string
+        // This handles fields that don't exist in the data object
+        html = html.replace(/\{\{[^}]+\}\}/g, '');
+
+        return html;
+    }
+
+    /**
      * Generate a single PDF from sample data (optimized)
      */
     async generateSinglePDF(sampleData) {
@@ -282,10 +372,17 @@ class PDFGeneratorService {
         const page = await browser.newPage();
 
         try {
-            const template = await this.loadTemplate(type);
-            const html = type === 'water'
-                ? this.fillWaterTemplate(template, sample)
-                : this.fillTemplate(template, sample);
+            const cropType = sample.type || 'normal'; // For fertilizer samples
+            const template = await this.loadTemplate(type, cropType);
+
+            let html;
+            if (type === 'water') {
+                html = this.fillWaterTemplate(template, sample);
+            } else if (type === 'fertilizer') {
+                html = this.fillFertilizerTemplate(template, sample);
+            } else {
+                html = this.fillTemplate(template, sample);
+            }
 
             // Inject font CSS directly
             const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
@@ -305,7 +402,7 @@ class PDFGeneratorService {
 
             return {
                 sampleId: sample._id,
-                farmerName: sample.farmersName,
+                farmerName: sample.farmerName || sample.farmersName,
                 buffer: pdfBuffer
             };
         } finally {
@@ -915,6 +1012,130 @@ class PDFGeneratorService {
         });
 
         return html;
+    }
+
+    /**
+     * Generate PDF for a single fertilizer sample
+     */
+    async generateFertilizerPDF(sampleData) {
+        const browser = await this.initBrowser();
+        const page = await browser.newPage();
+
+        try {
+            logger.info(`Generating fertilizer PDF for sample: ${sampleData._id || 'unknown'}`);
+
+            // Load and fill template based on crop type
+            const cropType = sampleData.type || 'normal';
+            const template = await this.loadTemplate('fertilizer', cropType);
+            const html = this.fillFertilizerTemplate(template, sampleData);
+
+            // Inject font CSS
+            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
+            await page.setContent(htmlWithFonts, {
+                waitUntil: 'domcontentloaded'
+            });
+
+            // Wait for rendering
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+            });
+
+            await page.close();
+            logger.info(`Fertilizer PDF generated successfully`);
+            return pdfBuffer;
+
+        } catch (error) {
+            logger.error(`Error generating fertilizer PDF: ${error.message}`);
+            await page.close();
+            throw error;
+        }
+    }
+
+    /**
+     * Generate bulk PDFs for fertilizer samples
+     */
+    async generateBulkFertilizerPDFs(samplesArray) {
+        logger.info(`Generating bulk fertilizer PDFs for ${samplesArray.length} samples`);
+        const results = await this._processInParallel(samplesArray, 'fertilizer');
+        logger.info(`Bulk fertilizer PDFs generation completed`);
+        return results;
+    }
+
+    /**
+     * Generate combined PDF for all fertilizer samples in a session
+     */
+    async generateCombinedFertilizerPDF(samplesArray) {
+        const browser = await this.initBrowser();
+        const page = await browser.newPage();
+
+        try {
+            logger.info(`Generating combined fertilizer PDF for ${samplesArray.length} samples`);
+
+            let combinedHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        ${this.fontCSS}
+        @page {
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .page-break {
+            page-break-after: always;
+        }
+    </style>
+</head>
+<body>`;
+
+            // Add each sample as a page
+            for (let i = 0; i < samplesArray.length; i++) {
+                const sample = samplesArray[i];
+                const cropType = sample.type || 'normal';
+                const template = await this.loadTemplate('fertilizer', cropType);
+                const pageHtml = this.fillFertilizerTemplate(template, sample)
+                    .replace('<!DOCTYPE html>', '')
+                    .replace(/<html[^>]*>/, '')
+                    .replace('</html>', '')
+                    .replace(/<head>[\s\S]*?<\/head>/, '')
+                    .replace(/<body[^>]*>/, '')
+                    .replace('</body>', '');
+
+                combinedHtml += `<div class="page-break">${pageHtml}</div>`;
+            }
+
+            combinedHtml += '</body></html>';
+
+            await page.setContent(combinedHtml, {
+                waitUntil: 'domcontentloaded'
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+            });
+
+            await page.close();
+            logger.info(`Combined fertilizer PDF generated successfully`);
+            return pdfBuffer;
+
+        } catch (error) {
+            logger.error(`Error generating combined fertilizer PDF: ${error.message}`);
+            await page.close();
+            throw error;
+        }
     }
 }
 

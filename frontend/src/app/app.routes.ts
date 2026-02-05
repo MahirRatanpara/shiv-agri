@@ -21,6 +21,7 @@ import { NotFoundComponent } from './pages/not-found/not-found';
 import { LoginComponent } from './pages/login/login';
 import { SoilTestingComponent } from './pages/soil-testing/soil-testing';
 import { WaterTestingComponent } from './pages/water-testing/water-testing';
+import { FertilizerTestingComponent } from './pages/fertilizer-testing/fertilizer-testing';
 import { LabTestingComponent } from './pages/lab-testing/lab-testing';
 import { UserManagementComponent } from './pages/admin/user-management/user-management.component';
 import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work';
@@ -59,10 +60,10 @@ export const routes: Routes = [
       { path: '', redirectTo: 'soil-testing', pathMatch: 'full' },
       { path: 'soil-testing', component: SoilTestingComponent },
       { path: 'soil-testing/session/:sessionId', component: SoilTestingComponent },
+      { path: 'fertilizer-testing', component: FertilizerTestingComponent },
+      { path: 'fertilizer-testing/session/:sessionId', component: FertilizerTestingComponent },
       { path: 'water-testing', component: WaterTestingComponent },
       { path: 'water-testing/session/:sessionId', component: WaterTestingComponent },
-      // TODO: Add fertilizer-testing route when implemented
-      // { path: 'fertilizer-testing', component: FertilizerTestingComponent },
     ],
   },
   {

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ખાતરોની ભલામણ - કપાસ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+            padding: 10mm 12mm;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 14pt;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .info-line {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        .section-title {
+            font-weight: 700;
+            margin-top: 12px;
+            margin-bottom: 8px;
+            text-decoration: underline;
+            font-size: 11pt;
+        }
+
+        .subsection-title {
+            font-weight: 600;
+            margin-top: 10px;
+            margin-bottom: 6px;
+            font-size: 10pt;
+        }
+
+        .fertilizer-row {
+            margin: 4px 0;
+            padding-left: 0;
+            font-size: 10pt;
+        }
+
+        .field-value {
+            display: inline-block;
+            min-width: 40px;
+            border-bottom: 1px solid #000;
+            padding: 0 4px;
+            text-align: center;
+        }
+
+        .field-value:empty::after {
+            content: '\00a0\00a0\00a0\00a0\00a0\00a0';
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table, th, td {
+            border: 1px solid #000;
+        }
+
+        th, td {
+            padding: 4px 6px;
+            text-align: left;
+            font-size: 9pt;
+        }
+
+        th {
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .notes {
+            margin-top: 15px;
+        }
+
+        .note-item {
+            margin: 4px 0;
+            padding-left: 20px;
+            text-indent: -20px;
+            font-size: 9pt;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+        
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+        
+        .pl-20 {
+            padding-left: 20px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ખાતરોની  ભલામણ</h1>
+    </div>
+
+    <div class="info-line">
+        પાકનું નામ : <strong><span class="field-value">{{cropName}}</span></strong>
+        <span style="float: right;">ખેડૂત નું નામ : <strong><span class="field-value">{{farmerName}}</span></strong></span>
+    </div>
+
+    <div class="info-line mb-20">
+        ખાતર તત્વોના રૂપમાં ભલામણ  <strong><span class="field-value">{{nValue}}</span> N - <span class="field-value">{{pValue}}</span> P - <span class="field-value">{{kValue}}</span> K Kg / ha</strong>
+    </div>
+
+    <div class="section-title">(૧) પાયામાં આપવાના ખાતરો (વાવેતર પહેલા) - વિઘા દીઠ</div>
+    
+    <div style="margin-left: 20px;">
+        <div class="subsection-title">(A) સેન્દ્રીય ખાતરો / સુક્ષ્મ તત્વ યુક્ત ખાતર</div>
+        
+        <div class="fertilizer-row">(૧) સડેલું છાણીયું ખાતર = <span class="field-value">{{organicManure}}</span> મોટું ટ્રેક્ટર / વિઘે (અથવા) ડીકેઇડ એરંડીનો ખોળ = <span class="field-value">{{castorCake}}</span> કિલો/વિઘે</div>
+        <div class="fertilizer-row">(૨) જીપ્સમ = <span class="field-value">{{gypsum}}</span> કિલો/વિઘે</div>
+        <div class="fertilizer-row">(૩) સરદાર અમીન = <span class="field-value">{{sardarAmin}}</span> કિલો/વિઘે  અથવા અન્ય કંપનીનું સુક્ષ્મ તત્વોવાળું ખાતર = <span class="field-value">{{micronutrient}}</span> કિલો/વિઘે</div>
+        <div class="fertilizer-row">(૪) બોરોકોલ = <span class="field-value">{{borocol}}</span> કિલો/વિઘે</div>
+        <div class="fertilizer-row">(૫) ફેરસ સલ્ફેટ = <span class="field-value">{{ferrous}}</span> કિલો/વિઘે</div>
+        
+        <div class="subsection-title">(B) રાસાયણીક ખાતરો :</div>
+        
+        <table>
+            <tr>
+                <th>(૧) ડી.એ.પી. (૧૮:૪૬:૦૦)</th>
+                <td>{{dap}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૨) એન.પી.કે. (૧૨:૩૨:૧૬)</th>
+                <td>{{npk12}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૩) એ.એસ.પી. (૨૦:૨૦:૦૦)</th>
+                <td>{{asp}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૪) નર્મદા ફોસ  (૨૦:૨૦:૦૦)</th>
+                <td>{{narmadaPhos}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦)</th>
+                <td>{{ssp}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦)</th>
+                <td>{{ammoniumSulphate}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦)</th>
+                <td>{{mop}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+            <tr>
+                <th>(૮) યુરીયા (૪૬:૦૦:૦૦)</th>
+                <td>{{ureaBase}}</td>
+                <td>કિલો/વિઘે</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section-title">(૨) ડોઝમાં આપવાના ખાતરો (પાક ઉગ્યા પછી)-વિઘા દીઠ</div>
+    
+    <div class="pl-20">
+        <div class="fertilizer-row">(૧) ૧૫ દિવસની અવસ્થાએ = <span class="field-value">{{day15}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૨) ૨૫ દિવસની અવસ્થાએ = <span class="field-value">{{day25Npk}}</span> મિલી/વિઘે (એન.પી.કે. કલ્ચર) અને ટ્રાયકોડર્માં <span class="field-value">{{day25Tricho}}</span> કિલો/વિઘે</div>
+        <div class="fertilizer-row">(૩) ૩૦ દિવસની અવસ્થાએ = <span class="field-value">{{day30}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૪) ૪૫ દિવસની અવસ્થાએ = <span class="field-value">{{day45}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૫) ૬૦ દિવસની અવસ્થાએ = <span class="field-value">{{day60}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૬) ૭૫ દિવસની અવસ્થાએ = <span class="field-value">{{day75}}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>
+        <div class="fertilizer-row">(૭) ૯૦ દિવસની અવસ્થાએ = <span class="field-value">{{day90Urea}}</span> કિલો/વિઘે (યુરીયા) + <span class="field-value">{{day90Mag}}</span> કિલો/વિઘે (મેગ્નેશ્યમ સલ્ફેટ)</div>
+        <div class="fertilizer-row">(૮) ૧૦૫ દિવસની અવસ્થાએ = <span class="field-value">{{day105}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૯) ૧૧૫ દિવસની અવસ્થાએ = <span class="field-value">{{day115}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૧૦) ૧૩૦ દિવસની અવસ્થાએ = <span class="field-value">{{day130}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૧૧) ૧૪૫ દિવસની અવસ્થાએ = <span class="field-value">{{day145}}</span> કિલો/વિઘે (યુરીયા)</div>
+        <div class="fertilizer-row">(૧૨) ૧૬૦ દિવસની અવસ્થાએ = <span class="field-value">{{day160}}</span> કિલો/વિઘે (યુરીયા)</div>
+    </div>
+
+    <div class="section-title">(૩) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ)</div>
+    
+    <table>
+        <tr>
+            <th rowspan="2"></th>
+            <th rowspan="2">પાકની અવસ્થા</th>
+            <th rowspan="2">એન.પી.કે.</th>
+            <th rowspan="2">૧૬ લીટર પાણીમાં</th>
+            <th rowspan="2">હોર્મોન્સનું નામ</th>
+            <th rowspan="2">૧૬ લીટર પાણીમાં</th>
+        </tr>
+        <tr></tr>
+        <tr>
+            <td>(૧)</td>
+            <td>૪૫ દિવસે</td>
+            <td>૧૯:૧૯:૧૯</td>
+            <td>{{spray1Npk}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>ફેન્ટેકપ્લસ</td>
+            <td>{{spray1Hormone}} મિલી</td>
+        </tr>
+        <tr>
+            <td>(૨)</td>
+            <td>{{spray2Stage}}</td>
+            <td>૦૦:૫૨:૩૪</td>
+            <td>{{spray2Npk}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray2Hormone}}</td>
+            <td>{{spray2HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૩)</td>
+            <td>{{spray3Stage}}</td>
+            <td>૧૨:૬૧:૦૦</td>
+            <td>{{spray3Npk}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray3Hormone}}</td>
+            <td>{{spray3HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૪)</td>
+            <td>{{spray4Stage}}</td>
+            <td>૨૩:૨૩:૨૩</td>
+            <td>{{spray4Npk}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray4Hormone}}</td>
+            <td>{{spray4HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૫)</td>
+            <td>{{spray5Stage}}</td>
+            <td>૧૩:૦૦:૪૫</td>
+            <td>{{spray5Npk}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray5Hormone}}</td>
+            <td>{{spray5HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૬)</td>
+            <td>૧૨૦ દિવસે</td>
+            <td>બોરોન ૨૦%</td>
+            <td>{{spray6Boron}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray6Hormone}}</td>
+            <td>{{spray6HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૭)</td>
+            <td>{{spray7Stage}}</td>
+            <td>હિરાકસી+ લિંબુના ફૂલ</td>
+            <td>{{spray7Dose}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray7Hormone}}</td>
+            <td>{{spray7HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૮)</td>
+            <td>૧૩૦ દિવસે</td>
+            <td>માઇક્રોમિક્સ</td>
+            <td>{{spray8Micro}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray8Hormone}}</td>
+            <td>{{spray8HormoneDose}}</td>
+        </tr>
+        <tr>
+            <td>(૯)</td>
+            <td>{{spray9Stage}}</td>
+            <td>ફાસ્ટ (અંકુર)</td>
+            <td>{{spray9Dose}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray9Hormone}}</td>
+            <td>{{spray9HormoneDose}}</td>
+        </tr>
+    </table>
+
+    <div class="notes">
+        <div style="font-weight: 700; margin-bottom: 10px;">નોંધ :-</div>
+        <div class="note-item">(૧) ઉપરોક્ત ખાતરો બજારમાં ઉપલબ્ધ ન હોય તો અન્ય ખાતર વાપરવાનું થાય, તો તેના ડોઝ માટે ફોન કરવો.</div>
+        <div class="note-item">(૨) જે ખાતરોની સામે તેનો ડોઝ લખેલ છે, તેજ ખાતરોનો ઉપયોગ કરવો.</div>
+        <div class="note-item">(૩) સુક્ષ્મ તત્વ યુક્ત ખાતરો ફોસ્ફેટીક ખાતરો સાથે મીશ્રણ કરીને આપવા નહી. તેને અલગથી આપવા.</div>
+        <div class="note-item">(૪) ડ્રીપથી પિયત આપવા હોઇએ તો ઉપરોક્ત ખાતરોના પાક ઉગ્યા પછી ખાતરોના ડોઝ ટુંકા ગાળાના દિવસોમાં વિભાજીત કરીને આપી શકાય.</div>
+        <div class="note-item">(૫) ડી.એ.પી. ખાતર અથવા અન્ય ફોસ્ફેટીક ખાતરો ક્યારેય ડ્રીપ મારફતે આપવા નહી.</div>
+        <div class="note-item">(૬) સ્પ્રે પમ્પ દ્વારા આપવાના ખાતરો સાથે ક્યારેય કોઇપણ પ્રકારની રાસાયણીક દવા પમ્પમાં મીશ્રણ ન કરવી.</div>
+        <div class="note-item">(૭) એન.પી.કે. કલ્ચર (જૈવિક ખાતર) ડ્રેન્ચીંગ અથવા ડ્રીપ દ્વારા આપવા, અથવા તેને રેતી / છાણીયું ખાતર / દિવેલાનો ખોળ સાથે ભેળવીને આપવા.</div>
+    </div>
+</body>
+</html>

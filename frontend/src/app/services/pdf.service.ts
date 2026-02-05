@@ -224,7 +224,7 @@ export class PdfService {
    * Get auth headers for fetch requests
    */
   private getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   }
 
@@ -531,6 +531,129 @@ export class PdfService {
       const blob = await this.generateCombinedWaterPDF(sessionId).toPromise();
       if (blob) {
         const defaultFilename = filename || `પાણી ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  // =============== FERTILIZER TESTING PDF METHODS ===============
+
+  /**
+   * Stream and download bulk PDFs for a fertilizer testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkFertilizerPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdfs-stream`;
+    await this.processStreamingPDFs(url, 'ખાતર ચકાસણી', 'Downloading Fertilizer Reports', onProgress);
+  }
+
+  /**
+   * Generate and download PDF for a single fertilizer sample
+   */
+  generateFertilizerSamplePDF(sampleId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/fertilizer-testing/samples/${sampleId}/pdf`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Generate and download all PDFs for a fertilizer testing session (returns base64 encoded PDFs)
+   */
+  generateBulkFertilizerPDFs(sessionId: string): Observable<BulkPDFResponse> {
+    return this.http.post<BulkPDFResponse>(
+      `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdfs`,
+      {}
+    );
+  }
+
+  /**
+   * Generate and download combined PDF for all fertilizer samples in a session
+   */
+  generateCombinedFertilizerPDF(sessionId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdf-combined`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Download fertilizer sample PDF
+   */
+  async downloadFertilizerSamplePDF(sampleId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateFertilizerSamplePDF(sampleId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `ખાતર ચકાસણી - ${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  /**
+   * Download all fertilizer PDFs for a session (individual downloads with delay)
+   */
+  async downloadBulkFertilizerPDFs(sessionId: string): Promise<void> {
+    try {
+      const response = await this.generateBulkFertilizerPDFs(sessionId).toPromise();
+      if (response) {
+        this.downloadBulkFertilizerPDFsHelper(response);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  /**
+   * Download bulk fertilizer PDFs from base64 response
+   */
+  private downloadBulkFertilizerPDFsHelper(response: BulkPDFResponse): void {
+    response.pdfs.forEach((pdfData, index) => {
+      try {
+        // Clean the base64 string (remove whitespace and newlines)
+        const cleanBase64 = pdfData.pdf.replace(/\s/g, '');
+
+        // Convert base64 to blob
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // Download with delay to avoid browser blocking
+        setTimeout(() => {
+          const farmerName = pdfData.farmerName || 'Unknown';
+          const filename = `ખાતર ચકાસણી - ${farmerName}.pdf`;
+          this.downloadPDF(blob, filename);
+        }, index * 500); // 500ms delay between downloads
+      } catch (error) {
+
+      }
+    });
+  }
+
+  /**
+   * Download combined fertilizer PDF for a session
+   */
+  async downloadCombinedFertilizerSessionPDF(sessionId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateCombinedFertilizerPDF(sessionId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `ખાતર ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {

@@ -65,6 +65,9 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   completedTotalPages: number = 0;
   showCompletedSessions: boolean = false;
 
+  // Auto-save timeout
+  private saveTimeout: any = null;
+
   get activeSessions(): Session[] {
     return this.allSessions.filter(s => s.status !== 'completed');
   }
@@ -310,6 +313,31 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: true,
       minWidth: 140,
+    },
+    {
+      field: 'cropType',
+      headerName: 'Crop Type',
+      editable: true,
+      filter: true,
+      minWidth: 150,
+      cellEditor: 'agSelectCellEditor',
+      cellEditorParams: {
+        values: ['', 'normal', 'small-fruit', 'large-fruit']
+      },
+      valueFormatter: (params: any) => {
+        const value = params.value;
+        if (!value || value === '') return '';
+        if (value === 'normal') return 'Normal';
+        if (value === 'small-fruit') return 'Small Fruit';
+        if (value === 'large-fruit') return 'Large Fruit';
+        return value;
+      },
+      cellStyle: (params: any) => {
+        if (params.value && params.value !== '') {
+          return { backgroundColor: '#e8f5e9', fontWeight: '600' };
+        }
+        return null;
+      }
     },
     {
       headerName: 'Actions',
@@ -1030,6 +1058,14 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
     // Auto-resize the column that was edited
     event.api.autoSizeColumns([colId], false);
+
+    // Trigger auto-save after 2 seconds of inactivity
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.autoSaveSession();
+    }, 2000);
   }
 
   onSelectionChanged() {
@@ -1133,8 +1169,19 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
           k2o: this.gridApi.getValue('k2o', node) ?? null,
           organicMatter: this.gridApi.getValue('organicMatter', node) ?? null,
           cropName: this.gridApi.getValue('cropName', node) || '',
+          cropType: this.gridApi.getValue('cropType', node) || '',
           finalDeduction: this.gridApi.getValue('finalDeduction', node) || '',
         };
+
+        // Include _id if it exists (for updates)
+        if (node.data._id) {
+          completeData._id = node.data._id;
+        }
+
+        // Include fertilizerSampleId if it exists (for linking)
+        if (node.data.fertilizerSampleId) {
+          completeData.fertilizerSampleId = node.data.fertilizerSampleId;
+        }
 
         // Debug logging for troubleshooting
 
@@ -1144,6 +1191,49 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
 
     return allGridData;
+  }
+
+  /**
+   * Auto-save session data without refreshing the grid
+   */
+  private async autoSaveSession(): Promise<void> {
+    if (!this.currentSession || !this.currentSession._id) {
+      return;
+    }
+
+    const allGridData: SoilTestingData[] = this.extractGridDataWithCalculatedValues();
+
+    if (allGridData.length === 0) {
+      return;
+    }
+
+    this.soilTestingService.bulkUpdateSamples(this.currentSession._id, allGridData).subscribe({
+      next: (response: any) => {
+        // Update IDs and fertilizer links without refreshing the entire grid
+        if (response.samples && Array.isArray(response.samples)) {
+          this.gridApi.forEachNode((node, index) => {
+            if (node.data && response.samples[index]) {
+              const updatedSample = response.samples[index];
+              // Update _id if it was newly created
+              if (!node.data._id && updatedSample._id) {
+                node.data._id = updatedSample._id;
+              }
+              // Update fertilizerSampleId if it was created/updated
+              if (updatedSample.fertilizerSampleId !== undefined) {
+                node.data.fertilizerSampleId = updatedSample.fertilizerSampleId;
+              }
+            }
+          });
+        }
+        console.log('✅ Auto-saved session data');
+        // Show a subtle toast notification
+        this.toastService.success('Changes saved', 1000);
+      },
+      error: (error) => {
+        console.error('❌ Auto-save failed:', error);
+        this.toastService.error('Auto-save failed. Please try again.');
+      }
+    });
   }
 
   /**

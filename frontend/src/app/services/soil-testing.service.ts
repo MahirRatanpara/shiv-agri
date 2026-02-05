@@ -28,7 +28,9 @@ export interface SoilTestingData {
   k2o: number | null;
   organicMatter?: number | null; // Auto-calculated
   cropName: string;
+  cropType?: string; // Crop type for fertilizer linking: 'normal', 'small-fruit', 'large-fruit'
   finalDeduction: string;
+  fertilizerSampleId?: string; // Link to fertilizer sample
   createdAt?: string; // Added for referenced samples
   updatedAt?: string; // Added for referenced samples
 
@@ -190,8 +192,8 @@ export class SoilTestingService {
    * @param sessionId - The session ID
    * @param samples - Array of samples to update/insert
    */
-  bulkUpdateSamples(sessionId: string, samples: SoilTestingData[]): Observable<{ message: string; count: number }> {
-    return this.http.patch<{ message: string; count: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+  bulkUpdateSamples(sessionId: string, samples: SoilTestingData[]): Observable<{ message: string; count: number; samples: SoilTestingData[] }> {
+    return this.http.patch<{ message: string; count: number; samples: SoilTestingData[] }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
       samples
     });
   }
@@ -212,5 +214,12 @@ export class SoilTestingService {
       `${this.apiUrl}/sessions/${sessionId}/upload-excel`,
       formData
     );
+  }
+
+  /**
+   * Get soil data for a specific sample (for fertilizer testing popup)
+   */
+  getSoilDataForSample(sampleId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/samples/${sampleId}/soil-data`);
   }
 }
