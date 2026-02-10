@@ -43,14 +43,18 @@ services:
       - frontend
     networks:
       - app-network
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
     image: certbot/certbot
     container_name: shivagri-certbot
+    restart: unless-stopped
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_conf:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - app-network
 
 volumes:
   api_uploads:
