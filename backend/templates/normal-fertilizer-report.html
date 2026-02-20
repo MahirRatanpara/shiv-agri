@@ -15,11 +15,13 @@
         
         body {
             font-family: 'Noto Sans Gujarati', sans-serif;
-            font-size: 10pt;
-            line-height: 1.4;
+            font-size: 9pt;
+            line-height: 1.3;
             color: #000;
             background: #fff;
-            padding: 10mm 12mm;
+            padding: 5mm 8mm;
+            max-width: 100%;
+            overflow-x: hidden;
         }
         
         .header {
@@ -28,9 +30,9 @@
         }
         
         .header h1 {
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .info-line {
@@ -40,23 +42,23 @@
 
         .section-title {
             font-weight: 700;
-            margin-top: 12px;
-            margin-bottom: 8px;
+            margin-top: 10px;
+            margin-bottom: 6px;
             text-decoration: underline;
-            font-size: 11pt;
+            font-size: 10pt;
         }
 
         .subsection-title {
             font-weight: 600;
-            margin-top: 10px;
-            margin-bottom: 6px;
-            font-size: 10pt;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            font-size: 9.5pt;
         }
 
         .fertilizer-row {
-            margin: 4px 0;
+            margin: 3px 0;
             padding-left: 0;
-            font-size: 10pt;
+            font-size: 9pt;
         }
 
         .field-value {
@@ -74,7 +76,10 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
+            margin: 6px 0;
+            table-layout: fixed;
+            word-wrap: break-word;
+            max-width: 100%;
         }
 
         table, th, td {
@@ -82,9 +87,11 @@
         }
 
         th, td {
-            padding: 4px 6px;
+            padding: 3px 4px;
             text-align: left;
-            font-size: 9pt;
+            font-size: 8.5pt;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         th {
@@ -93,14 +100,15 @@
         }
 
         .notes {
-            margin-top: 15px;
+            margin-top: 12px;
         }
 
         .note-item {
-            margin: 4px 0;
+            margin: 3px 0;
             padding-left: 20px;
             text-indent: -20px;
-            font-size: 9pt;
+            font-size: 8.5pt;
+            line-height: 1.3;
         }
         
         .text-center {
@@ -119,9 +127,28 @@
             padding-left: 20px;
         }
         
+        .info-line, .fertilizer-row, .note-item {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 5mm;
+        }
+
         @media print {
             body {
-                padding: 0;
+                padding: 5mm 8mm;
+            }
+
+            * {
+                overflow: visible !important;
             }
         }
     </style>
@@ -215,88 +242,39 @@
     </div>
 
     <div class="section-title">(૩) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ)</div>
-    
+
     <table>
         <tr>
-            <th rowspan="2"></th>
-            <th rowspan="2">પાકની અવસ્થા</th>
-            <th rowspan="2">એન.પી.કે.</th>
-            <th rowspan="2">૧૬ લીટર પાણીમાં</th>
-            <th rowspan="2">હોર્મોન્સનું નામ</th>
-            <th rowspan="2">૧૬ લીટર પાણીમાં</th>
+            <th></th>
+            <th>પાકની અવસ્થા</th>
+            <th>એન.પી.કે.</th>
+            <th>૧૬ લીટર પાણીમાં</th>
+            <th>હોર્મોન્સનું નામ</th>
+            <th>૧૬ લીટર પાણીમાં</th>
         </tr>
-        <tr></tr>
         <tr>
             <td>(૧)</td>
-            <td>૪૫ દિવસે</td>
-            <td>૧૯:૧૯:૧૯</td>
-            <td>{{spray1Npk}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>ફેન્ટેકપ્લસ</td>
-            <td>{{spray1Hormone}} મિલી</td>
+            <td>{{spray1_stage}}</td>
+            <td>{{spray1_npkType}}</td>
+            <td>{{spray1_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray1_hormoneName}}</td>
+            <td>{{spray1_hormoneDose}} મિલી</td>
         </tr>
         <tr>
             <td>(૨)</td>
-            <td>{{spray2Stage}}</td>
-            <td>૦૦:૫૨:૩૪</td>
-            <td>{{spray2Npk}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray2Hormone}}</td>
-            <td>{{spray2HormoneDose}}</td>
+            <td>{{spray2_stage}}</td>
+            <td>{{spray2_npkType}}</td>
+            <td>{{spray2_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray2_hormoneName}}</td>
+            <td>{{spray2_hormoneDose}} મિલી</td>
         </tr>
         <tr>
             <td>(૩)</td>
-            <td>{{spray3Stage}}</td>
-            <td>૧૨:૬૧:૦૦</td>
-            <td>{{spray3Npk}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray3Hormone}}</td>
-            <td>{{spray3HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૪)</td>
-            <td>{{spray4Stage}}</td>
-            <td>૨૩:૨૩:૨૩</td>
-            <td>{{spray4Npk}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray4Hormone}}</td>
-            <td>{{spray4HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૫)</td>
-            <td>{{spray5Stage}}</td>
-            <td>૧૩:૦૦:૪૫</td>
-            <td>{{spray5Npk}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray5Hormone}}</td>
-            <td>{{spray5HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૬)</td>
-            <td>૧૨૦ દિવસે</td>
-            <td>બોરોન ૨૦%</td>
-            <td>{{spray6Boron}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray6Hormone}}</td>
-            <td>{{spray6HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૭)</td>
-            <td>{{spray7Stage}}</td>
-            <td>હિરાકસી+ લિંબુના ફૂલ</td>
-            <td>{{spray7Dose}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray7Hormone}}</td>
-            <td>{{spray7HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૮)</td>
-            <td>૧૩૦ દિવસે</td>
-            <td>માઇક્રોમિક્સ</td>
-            <td>{{spray8Micro}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray8Hormone}}</td>
-            <td>{{spray8HormoneDose}}</td>
-        </tr>
-        <tr>
-            <td>(૯)</td>
-            <td>{{spray9Stage}}</td>
-            <td>ફાસ્ટ (અંકુર)</td>
-            <td>{{spray9Dose}} ગ્રામ/પમ્પ દીઠ</td>
-            <td>{{spray9Hormone}}</td>
-            <td>{{spray9HormoneDose}}</td>
+            <td>{{spray3_stage}}</td>
+            <td>{{spray3_npkType}}</td>
+            <td>{{spray3_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
+            <td>{{spray3_hormoneName}}</td>
+            <td>{{spray3_hormoneDose}} મિલી</td>
         </tr>
     </table>
 

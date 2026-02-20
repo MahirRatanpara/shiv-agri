@@ -70,102 +70,88 @@ export interface FertilizerSampleData {
   day145?: number | null;
   day160?: number | null;
 
-  // Spray Fertilizers (Normal)
-  spray1Npk?: number | null;
-  spray1Hormone?: string;
-  spray2Stage?: string;
-  spray2Npk?: number | null;
-  spray2Hormone?: string;
-  spray2HormoneDose?: string;
-  spray3Stage?: string;
-  spray3Npk?: number | null;
-  spray3Hormone?: string;
-  spray3HormoneDose?: string;
-  spray4Stage?: string;
-  spray4Npk?: number | null;
-  spray4Hormone?: string;
-  spray4HormoneDose?: string;
-  spray5Stage?: string;
-  spray5Npk?: number | null;
-  spray5Hormone?: string;
-  spray5HormoneDose?: string;
-  spray6Boron?: number | null;
-  spray6Hormone?: string;
-  spray6HormoneDose?: string;
-  spray7Stage?: string;
-  spray7Dose?: number | null;
-  spray7Hormone?: string;
-  spray7HormoneDose?: string;
-  spray8Micro?: number | null;
-  spray8Hormone?: string;
-  spray8HormoneDose?: string;
-  spray9Stage?: string;
-  spray9Dose?: number | null;
-  spray9Hormone?: string;
-  spray9HormoneDose?: string;
+  // Spray Fertilizers (Normal - 3 sprays with uniform structure)
+  spray1_stage?: number | null;          // પાકની અવસ્થા (Crop Stage)
+  spray1_npkType?: string;               // એન.પી.કે. (NPK Type)
+  spray1_npkDose?: number | null;        // ૧૬ લીટર પાણીમાં (NPK Dose)
+  spray1_hormoneName?: string;           // હોર્મોન્સનું નામ (Hormone Name)
+  spray1_hormoneDose?: number | null;    // ૧૬ લીટર પાણીમાં (Hormone Dose)
 
-  // Small Fruit Fields
-  june_dap?: number | null;
-  june_npk?: number | null;
-  june_asp?: number | null;
-  june_narmada?: number | null;
-  june_ssp?: number | null;
-  june_as?: number | null;
-  june_mop?: number | null;
-  june_urea?: number | null;
+  spray2_stage?: number | null;
+  spray2_npkType?: string;
+  spray2_npkDose?: number | null;
+  spray2_hormoneName?: string;
+  spray2_hormoneDose?: number | null;
 
-  month2_dap?: number | null;
-  month2_npk?: number | null;
-  month2_asp?: number | null;
-  month2_narmada?: number | null;
-  month2_ssp?: number | null;
-  month2_as?: number | null;
-  month2_mop?: number | null;
-  month2_urea?: number | null;
+  spray3_stage?: number | null;
+  spray3_npkType?: string;
+  spray3_npkDose?: number | null;
+  spray3_hormoneName?: string;
+  spray3_hormoneDose?: number | null;
 
-  october_dap?: number | null;
-  october_npk?: number | null;
-  october_asp?: number | null;
-  october_narmada?: number | null;
-  october_ssp?: number | null;
-  october_as?: number | null;
-  october_mop?: number | null;
-  october_urea?: number | null;
+  // Fruit Tree Fields (shared by small-fruit and large-fruit)
+  // M1 section
+  m1_month?: string | null;
+  m1_dap?: number | null;
+  m1_npk?: number | null;
+  m1_asp?: number | null;
+  m1_narmada?: number | null;
+  m1_ssp?: number | null;
+  m1_as?: number | null;
+  m1_mop?: number | null;
+  m1_urea?: number | null;
+  m1_borocol?: number | null;
+  m1_sardaramin?: number | null;
+  m1_chhaniyu?: number | null;
+  m1_erandakhol?: number | null;
 
-  february_dap?: number | null;
-  february_npk?: number | null;
-  february_asp?: number | null;
-  february_narmada?: number | null;
-  february_ssp?: number | null;
-  february_as?: number | null;
-  february_mop?: number | null;
-  february_urea?: number | null;
+  // M2 section
+  m2_month?: string | null;
+  m2_dap?: number | null;
+  m2_npk?: number | null;
+  m2_asp?: number | null;
+  m2_narmada?: number | null;
+  m2_ssp?: number | null;
+  m2_as?: number | null;
+  m2_mop?: number | null;
+  m2_urea?: number | null;
 
-  // Large Fruit Fields
-  august_dap?: number | null;
-  august_npk?: number | null;
-  august_asp?: number | null;
-  august_narmada?: number | null;
-  august_ssp?: number | null;
-  august_as?: number | null;
-  august_mop?: number | null;
-  august_urea?: number | null;
+  // M3 section
+  m3_month?: string | null;
+  m3_dap?: number | null;
+  m3_npk?: number | null;
+  m3_asp?: number | null;
+  m3_narmada?: number | null;
+  m3_ssp?: number | null;
+  m3_as?: number | null;
+  m3_mop?: number | null;
+  m3_urea?: number | null;
+  m3_borocol?: number | null;
+  m3_sardaramin?: number | null;
+  m3_chhaniyu?: number | null;
+  m3_erandakhol?: number | null;
 
-  month4_dap?: number | null;
-  month4_npk?: number | null;
-  month4_asp?: number | null;
-  month4_narmada?: number | null;
-  month4_ssp?: number | null;
-  month4_as?: number | null;
-  month4_mop?: number | null;
-  month4_urea?: number | null;
+  // M4 section
+  m4_month?: string | null;
+  m4_dap?: number | null;
+  m4_npk?: number | null;
+  m4_asp?: number | null;
+  m4_narmada?: number | null;
+  m4_ssp?: number | null;
+  m4_as?: number | null;
+  m4_mop?: number | null;
+  m4_urea?: number | null;
+  m4_borocol?: number | null;
+  m4_sardaramin?: number | null;
+  m4_chhaniyu?: number | null;
+  m4_erandakhol?: number | null;
 
-  // Spray section (fruit trees)
-  spray_npk1919?: number | null;
-  spray_npk0052?: number | null;
-  spray_npk1261?: number | null;
-  spray_npk1300?: number | null;
-  spray_micromix?: number | null;
+  // M5 - Spray section (fruit trees)
+  m5_npk1919?: number | null;
+  m5_npk0052?: number | null;
+  m5_npk1261?: number | null;
+  m5_npk1300?: number | null;
+  m5_micromix?: number | null;
 }
 
 export interface PaginatedSamplesResponse {

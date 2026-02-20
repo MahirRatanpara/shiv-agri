@@ -1604,31 +1604,28 @@
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
 }
 
-:host ::ng-deep .header-section-june {
+/* M1 – Purple */
+:host ::ng-deep .header-section-m1 {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
 }
 
-:host ::ng-deep .header-section-month2 {
+/* M2 – Pink */
+:host ::ng-deep .header-section-m2 {
   background: linear-gradient(135deg, #ec4899 0%, #db2777 100%) !important;
 }
 
-:host ::ng-deep .header-section-october {
+/* M3 – Orange */
+:host ::ng-deep .header-section-m3 {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
 }
 
-:host ::ng-deep .header-section-february {
+/* M4 – Cyan */
+:host ::ng-deep .header-section-m4 {
   background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
 }
 
-:host ::ng-deep .header-section-august {
-  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-}
-
-:host ::ng-deep .header-section-month4 {
-  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%) !important;
-}
-
-:host ::ng-deep .header-section-spray {
+/* M5 – Red (Spray) */
+:host ::ng-deep .header-section-m5 {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
 }
 

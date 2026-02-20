@@ -6,7 +6,7 @@
         <div class="title-section">
           <h1 class="page-title">
             <i class="fas fa-flask"></i>
-            Fertilizer Testing Dashboard
+            Fertilizer Recommendation Dashboard
           </h1>
           <p class="page-subtitle">Manage fertilizer recommendations and testing sessions</p>
         </div>
@@ -96,10 +96,6 @@
                 <span class="session-version">Version {{ session.version }}</span>
               </div>
               <div class="session-metadata">
-                <span class="session-time">
-                  <i class="fas fa-clock"></i>
-                  {{ session.startTime | date:'shortTime' }}
-                </span>
                 <span class="session-records">
                   <i class="fas fa-database"></i>
                   {{ session.sampleCount || 0 }} samples
@@ -163,11 +159,6 @@
                 <span class="session-version">Version {{ session.version }}</span>
               </div>
               <div class="session-metadata">
-                <span class="session-time">
-                  <i class="fas fa-clock"></i>
-                  {{ session.startTime | date:'shortTime' }}
-                  <span *ngIf="session.endTime"> - {{ session.endTime | date:'shortTime' }}</span>
-                </span>
                 <span class="session-records">
                   <i class="fas fa-database"></i>
                   {{ session.sampleCount || 0 }} samples
