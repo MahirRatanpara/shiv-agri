@@ -6,20 +6,22 @@
     <title>ખાતરોની ભલામણ (નાના ફળ ઝાડ માટે)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;600;700&display=swap');
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Noto Sans Gujarati', sans-serif;
-            font-size: 10pt;
-            line-height: 1.4;
+            font-size: 9pt;
+            line-height: 1.3;
             color: #000;
             background: #fff;
-            padding: 10mm 12mm;
+            padding: 5mm 8mm;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .header {
@@ -28,32 +30,36 @@
         }
 
         .header h1 {
-            font-size: 13pt;
+            font-size: 12pt;
             font-weight: 700;
         }
 
         .section-title {
             font-weight: 700;
-            margin-top: 12px;
-            margin-bottom: 8px;
+            margin-top: 10px;
+            margin-bottom: 6px;
             text-align: center;
-            font-size: 11pt;
+            font-size: 10pt;
         }
 
         .month-section {
-            margin: 10px 0;
+            margin: 8px 0;
         }
 
         .month-title {
             font-weight: 600;
-            margin-bottom: 6px;
-            font-size: 10pt;
+            margin-bottom: 4px;
+            font-size: 9pt;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .content-line {
-            margin: 4px 0;
-            line-height: 1.5;
-            font-size: 10pt;
+            margin: 3px 0;
+            line-height: 1.3;
+            font-size: 9pt;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .field-value {
@@ -69,20 +75,31 @@
         }
 
         .notes {
-            margin-top: 15px;
+            margin-top: 12px;
         }
 
         .note-item {
-            margin: 4px 0;
+            margin: 3px 0;
             padding-left: 15px;
             text-indent: -15px;
-            line-height: 1.5;
-            font-size: 9pt;
+            line-height: 1.3;
+            font-size: 8.5pt;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
-        
+
+        @page {
+            size: A4;
+            margin: 5mm;
+        }
+
         @media print {
             body {
-                padding: 0;
+                padding: 5mm 8mm;
+            }
+
+            * {
+                overflow: visible !important;
             }
         }
     </style>
@@ -95,61 +112,47 @@
     <div class="section-title">ખાતરોની ભલામણ</div>
 
     <div class="month-section">
-        <div class="month-title">(૧) ....... જૂન............ મહીનામાં વાવેતર ના સમયે આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{june_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{june_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{june_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{june_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{june_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{june_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{june_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{june_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="month-title">(1) {{m1_month}} મહીનામાં વાવેતર ના સમયે આપવાના ખાતરો (ઝાડ દીઠ)</div>
+        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m1_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m1_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m1_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m1_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m1_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m1_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m1_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m1_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
     </div>
 
     <div class="month-section">
-        <div class="month-title">(૨) ................. મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)   એન.પી.કે. કલ્ચર (જૈવિક ખાતર) ......... મિલી/ઝાડ</div>
-        <div class="content-line">(ડ્રેન્ચીંગ અથવા ડ્રીપમાં આપવા, અથવા તેને રેતી/છાણીયું ખાતર/દિવેલાનો ખોળ સાથે ભેળવીને આપવા.)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{month2_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{month2_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{month2_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{month2_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{month2_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{month2_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{month2_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{month2_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="month-title">(2) {{m2_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ) એન.પી.કે. કલ્ચર (જૈવિક ખાતર) <span class="field-value">{{m2_npk}}</span> મિલી/ઝાડ</div>
     </div>
 
     <div class="month-section">
-        <div class="month-title">(૩) ......ઓક્ટોબર...... મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{october_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{october_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{october_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{october_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{october_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{october_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{october_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{october_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="month-title">(3) {{m3_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
+        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m3_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m3_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m3_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m3_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m3_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m3_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m3_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m3_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
     </div>
 
     <div class="month-section">
-        <div class="month-title">(૪) ............... ફેબ્રુઆરી ....... મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{february_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{february_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{february_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{february_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{february_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{february_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{february_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{february_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="month-title">(4) {{m4_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
+        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m4_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m4_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m4_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m4_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m4_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m4_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m4_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
+        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m4_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
     </div>
 
     <div class="month-section">
-        <div class="month-title">(૫) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ)</div>
-        <div class="content-line">(૧) એન.પી.કે. (૧૯:૧૯:૧૯) <span class="field-value">{{spray_npk1919}}</span> ગ્રામ/પંપ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૦૦:૫૨:૩૪) <span class="field-value">{{spray_npk0052}}</span> ગ્રામ/પંપ દીઠ</div>
-        <div class="content-line">(૩) એન.પી.કે. (૧૨:૬૧:૦૦) <span class="field-value">{{spray_npk1261}}</span> ગ્રામ/પંપ દીઠ</div>
-        <div class="content-line">(૪) એન.પી.કે. (૧૩:૦૦:૪૫) <span class="field-value">{{spray_npk1300}}</span> ગ્રામ/પંપ દીઠ</div>
-        <div class="content-line">(૫) માઇક્રોમિક્સ <span class="field-value">{{spray_micromix}}</span> ગ્રામ/પંપ દીઠ</div>
+        <div class="month-title">(5) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ) એન.પી.કે. (૧૯:૧૯:૧૯) <span class="field-value">{{m5_npk1919}}</span> ગ્રામ/પંપ દીઠ</div>
     </div>
 
     <div class="notes">
@@ -162,5 +165,6 @@
         <div class="note-item">(૬) સ્પ્રે પમ્પ દ્વારા આપવાના ખાતરો સાથે ક્યારેય કોઇપણ પ્રકારની રાસાયણીક દવા પમ્પમાં મીશ્રણ ન કરવી.</div>
         <div class="note-item">(૭) એન.પી.કે. કલ્ચર (જૈવિક ખાતર) ડ્રેન્ચીંગ અથવા ડ્રીપ દ્વારા આપવા, અથવા તેને રેતી / છાણીયું ખાતર / દિવેલાનો ખોળ સાથે ભેળવીને આપવા.</div>
     </div>
+
 </body>
 </html>

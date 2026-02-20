@@ -257,63 +257,311 @@ class PDFGeneratorService {
     }
 
     /**
-     * Fill fertilizer template with sample data
-     * Handles all three crop types: normal, small-fruit, large-fruit
+     * Fill fertilizer template with sample data - Normal Crops (Cotton, etc.)
      */
-    fillFertilizerTemplate(template, data) {
+    fillFertilizerNormalTemplate(template, data) {
         let html = template;
 
-        // Helper function to format numbers - returns empty string for missing values
+        // Helper function to format numbers
         const formatNumber = (value, decimals = 0) => {
-            if (value === null || value === undefined || value === '' || isNaN(value)) return '';
-            const num = Number(value);
-            if (isNaN(num)) return '';
-            return num.toFixed(decimals);
-        };
-
-        // Helper function to safely get value - returns empty string for missing values
-        const getValue = (value) => {
             if (value === null || value === undefined || value === '') return '';
-            return String(value);
+            return Number(value).toFixed(decimals);
         };
 
-        // Basic placeholders (common to all types)
+        // Helper function to safely get value
+        const getValue = (value) => {
+            return value || '';
+        };
+
+        // Map all placeholders explicitly
         const replacements = {
+            // Basic info
             '{{sampleNumber}}': getValue(data.sampleNumber),
             '{{farmerName}}': getValue(data.farmerName),
             '{{cropName}}': getValue(data.cropName),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
+
+            // N-P-K recommendation values
+            '{{nValue}}': formatNumber(data.nValue, 0),
+            '{{pValue}}': formatNumber(data.pValue, 0),
+            '{{kValue}}': formatNumber(data.kValue, 0),
+
+            // Section A - Organic Fertilizers
+            '{{organicManure}}': formatNumber(data.organicManure, 0),
+            '{{castorCake}}': formatNumber(data.castorCake, 0),
+            '{{gypsum}}': formatNumber(data.gypsum, 0),
+            '{{sardarAmin}}': formatNumber(data.sardarAmin, 0),
+            '{{micronutrient}}': formatNumber(data.micronutrient, 0),
+            '{{borocol}}': formatNumber(data.borocol, 0),
+            '{{ferrous}}': formatNumber(data.ferrous, 0),
+
+            // Section B - Chemical Fertilizers
+            '{{dap}}': formatNumber(data.dap, 0),
+            '{{npk12}}': formatNumber(data.npk12, 0),
+            '{{asp}}': formatNumber(data.asp, 0),
+            '{{narmadaPhos}}': formatNumber(data.narmadaPhos, 0),
+            '{{ssp}}': formatNumber(data.ssp, 0),
+            '{{ammoniumSulphate}}': formatNumber(data.ammoniumSulphate, 0),
+            '{{mop}}': formatNumber(data.mop, 0),
+            '{{ureaBase}}': formatNumber(data.ureaBase, 0),
+
+            // Section 2 - Dose fertilizers (after crop emergence)
+            '{{day15}}': formatNumber(data.day15, 0),
+            '{{day25Npk}}': formatNumber(data.day25Npk, 0),
+            '{{day25Tricho}}': formatNumber(data.day25Tricho, 0),
+            '{{day30}}': formatNumber(data.day30, 0),
+            '{{day45}}': formatNumber(data.day45, 0),
+            '{{day60}}': formatNumber(data.day60, 0),
+            '{{day75}}': formatNumber(data.day75, 0),
+            '{{day90Urea}}': formatNumber(data.day90Urea, 0),
+            '{{day90Mag}}': formatNumber(data.day90Mag, 0),
+            '{{day105}}': formatNumber(data.day105, 0),
+            '{{day115}}': formatNumber(data.day115, 0),
+            '{{day130}}': formatNumber(data.day130, 0),
+            '{{day145}}': formatNumber(data.day145, 0),
+            '{{day160}}': formatNumber(data.day160, 0),
+
+            // Section 3 - Spray fertilizers (3 sprays with uniform structure)
+            // Spray 1
+            '{{spray1_stage}}': formatNumber(data.spray1_stage, 0),
+            '{{spray1_npkType}}': getValue(data.spray1_npkType),
+            '{{spray1_npkDose}}': formatNumber(data.spray1_npkDose, 0),
+            '{{spray1_hormoneName}}': getValue(data.spray1_hormoneName),
+            '{{spray1_hormoneDose}}': formatNumber(data.spray1_hormoneDose, 0),
+
+            // Spray 2
+            '{{spray2_stage}}': formatNumber(data.spray2_stage, 0),
+            '{{spray2_npkType}}': getValue(data.spray2_npkType),
+            '{{spray2_npkDose}}': formatNumber(data.spray2_npkDose, 0),
+            '{{spray2_hormoneName}}': getValue(data.spray2_hormoneName),
+            '{{spray2_hormoneDose}}': formatNumber(data.spray2_hormoneDose, 0),
+
+            // Spray 3
+            '{{spray3_stage}}': formatNumber(data.spray3_stage, 0),
+            '{{spray3_npkType}}': getValue(data.spray3_npkType),
+            '{{spray3_npkDose}}': formatNumber(data.spray3_npkDose, 0),
+            '{{spray3_hormoneName}}': getValue(data.spray3_hormoneName),
+            '{{spray3_hormoneDose}}': formatNumber(data.spray3_hormoneDose, 0),
         };
-
-        // Add all data fields as replacements (handles all column names dynamically)
-        Object.keys(data).forEach(key => {
-            if (key !== '_id' && key !== '__v' && key !== 'sessionId' && key !== 'type' && key !== 'createdAt' && key !== 'updatedAt') {
-                const value = data[key];
-                const placeholder = `{{${key}}}`;
-
-                // Format numbers if they are numeric
-                if (typeof value === 'number') {
-                    replacements[placeholder] = formatNumber(value, 0);
-                } else if (value !== null && value !== undefined && value !== '') {
-                    replacements[placeholder] = getValue(value);
-                } else {
-                    // For missing/empty values, set to empty string
-                    replacements[placeholder] = '';
-                }
-            }
-        });
 
         // Replace all placeholders
         Object.entries(replacements).forEach(([placeholder, value]) => {
-            const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            html = html.replace(new RegExp(escapedPlaceholder, 'g'), value);
+            html = html.replace(new RegExp(placeholder, 'g'), value);
         });
 
-        // Replace any remaining unreplaced placeholders with empty string
-        // This handles fields that don't exist in the data object
-        html = html.replace(/\{\{[^}]+\}\}/g, '');
+        return html;
+    }
+
+    /**
+     * Fill fertilizer template with sample data - Small Fruit Trees
+     */
+    fillFertilizerSmallFruitTemplate(template, data) {
+        let html = template;
+
+        // Helper function to format numbers
+        const formatNumber = (value, decimals = 0) => {
+            if (value === null || value === undefined || value === '') return '';
+            return Number(value).toFixed(decimals);
+        };
+
+        // Helper function to safely get value
+        const getValue = (value) => {
+            return value || '';
+        };
+
+        // Map all placeholders explicitly
+        const replacements = {
+            // Basic info
+            '{{sampleNumber}}': getValue(data.sampleNumber),
+            '{{farmerName}}': getValue(data.farmerName),
+            '{{cropName}}': getValue(data.cropName),
+            '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
+
+            // Month names (selected months for each section)
+            '{{m1_month}}': getValue(data.m1_month),
+            '{{m2_month}}': getValue(data.m2_month),
+            '{{m3_month}}': getValue(data.m3_month),
+            '{{m4_month}}': getValue(data.m4_month),
+
+            // M1 fertilizers
+            '{{m1_dap}}': formatNumber(data.m1_dap, 0),
+            '{{m1_npk}}': formatNumber(data.m1_npk, 0),
+            '{{m1_asp}}': formatNumber(data.m1_asp, 0),
+            '{{m1_narmada}}': formatNumber(data.m1_narmada, 0),
+            '{{m1_ssp}}': formatNumber(data.m1_ssp, 0),
+            '{{m1_as}}': formatNumber(data.m1_as, 0),
+            '{{m1_mop}}': formatNumber(data.m1_mop, 0),
+            '{{m1_urea}}': formatNumber(data.m1_urea, 0),
+
+            // M2 fertilizers
+            '{{m2_dap}}': formatNumber(data.m2_dap, 0),
+            '{{m2_npk}}': formatNumber(data.m2_npk, 0),
+            '{{m2_asp}}': formatNumber(data.m2_asp, 0),
+            '{{m2_narmada}}': formatNumber(data.m2_narmada, 0),
+            '{{m2_ssp}}': formatNumber(data.m2_ssp, 0),
+            '{{m2_as}}': formatNumber(data.m2_as, 0),
+            '{{m2_mop}}': formatNumber(data.m2_mop, 0),
+            '{{m2_urea}}': formatNumber(data.m2_urea, 0),
+
+            // M3 fertilizers
+            '{{m3_dap}}': formatNumber(data.m3_dap, 0),
+            '{{m3_npk}}': formatNumber(data.m3_npk, 0),
+            '{{m3_asp}}': formatNumber(data.m3_asp, 0),
+            '{{m3_narmada}}': formatNumber(data.m3_narmada, 0),
+            '{{m3_ssp}}': formatNumber(data.m3_ssp, 0),
+            '{{m3_as}}': formatNumber(data.m3_as, 0),
+            '{{m3_mop}}': formatNumber(data.m3_mop, 0),
+            '{{m3_urea}}': formatNumber(data.m3_urea, 0),
+
+            // M4 fertilizers
+            '{{m4_dap}}': formatNumber(data.m4_dap, 0),
+            '{{m4_npk}}': formatNumber(data.m4_npk, 0),
+            '{{m4_asp}}': formatNumber(data.m4_asp, 0),
+            '{{m4_narmada}}': formatNumber(data.m4_narmada, 0),
+            '{{m4_ssp}}': formatNumber(data.m4_ssp, 0),
+            '{{m4_as}}': formatNumber(data.m4_as, 0),
+            '{{m4_mop}}': formatNumber(data.m4_mop, 0),
+            '{{m4_urea}}': formatNumber(data.m4_urea, 0),
+
+            // M5 - Spray fertilizers
+            '{{m5_npk1919}}': formatNumber(data.m5_npk1919, 0),
+            '{{m5_npk0052}}': formatNumber(data.m5_npk0052, 0),
+            '{{m5_npk1261}}': formatNumber(data.m5_npk1261, 0),
+            '{{m5_npk1300}}': formatNumber(data.m5_npk1300, 0),
+            '{{m5_micromix}}': formatNumber(data.m5_micromix, 0),
+        };
+
+        // Replace all placeholders
+        Object.entries(replacements).forEach(([placeholder, value]) => {
+            html = html.replace(new RegExp(placeholder, 'g'), value);
+        });
 
         return html;
+    }
+
+    /**
+     * Fill fertilizer template with sample data - Large Fruit Trees
+     */
+    fillFertilizerLargeFruitTemplate(template, data) {
+        let html = template;
+
+        // Helper function to format numbers
+        const formatNumber = (value, decimals = 0) => {
+            if (value === null || value === undefined || value === '') return '';
+            return Number(value).toFixed(decimals);
+        };
+
+        // Helper function to safely get value
+        const getValue = (value) => {
+            return value || '';
+        };
+
+        // Map all placeholders explicitly
+        const replacements = {
+            // Basic info
+            '{{sampleNumber}}': getValue(data.sampleNumber),
+            '{{farmerName}}': getValue(data.farmerName),
+            '{{cropName}}': getValue(data.cropName),
+            '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
+
+            // Month names (selected months for each section)
+            '{{m1_month}}': getValue(data.m1_month),
+            '{{m2_month}}': getValue(data.m2_month),
+            '{{m3_month}}': getValue(data.m3_month),
+            '{{m4_month}}': getValue(data.m4_month),
+
+            // M1 fertilizers
+            '{{m1_dap}}': formatNumber(data.m1_dap, 0),
+            '{{m1_npk}}': formatNumber(data.m1_npk, 0),
+            '{{m1_asp}}': formatNumber(data.m1_asp, 0),
+            '{{m1_narmada}}': formatNumber(data.m1_narmada, 0),
+            '{{m1_ssp}}': formatNumber(data.m1_ssp, 0),
+            '{{m1_as}}': formatNumber(data.m1_as, 0),
+            '{{m1_mop}}': formatNumber(data.m1_mop, 0),
+            '{{m1_urea}}': formatNumber(data.m1_urea, 0),
+
+            // M2 fertilizers
+            '{{m2_dap}}': formatNumber(data.m2_dap, 0),
+            '{{m2_npk}}': formatNumber(data.m2_npk, 0),
+            '{{m2_asp}}': formatNumber(data.m2_asp, 0),
+            '{{m2_narmada}}': formatNumber(data.m2_narmada, 0),
+            '{{m2_ssp}}': formatNumber(data.m2_ssp, 0),
+            '{{m2_as}}': formatNumber(data.m2_as, 0),
+            '{{m2_mop}}': formatNumber(data.m2_mop, 0),
+            '{{m2_urea}}': formatNumber(data.m2_urea, 0),
+
+            // M3 fertilizers
+            '{{m3_dap}}': formatNumber(data.m3_dap, 0),
+            '{{m3_npk}}': formatNumber(data.m3_npk, 0),
+            '{{m3_asp}}': formatNumber(data.m3_asp, 0),
+            '{{m3_narmada}}': formatNumber(data.m3_narmada, 0),
+            '{{m3_ssp}}': formatNumber(data.m3_ssp, 0),
+            '{{m3_as}}': formatNumber(data.m3_as, 0),
+            '{{m3_mop}}': formatNumber(data.m3_mop, 0),
+            '{{m3_urea}}': formatNumber(data.m3_urea, 0),
+
+            // M1 extra fertilizers (large-fruit only)
+            '{{m1_borocol}}': formatNumber(data.m1_borocol, 0),
+            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin, 0),
+            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu, 0),
+            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol, 0),
+
+            // M3 extra fertilizers (large-fruit only)
+            '{{m3_borocol}}': formatNumber(data.m3_borocol, 0),
+            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin, 0),
+            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu, 0),
+            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol, 0),
+
+            // M4 fertilizers
+            '{{m4_dap}}': formatNumber(data.m4_dap, 0),
+            '{{m4_npk}}': formatNumber(data.m4_npk, 0),
+            '{{m4_asp}}': formatNumber(data.m4_asp, 0),
+            '{{m4_narmada}}': formatNumber(data.m4_narmada, 0),
+            '{{m4_ssp}}': formatNumber(data.m4_ssp, 0),
+            '{{m4_as}}': formatNumber(data.m4_as, 0),
+            '{{m4_mop}}': formatNumber(data.m4_mop, 0),
+            '{{m4_urea}}': formatNumber(data.m4_urea, 0),
+            '{{m4_borocol}}': formatNumber(data.m4_borocol, 0),
+            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin, 0),
+            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu, 0),
+            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol, 0),
+
+            // M5 - Spray fertilizers
+            '{{m5_npk1919}}': formatNumber(data.m5_npk1919, 0),
+            '{{m5_npk0052}}': formatNumber(data.m5_npk0052, 0),
+            '{{m5_npk1261}}': formatNumber(data.m5_npk1261, 0),
+            '{{m5_npk1300}}': formatNumber(data.m5_npk1300, 0),
+            '{{m5_micromix}}': formatNumber(data.m5_micromix, 0),
+        };
+
+        // Replace all placeholders
+        Object.entries(replacements).forEach(([placeholder, value]) => {
+            html = html.replace(new RegExp(placeholder, 'g'), value);
+        });
+
+        return html;
+    }
+
+    /**
+     * Fill fertilizer template with sample data (dispatcher function)
+     * Calls the appropriate template filler based on crop type
+     */
+    fillFertilizerTemplate(template, data) {
+        const cropType = data.type || 'normal';
+
+        logger.info(`Filling fertilizer template for crop type: ${cropType}`);
+        logger.debug(`Sample ID: ${data._id}, Farmer: ${data.farmerName}, Crop: ${data.cropName}`);
+
+        // Convert Mongoose document to plain object if needed
+        const plainData = data.toObject ? data.toObject() : data;
+
+        if (cropType === 'small-fruit') {
+            return this.fillFertilizerSmallFruitTemplate(template, plainData);
+        } else if (cropType === 'large-fruit') {
+            return this.fillFertilizerLargeFruitTemplate(template, plainData);
+        } else {
+            return this.fillFertilizerNormalTemplate(template, plainData);
+        }
     }
 
     /**
@@ -394,11 +642,19 @@ class PDFGeneratorService {
             // Minimal wait for font rendering
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            const pdfBuffer = await page.pdf({
+            const pdfOptions = {
                 format: 'A4',
                 printBackground: true,
-                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
-            });
+                margin: { top: '3mm', right: '3mm', bottom: '3mm', left: '3mm' },
+                preferCSSPageSize: true
+            };
+
+            // Only scale down for non-fertilizer types (fertilizer templates are already sized for A4)
+            if (type !== 'fertilizer') {
+                pdfOptions.scale = 0.95;
+            }
+
+            const pdfBuffer = await page.pdf(pdfOptions);
 
             return {
                 sampleId: sample._id,
@@ -1018,40 +1274,81 @@ class PDFGeneratorService {
      * Generate PDF for a single fertilizer sample
      */
     async generateFertilizerPDF(sampleData) {
-        const browser = await this.initBrowser();
-        const page = await browser.newPage();
-
         try {
+            // Validate sample data
+            if (!sampleData) {
+                throw new Error('Sample data is required');
+            }
+
             logger.info(`Generating fertilizer PDF for sample: ${sampleData._id || 'unknown'}`);
 
+            // Convert Mongoose document to plain object if needed
+            const plainData = sampleData.toObject ? sampleData.toObject() : sampleData;
+
             // Load and fill template based on crop type
-            const cropType = sampleData.type || 'normal';
+            const cropType = plainData.type || 'normal';
+            logger.info(`Loading fertilizer template for crop type: ${cropType}`);
             const template = await this.loadTemplate('fertilizer', cropType);
-            const html = this.fillFertilizerTemplate(template, sampleData);
+
+            logger.info(`Filling fertilizer template with sample data`);
+            const html = this.fillFertilizerTemplate(template, plainData);
+
+            if (!html || html.length === 0) {
+                throw new Error('Template filling produced empty HTML');
+            }
+
+            logger.info(`Template filled successfully, HTML length: ${html.length}`);
 
             // Inject font CSS
-            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+            const htmlWithFonts = html.includes('</head>')
+                ? html.replace('</head>', `<style>${this.fontCSS}</style></head>`)
+                : html;
 
-            await page.setContent(htmlWithFonts, {
-                waitUntil: 'domcontentloaded'
-            });
+            logger.info(`Initializing browser and page`);
+            // Initialize browser and page
+            const browser = await this.initBrowser();
 
-            // Wait for rendering
-            await new Promise(resolve => setTimeout(resolve, 200));
+            if (!browser) {
+                throw new Error('Failed to initialize browser');
+            }
 
-            const pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
-            });
+            logger.info(`Browser initialized, creating new page`);
+            const page = await browser.newPage();
 
-            await page.close();
-            logger.info(`Fertilizer PDF generated successfully`);
-            return pdfBuffer;
+            try {
+
+                logger.info(`Setting page content`);
+                await page.setContent(htmlWithFonts, {
+                    waitUntil: 'domcontentloaded'
+                });
+
+                // Wait for rendering
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                logger.info(`Generating PDF buffer`);
+                const pdfBuffer = await page.pdf({
+                    format: 'A4',
+                    printBackground: true,
+                    margin: { top: '3mm', right: '3mm', bottom: '3mm', left: '3mm' },
+                    preferCSSPageSize: true
+                });
+
+                logger.info(`Fertilizer PDF generated successfully, closing page`);
+                return pdfBuffer;
+
+            } finally {
+                // Always close the page
+                try {
+                    if (page && !page.isClosed()) {
+                        await page.close();
+                    }
+                } catch (closeError) {
+                    logger.error(`Error closing page: ${closeError.message}`);
+                }
+            }
 
         } catch (error) {
-            logger.error(`Error generating fertilizer PDF: ${error.message}`);
-            await page.close();
+            logger.error(`Error generating fertilizer PDF: ${error.message}`, { stack: error.stack });
             throw error;
         }
     }
@@ -1124,7 +1421,8 @@ class PDFGeneratorService {
             const pdfBuffer = await page.pdf({
                 format: 'A4',
                 printBackground: true,
-                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+                margin: { top: '3mm', right: '3mm', bottom: '3mm', left: '3mm' },
+                preferCSSPageSize: true
             });
 
             await page.close();

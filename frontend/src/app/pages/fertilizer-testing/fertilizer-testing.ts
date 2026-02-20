@@ -254,6 +254,84 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'day130', headerName: 'Day 130', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-dose' },
       { field: 'day145', headerName: 'Day 145', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-dose' },
       { field: 'day160', headerName: 'Day 160', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-dose' },
+      // Spray fertilizers (3 sprays with uniform structure)
+      { field: 'spray1_stage', headerName: 'Spray 1 - Stage', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-spray' },
+      {
+        field: 'spray1_npkType',
+        headerName: 'Spray 1 - NPK Type',
+        editable: true,
+        minWidth: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray1_npkDose', headerName: 'Spray 1 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray1_hormoneName',
+        headerName: 'Spray 1 - Hormone',
+        editable: true,
+        minWidth: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray1_hormoneDose', headerName: 'Spray 1 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
+
+      { field: 'spray2_stage', headerName: 'Spray 2 - Stage', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-spray' },
+      {
+        field: 'spray2_npkType',
+        headerName: 'Spray 2 - NPK Type',
+        editable: true,
+        minWidth: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray2_npkDose', headerName: 'Spray 2 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray2_hormoneName',
+        headerName: 'Spray 2 - Hormone',
+        editable: true,
+        minWidth: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray2_hormoneDose', headerName: 'Spray 2 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
+
+      { field: 'spray3_stage', headerName: 'Spray 3 - Stage', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-spray' },
+      {
+        field: 'spray3_npkType',
+        headerName: 'Spray 3 - NPK Type',
+        editable: true,
+        minWidth: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray3_npkDose', headerName: 'Spray 3 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray3_hormoneName',
+        headerName: 'Spray 3 - Hormone',
+        editable: true,
+        minWidth: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray3_hormoneDose', headerName: 'Spray 3 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
       // Actions column
       {
         headerName: 'Actions',
@@ -272,130 +350,129 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       },
     ];
 
-    // Small fruit tree columns - organized by months
+    const gujaratiMonths = [
+      'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
+      'જુલાઈ', 'ઓગસ્ટ', 'સપ્ટેમ્બર', 'ઓક્ટોબર', 'નવેમ્બર', 'ડિસેમ્બર'
+    ];
+
+    const monthDropdown = (field: string, label: string, hClass: string): ColDef<FertilizerSampleData> => ({
+      field: field as any,
+      headerName: label,
+      editable: true,
+      minWidth: 140,
+      headerClass: hClass,
+      cellEditor: 'agSelectCellEditor',
+      cellEditorParams: { values: gujaratiMonths },
+    });
+
+    const fruitActionsCol: ColDef<FertilizerSampleData> = {
+      headerName: 'Actions',
+      cellRenderer: (params: any) => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm btn-pdf-action';
+        button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+        button.addEventListener('click', () => this.downloadSinglePdf(params.data));
+        return button;
+      },
+      minWidth: 120,
+      maxWidth: 120,
+      pinned: 'right',
+      sortable: false,
+      filter: false,
+    };
+
+    // Small fruit tree columns - M1 through M5
     this.smallFruitColDefs = [
       ...commonCols,
-      // June section
-      { field: 'june_dap', headerName: 'June DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_npk', headerName: 'June NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_asp', headerName: 'June ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_narmada', headerName: 'June Narmada', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-june' },
-      { field: 'june_ssp', headerName: 'June SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_as', headerName: 'June AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_mop', headerName: 'June MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_urea', headerName: 'June Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      // Month 2 section
-      { field: 'month2_dap', headerName: 'M2 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_npk', headerName: 'M2 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_asp', headerName: 'M2 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_narmada', headerName: 'M2 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-month2' },
-      { field: 'month2_ssp', headerName: 'M2 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_as', headerName: 'M2 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_mop', headerName: 'M2 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      { field: 'month2_urea', headerName: 'M2 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month2' },
-      // October section
-      { field: 'october_dap', headerName: 'Oct DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_npk', headerName: 'Oct NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_asp', headerName: 'Oct ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_narmada', headerName: 'Oct Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-october' },
-      { field: 'october_ssp', headerName: 'Oct SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_as', headerName: 'Oct AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_mop', headerName: 'Oct MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      { field: 'october_urea', headerName: 'Oct Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-october' },
-      // February section
-      { field: 'february_dap', headerName: 'Feb DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_npk', headerName: 'Feb NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_asp', headerName: 'Feb ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_narmada', headerName: 'Feb Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-february' },
-      { field: 'february_ssp', headerName: 'Feb SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_as', headerName: 'Feb AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_mop', headerName: 'Feb MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_urea', headerName: 'Feb Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      // Spray section
-      { field: 'spray_npk1919', headerName: 'Spray NPK 19:19:19', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk0052', headerName: 'Spray NPK 00:52:34', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk1261', headerName: 'Spray NPK 12:61:00', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk1300', headerName: 'Spray NPK 13:00:45', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_micromix', headerName: 'Spray Micromix', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-spray' },
-      // Actions column
-      {
-        headerName: 'Actions',
-        cellRenderer: (params: any) => {
-          const button = document.createElement('button');
-          button.className = 'btn btn-sm btn-pdf-action';
-          button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
-          button.addEventListener('click', () => this.downloadSinglePdf(params.data));
-          return button;
-        },
-        minWidth: 120,
-        maxWidth: 120,
-        pinned: 'right',
-        sortable: false,
-        filter: false,
-      },
+      // M1 section
+      monthDropdown('m1_month', 'M1 Month', 'header-section-m1'),
+      { field: 'm1_dap', headerName: 'M1 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_npk', headerName: 'M1 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_asp', headerName: 'M1 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_narmada', headerName: 'M1 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m1' },
+      { field: 'm1_ssp', headerName: 'M1 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_as', headerName: 'M1 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_mop', headerName: 'M1 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_urea', headerName: 'M1 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      // M2 section (NPK culture only)
+      monthDropdown('m2_month', 'M2 Month', 'header-section-m2'),
+      { field: 'm2_npk', headerName: 'M2 NPK Culture (મિલી)', editable: true, cellDataType: 'number', minWidth: 160, headerClass: 'header-section-m2' },
+      // M3 section
+      monthDropdown('m3_month', 'M3 Month', 'header-section-m3'),
+      { field: 'm3_dap', headerName: 'M3 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_npk', headerName: 'M3 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_asp', headerName: 'M3 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_narmada', headerName: 'M3 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m3' },
+      { field: 'm3_ssp', headerName: 'M3 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_as', headerName: 'M3 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_mop', headerName: 'M3 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_urea', headerName: 'M3 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      // M4 section
+      monthDropdown('m4_month', 'M4 Month', 'header-section-m4'),
+      { field: 'm4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_npk', headerName: 'M4 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_asp', headerName: 'M4 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_narmada', headerName: 'M4 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m4' },
+      { field: 'm4_ssp', headerName: 'M4 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      // M5 - Spray section
+      { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', minWidth: 170, headerClass: 'header-section-m5' },
+      fruitActionsCol,
     ];
 
-    // Large fruit tree columns
+    // Large fruit tree columns - same M1–M5 structure
     this.largeFruitColDefs = [
       ...commonCols,
-      // June section
-      { field: 'june_dap', headerName: 'June DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_npk', headerName: 'June NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_asp', headerName: 'June ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_narmada', headerName: 'June Narmada', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-june' },
-      { field: 'june_ssp', headerName: 'June SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_as', headerName: 'June AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_mop', headerName: 'June MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      { field: 'june_urea', headerName: 'June Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-june' },
-      // August section
-      { field: 'august_dap', headerName: 'Aug DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_npk', headerName: 'Aug NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_asp', headerName: 'Aug ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_narmada', headerName: 'Aug Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-august' },
-      { field: 'august_ssp', headerName: 'Aug SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_as', headerName: 'Aug AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_mop', headerName: 'Aug MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      { field: 'august_urea', headerName: 'Aug Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-august' },
-      // February section
-      { field: 'february_dap', headerName: 'Feb DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_npk', headerName: 'Feb NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_asp', headerName: 'Feb ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_narmada', headerName: 'Feb Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-february' },
-      { field: 'february_ssp', headerName: 'Feb SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_as', headerName: 'Feb AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_mop', headerName: 'Feb MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      { field: 'february_urea', headerName: 'Feb Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-february' },
-      // Month 4 section
-      { field: 'month4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_npk', headerName: 'M4 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_asp', headerName: 'M4 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_narmada', headerName: 'M4 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-month4' },
-      { field: 'month4_ssp', headerName: 'M4 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      { field: 'month4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-month4' },
-      // Spray section
-      { field: 'spray_npk1919', headerName: 'Spray NPK 19:19:19', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk0052', headerName: 'Spray NPK 00:52:34', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk1261', headerName: 'Spray NPK 12:61:00', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_npk1300', headerName: 'Spray NPK 13:00:45', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-spray' },
-      { field: 'spray_micromix', headerName: 'Spray Micromix', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-spray' },
-      // Actions column
-      {
-        headerName: 'Actions',
-        cellRenderer: (params: any) => {
-          const button = document.createElement('button');
-          button.className = 'btn btn-sm btn-pdf-action';
-          button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
-          button.addEventListener('click', () => this.downloadSinglePdf(params.data));
-          return button;
-        },
-        minWidth: 120,
-        maxWidth: 120,
-        pinned: 'right',
-        sortable: false,
-        filter: false,
-      },
+      // M1 section
+      monthDropdown('m1_month', 'M1 Month', 'header-section-m1'),
+      { field: 'm1_dap', headerName: 'M1 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_npk', headerName: 'M1 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_asp', headerName: 'M1 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_narmada', headerName: 'M1 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m1' },
+      { field: 'm1_ssp', headerName: 'M1 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_as', headerName: 'M1 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_mop', headerName: 'M1 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_urea', headerName: 'M1 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_borocol', headerName: 'M1 Borocol (કિ)', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-m1' },
+      { field: 'm1_sardaramin', headerName: 'M1 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m1' },
+      { field: 'm1_chhaniyu', headerName: 'M1 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m1' },
+      { field: 'm1_erandakhol', headerName: 'M1 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m1' },
+      // M2 section (NPK culture only)
+      monthDropdown('m2_month', 'M2 Month', 'header-section-m2'),
+      { field: 'm2_npk', headerName: 'M2 NPK Culture (મિલી)', editable: true, cellDataType: 'number', minWidth: 160, headerClass: 'header-section-m2' },
+      // M3 section
+      monthDropdown('m3_month', 'M3 Month', 'header-section-m3'),
+      { field: 'm3_dap', headerName: 'M3 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_npk', headerName: 'M3 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_asp', headerName: 'M3 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_narmada', headerName: 'M3 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m3' },
+      { field: 'm3_ssp', headerName: 'M3 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_as', headerName: 'M3 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_mop', headerName: 'M3 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_urea', headerName: 'M3 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_borocol', headerName: 'M3 Borocol (કિ)', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-m3' },
+      { field: 'm3_sardaramin', headerName: 'M3 Sardar Amin (કિ)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m3' },
+      { field: 'm3_chhaniyu', headerName: 'M3 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m3' },
+      { field: 'm3_erandakhol', headerName: 'M3 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m3' },
+      // M4 section
+      monthDropdown('m4_month', 'M4 Month', 'header-section-m4'),
+      { field: 'm4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_npk', headerName: 'M4 NPK', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_asp', headerName: 'M4 ASP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_narmada', headerName: 'M4 Narmada', editable: true, cellDataType: 'number', minWidth: 115, headerClass: 'header-section-m4' },
+      { field: 'm4_ssp', headerName: 'M4 SSP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_borocol', headerName: 'M4 Borocol (કિ)', editable: true, cellDataType: 'number', minWidth: 120, headerClass: 'header-section-m4' },
+      { field: 'm4_sardaramin', headerName: 'M4 Sardar Amin (કિ)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m4' },
+      { field: 'm4_chhaniyu', headerName: 'M4 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m4' },
+      { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m4' },
+      // M5 - Spray section
+      { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', minWidth: 170, headerClass: 'header-section-m5' },
+      fruitActionsCol,
     ];
   }
 

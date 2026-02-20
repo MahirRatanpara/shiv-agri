@@ -595,6 +595,38 @@ router.post('/sessions/:id/upload-excel',
 const pdfGenerator = require('../services/pdfGenerator');
 
 /**
+ * Test endpoint to check sample data structure
+ * GET /api/fertilizer-testing/samples/:sampleId/test
+ */
+router.get('/samples/:sampleId/test', async (req, res) => {
+  try {
+    const sample = await FertilizerSample.findById(req.params.sampleId);
+    if (!sample) {
+      return res.status(404).json({ error: 'Sample not found' });
+    }
+
+    const plainSample = sample.toObject();
+
+    res.json({
+      id: sample._id,
+      type: plainSample.type,
+      farmerName: plainSample.farmerName,
+      cropName: plainSample.cropName,
+      sampleNumber: plainSample.sampleNumber,
+      hasNValue: plainSample.nValue !== null && plainSample.nValue !== undefined,
+      hasPValue: plainSample.pValue !== null && plainSample.pValue !== undefined,
+      hasKValue: plainSample.kValue !== null && plainSample.kValue !== undefined,
+      hasSpray1Npk: plainSample.spray1Npk !== null && plainSample.spray1Npk !== undefined,
+      fieldCount: Object.keys(plainSample).length,
+      fields: Object.keys(plainSample).filter(k => !k.startsWith('_') && k !== '__v')
+    });
+  } catch (error) {
+    logger.error(`Error testing sample: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Generate PDF for a single fertilizer sample
  * POST /api/fertilizer-testing/samples/:sampleId/pdf
  */
@@ -607,6 +639,8 @@ router.post('/samples/:sampleId/pdf', async (req, res) => {
       logger.warn(`Fertilizer sample not found: ${req.params.sampleId}`);
       return res.status(404).json({ error: 'Sample not found' });
     }
+
+    logger.info(`Found sample - ID: ${sample._id}, Type: ${sample.type}, Farmer: ${sample.farmerName}`);
 
     // Generate PDF
     const pdfBuffer = await pdfGenerator.generateFertilizerPDF(sample);
