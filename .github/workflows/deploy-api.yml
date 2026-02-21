@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       run_permission_sync:
-        description: 'Run database permissions sync after deployment'
+        description: 'Run database permissions sync before deployment'
         required: false
         type: boolean
         default: true
@@ -28,7 +28,22 @@ env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/shiv-agri-api
 
 jobs:
+  # Run permissions sync BEFORE API deployment
+  sync-permissions:
+    name: Sync Database Permissions
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || inputs.run_permission_sync == true)
+    uses: ./.github/workflows/deploy-permissions.yml
+    secrets: inherit
+    with:
+      dry_run: ${{ github.event_name == 'push' && false || inputs.dry_run || false }}
+      force_update: ${{ inputs.force_update || false }}
+      triggered_by: 'deploy-api'
+
   build-and-deploy:
+    needs: sync-permissions
+    if: always() && (needs.sync-permissions.result == 'success' || needs.sync-permissions.result == 'skipped')
     runs-on: ubuntu-latest
 
     steps:
@@ -99,22 +114,3 @@ jobs:
           echo "**Permission Sync:** ${{ (github.event_name == 'push' || inputs.run_permission_sync == true) && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ API deployment completed successfully" >> $GITHUB_STEP_SUMMARY
-
-  # Call the deploy-permissions workflow after successful API deployment
-  sync-permissions:
-    name: Sync Database Permissions
-    needs: build-and-deploy
-    # Run if:
-    # 1. Previous job succeeded AND
-    # 2. On main branch AND
-    # 3. Either it's a push event (auto-sync) OR manual trigger with run_permission_sync=true
-    if: |
-      needs.build-and-deploy.result == 'success' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || inputs.run_permission_sync == true)
-    uses: ./.github/workflows/deploy-permissions.yml
-    secrets: inherit
-    with:
-      dry_run: ${{ github.event_name == 'push' && false || inputs.dry_run || false }}
-      force_update: ${{ inputs.force_update || false }}
-      triggered_by: 'deploy-api'
