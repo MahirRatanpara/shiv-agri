@@ -15,77 +15,85 @@
 
         body {
             font-family: 'Noto Sans Gujarati', sans-serif;
-            font-size: 9pt;
-            line-height: 1.3;
+            font-size: 10pt;
+            line-height: 1.4;
             color: #000;
             background: #fff;
-            padding: 5mm 8mm;
-            max-width: 100%;
+            padding: 8mm 10mm;
+            max-width: 85%;
+            margin: 0 auto;
             overflow-x: hidden;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .header h1 {
-            font-size: 12pt;
+            font-size: 13pt;
             font-weight: 700;
+        }
+
+        .info-line {
+            margin: 5px 0 15px 0;
+            line-height: 1.6;
+            font-size: 10pt;
         }
 
         .section-title {
             font-weight: 700;
-            margin-top: 10px;
+            font-size: 10pt;
+            margin-top: 14px;
             margin-bottom: 6px;
-            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4px;
             font-size: 10pt;
         }
 
-        .month-section {
-            margin: 8px 0;
+        td {
+            padding: 5px 10px;
+            border: 1px solid #000;
+            vertical-align: middle;
+            width: 33.33%;
         }
 
-        .month-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            font-size: 9pt;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .content-line {
-            margin: 3px 0;
-            line-height: 1.3;
-            font-size: 9pt;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .field-value {
-            display: inline-block;
-            min-width: 40px;
-            border-bottom: 1px solid #000;
-            padding: 0 4px;
+        .col-value {
             text-align: center;
         }
 
-        .field-value:empty::after {
-            content: '\00a0\00a0\00a0\00a0\00a0\00a0';
+        .section-text {
+            font-weight: 700;
+            font-size: 10pt;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .section-text-normal {
+            font-weight: normal;
         }
 
         .notes {
-            margin-top: 12px;
+            margin-top: 16px;
+        }
+
+        .notes-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 10pt;
         }
 
         .note-item {
-            margin: 3px 0;
-            padding-left: 15px;
-            text-indent: -15px;
-            line-height: 1.3;
-            font-size: 8.5pt;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
+            margin: 4px 0;
+            padding-left: 18px;
+            text-indent: -18px;
+            line-height: 1.4;
+            font-size: 9pt;
         }
 
         @page {
@@ -94,13 +102,8 @@
         }
 
         @media print {
-            body {
-                padding: 5mm 8mm;
-            }
-
-            * {
-                overflow: visible !important;
-            }
+            body { padding: 8mm 10mm; }
+            * { overflow: visible !important; }
         }
     </style>
 </head>
@@ -109,54 +112,65 @@
         <h1>ખાતરોની ભલામણ (નાના ફળ ઝાડ માટે)</h1>
     </div>
 
-    <div class="section-title">ખાતરોની ભલામણ</div>
-
-    <div class="month-section">
-        <div class="month-title">(1) {{m1_month}} મહીનામાં વાવેતર ના સમયે આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m1_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m1_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m1_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m1_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m1_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m1_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m1_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m1_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
+    <div class="info-line">
+        પાકનું નામ : <strong>{{cropName}}</strong>
+        <span style="float: right;">ખેડૂત નું નામ : <strong>{{farmerName}}</strong></span>
     </div>
 
-    <div class="month-section">
-        <div class="month-title">(2) {{m2_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ) એન.પી.કે. કલ્ચર (જૈવિક ખાતર) <span class="field-value">{{m2_npk}}</span> મિલી/ઝાડ</div>
+    <!-- Section 1 -->
+    <div class="section-title">(1) ......{{m1_month}}........ મહીનામાં વાવેતર ના સમયે આપવાના ખાતરો (ઝાડ દીઠ)</div>
+    <table>
+        <tr><td class="col-name">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦)</td><td class="col-value">{{m1_dap}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૨) એન.પી.કે. (૧૨:૩૨:૧૬)</td><td class="col-value">{{m1_npk}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦)</td><td class="col-value">{{m1_asp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦)</td><td class="col-value">{{m1_narmada}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦)</td><td class="col-value">{{m1_ssp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦)</td><td class="col-value">{{m1_as}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦)</td><td class="col-value">{{m1_mop}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૮) યુરીયા (૪૬:૦૦:૦૦)</td><td class="col-value">{{m1_urea}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+    </table>
+
+    <!-- Section 2 -->
+    <div class="section-text">
+        (2) .........{{m2_month}}....... મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ) &nbsp;એન.પી.કે. કલ્ચર (જૈવિક ખાતર) .....{{m2_npk}}.... મિલી/ઝાડ
     </div>
 
-    <div class="month-section">
-        <div class="month-title">(3) {{m3_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m3_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m3_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m3_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m3_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m3_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m3_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m3_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m3_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
-    </div>
+    <!-- Section 3 -->
+    <div class="section-title">(3) ......{{m3_month}}..... મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
+    <table>
+        <tr><td class="col-name">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦)</td><td class="col-value">{{m3_dap}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૨) એન.પી.કે. (૧૨:૩૨:૧૬)</td><td class="col-value">{{m3_npk}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦)</td><td class="col-value">{{m3_asp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦)</td><td class="col-value">{{m3_narmada}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦)</td><td class="col-value">{{m3_ssp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦)</td><td class="col-value">{{m3_as}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦)</td><td class="col-value">{{m3_mop}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૮) યુરીયા (૪૬:૦૦:૦૦)</td><td class="col-value">{{m3_urea}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+    </table>
 
-    <div class="month-section">
-        <div class="month-title">(4) {{m4_month}} મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
-        <div class="content-line">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦) <span class="field-value">{{m4_dap}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૨) એન.પી.કે. (૧૨:૩૨:૧૬) <span class="field-value">{{m4_npk}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦) <span class="field-value">{{m4_asp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦) <span class="field-value">{{m4_narmada}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦) <span class="field-value">{{m4_ssp}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦) <span class="field-value">{{m4_as}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦) <span class="field-value">{{m4_mop}}</span> ગ્રામ/ઝાડ દીઠ</div>
-        <div class="content-line">(૮) યુરીયા (૪૬:૦૦:૦૦) <span class="field-value">{{m4_urea}}</span> ગ્રામ/ઝાડ દીઠ</div>
-    </div>
+    <!-- Section 4 -->
+    <div class="section-title">(4) ......{{m4_month}}..... મહીનામાં આપવાના ખાતરો (ઝાડ દીઠ)</div>
+    <table>
+        <tr><td class="col-name">(૧) ડી.એ.પી. (૧૮:૪૬:૦૦)</td><td class="col-value">{{m4_dap}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૨) એન.પી.કે. (૧૨:૩૨:૧૬)</td><td class="col-value">{{m4_npk}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૩) એ.એસ.પી. (૨૦:૨૦:૦૦)</td><td class="col-value">{{m4_asp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૪) નર્મદા ફોસ (૨૦:૨૦:૦૦)</td><td class="col-value">{{m4_narmada}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૫) સીંગલ સુપર ફોસ્ફેટ (૦૦:૧૬:૦૦)</td><td class="col-value">{{m4_ssp}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૬) એમોનીયમ સલ્ફેટ (૨૧:૦૦:૦૦)</td><td class="col-value">{{m4_as}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૭) મ્યુરેટ ઓફ પોટાશ (૦૦:૦૦:૬૦)</td><td class="col-value">{{m4_mop}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+        <tr><td class="col-name">(૮) યુરીયા (૪૬:૦૦:૦૦)</td><td class="col-value">{{m4_urea}}</td><td class="col-unit">ગ્રામ/ઝાડ દીઠ</td></tr>
+    </table>
 
-    <div class="month-section">
-        <div class="month-title">(5) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ) એન.પી.કે. (૧૯:૧૯:૧૯) <span class="field-value">{{m5_npk1919}}</span> ગ્રામ/પંપ દીઠ</div>
+    <!-- Section 5 -->
+    <div class="section-text">
+        (5) સ્પ્રે પંપમાં નાખીને છોડ પર સ્પ્રે કરવાના પાણીમાં દ્રાવ્ય ખાતરો (એક પંપ દીઠ) એન.પી.કે. (૧૯:૧૯:૧૯) .....{{m5_npk1919}}..... ગ્રામ/પંપ દીઠ
     </div>
+    <br>
+    <br>
+    <br>
 
     <div class="notes">
-        <div style="font-weight: 700; margin-bottom: 8px;">નોંધ :-</div>
+        <div class="notes-title">નોંધ :-</div>
         <div class="note-item">(૧) ઉપરોક્ત ખાતરો બજારમાં ઉપલબ્ધ ન હોય તો અન્ય ખાતર વાપરવાનું થાય, તો તેના ડોઝ માટે ફોન કરવો.</div>
         <div class="note-item">(૨) જે ખાતરોની સામે તેનો ડોઝ લખેલ છે, તેજ ખાતરોનો ઉપયોગ કરવો.</div>
         <div class="note-item">(૩) સુક્ષ્મ તત્વ યુક્ત ખાતરો ફોસ્ફેટીક ખાતરો સાથે મીશ્રણ કરીને આપવા નહી. તેને અલગથી આપવા.</div>
