@@ -370,10 +370,11 @@ router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.up
         // Get existing sample to check cropType change
         const existingSample = await SoilSample.findById(sampleData._id);
 
-        // Update existing
+        // Update existing - strip _id from $set to avoid MongoDB immutable field error
+        const { _id, ...updateFields } = sampleWithClassifications;
         savedSample = await SoilSample.findOneAndUpdate(
           { _id: sampleData._id, sessionId },
-          { $set: { ...sampleWithClassifications, sessionId } },
+          { $set: { ...updateFields, sessionId } },
           { new: true }
         );
 
@@ -384,9 +385,10 @@ router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.up
           savedSample = await SoilSample.findById(savedSample._id);
         }
       } else {
-        // Insert new
+        // Insert new - strip _id to let MongoDB generate one
+        const { _id: _unusedId, ...insertFields } = sampleWithClassifications;
         savedSample = await SoilSample.create({
-          ...sampleWithClassifications,
+          ...insertFields,
           sessionId,
           sessionDate: session.date,
           sessionVersion: session.version

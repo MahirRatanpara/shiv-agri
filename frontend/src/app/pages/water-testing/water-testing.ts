@@ -114,11 +114,9 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: "Farmer's Name",
       editable: true,
       filter: true,
-      minWidth: 180,
+      minWidth: 280,
       flex: 0,
       pinned: 'left',
-      autoHeight: true,
-      wrapText: true,
     },
     {
       field: 'mobileNo',
@@ -1136,6 +1134,11 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
           finalDeduction: this.gridApi.getValue('finalDeduction', node) || '',
         };
 
+        // Include _id if it exists (for updates vs inserts)
+        if (node.data._id) {
+          completeData._id = node.data._id;
+        }
+
         allGridData.push(completeData);
       }
     });
@@ -1167,9 +1170,25 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
           this.hasMoreData = true;
           this.isLoadingMore = false;
 
-          this.loadMoreSamples();
-
-          resolve();
+          // Wait for samples to reload before resolving so rowData has _ids
+          this.waterTestingService.getSamplesForSession(
+            this.currentSession!._id!,
+            1,
+            this.gridPageSize
+          ).subscribe({
+            next: (samplesResponse) => {
+              this.rowData = samplesResponse.samples;
+              if (this.gridApi) {
+                this.gridApi.setGridOption('rowData', this.rowData);
+              }
+              this.gridCurrentPage = 2;
+              this.hasMoreData = samplesResponse.samples.length >= this.gridPageSize;
+              resolve();
+            },
+            error: (err) => {
+              resolve(); // Still resolve so caller isn't stuck
+            }
+          });
         },
         error: (error) => {
           reject(error);
