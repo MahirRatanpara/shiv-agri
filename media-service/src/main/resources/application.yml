@@ -1,0 +1,45 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: media-service
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/shiv-agri}
+      auto-index-creation: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+media:
+  storage:
+    active-backend: ${MEDIA_STORAGE_ACTIVE_BACKEND:filesystem}
+    max-file-size-bytes: 20971520
+    allowed-mime-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - image/gif
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - webp
+      - gif
+    filesystem:
+      root-dir: ${MEDIA_STORAGE_FILESYSTEM_ROOT_DIR:/var/media/uploads}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.shivagri.media: INFO

@@ -41,6 +41,26 @@ services:
     networks:
       - app-network
 
+  media-service:
+    build:
+      context: ./media-service
+      dockerfile: Dockerfile
+    container_name: shivagri-media-dev
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: filesystem
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/shiv-agri
+      MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+    ports:
+      - "8081:8081"
+    volumes:
+      - /Users/mahirratanpara/shiv-agri-media:/var/media/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+
   frontend:
     build:
       context: ./frontend
