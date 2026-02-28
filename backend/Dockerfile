@@ -16,7 +16,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install Chromium and dependencies for Puppeteer
+# Install Chromium and dependencies for Puppeteer (including Gujarati font)
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -24,7 +24,8 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    font-noto-emoji
+    font-noto-emoji \
+    font-noto-gujarati
 
 # Set Puppeteer to use installed Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \

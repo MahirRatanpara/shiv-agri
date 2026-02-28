@@ -60,32 +60,35 @@ jobs:
           cache-from: ${{ inputs.use_build_cache && format('type=registry,ref={0}:buildcache', env.IMAGE_NAME) || '' }}
           cache-to: ${{ inputs.use_build_cache && format('type=registry,ref={0}:buildcache,mode=max', env.IMAGE_NAME) || '' }}
 
+      - name: Setup SSH key
+        if: github.ref == 'refs/heads/main'
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf 'Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' > ~/.ssh/config
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+
       - name: Deploy to Hostinger VPS
         if: github.ref == 'refs/heads/main'
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-          ssh -i ~/.ssh/deploy_key -o ConnectTimeout=10 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'DEPLOY_SCRIPT'
-            cd /var/www/shiv-agri
-
-            if [ -f .env ]; then
-              export $(cat .env | grep -v '^#' | xargs)
-              echo "✓ Environment variables loaded from .env"
-            else
-              echo "⚠ Warning: .env file not found"
-            fi
-
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin 2>/dev/null
-            docker compose -f docker-compose.prod.yml pull --quiet ${{ inputs.service_name }}
-            docker compose -f docker-compose.prod.yml up -d --no-deps ${{ inputs.service_name }}
-            nohup docker image prune -f > /dev/null 2>&1 &
-            echo "✅ ${{ inputs.service_name }} deployment completed successfully!"
-          DEPLOY_SCRIPT
-
-          rm -f ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key "${SERVER_USER}@${SERVER_HOST}" << EOF
+          set -e
+          cd /var/www/shiv-agri
+          [ -f .env ] && export \$(cat .env | grep -v '^#' | xargs)
+          echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_USER}" --password-stdin 2>/dev/null
+          docker compose -f docker-compose.prod.yml pull --quiet ${SERVICE_NAME}
+          docker compose -f docker-compose.prod.yml up -d --no-deps ${SERVICE_NAME}
+          nohup docker image prune -f > /dev/null 2>&1 &
+          echo "✅ ${SERVICE_NAME} deployed successfully!"
+          EOF
+          rm -f ~/.ssh/deploy_key ~/.ssh/config
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVICE_NAME: ${{ inputs.service_name }}
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create deployment summary
         if: github.ref == 'refs/heads/main'

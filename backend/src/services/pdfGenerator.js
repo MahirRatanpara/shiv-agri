@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
 
@@ -21,21 +22,33 @@ class PDFGeneratorService {
         // Template cache for faster access
         this.templateCache = {};
 
+        // Load Gujarati font as base64 data URI (works offline in Docker)
+        const fontPath = path.join(__dirname, '../../fonts/NotoSansGujarati-Regular.ttf');
+        let fontDataUri;
+        try {
+            const fontBuffer = fsSync.readFileSync(fontPath);
+            fontDataUri = `data:font/truetype;base64,${fontBuffer.toString('base64')}`;
+            logger.info('Loaded NotoSansGujarati font from local file');
+        } catch (err) {
+            logger.warn(`Could not load local font file: ${err.message}, falling back to Google Fonts URL`);
+            fontDataUri = 'https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2';
+        }
+
         // Font CSS to inject (cached)
         this.fontCSS = `
             @font-face {
                 font-family: 'Noto Sans Gujarati';
-                src: url('https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2') format('woff2');
+                src: url('${fontDataUri}') format('truetype');
                 font-weight: 400;
                 font-style: normal;
-                font-display: swap;
+                font-display: block;
             }
             @font-face {
                 font-family: 'Noto Sans Gujarati';
-                src: url('https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2') format('woff2');
+                src: url('${fontDataUri}') format('truetype');
                 font-weight: 700;
                 font-style: normal;
-                font-display: swap;
+                font-display: block;
             }
         `;
     }
