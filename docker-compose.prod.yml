@@ -21,6 +21,21 @@ services:
     networks:
       - app-network
 
+  media-service:
+    image: ${DOCKERHUB_USERNAME}/shiv-agri-media:latest
+    container_name: shivagri-media
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: filesystem
+      SPRING_DATA_MONGODB_URI: ${MONGODB_URI}
+      MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+    volumes:
+      - /var/media/uploads:/var/media/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
   frontend:
     image: ${DOCKERHUB_USERNAME}/shiv-agri-frontend:latest
     container_name: shivagri-frontend
