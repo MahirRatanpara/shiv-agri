@@ -341,19 +341,21 @@ router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.up
 
     const operations = samples.map(sampleData => {
       if (sampleData._id) {
-        // Update existing
+        // Update existing - strip _id from $set to avoid MongoDB immutable field error
+        const { _id, ...updateFields } = sampleData;
         return {
           updateOne: {
             filter: { _id: sampleData._id, sessionId },
-            update: { $set: { ...sampleData, sessionId } }
+            update: { $set: { ...updateFields, sessionId } }
           }
         };
       } else {
-        // Insert new
+        // Insert new - strip _id to let MongoDB generate one
+        const { _id, ...insertFields } = sampleData;
         return {
           insertOne: {
             document: {
-              ...sampleData,
+              ...insertFields,
               sessionId,
               sessionDate: session.date,
               sessionVersion: session.version

@@ -605,19 +605,21 @@ router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.u
       const sampleWithClassifications = addClassifications(sampleData);
 
       if (sampleData._id) {
-        // Update existing
+        // Update existing - strip _id from $set to avoid MongoDB immutable field error
+        const { _id, ...updateFields } = sampleWithClassifications;
         return {
           updateOne: {
             filter: { _id: sampleData._id, sessionId },
-            update: { $set: { ...sampleWithClassifications, sessionId } }
+            update: { $set: { ...updateFields, sessionId } }
           }
         };
       } else {
-        // Insert new
+        // Insert new - strip _id to let MongoDB generate one
+        const { _id, ...insertFields } = sampleWithClassifications;
         return {
           insertOne: {
             document: {
-              ...sampleWithClassifications,
+              ...insertFields,
               sessionId,
               sessionDate: session.date,
               sessionVersion: session.version
