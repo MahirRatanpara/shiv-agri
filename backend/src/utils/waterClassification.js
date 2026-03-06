@@ -70,7 +70,7 @@ const waterTestingRulebook = {
                 max: Infinity,
                 classification: "અતિશય ક્ષાર",
                 classificationEn: "Extreme Salinity",
-                classCode: "C₄"
+                classCode: "C₅"
             }
         ]
     },
