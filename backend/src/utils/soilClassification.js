@@ -11,14 +11,14 @@ const soilTestingRulebook = {
         ranges: [
             {
                 min: 0,
-                max: 5.4,
+                max: 6.4,
                 classification: "ઓછું",
                 label: "એસિડિક",
                 classificationEn: "Low",
                 labelEn: "Acidic"
             },
             {
-                min: 5.5,
+                min: 6.5,
                 max: 8.19,
                 classification: "મધ્યમ",
                 label: "સામાન્ય",
@@ -44,7 +44,7 @@ const soilTestingRulebook = {
         ranges: [
             {
                 min: 0,
-                max: 0.66,
+                max: 1,
                 classification: "ઓછું",
                 label: "સામાન્ય",
                 classificationEn: "Low",
