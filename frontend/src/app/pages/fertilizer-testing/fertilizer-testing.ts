@@ -264,7 +264,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
         }
       },
       { field: 'spray1_npkDose', headerName: 'Spray 1 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
@@ -276,7 +276,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
         }
       },
       { field: 'spray1_hormoneDose', headerName: 'Spray 1 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
@@ -290,7 +290,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
         }
       },
       { field: 'spray2_npkDose', headerName: 'Spray 2 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
@@ -302,7 +302,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
         }
       },
       { field: 'spray2_hormoneDose', headerName: 'Spray 2 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
@@ -316,7 +316,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
         }
       },
       { field: 'spray3_npkDose', headerName: 'Spray 3 - NPK Dose', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-spray' },
@@ -328,7 +328,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         headerClass: 'header-section-spray',
         cellEditor: 'agSelectCellEditor',
         cellEditorParams: {
-          values: ['ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
         }
       },
       { field: 'spray3_hormoneDose', headerName: 'Spray 3 - Hormone Dose', editable: true, cellDataType: 'number', minWidth: 180, headerClass: 'header-section-spray' },
@@ -351,7 +351,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
     ];
 
     const gujaratiMonths = [
-      'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
+      '', 'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
       'જુલાઈ', 'ઓગસ્ટ', 'સપ્ટેમ્બર', 'ઓક્ટોબર', 'નવેમ્બર', 'ડિસેમ્બર'
     ];
 
@@ -394,6 +394,10 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'm1_as', headerName: 'M1 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
       { field: 'm1_mop', headerName: 'M1 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
       { field: 'm1_urea', headerName: 'M1 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_borocol', headerName: 'M1 Borocol (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-m1' },
+      { field: 'm1_sardaramin', headerName: 'M1 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m1' },
+      { field: 'm1_chhaniyu', headerName: 'M1 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m1' },
+      { field: 'm1_erandakhol', headerName: 'M1 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m1' },
       // M2 section (NPK culture only)
       monthDropdown('m2_month', 'M2 Month', 'header-section-m2'),
       { field: 'm2_npk', headerName: 'M2 NPK Culture (મિલી)', editable: true, cellDataType: 'number', minWidth: 160, headerClass: 'header-section-m2' },
@@ -407,6 +411,10 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'm3_as', headerName: 'M3 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
       { field: 'm3_mop', headerName: 'M3 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
       { field: 'm3_urea', headerName: 'M3 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_borocol', headerName: 'M3 Borocol (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-m3' },
+      { field: 'm3_sardaramin', headerName: 'M3 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m3' },
+      { field: 'm3_chhaniyu', headerName: 'M3 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m3' },
+      { field: 'm3_erandakhol', headerName: 'M3 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m3' },
       // M4 section
       monthDropdown('m4_month', 'M4 Month', 'header-section-m4'),
       { field: 'm4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
@@ -417,6 +425,10 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'm4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
       { field: 'm4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
       { field: 'm4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', minWidth: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_borocol', headerName: 'M4 Borocol (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 130, headerClass: 'header-section-m4' },
+      { field: 'm4_sardaramin', headerName: 'M4 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', minWidth: 150, headerClass: 'header-section-m4' },
+      { field: 'm4_chhaniyu', headerName: 'M4 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m4' },
+      { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', minWidth: 140, headerClass: 'header-section-m4' },
       // M5 - Spray section
       { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', minWidth: 170, headerClass: 'header-section-m5' },
       fruitActionsCol,
@@ -974,7 +986,19 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   /**
    * Switch crop type tab
    */
-  switchCropType(type: CropType) {
+  async switchCropType(type: CropType) {
+    if (type === this.activeCropType) return;
+
+    // Auto-save current data before switching
+    if (this.currentSession?._id && this.gridApi) {
+      try {
+        await this.saveCurrentSession();
+      } catch (err) {
+        // Log but don't block the switch
+        console.warn('Auto-save before type switch failed:', err);
+      }
+    }
+
     this.activeCropType = type;
     // Reload grid with new column definitions
     if (this.gridApi) {
@@ -1168,16 +1192,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
 
     return new Promise((resolve, reject) => {
       this.fertilizerTestingService.bulkUpdateSamples(this.currentSession!._id!, allGridData).subscribe({
-        next: (response) => {
-          // After save, refresh the data to ensure we have IDs for new rows
-          this.rowData = [];
-          this.gridCurrentPage = 1;
-          this.hasMoreData = true;
-          this.isLoadingMore = false;
-
-          // Reload
-          this.loadMoreSamples();
-
+        next: () => {
           resolve();
         },
         error: (error) => {
