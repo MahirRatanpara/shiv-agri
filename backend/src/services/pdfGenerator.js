@@ -405,6 +405,10 @@ class PDFGeneratorService {
             '{{m1_as}}': formatNumber(data.m1_as, 0),
             '{{m1_mop}}': formatNumber(data.m1_mop, 0),
             '{{m1_urea}}': formatNumber(data.m1_urea, 0),
+            '{{m1_borocol}}': formatNumber(data.m1_borocol, 0),
+            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin, 0),
+            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu, 0),
+            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol, 0),
 
             // M2 fertilizers
             '{{m2_dap}}': formatNumber(data.m2_dap, 0),
@@ -425,6 +429,10 @@ class PDFGeneratorService {
             '{{m3_as}}': formatNumber(data.m3_as, 0),
             '{{m3_mop}}': formatNumber(data.m3_mop, 0),
             '{{m3_urea}}': formatNumber(data.m3_urea, 0),
+            '{{m3_borocol}}': formatNumber(data.m3_borocol, 0),
+            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin, 0),
+            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu, 0),
+            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol, 0),
 
             // M4 fertilizers
             '{{m4_dap}}': formatNumber(data.m4_dap, 0),
@@ -435,6 +443,10 @@ class PDFGeneratorService {
             '{{m4_as}}': formatNumber(data.m4_as, 0),
             '{{m4_mop}}': formatNumber(data.m4_mop, 0),
             '{{m4_urea}}': formatNumber(data.m4_urea, 0),
+            '{{m4_borocol}}': formatNumber(data.m4_borocol, 0),
+            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin, 0),
+            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu, 0),
+            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol, 0),
 
             // M5 - Spray fertilizers
             '{{m5_npk1919}}': formatNumber(data.m5_npk1919, 0),

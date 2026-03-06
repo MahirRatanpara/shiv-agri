@@ -90,7 +90,23 @@ const sampleSchema = new mongoose.Schema({
   day160: { type: Number, default: null },
 
   // Spray Fertilizers (Normal crop - 3 sprays with uniform structure)
+  spray1_stage: { type: Number, default: null },
+  spray1_npkType: { type: String, default: null },
+  spray1_npkDose: { type: Number, default: null },
+  spray1_hormoneName: { type: String, default: null },
+  spray1_hormoneDose: { type: Number, default: null },
 
+  spray2_stage: { type: Number, default: null },
+  spray2_npkType: { type: String, default: null },
+  spray2_npkDose: { type: Number, default: null },
+  spray2_hormoneName: { type: String, default: null },
+  spray2_hormoneDose: { type: Number, default: null },
+
+  spray3_stage: { type: Number, default: null },
+  spray3_npkType: { type: String, default: null },
+  spray3_npkDose: { type: Number, default: null },
+  spray3_hormoneName: { type: String, default: null },
+  spray3_hormoneDose: { type: Number, default: null },
 
   // Fruit Tree Fields (shared by small-fruit and large-fruit types)
   // M1 section - selected month name + fertilizer amounts
