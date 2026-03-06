@@ -96,11 +96,11 @@ const waterTestingRulebook = {
             },
             {
                 min: 2250,
-                max: 5,
+                max: 5000,
                 classCode: "C₄"
             },
             {
-                min: 5,
+                min: 5000,
                 max: Infinity,
                 classCode: "C₅"
             },
