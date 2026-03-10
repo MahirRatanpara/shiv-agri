@@ -1228,7 +1228,8 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
 
       // STEP 3: Generate PDF from backend using sample ID
       const farmerName = savedRow.farmerName || 'Unknown';
-      const filename = `ખાતર ચકાસણી - ${farmerName}.pdf`;
+      const sampleNumber = savedRow.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - ખાતર ભલામણ - ${farmerName}.pdf` : `ખાતર ભલામણ - ${farmerName}.pdf`;
 
       await this.pdfService.downloadFertilizerSamplePDF(savedRow._id, filename);
 

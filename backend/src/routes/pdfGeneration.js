@@ -102,6 +102,7 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
     // Return the array of PDFs as JSON with base64 encoding
     const result = pdfs.map(pdf => ({
       sampleId: pdf.sampleId,
+      sampleNumber: pdf.sampleNumber,
       farmerName: pdf.farmerName,
       pdf: Buffer.from(pdf.buffer).toString('base64')
     }));
@@ -179,7 +180,8 @@ router.post('/session/:sessionId/stream', async (req, res) => {
       }
 
       const farmerName = pdf.farmerName || 'Unknown';
-      const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
+      const sampleNumber = pdf.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - જમીન ચકાસણી - ${farmerName}.pdf` : `જમીન ચકાસણી - ${farmerName}.pdf`;
       const encodedFilename = encodeURIComponent(filename);
 
       try {
@@ -190,6 +192,7 @@ router.post('/session/:sessionId/stream', async (req, res) => {
         res.write(`Content-Type: application/pdf\r\n`);
         res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
         res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+        res.write(`X-Sample-Number: ${encodeURIComponent(sampleNumber)}\r\n`);
         res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
         res.write(`X-Index: ${index}\r\n`);
         res.write(`X-Total: ${total}\r\n`);
@@ -322,6 +325,7 @@ router.post('/samples/multiple', async (req, res) => {
 
       const result = pdfs.map(pdf => ({
         sampleId: pdf.sampleId,
+        sampleNumber: pdf.sampleNumber,
         farmerName: pdf.farmerName,
         pdf: Buffer.from(pdf.buffer).toString('base64')
       }));
