@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema({
   refreshToken: {
     type: String
   },
+  googleRefreshToken: {
+    type: String
+  },
   lastLogin: {
     type: Date
   },

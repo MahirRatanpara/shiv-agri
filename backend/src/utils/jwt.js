@@ -1,21 +1,13 @@
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-dev-jwt-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 /**
  * Generate access token
  */
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-};
-
-/**
- * Generate refresh token
- */
-const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
 };
 
 /**
@@ -29,8 +21,20 @@ const verifyToken = (token) => {
   }
 };
 
+/**
+ * Decode token without verifying expiry (still validates signature)
+ * Used for reading userId from expired tokens during refresh
+ */
+const decodeToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+  } catch (error) {
+    throw new Error('Invalid token');
+  }
+};
+
 module.exports = {
   generateAccessToken,
-  generateRefreshToken,
-  verifyToken
+  verifyToken,
+  decodeToken
 };

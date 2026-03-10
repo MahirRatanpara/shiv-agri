@@ -1,11 +1,11 @@
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
-const { generateAccessToken, generateRefreshToken, verifyToken } = require('../utils/jwt');
+const { generateAccessToken, verifyToken, decodeToken } = require('../utils/jwt');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
- * Google OAuth login
+ * Google OAuth login (legacy ID token flow - kept as fallback)
  */
 const googleLogin = async (req, res) => {
   try {
@@ -28,7 +28,6 @@ const googleLogin = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create new user - auto-approved
       user = new User({
         googleId,
         email,
@@ -38,7 +37,6 @@ const googleLogin = async (req, res) => {
       });
       await user.save();
 
-      // Set roleRef based on role name
       const Role = require('../models/Role');
       const roleDoc = await Role.findOne({ name: user.role }).populate('permissions');
       if (roleDoc) {
@@ -46,39 +44,16 @@ const googleLogin = async (req, res) => {
         await user.save();
       }
 
-      // Populate roleRef with permissions for response
       await user.populate({
         path: 'roleRef',
         populate: { path: 'permissions' }
       });
 
-      // Generate tokens for new user
       const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
-      const refreshToken = generateRefreshToken({ userId: user._id });
-
-      // Save refresh token
-      user.refreshToken = refreshToken;
-      await user.save();
-
-      // Set cookies
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 1000 // 1 hour
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
 
       return res.status(201).json({
         message: 'Account created successfully',
         accessToken,
-        refreshToken,
         user: {
           id: user._id,
           email: user.email,
@@ -99,7 +74,6 @@ const googleLogin = async (req, res) => {
     }
     user.lastLogin = new Date();
 
-    // Ensure roleRef is set
     if (!user.roleRef) {
       const Role = require('../models/Role');
       const roleDoc = await Role.findOne({ name: user.role });
@@ -108,39 +82,17 @@ const googleLogin = async (req, res) => {
       }
     }
 
-    // Generate tokens
     const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
-    const refreshToken = generateRefreshToken({ userId: user._id });
-
-    // Save refresh token
-    user.refreshToken = refreshToken;
     await user.save();
 
-    // Populate roleRef with permissions for response
     await user.populate({
       path: 'roleRef',
       populate: { path: 'permissions' }
     });
 
-    // Set cookies
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 1000 // 1 hour
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-
     res.json({
       message: 'Login successful',
       accessToken,
-      refreshToken,
       user: {
         id: user._id,
         email: user.email,
@@ -157,36 +109,189 @@ const googleLogin = async (req, res) => {
 };
 
 /**
- * Refresh access token
+ * Google OAuth login with Authorization Code flow
+ * Frontend sends an authorization code, backend exchanges it for tokens
+ */
+const googleLoginWithCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code is required' });
+    }
+
+    // Exchange authorization code for tokens
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: 'postmessage',
+        grant_type: 'authorization_code'
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (tokenData.error) {
+      console.error('Google token exchange error:', tokenData);
+      return res.status(400).json({ error: 'Failed to exchange authorization code', details: tokenData.error_description });
+    }
+
+    const { id_token, refresh_token: googleRefreshToken } = tokenData;
+
+    // Verify the id_token to get user info
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ email });
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      user = new User({
+        googleId,
+        email,
+        name,
+        profilePhoto: picture,
+        lastLogin: new Date()
+      });
+
+      if (googleRefreshToken) {
+        user.googleRefreshToken = googleRefreshToken;
+      }
+      await user.save();
+
+      const Role = require('../models/Role');
+      const roleDoc = await Role.findOne({ name: user.role }).populate('permissions');
+      if (roleDoc) {
+        user.roleRef = roleDoc._id;
+        await user.save();
+      }
+    } else {
+      // Update existing user
+      if (!user.googleId) {
+        user.googleId = googleId;
+      }
+      if (picture) {
+        user.profilePhoto = picture;
+      }
+      user.lastLogin = new Date();
+
+      // Store Google refresh token (only provided on first consent)
+      if (googleRefreshToken) {
+        user.googleRefreshToken = googleRefreshToken;
+      }
+
+      if (!user.roleRef) {
+        const Role = require('../models/Role');
+        const roleDoc = await Role.findOne({ name: user.role });
+        if (roleDoc) {
+          user.roleRef = roleDoc._id;
+        }
+      }
+
+      await user.save();
+    }
+
+    // Populate roleRef with permissions for response
+    await user.populate({
+      path: 'roleRef',
+      populate: { path: 'permissions' }
+    });
+
+    // Generate JWT access token (24h)
+    const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
+
+    res.status(isNewUser ? 201 : 200).json({
+      message: isNewUser ? 'Account created successfully' : 'Login successful',
+      accessToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        profilePhoto: user.profilePhoto,
+        roleRef: user.roleRef
+      }
+    });
+  } catch (error) {
+    console.error('Google code login error:', error);
+    res.status(500).json({ error: 'Authentication failed', details: error.message });
+  }
+};
+
+/**
+ * Refresh access token using stored Google refresh token
+ * Frontend sends the expired/expiring JWT for user identification
  */
 const refreshAccessToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body || req.cookies;
+    // Get the current (possibly expired) access token from Authorization header
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.accessToken;
 
-    if (!refreshToken) {
-      return res.status(401).json({ error: 'Refresh token is required' });
+    if (!token) {
+      return res.status(401).json({ error: 'Access token is required for refresh' });
     }
 
-    // Verify refresh token
-    const decoded = verifyToken(refreshToken);
+    // Decode token without strict expiry check (but still validates signature)
+    let decoded;
+    try {
+      decoded = decodeToken(token);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-    // Find user and verify refresh token
+    // Grace window: reject tokens that expired more than 30 days ago
+    const now = Math.floor(Date.now() / 1000);
+    if (decoded.exp && (now - decoded.exp) > 30 * 24 * 60 * 60) {
+      return res.status(401).json({ error: 'Token expired too long ago, please login again' });
+    }
+
+    // Find user
     const user = await User.findById(decoded.userId);
-
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(401).json({ error: 'Invalid refresh token' });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
     }
 
-    // Generate new access token
-    const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
+    // Use stored Google refresh token to validate with Google
+    if (!user.googleRefreshToken) {
+      return res.status(401).json({ error: 'No Google session found, please login again' });
+    }
 
-    // Set cookie
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 1000 // 1 hour
+    // Call Google's token endpoint with the refresh token
+    const googleResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: user.googleRefreshToken,
+        grant_type: 'refresh_token'
+      })
     });
+
+    const googleData = await googleResponse.json();
+
+    if (googleData.error) {
+      // Google refresh token is revoked or invalid — user must re-login
+      console.error('Google refresh token invalid:', googleData.error);
+      user.googleRefreshToken = null;
+      await user.save();
+      return res.status(401).json({ error: 'Google session expired, please login again' });
+    }
+
+    // Google refresh succeeded — issue new JWT
+    const accessToken = generateAccessToken({ userId: user._id, email: user.email, role: user.role });
 
     res.json({
       message: 'Token refreshed',
@@ -194,20 +299,37 @@ const refreshAccessToken = async (req, res) => {
     });
   } catch (error) {
     console.error('Refresh token error:', error);
-    res.status(401).json({ error: 'Invalid or expired refresh token' });
+    res.status(401).json({ error: 'Token refresh failed' });
   }
 };
 
 /**
- * Logout
+ * Logout - revoke Google refresh token and clear session
  */
 const logout = async (req, res) => {
   try {
     const userId = req.user?._id;
 
     if (userId) {
-      // Clear refresh token from database
-      await User.findByIdAndUpdate(userId, { refreshToken: null });
+      const user = await User.findById(userId);
+
+      if (user) {
+        // Revoke Google refresh token if present
+        if (user.googleRefreshToken) {
+          try {
+            await fetch(`https://oauth2.googleapis.com/revoke?token=${user.googleRefreshToken}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+          } catch (revokeError) {
+            console.error('Failed to revoke Google token (non-fatal):', revokeError);
+          }
+          user.googleRefreshToken = null;
+        }
+
+        user.refreshToken = null;
+        await user.save();
+      }
     }
 
     // Clear cookies
@@ -246,6 +368,7 @@ const getCurrentUser = async (req, res) => {
 
 module.exports = {
   googleLogin,
+  googleLoginWithCode,
   refreshAccessToken,
   logout,
   getCurrentUser
