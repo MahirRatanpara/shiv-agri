@@ -1,4 +1,4 @@
-import { Component, OnInit, PLATFORM_ID, Inject } from '@angular/core';
+import { Component, OnInit, PLATFORM_ID, Inject, NgZone } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -18,9 +18,12 @@ export class LoginComponent implements OnInit {
   successMessage = '';
   isLoading = false;
 
+  private codeClient: any = null;
+
   constructor(
     private authService: AuthService,
     private router: Router,
+    private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -38,34 +41,43 @@ export class LoginComponent implements OnInit {
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      this.renderGoogleButton();
+      this.setupCodeClient();
     };
     document.head.appendChild(script);
   }
 
-  renderGoogleButton(): void {
-    google.accounts.id.initialize({
+  setupCodeClient(): void {
+    this.codeClient = google.accounts.oauth2.initCodeClient({
       client_id: environment.googleClientId,
-      callback: (response: any) => this.handleCredentialResponse(response)
+      scope: 'openid email profile',
+      ux_mode: 'popup',
+      callback: (response: any) => {
+        this.ngZone.run(() => {
+          this.handleCodeResponse(response);
+        });
+      }
     });
 
-    google.accounts.id.renderButton(
-      document.getElementById('googleSignInButton'),
-      {
-        theme: 'outline',
-        size: 'large',
-        width: 300,
-        text: 'signin_with'
-      }
-    );
+    // Render a custom Google sign-in button
+    const buttonEl = document.getElementById('googleSignInButton');
+    if (buttonEl) {
+      buttonEl.addEventListener('click', () => {
+        this.codeClient.requestCode();
+      });
+    }
   }
 
-  handleCredentialResponse(response: any): void {
+  handleCodeResponse(response: any): void {
+    if (response.error) {
+      this.errorMessage = 'Google sign-in was cancelled or failed.';
+      return;
+    }
+
     this.isLoading = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService.googleLogin(response.credential).subscribe({
+    this.authService.googleLoginWithCode(response.code).subscribe({
       next: (result) => {
         this.isLoading = false;
         this.successMessage = 'Login successful! Redirecting...';

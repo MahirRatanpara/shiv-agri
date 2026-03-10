@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap, catchError, throwError } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError, throwError, shareReplay } from 'rxjs';
 import { environment } from '../environments/environment';
 
 export interface User {
@@ -25,7 +25,6 @@ export interface User {
 export interface AuthResponse {
   message: string;
   accessToken?: string;
-  refreshToken?: string;
   user?: User;
   error?: string;
 }
@@ -41,59 +40,49 @@ export class AuthService {
   // Signal for reactive state
   public isAuthenticated = signal(false);
 
-  // Token refresh timer
-  private tokenRefreshTimer: any = null;
-  private readonly TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000; // 50 minutes (refresh before 1h expiry)
+  // Token refresh scheduling
+  private refreshTimeout: any = null;
+
+  // Shared refresh observable to dedup concurrent refresh calls
+  private refreshInProgress$: Observable<AuthResponse> | null = null;
 
   constructor(private http: HttpClient) {
     this.loadStoredUser();
-    this.startTokenRefreshTimer();
+    this.setupVisibilityListener();
   }
 
   /**
    * Load user from localStorage on app init
-   * Also checks if tokens are expired and attempts refresh
    */
   private loadStoredUser(): void {
     const storedUser = localStorage.getItem('currentUser');
     const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
 
     if (storedUser && accessToken) {
       const user = JSON.parse(storedUser);
 
-      // Check if access token is expired
       if (this.isTokenExpired(accessToken)) {
-        console.log('Access token expired, attempting to refresh...');
-
-        // If we have a refresh token, try to refresh
-        if (refreshToken && !this.isTokenExpired(refreshToken)) {
-          this.refreshToken().subscribe({
-            next: () => {
-              console.log('Token refreshed successfully on app init');
-              this.currentUserSubject.next(user);
-              this.isAuthenticated.set(true);
-            },
-            error: (error) => {
-              console.error('Failed to refresh token on app init, logging out:', error);
-              this.clearSession();
-            }
-          });
-        } else {
-          console.log('Refresh token missing or expired, clearing session');
-          this.clearSession();
-        }
+        // Token expired — attempt refresh via Google refresh token on backend
+        this.refreshToken().subscribe({
+          next: () => {
+            this.currentUserSubject.next(user);
+            this.isAuthenticated.set(true);
+            this.scheduleNextRefresh();
+          },
+          error: () => {
+            this.clearSession();
+          }
+        });
       } else {
-        // Access token is still valid
+        // Token still valid
         this.currentUserSubject.next(user);
         this.isAuthenticated.set(true);
+        this.scheduleNextRefresh();
 
-        // Check if token will expire soon and refresh proactively
         if (this.isTokenExpiringSoon(accessToken)) {
-          console.log('Access token expiring soon, refreshing proactively...');
           this.refreshToken().subscribe({
-            next: () => console.log('Token refreshed proactively'),
-            error: (error) => console.error('Proactive refresh failed:', error)
+            next: () => this.scheduleNextRefresh(),
+            error: (err) => console.error('Proactive refresh failed:', err)
           });
         }
       }
@@ -101,7 +90,78 @@ export class AuthService {
   }
 
   /**
-   * Google OAuth login
+   * Listen for tab visibility changes to refresh token when user returns
+   */
+  private setupVisibilityListener(): void {
+    if (typeof document === 'undefined') return;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!this.isAuthenticated()) return;
+
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) return;
+
+      if (this.isTokenExpired(accessToken) || this.isTokenExpiringSoon(accessToken)) {
+        this.refreshToken().subscribe({
+          next: () => this.scheduleNextRefresh(),
+          error: () => this.clearSession()
+        });
+      }
+    });
+  }
+
+  /**
+   * Schedule a token refresh 5 minutes before expiry
+   */
+  private scheduleNextRefresh(): void {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = null;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken || !this.isAuthenticated()) return;
+
+    const decoded = this.decodeToken(accessToken);
+    if (!decoded?.exp) return;
+
+    const expiresAt = decoded.exp * 1000;
+    const fiveMinutes = 5 * 60 * 1000;
+    const delay = expiresAt - Date.now() - fiveMinutes;
+
+    if (delay <= 0) {
+      // Already within the refresh window
+      return;
+    }
+
+    this.refreshTimeout = setTimeout(() => {
+      if (this.isAuthenticated()) {
+        this.refreshToken().subscribe({
+          next: () => this.scheduleNextRefresh(),
+          error: () => this.clearSession()
+        });
+      }
+    }, delay);
+  }
+
+  /**
+   * Google OAuth login with authorization code
+   */
+  googleLoginWithCode(code: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/google-code`, { code }, {
+      withCredentials: true
+    }).pipe(
+      tap(response => {
+        if (response.accessToken && response.user) {
+          this.setSession(response);
+        }
+      })
+    );
+  }
+
+  /**
+   * Legacy Google OAuth login (ID token flow)
    */
   googleLogin(credential: string): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/google`, { credential }, {
@@ -121,15 +181,10 @@ export class AuthService {
   private setSession(authResult: AuthResponse): void {
     if (authResult.accessToken && authResult.user) {
       localStorage.setItem('accessToken', authResult.accessToken);
-      if (authResult.refreshToken) {
-        localStorage.setItem('refreshToken', authResult.refreshToken);
-      }
       localStorage.setItem('currentUser', JSON.stringify(authResult.user));
       this.currentUserSubject.next(authResult.user);
       this.isAuthenticated.set(true);
-
-      // Start token refresh timer after login
-      this.startTokenRefreshTimer();
+      this.scheduleNextRefresh();
     }
   }
 
@@ -143,7 +198,6 @@ export class AuthService {
       tap(() => {
         this.clearSession();
       }),
-      // Always clear session even if API call fails
       catchError((error) => {
         this.clearSession();
         return throwError(() => error);
@@ -152,18 +206,21 @@ export class AuthService {
   }
 
   /**
-   * Clear session data - can be called directly for immediate logout
+   * Clear session data
    */
   clearSession(): void {
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('refreshToken'); // clean up legacy key
     localStorage.removeItem('currentUser');
-    localStorage.removeItem('attemptedUrl'); // Also clear redirect URL
+    localStorage.removeItem('attemptedUrl');
     this.currentUserSubject.next(null);
     this.isAuthenticated.set(false);
 
-    // Stop token refresh timer
-    this.stopTokenRefreshTimer();
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = null;
+    }
+    this.refreshInProgress$ = null;
   }
 
   /**
@@ -183,18 +240,31 @@ export class AuthService {
 
   /**
    * Refresh access token
+   * Backend uses stored Google refresh token — no client-side token needed in body
+   * Uses shareReplay to dedup concurrent refresh calls
    */
   refreshToken(): Observable<AuthResponse> {
-    const refreshToken = localStorage.getItem('refreshToken');
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/refresh`, { refreshToken }, {
+    if (this.refreshInProgress$) {
+      return this.refreshInProgress$;
+    }
+
+    this.refreshInProgress$ = this.http.post<AuthResponse>(`${this.apiUrl}/auth/refresh`, {}, {
       withCredentials: true
     }).pipe(
       tap(response => {
         if (response.accessToken) {
           localStorage.setItem('accessToken', response.accessToken);
         }
-      })
+        this.refreshInProgress$ = null;
+      }),
+      catchError(error => {
+        this.refreshInProgress$ = null;
+        return throwError(() => error);
+      }),
+      shareReplay(1)
     );
+
+    return this.refreshInProgress$;
   }
 
   /**
@@ -212,58 +282,7 @@ export class AuthService {
   }
 
   /**
-   * Start automatic token refresh timer
-   * Refreshes token every 50 minutes (before 1h expiry)
-   */
-  private startTokenRefreshTimer(): void {
-    // Clear any existing timer
-    this.stopTokenRefreshTimer();
-
-    // Only start timer if user is authenticated
-    if (!this.isAuthenticated()) {
-      return;
-    }
-
-    // Set up periodic refresh
-    this.tokenRefreshTimer = setInterval(() => {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const accessToken = localStorage.getItem('accessToken');
-
-      // Only refresh if we have both tokens and user is still authenticated
-      if (refreshToken && accessToken && this.isAuthenticated()) {
-        console.log('Proactively refreshing access token...');
-        this.refreshToken().subscribe({
-          next: () => {
-            console.log('Access token refreshed successfully');
-          },
-          error: (error) => {
-            console.error('Failed to refresh token, logging out:', error);
-            this.clearSession();
-          }
-        });
-      } else {
-        // Stop timer if tokens are missing
-        this.stopTokenRefreshTimer();
-      }
-    }, this.TOKEN_REFRESH_INTERVAL);
-
-    console.log('Token refresh timer started (will refresh every 50 minutes)');
-  }
-
-  /**
-   * Stop the token refresh timer
-   */
-  private stopTokenRefreshTimer(): void {
-    if (this.tokenRefreshTimer) {
-      clearInterval(this.tokenRefreshTimer);
-      this.tokenRefreshTimer = null;
-      console.log('Token refresh timer stopped');
-    }
-  }
-
-  /**
-   * Decode JWT token to get payload
-   * Note: This does NOT verify the token, only decodes it
+   * Decode JWT token payload (does NOT verify)
    */
   private decodeToken(token: string): any {
     try {
@@ -271,7 +290,6 @@ export class AuthService {
       const decoded = atob(payload);
       return JSON.parse(decoded);
     } catch (error) {
-      console.error('Failed to decode token:', error);
       return null;
     }
   }
@@ -281,33 +299,18 @@ export class AuthService {
    */
   private isTokenExpired(token: string): boolean {
     const decoded = this.decodeToken(token);
-    if (!decoded || !decoded.exp) {
-      return true;
-    }
-
-    // JWT exp is in seconds, Date.now() is in milliseconds
-    const expirationTime = decoded.exp * 1000;
-    const currentTime = Date.now();
-
-    return currentTime >= expirationTime;
+    if (!decoded?.exp) return true;
+    return Date.now() >= decoded.exp * 1000;
   }
 
   /**
-   * Check if token will expire soon (within 10 minutes)
+   * Check if token will expire within 10 minutes
    */
   private isTokenExpiringSoon(token: string): boolean {
     const decoded = this.decodeToken(token);
-    if (!decoded || !decoded.exp) {
-      return true;
-    }
-
-    // JWT exp is in seconds, Date.now() is in milliseconds
-    const expirationTime = decoded.exp * 1000;
-    const currentTime = Date.now();
+    if (!decoded?.exp) return true;
     const tenMinutes = 10 * 60 * 1000;
-
-    // Returns true if token expires within the next 10 minutes
-    return (expirationTime - currentTime) <= tenMinutes;
+    return (decoded.exp * 1000 - Date.now()) <= tenMinutes;
   }
 
   /**
@@ -315,9 +318,7 @@ export class AuthService {
    */
   getTokenExpiration(token: string): Date | null {
     const decoded = this.decodeToken(token);
-    if (!decoded || !decoded.exp) {
-      return null;
-    }
+    if (!decoded?.exp) return null;
     return new Date(decoded.exp * 1000);
   }
 }
