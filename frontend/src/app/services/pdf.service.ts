@@ -8,6 +8,7 @@ export interface BulkPDFResponse {
   count: number;
   pdfs: {
     sampleId: string;
+    sampleNumber?: string;
     farmerName: string;
     pdf: string; // base64 encoded
   }[];
@@ -140,7 +141,8 @@ export class PdfService {
         // Download with delay to avoid browser blocking
         setTimeout(() => {
           const farmerName = pdfData.farmerName || 'Unknown';
-          const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - જમીન ચકાસણી - ${farmerName}.pdf` : `જમીન ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -310,7 +312,7 @@ export class PdfService {
 
       for (let i = 0; i < collectedPDFs.length; i++) {
         const pdf = collectedPDFs[i];
-        const filename = `${filePrefix} - ${pdf.farmerName}.pdf`;
+        const filename = pdf.sampleNumber ? `${pdf.sampleNumber} - ${filePrefix} - ${pdf.farmerName}.pdf` : `${filePrefix} - ${pdf.farmerName}.pdf`;
 
         // Create blob and trigger download
         const buffer = new ArrayBuffer(pdf.data.length);
@@ -346,9 +348,9 @@ export class PdfService {
   private parseMultipartResponse(
     arrayBuffer: ArrayBuffer,
     boundary: string
-  ): { farmerName: string; data: Uint8Array }[] {
+  ): { farmerName: string; sampleNumber: string; data: Uint8Array }[] {
     const uint8Array = new Uint8Array(arrayBuffer);
-    const results: { farmerName: string; data: Uint8Array }[] = [];
+    const results: { farmerName: string; sampleNumber: string; data: Uint8Array }[] = [];
     const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
 
     // Find all boundary positions by scanning raw bytes
@@ -414,7 +416,11 @@ export class PdfService {
         ? decodeURIComponent(headers['x-farmer-name'])
         : 'Unknown';
 
-      results.push({ farmerName, data });
+      const sampleNumber = headers['x-sample-number']
+        ? decodeURIComponent(headers['x-sample-number'])
+        : '';
+
+      results.push({ farmerName, sampleNumber, data });
     }
 
     return results;
@@ -514,7 +520,8 @@ export class PdfService {
         // Download with delay to avoid browser blocking
         setTimeout(() => {
           const farmerName = pdfData.farmerName || 'Unknown';
-          const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - પાણી ચકાસણી - ${farmerName}.pdf` : `પાણી ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -550,7 +557,7 @@ export class PdfService {
     onProgress?: (current: number, total: number, farmerName: string) => void
   ): Promise<void> {
     const url = `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdfs-stream`;
-    await this.processStreamingPDFs(url, 'ખાતર ચકાસણી', 'Downloading Fertilizer Reports', onProgress);
+    await this.processStreamingPDFs(url, 'ખાતર ભલામણ', 'Downloading Fertilizer Reports', onProgress);
   }
 
   /**
@@ -592,7 +599,7 @@ export class PdfService {
     try {
       const blob = await this.generateFertilizerSamplePDF(sampleId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `ખાતર ચકાસણી - ${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `ખાતર ભલામણ - ${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {
@@ -637,7 +644,8 @@ export class PdfService {
         // Download with delay to avoid browser blocking
         setTimeout(() => {
           const farmerName = pdfData.farmerName || 'Unknown';
-          const filename = `ખાતર ચકાસણી - ${farmerName}.pdf`;
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - ખાતર ભલામણ - ${farmerName}.pdf` : `ખાતર ભલામણ - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -653,7 +661,7 @@ export class PdfService {
     try {
       const blob = await this.generateCombinedFertilizerPDF(sessionId).toPromise();
       if (blob) {
-        const defaultFilename = filename || `ખાતર ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        const defaultFilename = filename || `ખાતર ભલામણ - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {

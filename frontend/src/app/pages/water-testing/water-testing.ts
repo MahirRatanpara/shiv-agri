@@ -1226,7 +1226,8 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
 
 
       const farmerName = updatedRow.farmersName || 'Unknown';
-      const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
+      const sampleNumber = updatedRow.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - પાણી ચકાસણી - ${farmerName}.pdf` : `પાણી ચકાસણી - ${farmerName}.pdf`;
       await this.pdfService.downloadWaterSamplePDF(updatedRow._id, filename);
 
       // Clear all toasts and show success message

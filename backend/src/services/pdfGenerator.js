@@ -683,6 +683,7 @@ class PDFGeneratorService {
 
             return {
                 sampleId: sample._id,
+                sampleNumber: sample.sampleNumber || '',
                 farmerName: sample.farmerName || sample.farmersName,
                 buffer: pdfBuffer
             };

@@ -1301,7 +1301,8 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
       // STEP 3: Generate PDF from backend using sample ID
       const farmerName = savedRow.farmersName || 'Unknown';
-      const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
+      const sampleNumber = savedRow.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - જમીન ચકાસણી - ${farmerName}.pdf` : `જમીન ચકાસણી - ${farmerName}.pdf`;
 
       await this.pdfService.downloadSinglePDF(savedRow._id, filename);
 
