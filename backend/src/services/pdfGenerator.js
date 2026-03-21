@@ -270,15 +270,35 @@ class PDFGeneratorService {
     }
 
     /**
+     * Build day 45 row conditionally based on Urea / Ammonium Sulphate values
+     */
+    _buildDay45Row(data, formatNumber) {
+        const ureaVal = formatNumber(data.day45);
+        const asVal = formatNumber(data.day45As);
+        const hasUrea = ureaVal !== '';
+        const hasAs = asVal !== '';
+
+        if (hasUrea && hasAs) {
+            return `<div class="fertilizer-row">(૪) ૪૫ દિવસની અવસ્થાએ = <span class="field-value">${ureaVal}</span> કિલો/વિઘે (યુરીયા) અથવા <span class="field-value">${asVal}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>`;
+        } else if (hasAs) {
+            return `<div class="fertilizer-row">(૪) ૪૫ દિવસની અવસ્થાએ = <span class="field-value">${asVal}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>`;
+        } else {
+            return `<div class="fertilizer-row">(૪) ૪૫ દિવસની અવસ્થાએ = <span class="field-value">${ureaVal}</span> કિલો/વિઘે (યુરીયા)</div>`;
+        }
+    }
+
+    /**
      * Fill fertilizer template with sample data - Normal Crops (Cotton, etc.)
      */
     fillFertilizerNormalTemplate(template, data) {
         let html = template;
 
-        // Helper function to format numbers
-        const formatNumber = (value, decimals = 0) => {
+        // Helper function to format numbers - allow decimals
+        const formatNumber = (value, decimals = 2) => {
             if (value === null || value === undefined || value === '') return '';
-            return Number(value).toFixed(decimals);
+            const num = Number(value);
+            if (Number.isInteger(num)) return num.toString();
+            return num.toFixed(decimals);
         };
 
         // Helper function to safely get value
@@ -291,70 +311,71 @@ class PDFGeneratorService {
             // Basic info
             '{{sampleNumber}}': getValue(data.sampleNumber),
             '{{farmerName}}': getValue(data.farmerName),
+            '{{farmsName}}': getValue(data.farmsName),
             '{{cropName}}': getValue(data.cropName),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
 
             // N-P-K recommendation values
-            '{{nValue}}': formatNumber(data.nValue, 0),
-            '{{pValue}}': formatNumber(data.pValue, 0),
-            '{{kValue}}': formatNumber(data.kValue, 0),
+            '{{nValue}}': formatNumber(data.nValue),
+            '{{pValue}}': formatNumber(data.pValue),
+            '{{kValue}}': formatNumber(data.kValue),
 
             // Section A - Organic Fertilizers
-            '{{organicManure}}': formatNumber(data.organicManure, 0),
-            '{{castorCake}}': formatNumber(data.castorCake, 0),
-            '{{gypsum}}': formatNumber(data.gypsum, 0),
-            '{{sardarAmin}}': formatNumber(data.sardarAmin, 0),
-            '{{micronutrient}}': formatNumber(data.micronutrient, 0),
-            '{{borocol}}': formatNumber(data.borocol, 0),
-            '{{ferrous}}': formatNumber(data.ferrous, 0),
+            '{{organicManure}}': formatNumber(data.organicManure),
+            '{{castorCake}}': formatNumber(data.castorCake),
+            '{{gypsum}}': formatNumber(data.gypsum),
+            '{{sardarAmin}}': formatNumber(data.sardarAmin),
+            '{{micronutrient}}': formatNumber(data.micronutrient),
+            '{{borocol}}': formatNumber(data.borocol),
+            '{{ferrous}}': formatNumber(data.ferrous),
 
             // Section B - Chemical Fertilizers
-            '{{dap}}': formatNumber(data.dap, 0),
-            '{{npk12}}': formatNumber(data.npk12, 0),
-            '{{asp}}': formatNumber(data.asp, 0),
-            '{{narmadaPhos}}': formatNumber(data.narmadaPhos, 0),
-            '{{ssp}}': formatNumber(data.ssp, 0),
-            '{{ammoniumSulphate}}': formatNumber(data.ammoniumSulphate, 0),
-            '{{mop}}': formatNumber(data.mop, 0),
-            '{{ureaBase}}': formatNumber(data.ureaBase, 0),
+            '{{dap}}': formatNumber(data.dap),
+            '{{npk12}}': formatNumber(data.npk12),
+            '{{asp}}': formatNumber(data.asp),
+            '{{narmadaPhos}}': formatNumber(data.narmadaPhos),
+            '{{ssp}}': formatNumber(data.ssp),
+            '{{ammoniumSulphate}}': formatNumber(data.ammoniumSulphate),
+            '{{mop}}': formatNumber(data.mop),
+            '{{ureaBase}}': formatNumber(data.ureaBase),
 
             // Section 2 - Dose fertilizers (after crop emergence)
-            '{{day15}}': formatNumber(data.day15, 0),
-            '{{day25Npk}}': formatNumber(data.day25Npk, 0),
-            '{{day25Tricho}}': formatNumber(data.day25Tricho, 0),
-            '{{day30}}': formatNumber(data.day30, 0),
-            '{{day45}}': formatNumber(data.day45, 0),
-            '{{day60}}': formatNumber(data.day60, 0),
-            '{{day75}}': formatNumber(data.day75, 0),
-            '{{day90Urea}}': formatNumber(data.day90Urea, 0),
-            '{{day90Mag}}': formatNumber(data.day90Mag, 0),
-            '{{day105}}': formatNumber(data.day105, 0),
-            '{{day115}}': formatNumber(data.day115, 0),
-            '{{day130}}': formatNumber(data.day130, 0),
-            '{{day145}}': formatNumber(data.day145, 0),
-            '{{day160}}': formatNumber(data.day160, 0),
+            '{{day15}}': formatNumber(data.day15),
+            '{{day25Npk}}': formatNumber(data.day25Npk),
+            '{{day25Tricho}}': formatNumber(data.day25Tricho),
+            '{{day30}}': formatNumber(data.day30),
+            '{{day45_row}}': this._buildDay45Row(data, formatNumber),
+            '{{day60}}': formatNumber(data.day60),
+            '{{day75}}': formatNumber(data.day75),
+            '{{day90Urea}}': formatNumber(data.day90Urea),
+            '{{day90Mag}}': formatNumber(data.day90Mag),
+            '{{day105}}': formatNumber(data.day105),
+            '{{day115}}': formatNumber(data.day115),
+            '{{day130}}': formatNumber(data.day130),
+            '{{day145}}': formatNumber(data.day145),
+            '{{day160}}': formatNumber(data.day160),
 
             // Section 3 - Spray fertilizers (3 sprays with uniform structure)
             // Spray 1
             '{{spray1_stage}}': formatNumber(data.spray1_stage, 0),
             '{{spray1_npkType}}': getValue(data.spray1_npkType),
-            '{{spray1_npkDose}}': formatNumber(data.spray1_npkDose, 0),
+            '{{spray1_npkDose}}': formatNumber(data.spray1_npkDose),
             '{{spray1_hormoneName}}': getValue(data.spray1_hormoneName),
-            '{{spray1_hormoneDose}}': formatNumber(data.spray1_hormoneDose, 0),
+            '{{spray1_hormoneDose}}': formatNumber(data.spray1_hormoneDose),
 
             // Spray 2
             '{{spray2_stage}}': formatNumber(data.spray2_stage, 0),
             '{{spray2_npkType}}': getValue(data.spray2_npkType),
-            '{{spray2_npkDose}}': formatNumber(data.spray2_npkDose, 0),
+            '{{spray2_npkDose}}': formatNumber(data.spray2_npkDose),
             '{{spray2_hormoneName}}': getValue(data.spray2_hormoneName),
-            '{{spray2_hormoneDose}}': formatNumber(data.spray2_hormoneDose, 0),
+            '{{spray2_hormoneDose}}': formatNumber(data.spray2_hormoneDose),
 
             // Spray 3
             '{{spray3_stage}}': formatNumber(data.spray3_stage, 0),
             '{{spray3_npkType}}': getValue(data.spray3_npkType),
-            '{{spray3_npkDose}}': formatNumber(data.spray3_npkDose, 0),
+            '{{spray3_npkDose}}': formatNumber(data.spray3_npkDose),
             '{{spray3_hormoneName}}': getValue(data.spray3_hormoneName),
-            '{{spray3_hormoneDose}}': formatNumber(data.spray3_hormoneDose, 0),
+            '{{spray3_hormoneDose}}': formatNumber(data.spray3_hormoneDose),
         };
 
         // Replace all placeholders
@@ -371,10 +392,12 @@ class PDFGeneratorService {
     fillFertilizerSmallFruitTemplate(template, data) {
         let html = template;
 
-        // Helper function to format numbers
-        const formatNumber = (value, decimals = 0) => {
+        // Helper function to format numbers - allow decimals
+        const formatNumber = (value, decimals = 2) => {
             if (value === null || value === undefined || value === '') return '';
-            return Number(value).toFixed(decimals);
+            const num = Number(value);
+            if (Number.isInteger(num)) return num.toString();
+            return num.toFixed(decimals);
         };
 
         // Helper function to safely get value
@@ -387,6 +410,7 @@ class PDFGeneratorService {
             // Basic info
             '{{sampleNumber}}': getValue(data.sampleNumber),
             '{{farmerName}}': getValue(data.farmerName),
+            '{{farmsName}}': getValue(data.farmsName),
             '{{cropName}}': getValue(data.cropName),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
 
@@ -397,63 +421,63 @@ class PDFGeneratorService {
             '{{m4_month}}': getValue(data.m4_month),
 
             // M1 fertilizers
-            '{{m1_dap}}': formatNumber(data.m1_dap, 0),
-            '{{m1_npk}}': formatNumber(data.m1_npk, 0),
-            '{{m1_asp}}': formatNumber(data.m1_asp, 0),
-            '{{m1_narmada}}': formatNumber(data.m1_narmada, 0),
-            '{{m1_ssp}}': formatNumber(data.m1_ssp, 0),
-            '{{m1_as}}': formatNumber(data.m1_as, 0),
-            '{{m1_mop}}': formatNumber(data.m1_mop, 0),
-            '{{m1_urea}}': formatNumber(data.m1_urea, 0),
-            '{{m1_borocol}}': formatNumber(data.m1_borocol, 0),
-            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin, 0),
-            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu, 0),
-            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol, 0),
+            '{{m1_dap}}': formatNumber(data.m1_dap),
+            '{{m1_npk}}': formatNumber(data.m1_npk),
+            '{{m1_asp}}': formatNumber(data.m1_asp),
+            '{{m1_narmada}}': formatNumber(data.m1_narmada),
+            '{{m1_ssp}}': formatNumber(data.m1_ssp),
+            '{{m1_as}}': formatNumber(data.m1_as),
+            '{{m1_mop}}': formatNumber(data.m1_mop),
+            '{{m1_urea}}': formatNumber(data.m1_urea),
+            '{{m1_borocol}}': formatNumber(data.m1_borocol),
+            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin),
+            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu),
+            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol),
 
             // M2 fertilizers
-            '{{m2_dap}}': formatNumber(data.m2_dap, 0),
-            '{{m2_npk}}': formatNumber(data.m2_npk, 0),
-            '{{m2_asp}}': formatNumber(data.m2_asp, 0),
-            '{{m2_narmada}}': formatNumber(data.m2_narmada, 0),
-            '{{m2_ssp}}': formatNumber(data.m2_ssp, 0),
-            '{{m2_as}}': formatNumber(data.m2_as, 0),
-            '{{m2_mop}}': formatNumber(data.m2_mop, 0),
-            '{{m2_urea}}': formatNumber(data.m2_urea, 0),
+            '{{m2_dap}}': formatNumber(data.m2_dap),
+            '{{m2_npk}}': formatNumber(data.m2_npk),
+            '{{m2_asp}}': formatNumber(data.m2_asp),
+            '{{m2_narmada}}': formatNumber(data.m2_narmada),
+            '{{m2_ssp}}': formatNumber(data.m2_ssp),
+            '{{m2_as}}': formatNumber(data.m2_as),
+            '{{m2_mop}}': formatNumber(data.m2_mop),
+            '{{m2_urea}}': formatNumber(data.m2_urea),
 
             // M3 fertilizers
-            '{{m3_dap}}': formatNumber(data.m3_dap, 0),
-            '{{m3_npk}}': formatNumber(data.m3_npk, 0),
-            '{{m3_asp}}': formatNumber(data.m3_asp, 0),
-            '{{m3_narmada}}': formatNumber(data.m3_narmada, 0),
-            '{{m3_ssp}}': formatNumber(data.m3_ssp, 0),
-            '{{m3_as}}': formatNumber(data.m3_as, 0),
-            '{{m3_mop}}': formatNumber(data.m3_mop, 0),
-            '{{m3_urea}}': formatNumber(data.m3_urea, 0),
-            '{{m3_borocol}}': formatNumber(data.m3_borocol, 0),
-            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin, 0),
-            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu, 0),
-            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol, 0),
+            '{{m3_dap}}': formatNumber(data.m3_dap),
+            '{{m3_npk}}': formatNumber(data.m3_npk),
+            '{{m3_asp}}': formatNumber(data.m3_asp),
+            '{{m3_narmada}}': formatNumber(data.m3_narmada),
+            '{{m3_ssp}}': formatNumber(data.m3_ssp),
+            '{{m3_as}}': formatNumber(data.m3_as),
+            '{{m3_mop}}': formatNumber(data.m3_mop),
+            '{{m3_urea}}': formatNumber(data.m3_urea),
+            '{{m3_borocol}}': formatNumber(data.m3_borocol),
+            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin),
+            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu),
+            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol),
 
             // M4 fertilizers
-            '{{m4_dap}}': formatNumber(data.m4_dap, 0),
-            '{{m4_npk}}': formatNumber(data.m4_npk, 0),
-            '{{m4_asp}}': formatNumber(data.m4_asp, 0),
-            '{{m4_narmada}}': formatNumber(data.m4_narmada, 0),
-            '{{m4_ssp}}': formatNumber(data.m4_ssp, 0),
-            '{{m4_as}}': formatNumber(data.m4_as, 0),
-            '{{m4_mop}}': formatNumber(data.m4_mop, 0),
-            '{{m4_urea}}': formatNumber(data.m4_urea, 0),
-            '{{m4_borocol}}': formatNumber(data.m4_borocol, 0),
-            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin, 0),
-            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu, 0),
-            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol, 0),
+            '{{m4_dap}}': formatNumber(data.m4_dap),
+            '{{m4_npk}}': formatNumber(data.m4_npk),
+            '{{m4_asp}}': formatNumber(data.m4_asp),
+            '{{m4_narmada}}': formatNumber(data.m4_narmada),
+            '{{m4_ssp}}': formatNumber(data.m4_ssp),
+            '{{m4_as}}': formatNumber(data.m4_as),
+            '{{m4_mop}}': formatNumber(data.m4_mop),
+            '{{m4_urea}}': formatNumber(data.m4_urea),
+            '{{m4_borocol}}': formatNumber(data.m4_borocol),
+            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin),
+            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu),
+            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol),
 
             // M5 - Spray fertilizers
-            '{{m5_npk1919}}': formatNumber(data.m5_npk1919, 0),
-            '{{m5_npk0052}}': formatNumber(data.m5_npk0052, 0),
-            '{{m5_npk1261}}': formatNumber(data.m5_npk1261, 0),
-            '{{m5_npk1300}}': formatNumber(data.m5_npk1300, 0),
-            '{{m5_micromix}}': formatNumber(data.m5_micromix, 0),
+            '{{m5_npk1919}}': formatNumber(data.m5_npk1919),
+            '{{m5_npk0052}}': formatNumber(data.m5_npk0052),
+            '{{m5_npk1261}}': formatNumber(data.m5_npk1261),
+            '{{m5_npk1300}}': formatNumber(data.m5_npk1300),
+            '{{m5_micromix}}': formatNumber(data.m5_micromix),
         };
 
         // Replace all placeholders
@@ -470,10 +494,13 @@ class PDFGeneratorService {
     fillFertilizerLargeFruitTemplate(template, data) {
         let html = template;
 
-        // Helper function to format numbers
-        const formatNumber = (value, decimals = 0) => {
+        // Helper function to format numbers - allow decimals for large fruit crop
+        const formatNumber = (value, decimals = 2) => {
             if (value === null || value === undefined || value === '') return '';
-            return Number(value).toFixed(decimals);
+            const num = Number(value);
+            // If it's a whole number, show without decimals for cleaner display
+            if (Number.isInteger(num)) return num.toString();
+            return num.toFixed(decimals);
         };
 
         // Helper function to safely get value
@@ -486,6 +513,7 @@ class PDFGeneratorService {
             // Basic info
             '{{sampleNumber}}': getValue(data.sampleNumber),
             '{{farmerName}}': getValue(data.farmerName),
+            '{{farmsName}}': getValue(data.farmsName),
             '{{cropName}}': getValue(data.cropName),
             '{{date}}': getValue(data.sessionDate || data.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]),
 
@@ -496,67 +524,67 @@ class PDFGeneratorService {
             '{{m4_month}}': getValue(data.m4_month),
 
             // M1 fertilizers
-            '{{m1_dap}}': formatNumber(data.m1_dap, 0),
-            '{{m1_npk}}': formatNumber(data.m1_npk, 0),
-            '{{m1_asp}}': formatNumber(data.m1_asp, 0),
-            '{{m1_narmada}}': formatNumber(data.m1_narmada, 0),
-            '{{m1_ssp}}': formatNumber(data.m1_ssp, 0),
-            '{{m1_as}}': formatNumber(data.m1_as, 0),
-            '{{m1_mop}}': formatNumber(data.m1_mop, 0),
-            '{{m1_urea}}': formatNumber(data.m1_urea, 0),
+            '{{m1_dap}}': formatNumber(data.m1_dap),
+            '{{m1_npk}}': formatNumber(data.m1_npk),
+            '{{m1_asp}}': formatNumber(data.m1_asp),
+            '{{m1_narmada}}': formatNumber(data.m1_narmada),
+            '{{m1_ssp}}': formatNumber(data.m1_ssp),
+            '{{m1_as}}': formatNumber(data.m1_as),
+            '{{m1_mop}}': formatNumber(data.m1_mop),
+            '{{m1_urea}}': formatNumber(data.m1_urea),
 
             // M2 fertilizers
-            '{{m2_dap}}': formatNumber(data.m2_dap, 0),
-            '{{m2_npk}}': formatNumber(data.m2_npk, 0),
-            '{{m2_asp}}': formatNumber(data.m2_asp, 0),
-            '{{m2_narmada}}': formatNumber(data.m2_narmada, 0),
-            '{{m2_ssp}}': formatNumber(data.m2_ssp, 0),
-            '{{m2_as}}': formatNumber(data.m2_as, 0),
-            '{{m2_mop}}': formatNumber(data.m2_mop, 0),
-            '{{m2_urea}}': formatNumber(data.m2_urea, 0),
+            '{{m2_dap}}': formatNumber(data.m2_dap),
+            '{{m2_npk}}': formatNumber(data.m2_npk),
+            '{{m2_asp}}': formatNumber(data.m2_asp),
+            '{{m2_narmada}}': formatNumber(data.m2_narmada),
+            '{{m2_ssp}}': formatNumber(data.m2_ssp),
+            '{{m2_as}}': formatNumber(data.m2_as),
+            '{{m2_mop}}': formatNumber(data.m2_mop),
+            '{{m2_urea}}': formatNumber(data.m2_urea),
 
             // M3 fertilizers
-            '{{m3_dap}}': formatNumber(data.m3_dap, 0),
-            '{{m3_npk}}': formatNumber(data.m3_npk, 0),
-            '{{m3_asp}}': formatNumber(data.m3_asp, 0),
-            '{{m3_narmada}}': formatNumber(data.m3_narmada, 0),
-            '{{m3_ssp}}': formatNumber(data.m3_ssp, 0),
-            '{{m3_as}}': formatNumber(data.m3_as, 0),
-            '{{m3_mop}}': formatNumber(data.m3_mop, 0),
-            '{{m3_urea}}': formatNumber(data.m3_urea, 0),
+            '{{m3_dap}}': formatNumber(data.m3_dap),
+            '{{m3_npk}}': formatNumber(data.m3_npk),
+            '{{m3_asp}}': formatNumber(data.m3_asp),
+            '{{m3_narmada}}': formatNumber(data.m3_narmada),
+            '{{m3_ssp}}': formatNumber(data.m3_ssp),
+            '{{m3_as}}': formatNumber(data.m3_as),
+            '{{m3_mop}}': formatNumber(data.m3_mop),
+            '{{m3_urea}}': formatNumber(data.m3_urea),
 
             // M1 extra fertilizers (large-fruit only)
-            '{{m1_borocol}}': formatNumber(data.m1_borocol, 0),
-            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin, 0),
-            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu, 0),
-            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol, 0),
+            '{{m1_borocol}}': formatNumber(data.m1_borocol),
+            '{{m1_sardaramin}}': formatNumber(data.m1_sardaramin),
+            '{{m1_chhaniyu}}': formatNumber(data.m1_chhaniyu),
+            '{{m1_erandakhol}}': formatNumber(data.m1_erandakhol),
 
             // M3 extra fertilizers (large-fruit only)
-            '{{m3_borocol}}': formatNumber(data.m3_borocol, 0),
-            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin, 0),
-            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu, 0),
-            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol, 0),
+            '{{m3_borocol}}': formatNumber(data.m3_borocol),
+            '{{m3_sardaramin}}': formatNumber(data.m3_sardaramin),
+            '{{m3_chhaniyu}}': formatNumber(data.m3_chhaniyu),
+            '{{m3_erandakhol}}': formatNumber(data.m3_erandakhol),
 
             // M4 fertilizers
-            '{{m4_dap}}': formatNumber(data.m4_dap, 0),
-            '{{m4_npk}}': formatNumber(data.m4_npk, 0),
-            '{{m4_asp}}': formatNumber(data.m4_asp, 0),
-            '{{m4_narmada}}': formatNumber(data.m4_narmada, 0),
-            '{{m4_ssp}}': formatNumber(data.m4_ssp, 0),
-            '{{m4_as}}': formatNumber(data.m4_as, 0),
-            '{{m4_mop}}': formatNumber(data.m4_mop, 0),
-            '{{m4_urea}}': formatNumber(data.m4_urea, 0),
-            '{{m4_borocol}}': formatNumber(data.m4_borocol, 0),
-            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin, 0),
-            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu, 0),
-            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol, 0),
+            '{{m4_dap}}': formatNumber(data.m4_dap),
+            '{{m4_npk}}': formatNumber(data.m4_npk),
+            '{{m4_asp}}': formatNumber(data.m4_asp),
+            '{{m4_narmada}}': formatNumber(data.m4_narmada),
+            '{{m4_ssp}}': formatNumber(data.m4_ssp),
+            '{{m4_as}}': formatNumber(data.m4_as),
+            '{{m4_mop}}': formatNumber(data.m4_mop),
+            '{{m4_urea}}': formatNumber(data.m4_urea),
+            '{{m4_borocol}}': formatNumber(data.m4_borocol),
+            '{{m4_sardaramin}}': formatNumber(data.m4_sardaramin),
+            '{{m4_chhaniyu}}': formatNumber(data.m4_chhaniyu),
+            '{{m4_erandakhol}}': formatNumber(data.m4_erandakhol),
 
             // M5 - Spray fertilizers
-            '{{m5_npk1919}}': formatNumber(data.m5_npk1919, 0),
-            '{{m5_npk0052}}': formatNumber(data.m5_npk0052, 0),
-            '{{m5_npk1261}}': formatNumber(data.m5_npk1261, 0),
-            '{{m5_npk1300}}': formatNumber(data.m5_npk1300, 0),
-            '{{m5_micromix}}': formatNumber(data.m5_micromix, 0),
+            '{{m5_npk1919}}': formatNumber(data.m5_npk1919),
+            '{{m5_npk0052}}': formatNumber(data.m5_npk0052),
+            '{{m5_npk1261}}': formatNumber(data.m5_npk1261),
+            '{{m5_npk1300}}': formatNumber(data.m5_npk1300),
+            '{{m5_micromix}}': formatNumber(data.m5_micromix),
         };
 
         // Replace all placeholders

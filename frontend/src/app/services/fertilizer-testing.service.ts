@@ -27,6 +27,7 @@ export interface FertilizerSampleData {
   // Common fields
   sampleNumber: string;
   farmerName: string;
+  farmsName?: string;
   cropName: string;
   soilSampleId?: string; // Link to soil sample (for auto-created entries)
 
@@ -60,6 +61,7 @@ export interface FertilizerSampleData {
   day25Tricho?: number | null;
   day30?: number | null;
   day45?: number | null;
+  day45As?: number | null;
   day60?: number | null;
   day75?: number | null;
   day90Urea?: number | null;

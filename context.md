@@ -394,10 +394,11 @@ Managed by `FertilizerSessionStateManager` (`models/fertilizer-session-state.mod
 **FertilizerSample** (`backend/src/models/FertilizerSample.js`)
 - `sessionId` (ObjectId → FertilizerSession, indexed)
 - `type` (enum: normal, small-fruit, large-fruit)
-- `sampleNumber`, `farmerName`, `cropName`
+- `sampleNumber`, `farmerName`, `farmsName`, `cropName`
 - `soilSampleId` (ObjectId → SoilSample — cross-reference)
 - NPK values: `nValue`, `pValue`, `kValue`
 - Recommendations: `organicManure`, `dap`, `npk`
+- Dose schedule: includes `day45` (Urea) and `day45As` (Ammonium Sulphate) as alternative options for day 45
 - Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields
 - Fruit tree sections: `m1`-`m5` with sub-parameters
 
@@ -715,6 +716,9 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 - `generateBulkPDFs(samples)` — Multiple PDFs as array
 - `generateBulkPDFsStream(samples, type)` — Async generator for streaming
 - `generateCombinedPDF(samples)` — Single PDF with all samples
+- `_buildDay45Row(data, formatNumber)` — Conditional day 45 row: shows Urea, Ammonium Sulphate, or both
+
+**Number Formatting:** `formatNumber` defaults to 2 decimal places but displays integers without decimals for cleaner output.
 
 ### API Endpoints (`backend/src/routes/pdfGeneration.js`)
 
