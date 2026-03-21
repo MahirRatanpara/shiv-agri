@@ -451,6 +451,7 @@ async function handleCropTypeChange(existingSample, updatedSample, soilSession) 
       await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
         type: newCropType,
         farmerName: updatedSample.farmersName,
+        farmsName: updatedSample.farmsName,
         sampleNumber: updatedSample.sampleNumber,
         cropName: updatedSample.cropName
       });
@@ -465,6 +466,7 @@ async function handleCropTypeChange(existingSample, updatedSample, soilSession) 
     if (existingSample.fertilizerSampleId) {
       await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
         farmerName: updatedSample.farmersName,
+        farmsName: updatedSample.farmsName,
         sampleNumber: updatedSample.sampleNumber,
         cropName: updatedSample.cropName
       });
@@ -505,6 +507,7 @@ async function createLinkedFertilizerSample(soilSample, soilSession) {
     type: soilSample.cropType,
     sampleNumber: soilSample.sampleNumber,
     farmerName: soilSample.farmersName,
+    farmsName: soilSample.farmsName,
     cropName: soilSample.cropName,
     soilSampleId: soilSample._id
   });

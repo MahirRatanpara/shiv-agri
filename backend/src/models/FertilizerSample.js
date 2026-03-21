@@ -39,6 +39,11 @@ const sampleSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  farmsName: {
+    type: String,
+    trim: true,
+    default: null
+  },
 
   // Link to soil sample (for auto-created entries)
   soilSampleId: {
@@ -78,7 +83,8 @@ const sampleSchema = new mongoose.Schema({
   day25Npk: { type: Number, default: null },
   day25Tricho: { type: Number, default: null },
   day30: { type: Number, default: null },
-  day45: { type: Number, default: null },
+  day45: { type: Number, default: null },       // Urea option
+  day45As: { type: Number, default: null },     // Ammonium Sulphate option
   day60: { type: Number, default: null },
   day75: { type: Number, default: null },
   day90Urea: { type: Number, default: null },

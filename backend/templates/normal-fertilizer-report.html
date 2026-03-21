@@ -158,9 +158,13 @@
         <h1>ખાતરોની  ભલામણ</h1>
     </div>
 
-    <div class="info-line">
+    <div class="info-line" style="overflow: hidden;">
         પાકનું નામ : <strong><span class="field-value">{{cropName}}</span></strong>
         <span style="float: right;">ખેડૂત નું નામ : <strong><span class="field-value">{{farmerName}}</span></strong></span>
+    </div>
+
+    <div class="info-line" style="clear: both;">
+        ખેતરનું નામ : <strong><span class="field-value">{{farmsName}}</span></strong>
     </div>
 
     <div class="info-line mb-20">
@@ -230,7 +234,7 @@
         <div class="fertilizer-row">(૧) ૧૫ દિવસની અવસ્થાએ = <span class="field-value">{{day15}}</span> કિલો/વિઘે (યુરીયા)</div>
         <div class="fertilizer-row">(૨) ૨૫ દિવસની અવસ્થાએ = <span class="field-value">{{day25Npk}}</span> મિલી/વિઘે (એન.પી.કે. કલ્ચર) અને ટ્રાયકોડર્માં <span class="field-value">{{day25Tricho}}</span> કિલો/વિઘે</div>
         <div class="fertilizer-row">(૩) ૩૦ દિવસની અવસ્થાએ = <span class="field-value">{{day30}}</span> કિલો/વિઘે (યુરીયા)</div>
-        <div class="fertilizer-row">(૪) ૪૫ દિવસની અવસ્થાએ = <span class="field-value">{{day45}}</span> કિલો/વિઘે (યુરીયા)</div>
+        {{day45_row}}
         <div class="fertilizer-row">(૫) ૬૦ દિવસની અવસ્થાએ = <span class="field-value">{{day60}}</span> કિલો/વિઘે (યુરીયા)</div>
         <div class="fertilizer-row">(૬) ૭૫ દિવસની અવસ્થાએ = <span class="field-value">{{day75}}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>
         <div class="fertilizer-row">(૭) ૯૦ દિવસની અવસ્થાએ = <span class="field-value">{{day90Urea}}</span> કિલો/વિઘે (યુરીયા) + <span class="field-value">{{day90Mag}}</span> કિલો/વિઘે (મેગ્નેશ્યમ સલ્ફેટ)</div>
@@ -254,27 +258,27 @@
         </tr>
         <tr>
             <td>(૧)</td>
-            <td>{{spray1_stage}}</td>
+            <td>{{spray1_stage}} દિવસ</td>
             <td>{{spray1_npkType}}</td>
             <td>{{spray1_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
             <td>{{spray1_hormoneName}}</td>
-            <td>{{spray1_hormoneDose}} મિલી</td>
+            <td>{{spray1_hormoneDose}} મિલી/પંપ દીઠ</td>
         </tr>
         <tr>
             <td>(૨)</td>
-            <td>{{spray2_stage}}</td>
+            <td>{{spray2_stage}} દિવસ</td>
             <td>{{spray2_npkType}}</td>
             <td>{{spray2_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
             <td>{{spray2_hormoneName}}</td>
-            <td>{{spray2_hormoneDose}} મિલી</td>
+            <td>{{spray2_hormoneDose}} મિલી/પંપ દીઠ</td>
         </tr>
         <tr>
             <td>(૩)</td>
-            <td>{{spray3_stage}}</td>
+            <td>{{spray3_stage}} દિવસ</td>
             <td>{{spray3_npkType}}</td>
             <td>{{spray3_npkDose}} ગ્રામ/પમ્પ દીઠ</td>
             <td>{{spray3_hormoneName}}</td>
-            <td>{{spray3_hormoneDose}} મિલી</td>
+            <td>{{spray3_hormoneDose}} મિલી/પંપ દીઠ</td>
         </tr>
     </table>
 
