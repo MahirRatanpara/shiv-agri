@@ -1,7 +1,7 @@
 # Shivagri Development Skill
 
 ## Overview
-This skill provides comprehensive guidelines for developing the Shivagri farm management and soil testing application. It ensures consistent development practices, prevents production issues, and maintains top-tier UX/UI standards.
+This skill provides comprehensive guidelines for developing the Shivagri farm management and soil testing application. It ensures consistent development practices, prevents production issues, and delivers a **modern, minimalist, and user-friendly** experience. Every new feature must align with the existing application's design language — always study what's already built before creating anything new.
 
 ## Technology Stack
 - **Frontend**: Angular 20.3.0
@@ -418,12 +418,18 @@ exports.checkPermission = (permission) => {
 
 ### What to Include in Every Implementation
 
-**When implementing a ticket, ALWAYS create:**
+**When implementing a ticket, ALWAYS:**
+
+0. ✅ **Study Existing Implementation First**
+   - Browse existing components, SCSS files, and layouts in the codebase
+   - Identify the established design patterns, colors, spacing, and typography
+   - Ensure new work is visually and structurally consistent with what already exists
 
 1. ✅ **Frontend Components** (Angular)
    - Component TypeScript, HTML, SCSS
    - Service for API calls
    - Models/interfaces
+   - Modern, minimalist, clean UI — no unnecessary elements
 
 2. ✅ **Backend APIs** (Node.js/Express)
    - Routes with proper middleware
@@ -450,6 +456,9 @@ exports.checkPermission = (permission) => {
 ❌ **DON'T**: Return entire documents when only few fields needed
 ❌ **DON'T**: Skip input validation
 ❌ **DON'T**: Use inefficient queries (N+1 problems)
+❌ **DON'T**: Introduce new UI patterns without checking existing ones first
+❌ **DON'T**: Build cluttered, busy, or visually noisy interfaces
+❌ **DON'T**: Add unnecessary UI elements — if it doesn't serve a clear purpose, remove it
 
 ✅ **DO**: Implement complete full-stack feature
 ✅ **DO**: Add proper RBAC checks
@@ -457,20 +466,26 @@ exports.checkPermission = (permission) => {
 ✅ **DO**: Validate all inputs
 ✅ **DO**: Return consistent API responses
 ✅ **DO**: Think about performance from the start
+✅ **DO**: Study existing components/styles before building new UI
+✅ **DO**: Keep interfaces clean, minimal, and focused on the task at hand
 
 ---
 
 ## UX/UI EXCELLENCE - NON-NEGOTIABLE STANDARDS
 
 ### Design Philosophy
-Shivagri's UX must be **top-of-the-game** with **ZERO compromise** on quality.
+Shivagri's UX must be **top-of-the-game** with **ZERO compromise** on quality. The design language is **modern, minimalist, and ultra user-friendly**. Every screen should feel clean, uncluttered, and purposeful — no visual noise, no unnecessary elements, no bloated layouts.
+
+**CRITICAL: ALWAYS refer to the currently implemented UI/UX patterns before building any new feature.** Study existing components, layouts, color schemes, spacing, typography, and interaction patterns already in the codebase. New features must visually and structurally align with the current application — consistency is paramount. Do not introduce new design patterns, color palettes, or layout approaches without first checking what already exists.
 
 ### Core Principles
-1. **User-Friendly**: Intuitive navigation, clear CTAs, minimal cognitive load
-2. **Fully Responsive**: Perfect rendering on ALL devices
-3. **Modern Aesthetics**: Contemporary design language
-4. **Smooth Animations**: Professional, purposeful motion
-5. **Accessibility**: WCAG 2.1 AA compliant
+1. **Minimalist Design**: Less is more — clean layouts, generous whitespace, only essential elements on screen. Remove clutter, reduce visual noise, and let content breathe.
+2. **User-Friendly**: Intuitive navigation, clear CTAs, minimal cognitive load. Every interaction should feel effortless and obvious.
+3. **Fully Responsive**: Perfect rendering on ALL devices
+4. **Modern Aesthetics**: Contemporary, sleek design language with refined typography and subtle depth
+5. **Smooth Animations**: Professional, purposeful motion — never flashy or distracting
+6. **Accessibility**: WCAG 2.1 AA compliant
+7. **Consistency First**: Always match the existing application's look and feel. Before creating any new UI, explore and reference the current implementation.
 
 ### Responsive Breakpoints
 ```css
@@ -750,11 +765,12 @@ export const fadeSlideIn = trigger('fadeSlideIn', [
 1. User says: "start working on ticket SHI-XX"
 2. Check/switch to correct branch (feature/shiXX)
 3. Review ticket requirements in Linear
-4. Break down into implementation steps (BOTH frontend AND backend)
-5. Confirm approach with user
-6. Implement with UX standards and backend architecture
-7. Show changes summary
-8. Wait for user review and commit
+4. **Study existing UI/UX patterns** — Browse current components, layouts, and styles to understand the established design language
+5. Break down into implementation steps (BOTH frontend AND backend)
+6. Confirm approach with user
+7. Implement with minimalist UX standards, matching existing patterns, and backend architecture
+8. Show changes summary
+9. Wait for user review and commit
 
 ### Code Quality Standards
 - **TypeScript**: Strict mode enabled, no `any` types
@@ -818,15 +834,18 @@ Show loading indicators for all async operations:
 4. ❌ **NO Testing/Running** - Don't run npm commands, build, or test unless explicitly asked
 5. ❌ **NO Commits** - Don't commit or push; leave for developer review
 6. ❌ **NO Production Access** - Never log into production servers
+7. ❌ **NO Inconsistent UI** - Never introduce new design patterns without studying existing implementation first
+8. ❌ **NO Cluttered Interfaces** - Never build busy, bloated, or visually noisy screens
 
 ### What TO Do
 1. ✅ **Implement FULL-STACK** - Always create both frontend AND backend components
 2. ✅ **Apply backend architecture** - Routes, controllers, services, models with indexes
 3. ✅ **Add RBAC & security** - JWT validation and permission checks
 4. ✅ **Optimize for performance** - Database indexes, efficient queries, <200ms response
-5. ✅ **Apply UX standards** - Follow the responsive design and modern UI guidelines
-6. ✅ **Show brief summary** - List both frontend and backend files modified
-7. ✅ **Wait for review** - Let developer test, commit, and push
+5. ✅ **Apply UX standards** - Modern, minimalist, user-friendly design aligned with existing implementation
+6. ✅ **Reference existing patterns** - Always study current codebase UI/UX before building new features
+7. ✅ **Show brief summary** - List both frontend and backend files modified
+8. ✅ **Wait for review** - Let developer test, commit, and push
 
 ---
 
@@ -936,7 +955,8 @@ Before marking any ticket complete:
 **Frontend:**
 - [ ] Component/UI implementation complete
 - [ ] Service for API calls created
-- [ ] UX is modern, responsive, and accessible
+- [ ] UX is modern, minimalist, user-friendly, responsive, and accessible
+- [ ] New UI aligns with existing application patterns and structure
 - [ ] Models/interfaces defined
 
 **Backend:**
@@ -964,15 +984,19 @@ Before marking any ticket complete:
 
 **This skill ensures Shivagri maintains professional development standards while delivering an exceptional user experience. Every line of code should reflect our commitment to quality, safety, and user satisfaction.**
 
-**CRITICAL - SEVEN ABSOLUTE RULES:**
+**CRITICAL - NINE ABSOLUTE RULES:**
 1. ✅ ALWAYS implement BOTH frontend AND backend (full-stack)
-2. ❌ NO production server access (EVER)
-3. ❌ NO automatic commits or pushes
-4. ❌ NO documentation creation (unless explicitly requested)
-5. ❌ NO test case writing (unless explicitly requested)
-6. ❌ NO testing or running (unless explicitly requested)
-7. ✅ ALWAYS provide brief summaries and wait for developer review
+2. ✅ ALWAYS reference existing UI/UX patterns before building anything new — consistency is mandatory
+3. ✅ ALWAYS deliver modern, minimalist, user-friendly interfaces — clean, uncluttered, purposeful
+4. ❌ NO production server access (EVER)
+5. ❌ NO automatic commits or pushes
+6. ❌ NO documentation creation (unless explicitly requested)
+7. ❌ NO test case writing (unless explicitly requested)
+8. ❌ NO testing or running (unless explicitly requested)
+9. ✅ ALWAYS provide brief summaries and wait for developer review
 
 **FULL-STACK IMPLEMENTATION IS MANDATORY.**
-**NO COMPROMISE on UX. NO EXCEPTIONS on production access. NO WASTED TOKENS on docs/tests.**
+**UX MUST BE MODERN, MINIMALIST, AND USER-FRIENDLY — NO COMPROMISE.**
+**ALWAYS ALIGN WITH EXISTING IMPLEMENTATION — STUDY BEFORE YOU BUILD.**
+**NO EXCEPTIONS on production access. NO WASTED TOKENS on docs/tests.**
 **BACKEND ARCHITECTURE MUST BE OPTIMIZED FOR QUICK RESPONSES (<200ms).**
