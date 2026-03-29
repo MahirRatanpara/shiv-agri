@@ -86,7 +86,8 @@ const sampleSchema = new mongoose.Schema({
   day45: { type: Number, default: null },       // Urea option
   day45As: { type: Number, default: null },     // Ammonium Sulphate option
   day60: { type: Number, default: null },
-  day75: { type: Number, default: null },
+  day75: { type: Number, default: null },       // Urea option
+  day75As: { type: Number, default: null },     // Ammonium Sulphate option
   day90Urea: { type: Number, default: null },
   day90Mag: { type: Number, default: null },
   day105: { type: Number, default: null },

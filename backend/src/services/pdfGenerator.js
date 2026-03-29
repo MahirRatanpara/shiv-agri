@@ -288,6 +288,35 @@ class PDFGeneratorService {
     }
 
     /**
+     * Build day 75 row conditionally based on Urea / Ammonium Sulphate values
+     */
+    _buildDay75Row(data, formatNumber) {
+        const ureaVal = formatNumber(data.day75);
+        const asVal = formatNumber(data.day75As);
+        const hasUrea = ureaVal !== '';
+        const hasAs = asVal !== '';
+
+        if (hasUrea && hasAs) {
+            return `<div class="fertilizer-row">(૬) ૭૫ દિવસની અવસ્થાએ = <span class="field-value">${ureaVal}</span> કિલો/વિઘે (યુરીયા) અથવા <span class="field-value">${asVal}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>`;
+        } else if (hasAs) {
+            return `<div class="fertilizer-row">(૬) ૭૫ દિવસની અવસ્થાએ = <span class="field-value">${asVal}</span> કિલો/વિઘે (એમોનીયમ સલ્ફેટ)</div>`;
+        } else {
+            return `<div class="fertilizer-row">(૬) ૭૫ દિવસની અવસ્થાએ = <span class="field-value">${ureaVal}</span> કિલો/વિઘે (યુરીયા)</div>`;
+        }
+    }
+
+    /**
+     * Build hormone dose text with conditional unit based on hormone name
+     * Fenteplus (ફેન્ટેકપ્લસ) → મિલી/પંપ દીઠ, Projib (પ્રોજીબ) → ગ્રામ/પંપ દીઠ
+     */
+    _buildHormoneDoseWithUnit(hormoneName, hormoneDose, formatNumber) {
+        const doseVal = formatNumber(hormoneDose);
+        if (!doseVal) return '';
+        const unit = hormoneName === 'પ્રોજીબ' ? 'ગ્રામ/પંપ દીઠ' : 'મિલી/પંપ દીઠ';
+        return `${doseVal} ${unit}`;
+    }
+
+    /**
      * Fill fertilizer template with sample data - Normal Crops (Cotton, etc.)
      */
     fillFertilizerNormalTemplate(template, data) {
@@ -346,7 +375,7 @@ class PDFGeneratorService {
             '{{day30}}': formatNumber(data.day30),
             '{{day45_row}}': this._buildDay45Row(data, formatNumber),
             '{{day60}}': formatNumber(data.day60),
-            '{{day75}}': formatNumber(data.day75),
+            '{{day75_row}}': this._buildDay75Row(data, formatNumber),
             '{{day90Urea}}': formatNumber(data.day90Urea),
             '{{day90Mag}}': formatNumber(data.day90Mag),
             '{{day105}}': formatNumber(data.day105),
@@ -361,21 +390,21 @@ class PDFGeneratorService {
             '{{spray1_npkType}}': getValue(data.spray1_npkType),
             '{{spray1_npkDose}}': formatNumber(data.spray1_npkDose),
             '{{spray1_hormoneName}}': getValue(data.spray1_hormoneName),
-            '{{spray1_hormoneDose}}': formatNumber(data.spray1_hormoneDose),
+            '{{spray1_hormoneDoseWithUnit}}': this._buildHormoneDoseWithUnit(data.spray1_hormoneName, data.spray1_hormoneDose, formatNumber),
 
             // Spray 2
             '{{spray2_stage}}': formatNumber(data.spray2_stage, 0),
             '{{spray2_npkType}}': getValue(data.spray2_npkType),
             '{{spray2_npkDose}}': formatNumber(data.spray2_npkDose),
             '{{spray2_hormoneName}}': getValue(data.spray2_hormoneName),
-            '{{spray2_hormoneDose}}': formatNumber(data.spray2_hormoneDose),
+            '{{spray2_hormoneDoseWithUnit}}': this._buildHormoneDoseWithUnit(data.spray2_hormoneName, data.spray2_hormoneDose, formatNumber),
 
             // Spray 3
             '{{spray3_stage}}': formatNumber(data.spray3_stage, 0),
             '{{spray3_npkType}}': getValue(data.spray3_npkType),
             '{{spray3_npkDose}}': formatNumber(data.spray3_npkDose),
             '{{spray3_hormoneName}}': getValue(data.spray3_hormoneName),
-            '{{spray3_hormoneDose}}': formatNumber(data.spray3_hormoneDose),
+            '{{spray3_hormoneDoseWithUnit}}': this._buildHormoneDoseWithUnit(data.spray3_hormoneName, data.spray3_hormoneDose, formatNumber),
         };
 
         // Replace all placeholders
