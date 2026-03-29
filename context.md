@@ -398,8 +398,8 @@ Managed by `FertilizerSessionStateManager` (`models/fertilizer-session-state.mod
 - `soilSampleId` (ObjectId → SoilSample — cross-reference)
 - NPK values: `nValue`, `pValue`, `kValue`
 - Recommendations: `organicManure`, `dap`, `npk`
-- Dose schedule: includes `day45` (Urea) and `day45As` (Ammonium Sulphate) as alternative options for day 45
-- Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields
+- Dose schedule: includes `day45` (Urea) and `day45As` (Ammonium Sulphate) as alternative options for day 45; similarly `day75` (Urea) and `day75As` (Ammonium Sulphate) for day 75
+- Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields; hormone dose unit is conditional on hormone name (Projib → grams, others → ml)
 - Fruit tree sections: `m1`-`m5` with sub-parameters
 
 ### API Endpoints (`backend/src/routes/fertilizerTesting.js`)
@@ -717,6 +717,8 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 - `generateBulkPDFsStream(samples, type)` — Async generator for streaming
 - `generateCombinedPDF(samples)` — Single PDF with all samples
 - `_buildDay45Row(data, formatNumber)` — Conditional day 45 row: shows Urea, Ammonium Sulphate, or both
+- `_buildDay75Row(data, formatNumber)` — Conditional day 75 row: shows Urea, Ammonium Sulphate, or both
+- `_buildHormoneDoseWithUnit(hormoneName, hormoneDose, formatNumber)` — Returns dose with unit based on hormone name (પ્રોજીબ → ગ્રામ/પંપ દીઠ, others → મિલી/પંપ દીઠ)
 
 **Number Formatting:** `formatNumber` defaults to 2 decimal places but displays integers without decimals for cleaner output.
 

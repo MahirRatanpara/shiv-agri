@@ -64,6 +64,7 @@ export interface FertilizerSampleData {
   day45As?: number | null;
   day60?: number | null;
   day75?: number | null;
+  day75As?: number | null;
   day90Urea?: number | null;
   day90Mag?: number | null;
   day105?: number | null;
