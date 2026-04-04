@@ -1,0 +1,61 @@
+<div class="activity-feed-card">
+  <h3 class="feed-title">Activity Feed</h3>
+
+  <!-- Loading skeleton -->
+  <div *ngIf="loading" class="skeleton-container">
+    <div *ngFor="let item of [1, 2, 3, 4, 5]" class="skeleton-entry">
+      <div class="skeleton-dot"></div>
+      <div class="skeleton-content">
+        <div class="skeleton-line skeleton-line-short"></div>
+        <div class="skeleton-line skeleton-line-long"></div>
+        <div class="skeleton-line skeleton-line-tiny"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && activities.length === 0" class="empty-state">
+    <i class="fas fa-stream empty-icon"></i>
+    <p>No activity yet</p>
+  </div>
+
+  <!-- Timeline -->
+  <div *ngIf="!loading && activities.length > 0" class="timeline">
+    <div *ngFor="let activity of activities" class="timeline-entry">
+      <div class="timeline-dot" [style.background-color]="getActionConfig(activity.actionType).color"></div>
+
+      <div class="entry-content">
+        <div class="entry-header">
+          <div class="user-avatar" *ngIf="!activity.userAvatar">
+            {{ getUserInitial(activity.userName) }}
+          </div>
+          <img
+            *ngIf="activity.userAvatar"
+            [src]="activity.userAvatar"
+            [alt]="activity.userName"
+            class="user-avatar-img"
+          />
+          <div class="entry-details">
+            <div class="entry-top-row">
+              <span class="user-name">{{ activity.userName }}</span>
+              <i
+                [class]="getActionConfig(activity.actionType).icon + ' action-icon'"
+                [style.color]="getActionConfig(activity.actionType).color"
+              ></i>
+            </div>
+            <p class="entry-description">{{ activity.description }}</p>
+            <span class="entry-timestamp">{{ timeAgo(activity.timestamp) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load more -->
+  <div *ngIf="!loading && pagination?.hasNext" class="load-more-container">
+    <button class="load-more-btn" (click)="loadMore()" [disabled]="loadingMore">
+      <span *ngIf="!loadingMore">Load more</span>
+      <span *ngIf="loadingMore" class="loading-spinner"></span>
+    </button>
+  </div>
+</div>

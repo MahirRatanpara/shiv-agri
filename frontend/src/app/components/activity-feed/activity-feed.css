@@ -1,0 +1,253 @@
+.activity-feed-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid hsl(0, 0%, 90%);
+  padding: 20px;
+}
+
+.feed-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: hsl(0, 0%, 15%);
+}
+
+/* ─── Timeline ─── */
+
+.timeline {
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: hsl(0, 0%, 88%);
+  border-radius: 1px;
+}
+
+.timeline-entry {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.timeline-entry:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px hsl(0, 0%, 88%);
+  z-index: 1;
+}
+
+/* ─── Entry Content ─── */
+
+.entry-content {
+  padding-left: 4px;
+}
+
+.entry-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: hsl(250, 80%, 60%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.user-avatar-img {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.entry-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-top-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(0, 0%, 15%);
+}
+
+.action-icon {
+  font-size: 12px;
+}
+
+.entry-description {
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(0, 0%, 30%);
+  margin: 2px 0 0 0;
+  line-height: 1.4;
+}
+
+.entry-timestamp {
+  font-size: 11px;
+  color: hsl(0, 0%, 55%);
+  margin-top: 2px;
+  display: inline-block;
+}
+
+/* ─── Empty State ─── */
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: hsl(0, 0%, 55%);
+}
+
+.empty-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: hsl(0, 0%, 78%);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ─── Load More ─── */
+
+.load-more-container {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.load-more-btn {
+  background: none;
+  border: 1px solid hsl(250, 80%, 60%);
+  color: hsl(250, 80%, 60%);
+  padding: 6px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  background: hsl(250, 80%, 60%);
+  color: #fff;
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid hsl(250, 80%, 60%);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+/* ─── Skeleton ─── */
+
+.skeleton-container {
+  padding-left: 20px;
+}
+
+.skeleton-entry {
+  position: relative;
+  padding-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.skeleton-entry:last-child {
+  padding-bottom: 0;
+}
+
+.skeleton-dot {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: hsl(0, 0%, 90%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+  background: hsl(0, 0%, 90%);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line-short {
+  width: 30%;
+}
+
+.skeleton-line-long {
+  width: 70%;
+}
+
+.skeleton-line-tiny {
+  width: 20%;
+  height: 8px;
+}
+
+/* ─── Animations ─── */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

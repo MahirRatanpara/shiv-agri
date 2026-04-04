@@ -1,0 +1,73 @@
+<a class="project-card" [routerLink]="['/projects', project._id]" [class.selected]="selected">
+  <!-- Selection checkbox -->
+  <div class="card-select" *ngIf="selectable" (click)="onSelectionToggle($event)">
+    <i [class]="selected ? 'fas fa-check-square' : 'far fa-square'"></i>
+  </div>
+
+  <!-- Cover / Thumbnail -->
+  <div class="card-cover">
+    <img *ngIf="project.coverImage || project.thumbnailUrl" [src]="project.coverImage || project.thumbnailUrl" [alt]="project.name" loading="lazy" />
+    <div class="card-cover-placeholder" *ngIf="!project.coverImage && !project.thumbnailUrl">
+      <i [class]="categoryIcon"></i>
+    </div>
+    <span class="category-badge">{{ project.category }}</span>
+    <button class="favorite-btn" (click)="onFavoriteClick($event)" [class.active]="isFavorite" [attr.aria-label]="isFavorite ? 'Remove from favorites' : 'Add to favorites'">
+      <i [class]="isFavorite ? 'fas fa-star' : 'far fa-star'"></i>
+    </button>
+  </div>
+
+  <!-- Card Body -->
+  <div class="card-body">
+    <div class="card-header-row">
+      <h3 class="card-title">{{ project.name }}</h3>
+      <span class="status-badge" [class]="statusClass">{{ project.status }}</span>
+    </div>
+
+    <!-- Client & Location -->
+    <div class="card-meta">
+      <div class="meta-item" *ngIf="project.clientName">
+        <div class="client-avatar">{{ clientInitial }}</div>
+        <span>{{ project.clientName }}</span>
+      </div>
+      <div class="meta-item" *ngIf="locationDisplay">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>{{ locationDisplay }}</span>
+      </div>
+    </div>
+
+    <!-- Progress Bars -->
+    <div class="card-progress">
+      <div class="progress-item">
+        <div class="progress-label">
+          <span>Budget</span>
+          <span>{{ formatCurrency(project.expenses) }} / {{ formatCurrency(project.budget) }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" [class]="budgetProgressClass" [style.width.%]="Math.min(budgetProgress, 100)"></div>
+        </div>
+      </div>
+      <div class="progress-item" *ngIf="project.totalVisitsPlanned > 0">
+        <div class="progress-label">
+          <span>Visits</span>
+          <span>{{ project.totalVisitsCompleted }}/{{ project.totalVisitsPlanned }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill progress-visits" [style.width.%]="Math.min(visitProgress, 100)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer">
+      <span class="card-timestamp">{{ timeAgo(project.updatedAt) }}</span>
+      <div class="card-team" *ngIf="project.assignedTo">
+        <div class="team-avatar" *ngIf="project.assignedTo.profilePhoto">
+          <img [src]="project.assignedTo.profilePhoto" [alt]="project.assignedTo.name" />
+        </div>
+        <div class="team-avatar team-avatar-placeholder" *ngIf="!project.assignedTo.profilePhoto">
+          {{ (project.assignedTo.name || '?')[0] }}
+        </div>
+      </div>
+    </div>
+  </div>
+</a>

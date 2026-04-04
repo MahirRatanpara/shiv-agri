@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for LLM context. Each section is self-contained so an LLM can read only the relevant section for a given task. Organized by feature domain for efficient chunking.
 
-> **Last Updated:** 2026-03-21
+> **Last Updated:** 2026-04-04
 
 ---
 
@@ -25,19 +25,23 @@
 15. [Feature: Media Service](#15-feature-media-service)
 16. [Feature: Activity Logging](#16-feature-activity-logging)
 17. [Feature: Drafts & Project Wizard](#17-feature-drafts--project-wizard)
-18. [Frontend: Routing & Navigation](#18-frontend-routing--navigation)
-19. [Frontend: Shared Components](#19-frontend-shared-components)
-20. [Frontend: Services Reference](#20-frontend-services-reference)
-21. [Frontend: Guards, Interceptors & Directives](#21-frontend-guards-interceptors--directives)
-22. [Frontend: State Management](#22-frontend-state-management)
-23. [Frontend: Styling & Theme](#23-frontend-styling--theme)
-24. [Database: Complete Schema Reference](#24-database-complete-schema-reference)
-25. [API: Complete Endpoint Reference](#25-api-complete-endpoint-reference)
-26. [DevOps: Docker & Containerization](#26-devops-docker--containerization)
-27. [DevOps: CI/CD Pipelines](#27-devops-cicd-pipelines)
-28. [DevOps: Infrastructure & Deployment](#28-devops-infrastructure--deployment)
-29. [DevOps: Monitoring & Maintenance](#29-devops-monitoring--maintenance)
-30. [Environment Variables](#30-environment-variables)
+18. [Feature: Comments & Discussions](#18-feature-comments--discussions)
+19. [Feature: Tasks & Checklist](#19-feature-tasks--checklist)
+20. [Feature: Visits & Field Inspections](#20-feature-visits--field-inspections)
+21. [Feature: Notifications](#21-feature-notifications)
+22. [Frontend: Routing & Navigation](#22-frontend-routing--navigation)
+23. [Frontend: Shared Components](#23-frontend-shared-components)
+24. [Frontend: Services Reference](#24-frontend-services-reference)
+25. [Frontend: Guards, Interceptors & Directives](#25-frontend-guards-interceptors--directives)
+26. [Frontend: State Management](#26-frontend-state-management)
+27. [Frontend: Styling & Theme](#27-frontend-styling--theme)
+28. [Database: Complete Schema Reference](#28-database-complete-schema-reference)
+29. [API: Complete Endpoint Reference](#29-api-complete-endpoint-reference)
+30. [DevOps: Docker & Containerization](#30-devops-docker--containerization)
+31. [DevOps: CI/CD Pipelines](#31-devops-cicd-pipelines)
+32. [DevOps: Infrastructure & Deployment](#32-devops-infrastructure--deployment)
+33. [DevOps: Monitoring & Maintenance](#33-devops-monitoring--maintenance)
+34. [Environment Variables](#34-environment-variables)
 
 ---
 
@@ -147,6 +151,10 @@ shiv-agri/
 │       │   ├── userController.js
 │       │   ├── roleController.js
 │       │   ├── transactionController.js
+│       │   ├── commentController.js
+│       │   ├── taskController.js
+│       │   ├── visitController.js
+│       │   ├── notificationController.js
 │       │   ├── receiptController.js
 │       │   ├── invoiceController.js
 │       │   └── letterController.js
@@ -154,6 +162,8 @@ shiv-agri/
 │       ├── models/
 │       │   ├── User.js, Role.js, Permission.js
 │       │   ├── Project.js, Transaction.js
+│       │   ├── Comment.js, Task.js, Visit.js
+│       │   ├── Notification.js, Media.js
 │       │   ├── SoilSession.js, SoilSample.js
 │       │   ├── WaterSession.js, WaterSample.js
 │       │   ├── FertilizerSession.js, FertilizerSample.js
@@ -163,10 +173,14 @@ shiv-agri/
 │       │   ├── api.js (main router)
 │       │   ├── auth.js, users.js, roles.js
 │       │   ├── projects.js, transactions.js
+│       │   ├── comments.js, tasks.js, visits.js
+│       │   ├── notifications.js, media.js
 │       │   ├── soilTesting.js, waterTesting.js, fertilizerTesting.js
 │       │   ├── managerialWork.js, pdfGeneration.js
 │       ├── services/
 │       │   ├── projectService.js, transactionService.js
+│       │   ├── commentService.js, taskService.js, visitService.js
+│       │   ├── notificationService.js
 │       │   ├── pdfGenerator.js, draftService.js, activityLogService.js
 │       ├── utils/
 │       │   ├── jwt.js, logger.js
@@ -178,7 +192,13 @@ shiv-agri/
 │   ├── components/
 │   │   ├── header/, footer/, toast/, confirmation-modal/
 │   │   ├── download-progress/, dashboard-overview/
-│   │   ├── project-list/, project-detail-popup/, role-selection-modal/
+│   │   ├── project-list/, project-card/, project-filters/
+│   │   ├── activity-feed/, budget-sliders/, comment-thread/
+│   │   ├── contact-manager/, financial-charts/, media-gallery/
+│   │   ├── notification-bell/, task-board/
+│   │   ├── transaction-form/, transaction-list/
+│   │   ├── visit-calendar/, visit-recorder/
+│   │   ├── role-selection-modal/
 │   ├── pages/
 │   │   ├── home/, login/, not-found/, my-account/, contact/
 │   │   ├── lab-testing/, soil-testing/, water-testing/, fertilizer-testing/
@@ -188,15 +208,22 @@ shiv-agri/
 │   │   ├── about/, blog/, events/, causes/, gallery/, etc.
 │   ├── services/
 │   │   ├── auth.service.ts, user.service.ts, permission.service.ts
+│   │   ├── project.service.ts, transaction.service.ts
+│   │   ├── comment.service.ts, task.service.ts, visit.service.ts
+│   │   ├── notification.service.ts, media.service.ts
 │   │   ├── soil-testing.service.ts, water-testing.service.ts
 │   │   ├── fertilizer-testing.service.ts
 │   │   ├── managerial-work.service.ts, pdf.service.ts
-│   │   ├── dashboard.service.ts, toast.service.ts
+│   │   ├── toast.service.ts
 │   │   ├── confirmation-modal.service.ts, download-progress.service.ts
 │   ├── guards/auth.guard.ts
 │   ├── interceptors/auth.interceptor.ts, error.interceptor.ts
 │   ├── directives/has-permission.directive.ts, has-role.directive.ts
-│   ├── models/session-state.model.ts, fertilizer-session-state.model.ts
+│   ├── models/
+│   │   ├── session-state.model.ts, fertilizer-session-state.model.ts
+│   │   ├── project.model.ts, transaction.model.ts
+│   │   ├── comment.model.ts, task.model.ts, visit.model.ts
+│   │   ├── notification.model.ts
 │   └── environments/environment.ts, environment.prod.ts
 ├── media-service/src/main/java/com/shivagri/media/
 │   ├── MediaServiceApplication.java
@@ -443,15 +470,25 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Milestones:** Array of { name, date, description, isCompleted, completedAt }
 
-**Visit Tracking:** `totalVisitsPlanned`, `totalVisitsCompleted`, `visitFrequency`, `numberOfYears`
+**Visit Tracking:** `totalVisitsPlanned`, `totalVisitsCompleted`, `visitCompletionPercentage` (auto-calc)
+- `visitFrequencyConfig` { frequency (weekly/biweekly/monthly/quarterly/custom), customDays, preferredDay, preferredTime }
+- `numberOfYears`
 
-**Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
+**Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`, `isDraft`
 
 **Soft Delete:** `isDeleted`, `deletedAt`, `deletedBy`
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
 
-**Indexes:** category+status, city, state, createdBy, budget, text search (name), geospatial (coordinates), date ranges
+**Pre-save:** Calculates `budgetUtilizationPercentage`, `visitCompletionPercentage`, budget category amounts, validates GeoJSON
+
+**Query Middleware:** Auto-excludes soft-deleted projects
+
+**Methods:** `softDelete()`, `addToFavorites()`, `removeFromFavorites()`
+
+**Static:** `findActive()`, `findByStatus()`, `findByCategory()`
+
+**Indexes:** category+status, city, state, createdBy, budget, text search (name, clientName, city, district, description, crops.name), geospatial (coordinates), date ranges
 
 ### API Endpoints (`backend/src/routes/projects.js`)
 
@@ -482,9 +519,15 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 **Query Filters:** category, projectType, status, city, state, budget range, date range, team, search text, favorites
 
 ### Frontend
-- **Component:** `pages/farm-dashboard/farm-dashboard.ts` — Project listing, activity tracking, budget/expense dashboard
-- **Component:** `pages/project-details/project-details.ts` — Full project view
-- **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`
+
+- **Component:** `pages/farm-dashboard/farm-dashboard.ts` — Project listing with filters, sorting, pagination, stats. Imports DashboardOverviewComponent, ProjectListComponent, ProjectFiltersComponent
+- **Component:** `pages/project-details/project-details.ts` — Tabbed project view (overview, contacts, transactions, visits, media, comments). Imports ContactManager, TransactionList/Form, VisitCalendar/Recorder, MediaGallery, CommentThread
+- **Component:** `components/dashboard-overview/dashboard-overview.ts` — Stat cards (Total Projects, Budget, Active, Completed) with INR formatting (Cr/L/K)
+- **Component:** `components/project-list/project-list.ts` — Grid/list view toggle, search with debounce, sort options, pagination, multi-select with bulk actions
+- **Component:** `components/project-card/project-card.ts` — Status/category icons, budget/visit progress bars, favorite toggle
+- **Component:** `components/project-filters/project-filters.ts` — Multi-select categories/statuses, city text, budget range, favorites toggle
+- **Component:** `components/financial-charts/financial-charts.ts` — Summary, category breakdown, monthly trend bar chart
+- **Route:** `/farm-dashboard` (authGuard), `/projects/:id` (authGuard)
 
 ---
 
@@ -502,26 +545,39 @@ Track debits and credits against projects. Auto-updates project expenses. Suppor
 - `category` (String, indexed)
 - `date` (Date, required, indexed)
 - `notes` (String, max 1000)
+- `paymentMethod` (enum: cash, bank_transfer, upi, cheque, card, other)
+- `referenceNumber`, `invoiceNumber`
+- `vendor` { name, contact, gstin }
+- `receiptUrl`, `tags[]`
 - `createdBy`, `lastUpdatedBy` (User refs)
 - Soft delete: `isDeleted`, `deletedAt`, `deletedBy`
 
 **Virtuals:** `formattedAmount` (INR currency), `transactionType` ('Expense'/'Income')
 
-**Auto-update:** Save/delete hooks recalculate parent Project's `expenses` field
+**Auto-update:** Post-save hooks recalculate parent Project's `expenses`/`income` fields
 
-**Static Methods:** `getByProject()`, `countByProject()`, `getSummaryByProject()`, `getCategoryBreakdown()`, `deleteByProject()`
+**Static Methods:** `getByProject()` (paginated with sorting/filtering), `getSummaryByProject()` (credits, debits, net, budget context), `getCategoryBreakdown()`, `deleteByProject()`
+
+**Indexes:** (projectId, date), (projectId, type), (projectId, category), (projectId, createdAt), (projectId, isDeleted, date)
 
 ### API Endpoints (`backend/src/routes/transactions.js`)
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| GET | `/api/transactions/summary` | farm.projects.view | Project summary (totals) |
+| GET | `/api/transactions/summary` | farm.projects.view | Project summary (totals + budget utilization) |
 | GET | `/api/transactions/categories` | farm.projects.view | Category breakdown |
+| GET | `/api/transactions/trends` | farm.projects.view | Monthly aggregation |
 | GET | `/api/transactions` | farm.projects.view | Filtered/paginated list |
 | POST | `/api/transactions` | project.update | Create transaction |
 | GET | `/api/transactions/:id` | farm.projects.view | Get single |
 | PATCH | `/api/transactions/:id` | project.update | Update |
 | DELETE | `/api/transactions/:id` | project.update | Soft delete |
+
+### Frontend
+
+- **Component:** `components/transaction-list/transaction-list.ts` — Filter tabs (all/debit/credit), category filter, pagination, summary display
+- **Component:** `components/transaction-form/transaction-form.ts` — Create/edit form with type, payment method, vendor, tags
+- **Service:** `services/transaction.service.ts` — CRUD, getSummary(), getCategoryBreakdown(), getTrends()
 
 ---
 
@@ -637,6 +693,17 @@ Create service list letters or general letters with rich text content, tags, and
 ### Frontend
 - **Component:** `pages/managerial-work/letters/letters.ts` — CRUD, rich text editor, tags, templates, PDF
 - **Route:** `/managerial-work/letters`
+
+### Backend Media (In-DB) Routes (`backend/src/routes/media.js`)
+
+Separate from the Spring Boot media service — stores files as MongoDB Buffer documents.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/media/upload` | Required | Upload file (multipart, max 10MB, JPG/PNG/GIF/WebP/PDF) |
+| GET | `/api/media/project/:projectId` | Required | List media for project (excludes data buffer) |
+| GET | `/api/media/:id/file` | Required | Download/stream file content |
+| DELETE | `/api/media/:id` | Required | Delete media record |
 
 ---
 
@@ -794,16 +861,27 @@ Audit trail for all project-related actions. Tracks who did what, when, with bef
 
 - `projectId` (ObjectId, indexed), `userId` (ObjectId, indexed)
 - `userName`, `userAvatar` (denormalized for display)
-- `actionType` (enum: created, updated, deleted, visit_recorded, expense_added, payment_received, document_uploaded, comment_posted, team_member_assigned/removed, contact_added/updated/removed, milestone_added/completed, status_changed, budget_updated, cover_photo_changed, other)
+- `actionType` (enum: created, updated, deleted, status_changed, budget_updated, cover_photo_changed, contact_added/updated/removed, milestone_added/completed, team_member_assigned/removed, expense_added, payment_received, transaction_updated/deleted, visit_scheduled/recorded/completed/cancelled, document/media_uploaded/deleted, comment_posted, reaction_added, task_created/completed/assigned, other)
 - `description` (required), `metadata` (flexible object)
 - `changes` ({ before, after } — for update tracking)
 - `ipAddress`, `userAgent`, `timestamp` (indexed)
 
 **Static Methods:**
-- `logActivity(projectId, userId, actionType, description, metadata)`
-- `getProjectActivity(projectId, options)` — Paginated
-- `getProjectActivityCount(projectId, actionType)`
-- `getRecentActivities(userId, limit)`
+- `logActivity(projectId, userId, actionType, description, metadata)` — Auto-maps action strings, populates user info
+- `getProjectActivity(projectId, options)` — Paginated with optional actionType filter
+- `getRecentActivities(userId, limit)` — Recent activities across all projects
+
+**Indexes:** (projectId, timestamp), (userId, timestamp), (projectId, actionType, timestamp)
+
+### Backend Service (`backend/src/services/activityLogService.js`)
+
+- `logActivity()` — Non-blocking wrapper around ActivityLog.logActivity (errors don't affect main flow)
+- `getProjectActivity()` — Delegates to ActivityLog model
+- `getRecentActivities()` — User's recent activities across projects
+
+### Frontend
+
+- **Component:** `components/activity-feed/activity-feed.ts` — Displays action history with icon/color mapping, timeAgo formatter, load-more pagination
 
 ---
 
@@ -819,6 +897,16 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 - `draftData` (Mixed — any form data)
 - `createdBy` (User ref)
 
+### Backend Service (`backend/src/services/draftService.js`)
+
+- `createProjectWithDraft()` — Creates isDraft=true Project + Draft doc
+- `updateDraft()` — Updates draft data + Project fields incrementally
+- `getDraftByProjectId()` — Fetches draft, validates isDraft=true
+- `getUserDrafts()` — Lists all drafts for user (sorted by updatedAt)
+- `completeDraft()` — Converts to live project (isDraft=false, deletes Draft, logs activity)
+- `createFinalProject()` — Creates live project directly (no draft) + logs activity
+- `deleteDraft()` — Deletes Draft + Project docs
+
 ### API Endpoints
 
 | Method | Path | Description |
@@ -828,14 +916,149 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | POST | `/api/projects/drafts` | Save as draft |
 | PUT | `/api/projects/drafts/:id` | Update draft |
 | POST | `/api/projects/drafts/:id/complete` | Convert draft → project |
+| DELETE | `/api/projects/drafts/:id` | Delete draft |
 
 ### Frontend
-- **Component:** `pages/project-wizard/project-wizard.ts` — Multi-step form wizard
+- **Component:** `pages/project-wizard/project-wizard.ts` — 6-step form wizard (Basic Info, Location & Land, Contacts, Budget, Crops, Team & Timeline). Auto-save every 30s with debouncing. Step validation. Imports BudgetSlidersComponent, ContactManagerComponent
+- **Component:** `components/budget-sliders/budget-sliders.ts` — 7 default budget categories, percentage sliders, auto-calculate amounts, even distribution
+- **Component:** `components/contact-manager/contact-manager.ts` — Add/edit contacts with role types, primary/active toggles
 - **Routes:** `/projects/new` (authGuard), `/projects/edit/:id` (authGuard)
 
 ---
 
-## 18. FRONTEND: ROUTING & NAVIGATION
+## 18. FEATURE: COMMENTS & DISCUSSIONS
+
+### Overview
+Threaded comment system for project discussions. Supports replies, @mentions with notifications, and emoji reactions.
+
+### Database Model: Comment (`backend/src/models/Comment.js`)
+
+- `projectId` (ObjectId → Project, indexed), `parentId` (ObjectId → Comment, for replies)
+- `userId` (ObjectId → User), `userName`, `userAvatar` (auto-populated from User)
+- `content` (String, max 2000), `mentions[]`, `reactions[]` (emoji + userId)
+- `isEdited`, `editedAt`, `isDeleted`, `deletedAt`
+- Indexes: (projectId, createdAt), (parentId)
+
+### API Endpoints (`backend/src/routes/comments.js`)
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET | `/api/comments/project/:projectId` | farm.comments.view | Paginated comments + replies |
+| POST | `/api/comments` | farm.comments.create | Create comment (logs activity, sends mention notifications) |
+| PUT | `/api/comments/:id` | farm.comments.update | Update content (ownership check) |
+| DELETE | `/api/comments/:id` | farm.comments.delete | Soft-delete (ownership check) |
+| POST | `/api/comments/:id/react` | farm.comments.create | Toggle emoji reaction |
+| GET | `/api/comments/:id/replies` | farm.comments.view | Get thread replies |
+
+### Frontend
+- **Component:** `components/comment-thread/comment-thread.ts` — Full CRUD, nested replies, 6 emoji reactions, @mention extraction, relative time display, avatar color generation
+- **Service:** `services/comment.service.ts` — getComments(), createComment(), updateComment(), deleteComment(), addReaction(), getReplies()
+
+---
+
+## 19. FEATURE: TASKS & CHECKLIST
+
+### Overview
+Kanban-style task management for projects. Tasks have status columns, priority levels, checklists, and assignee tracking.
+
+### Database Model: Task (`backend/src/models/Task.js`)
+
+- `projectId` (ObjectId → Project, indexed)
+- `title`, `description`, `status` (enum: todo, in_progress, review, done)
+- `priority` (enum: low, medium, high, urgent)
+- `assignedTo` (ObjectId → User), `assignedToName`
+- `dueDate`, `checklist[]` { text, isDone }, `tags[]`
+- `createdBy`, `completedAt`
+- Indexes: (projectId, status), (assignedTo)
+
+### API Endpoints (`backend/src/routes/tasks.js`)
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET | `/api/tasks/project/:projectId` | farm.tasks.view | List tasks (filters: status, assignedTo) |
+| GET | `/api/tasks/project/:projectId/stats` | farm.tasks.view | Task counts by status |
+| GET | `/api/tasks/:id` | farm.tasks.view | Get single task |
+| POST | `/api/tasks` | farm.tasks.create | Create task (logs activity, notifies assignee) |
+| PUT | `/api/tasks/:id` | farm.tasks.update | Update task (tracks status changes) |
+| PUT | `/api/tasks/:id/checklist/:index` | farm.tasks.update | Toggle checklist item |
+| DELETE | `/api/tasks/:id` | farm.tasks.delete | Delete task |
+
+### Frontend
+- **Component:** `components/task-board/task-board.ts` — Kanban board with 4 columns (todo, in_progress, review, done). Task state transitions, checklist progress, priority color coding, due date with overdue detection
+- **Service:** `services/task.service.ts` — getTasks(), getTask(), createTask(), updateTask(), deleteTask(), updateChecklist(), getStats()
+
+---
+
+## 20. FEATURE: VISITS & FIELD INSPECTIONS
+
+### Overview
+Field visit management with scheduling, recording, and 3-phase documentation (inspection → diagnosis → prescription). Supports recurring visit scheduling.
+
+### Database Model: Visit (`backend/src/models/Visit.js`)
+
+- `projectId` (ObjectId → Project), `visitNumber` (auto-increment per project)
+- `scheduledDate`, `actualDate`, `completedAt`
+- `status` (enum: scheduled, in_progress, completed, cancelled, missed)
+- `type` (enum: routine, emergency, follow_up, initial)
+- `assignedTo` (ObjectId → User, auto-populated), `assignedToName`
+- `notes`, `duration` (minutes), `location` { latitude, longitude }
+- **inspection:** cropHealth, soilCondition, waterLevel, pestPresence, diseasePresence, weatherCondition, observations[], photos[]
+- **diagnosis:** issues[] { type, severity, description, affectedArea }, labTestsRequired
+- **prescription:** recommendations[] { action, product, dosage, frequency, duration, priority }, nextVisitSuggested, followUpRequired
+- `createdBy`
+- Indexes: (projectId, scheduledDate), (projectId, status), (assignedTo, scheduledDate)
+
+### API Endpoints (`backend/src/routes/visits.js`)
+
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET | `/api/visits/project/:projectId` | farm.visits.view | List visits (filters: status, type, date range) |
+| GET | `/api/visits/project/:projectId/upcoming` | farm.visits.view | Upcoming visits (next N days) |
+| GET | `/api/visits/project/:projectId/stats` | farm.visits.view | Visit statistics |
+| POST | `/api/visits/project/:projectId/schedule-recurring` | farm.visits.create | Schedule recurring visits |
+| GET | `/api/visits/:id` | farm.visits.view | Get single visit |
+| POST | `/api/visits` | farm.visits.create | Create visit |
+| PUT | `/api/visits/:id` | farm.visits.update | Update visit |
+| PUT | `/api/visits/:id/complete` | farm.visits.update | Complete with inspection/diagnosis/prescription |
+| PUT | `/api/visits/:id/cancel` | farm.visits.update | Cancel visit |
+
+### Frontend
+- **Component:** `components/visit-calendar/visit-calendar.ts` — Month navigation calendar grid, visit placement on dates, status chips with color coding, stats display
+- **Component:** `components/visit-recorder/visit-recorder.ts` — 3-step wizard (Inspection → Diagnosis → Prescription). Crop health selector, observations, issue tracking, recommendation builder
+- **Service:** `services/visit.service.ts` — getVisits(), getVisit(), createVisit(), updateVisit(), completeVisit(), cancelVisit(), getUpcoming(), getStats(), scheduleRecurring()
+
+---
+
+## 21. FEATURE: NOTIFICATIONS
+
+### Overview
+In-app notification system with 30-day auto-expiry. Notifications created for @mentions, task assignments, visit scheduling, and project updates.
+
+### Database Model: Notification (`backend/src/models/Notification.js`)
+
+- `userId` (ObjectId → User), `createdBy`
+- `type` (enum: comment, mention, task_assigned, visit_scheduled, project_update, milestone, system)
+- `title`, `message`, `projectId`, `referenceId`, `referenceType`
+- `isRead`, `readAt`
+- Indexes: (userId, isRead, createdAt), TTL index (30-day auto-expiry)
+
+### API Endpoints (`backend/src/routes/notifications.js`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/notifications` | Paginated user notifications (supports unreadOnly filter) |
+| GET | `/api/notifications/unread-count` | Unread count |
+| PUT | `/api/notifications/read-all` | Mark all as read |
+| PUT | `/api/notifications/:id/read` | Mark single as read |
+| DELETE | `/api/notifications/:id` | Delete notification |
+
+### Frontend
+- **Component:** `components/notification-bell/notification-bell.ts` — Unread count badge, dropdown menu, auto-refresh every 30s, mark read, click-outside close
+- **Service:** `services/notification.service.ts` — Polling every 30s for unread count, `unreadCount$` BehaviorSubject. getNotifications(), markAsRead(), markAllAsRead(), deleteNotification()
+
+---
+
+## 22. FRONTEND: ROUTING & NAVIGATION
 
 ### Route Map (`frontend/src/app/app.routes.ts`)
 
@@ -858,7 +1081,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | `farm-dashboard` | FarmDashboardComponent | authGuard | Project management |
 | `projects/new` | ProjectWizardComponent | authGuard | Create project |
 | `projects/edit/:id` | ProjectWizardComponent | authGuard | Edit project |
-| `project-details/:id` | ProjectDetailsComponent | — | View project |
+| `projects/:id` | ProjectDetailsComponent | authGuard | View project |
 | `admin/users` | UserManagementComponent | authGuard | User management |
 | `my-account` | MyAccountComponent | authGuard | Account settings |
 | `contact` | ContactComponent | — | Contact page |
@@ -869,7 +1092,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 ---
 
-## 19. FRONTEND: SHARED COMPONENTS
+## 23. FRONTEND: SHARED COMPONENTS
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
@@ -878,14 +1101,27 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | ToastComponent | `components/toast/` | Notification display, auto-dismiss |
 | ConfirmationModalComponent | `components/confirmation-modal/` | Reusable confirm/cancel dialog |
 | DownloadProgressComponent | `components/download-progress/` | Bulk download progress bar |
-| DashboardOverviewComponent | `components/dashboard-overview/` | Dashboard stats and metrics |
-| ProjectListComponent | `components/project-list/` | Project cards for home page |
-| ProjectDetailPopupComponent | `components/project-detail-popup/` | Modal for project details |
+| DashboardOverviewComponent | `components/dashboard-overview/` | Dashboard stat cards with INR formatting |
+| ProjectListComponent | `components/project-list/` | Grid/list view, search, sort, pagination, bulk actions |
+| ProjectCardComponent | `components/project-card/` | Individual project card with progress bars |
+| ProjectFiltersComponent | `components/project-filters/` | Category/status/city/budget/favorites filters |
+| ActivityFeedComponent | `components/activity-feed/` | Paginated activity history with icons |
+| BudgetSlidersComponent | `components/budget-sliders/` | Budget category percentage sliders |
+| CommentThreadComponent | `components/comment-thread/` | Threaded comments with reactions |
+| ContactManagerComponent | `components/contact-manager/` | Contact CRUD with role types |
+| FinancialChartsComponent | `components/financial-charts/` | Budget charts and spending trends |
+| MediaGalleryComponent | `components/media-gallery/` | File upload, category filter, lightbox |
+| NotificationBellComponent | `components/notification-bell/` | Header notification dropdown |
+| TaskBoardComponent | `components/task-board/` | Kanban task board |
+| TransactionFormComponent | `components/transaction-form/` | Transaction create/edit form |
+| TransactionListComponent | `components/transaction-list/` | Filtered transaction table |
+| VisitCalendarComponent | `components/visit-calendar/` | Monthly calendar with visit markers |
+| VisitRecorderComponent | `components/visit-recorder/` | 3-step visit recording wizard |
 | RoleSelectionModalComponent | `components/role-selection-modal/` | Role picker during first login |
 
 ---
 
-## 20. FRONTEND: SERVICES REFERENCE
+## 24. FRONTEND: SERVICES REFERENCE
 
 | Service | File | Key Methods |
 |---------|------|-------------|
@@ -895,16 +1131,22 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | SoilTestingService | `soil-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel(), getSoilDataForSample() |
 | WaterTestingService | `water-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel() |
 | FertilizerTestingService | `fertilizer-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel() with type |
+| ProjectService | `project.service.ts` | getProjects(), getStats(), CRUD, toggleFavorite(), bulk ops, export, contacts/milestones CRUD, getTimeline(), getActivity(), draft methods. stats$ BehaviorSubject |
+| TransactionService | `transaction.service.ts` | CRUD, getSummary(), getCategoryBreakdown(), getTrends() |
+| CommentService | `comment.service.ts` | getComments(), createComment(), updateComment(), deleteComment(), addReaction(), getReplies() |
+| TaskService | `task.service.ts` | getTasks(), CRUD, updateChecklist(), getStats() |
+| VisitService | `visit.service.ts` | CRUD, completeVisit(), cancelVisit(), getUpcoming(), getStats(), scheduleRecurring() |
+| NotificationService | `notification.service.ts` | 30s polling, unreadCount$ BehaviorSubject, getNotifications(), markAsRead(), markAllAsRead() |
+| MediaService | `media.service.ts` | upload(), getByProject(), delete(), getUrl() |
 | ManagerialWorkService | `managerial-work.service.ts` | Receipt/Invoice/Letter CRUD, getNextNumber(), getServiceOptions(), numberToWords() |
 | PdfService | `pdf.service.ts` | generateSinglePDF(), downloadBulkPDFs(), streamBulkSessionPDFs(), previewPDF() — for soil/water/fertilizer/receipt/invoice/letter |
-| DashboardService | `dashboard.service.ts` | Dashboard metrics and analytics |
 | ToastService | `toast.service.ts` | success(), error(), info(), warning(), clear() |
 | ConfirmationModalService | `confirmation-modal.service.ts` | confirm(config) → Promise<boolean> |
 | DownloadProgressService | `download-progress.service.ts` | start(), update(), complete(), error(), progress$ Observable |
 
 ---
 
-## 21. FRONTEND: GUARDS, INTERCEPTORS & DIRECTIVES
+## 25. FRONTEND: GUARDS, INTERCEPTORS & DIRECTIVES
 
 ### Auth Guard (`guards/auth.guard.ts`)
 - `CanActivateFn` — checks `authService.isAuthenticated()`
@@ -926,7 +1168,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 ---
 
-## 22. FRONTEND: STATE MANAGEMENT
+## 26. FRONTEND: STATE MANAGEMENT
 
 **Pattern:** RxJS BehaviorSubjects + Services (no NgRx/Akita)
 
@@ -938,13 +1180,15 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | Toasts | ToastService.toasts | BehaviorSubject<Toast[]> |
 | Confirmation Modal | ConfirmationModalService.showModal$ | BehaviorSubject<boolean> |
 | Download Progress | DownloadProgressService.progress$ | BehaviorSubject<DownloadProgress> |
+| Project Stats | ProjectService.stats$ | BehaviorSubject<DashboardStats\|null> |
+| Notification Count | NotificationService.unreadCount$ | BehaviorSubject<number> |
 | Session State | SessionStateManager class | State Pattern (in-component) |
 
 **Data Flow:** Component → Service → HttpClient → Observable → Component subscription → Template rendering
 
 ---
 
-## 23. FRONTEND: STYLING & THEME
+## 27. FRONTEND: STYLING & THEME
 
 ### Theme Colors (from `src/assets/css/custom.css`)
 | Role | Color | Hex |
@@ -988,7 +1232,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 ---
 
-## 24. DATABASE: COMPLETE SCHEMA REFERENCE
+## 28. DATABASE: COMPLETE SCHEMA REFERENCE
 
 ### Collections Summary
 
@@ -1008,8 +1252,13 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | receipts | Receipt.js | receiptNumber (unique), date, customerName |
 | invoices | Invoice.js | invoiceNumber (unique), date |
 | letters | Letter.js | letterNumber (unique sparse), date |
-| activitylogs | ActivityLog.js | projectId+timestamp, userId+timestamp |
-| drafts | Draft.js | projectId, createdBy |
+| comments | Comment.js | (projectId, createdAt), parentId |
+| tasks | Task.js | (projectId, status), assignedTo |
+| visits | Visit.js | (projectId, scheduledDate), (projectId, status), (assignedTo, scheduledDate) |
+| notifications | Notification.js | (userId, isRead, createdAt), TTL 30 days |
+| media_files | Media.js | (projectId, category) |
+| activitylogs | ActivityLog.js | (projectId, timestamp), (userId, timestamp), (projectId, actionType, timestamp) |
+| drafts | Draft.js | (projectId, createdBy) |
 | media | MediaDocument.java | status+createdAt |
 
 ### Cross-Collection Relationships
@@ -1018,9 +1267,18 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 User ─── roleRef ──→ Role ──── permissions[] ──→ Permission
 User ←── createdBy ── Project
 User ←── createdBy ── Transaction
+User ←── userId ──── Comment
+User ←── assignedTo ── Task
+User ←── assignedTo ── Visit
+User ←── userId ──── Notification
 Project ←── projectId ── Transaction
+Project ←── projectId ── Comment
+Project ←── projectId ── Task
+Project ←── projectId ── Visit
+Project ←── projectId ── Media
 Project ←── projectId ── ActivityLog
 Project ←── projectId ── Draft
+Comment ←── parentId ── Comment (threaded replies)
 SoilSession ←── sessionId ── SoilSample
 WaterSession ←── sessionId ── WaterSample
 FertilizerSession ←── sessionId ── FertilizerSample
@@ -1031,7 +1289,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ---
 
-## 25. API: COMPLETE ENDPOINT REFERENCE
+## 29. API: COMPLETE ENDPOINT REFERENCE
 
 ### Base URL
 - Development: `http://localhost:3000/api`
@@ -1058,11 +1316,11 @@ Invoice ── linkedReceipts[] ──→ Receipt
 { "success": true, "data": [...], "pagination": { "page": 1, "limit": 20, "total": 156, "totalPages": 8 } }
 ```
 
-*For full endpoint details by feature, see Sections 5-17 above.*
+*For full endpoint details by feature, see Sections 5-21 above.*
 
 ---
 
-## 26. DEVOPS: DOCKER & CONTAINERIZATION
+## 30. DEVOPS: DOCKER & CONTAINERIZATION
 
 ### Development (`docker-compose.yml`)
 
@@ -1105,7 +1363,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ---
 
-## 27. DEVOPS: CI/CD PIPELINES
+## 31. DEVOPS: CI/CD PIPELINES
 
 ### GitHub Actions Workflows (`.github/workflows/`)
 
@@ -1143,7 +1401,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ---
 
-## 28. DEVOPS: INFRASTRUCTURE & DEPLOYMENT
+## 32. DEVOPS: INFRASTRUCTURE & DEPLOYMENT
 
 ### Git Hooks (`.githooks/`)
 
@@ -1190,7 +1448,7 @@ Available but not primary deployment:
 
 ---
 
-## 29. DEVOPS: MONITORING & MAINTENANCE
+## 33. DEVOPS: MONITORING & MAINTENANCE
 
 ### Health Checks
 - Backend: `GET /health` (30s interval, 10s timeout)
@@ -1215,7 +1473,7 @@ docker system prune -a -f                               # Cleanup
 
 ---
 
-## 30. ENVIRONMENT VARIABLES
+## 34. ENVIRONMENT VARIABLES
 
 ### Backend (.env.example)
 | Variable | Default | Purpose |

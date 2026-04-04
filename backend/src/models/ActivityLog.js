@@ -1,176 +1,126 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-/**
- * ActivityLog Schema
- * Tracks all activities/changes related to projects
- */
-const activityLogSchema = new mongoose.Schema({
-  // Reference to project
-  projectId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Project',
-    required: true,
-    index: true
-  },
+const ACTION_TYPES = [
+  'created', 'updated', 'deleted',
+  'status_changed', 'budget_updated', 'cover_photo_changed',
+  'contact_added', 'contact_updated', 'contact_removed',
+  'milestone_added', 'milestone_completed',
+  'team_member_assigned', 'team_member_removed',
+  'expense_added', 'payment_received', 'transaction_updated', 'transaction_deleted',
+  'visit_scheduled', 'visit_recorded', 'visit_completed', 'visit_cancelled',
+  'document_uploaded', 'media_uploaded', 'media_deleted',
+  'comment_posted', 'reaction_added',
+  'task_created', 'task_completed', 'task_assigned',
+  'other'
+];
 
-  // User who performed the action
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
-  },
+const activityLogSchema = new Schema({
+  projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  userName: { type: String },
+  userAvatar: { type: String },
 
-  userName: {
-    type: String // Denormalized for faster retrieval
-  },
-
-  userAvatar: {
-    type: String // Denormalized for faster retrieval
-  },
-
-  // Action details
-  actionType: {
-    type: String,
-    required: true,
-    enum: [
-      'created',
-      'updated',
-      'deleted',
-      'visit_recorded',
-      'expense_added',
-      'payment_received',
-      'document_uploaded',
-      'comment_posted',
-      'team_member_assigned',
-      'team_member_removed',
-      'contact_added',
-      'contact_updated',
-      'contact_removed',
-      'milestone_added',
-      'milestone_completed',
-      'status_changed',
-      'budget_updated',
-      'cover_photo_changed',
-      'other'
-    ],
-    index: true
-  },
-
-  // Human-readable description
-  description: {
-    type: String,
-    required: true
-  },
-
-  // Action-specific metadata (flexible)
-  metadata: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
-
-  // Changes made (for update actions)
+  actionType: { type: String, enum: ACTION_TYPES, required: true },
+  description: { type: String, required: true, trim: true },
+  metadata: { type: Schema.Types.Mixed },
   changes: {
-    before: mongoose.Schema.Types.Mixed,
-    after: mongoose.Schema.Types.Mixed
+    before: { type: Schema.Types.Mixed },
+    after: { type: Schema.Types.Mixed }
   },
 
-  // IP address and user agent for audit trail
-  ipAddress: String,
-  userAgent: String,
-
-  // Timestamp
-  timestamp: {
-    type: Date,
-    default: Date.now,
-    index: true
-  }
+  ipAddress: { type: String },
+  userAgent: { type: String },
+  timestamp: { type: Date, default: Date.now }
 }, {
-  timestamps: { createdAt: true, updatedAt: false } // Only need createdAt
+  timestamps: false
 });
 
-// ========================
-// Indexes for Performance
-// ========================
+// ── Indexes ──
 
-// Compound index for project activity queries (most common)
 activityLogSchema.index({ projectId: 1, timestamp: -1 });
-
-// Compound index for user activity queries
 activityLogSchema.index({ userId: 1, timestamp: -1 });
-
-// Compound index for filtering by action type
 activityLogSchema.index({ projectId: 1, actionType: 1, timestamp: -1 });
 
-// TTL index to auto-delete old logs after 2 years (optional)
-// activityLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 63072000 }); // 2 years
+// ── Static methods ──
 
-// ========================
-// Static Methods
-// ========================
+activityLogSchema.statics.logActivity = async function (projectId, userId, actionType, description, metadata = {}) {
+  try {
+    const User = mongoose.model('User');
+    let userName = '', userAvatar = '';
 
-/**
- * Log a project activity
- */
-activityLogSchema.statics.logActivity = async function(projectId, userId, actionType, description, metadata = {}) {
-  const User = mongoose.model('User');
-  const user = await User.findById(userId).select('fullName avatar').lean();
+    if (userId) {
+      const user = await User.findById(userId).select('name profilePhoto').lean();
+      if (user) {
+        userName = user.name || '';
+        userAvatar = user.profilePhoto || '';
+      }
+    }
 
-  return this.create({
-    projectId,
-    userId,
-    userName: user?.fullName || 'Unknown User',
-    userAvatar: user?.avatar || null,
-    actionType,
-    description,
-    metadata
-  });
+    // Map common action strings to enum values
+    const actionMap = {
+      'debit': 'expense_added',
+      'credit': 'payment_received',
+      'create': 'created',
+      'update': 'updated',
+      'delete': 'deleted'
+    };
+
+    const resolvedAction = actionMap[actionType] || actionType;
+    const validAction = ACTION_TYPES.includes(resolvedAction) ? resolvedAction : 'other';
+
+    return await this.create({
+      projectId,
+      userId,
+      userName,
+      userAvatar,
+      actionType: validAction,
+      description,
+      metadata: {
+        ...metadata,
+        originalAction: actionType !== validAction ? actionType : undefined
+      }
+    });
+  } catch (err) {
+    // Non-blocking: don't let logging failures break the main flow
+    console.error('Activity log error:', err.message);
+    return null;
+  }
 };
 
-/**
- * Get activity log for a project
- */
-activityLogSchema.statics.getProjectActivity = function(projectId, options = {}) {
-  const {
-    page = 1,
-    limit = 50,
-    actionType = null
-  } = options;
-
+activityLogSchema.statics.getProjectActivity = async function (projectId, options = {}) {
+  const { page = 1, limit = 20, actionType } = options;
   const query = { projectId };
-  if (actionType) {
-    query.actionType = Array.isArray(actionType) ? { $in: actionType } : actionType;
-  }
+  if (actionType) query.actionType = actionType;
 
   const skip = (page - 1) * limit;
+  const [activities, total] = await Promise.all([
+    this.find(query)
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    this.countDocuments(query)
+  ]);
 
-  return this.find(query)
-    .sort({ timestamp: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  return {
+    activities,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      hasNext: page < Math.ceil(total / limit),
+      hasPrevious: page > 1
+    }
+  };
 };
 
-/**
- * Get activity count for a project
- */
-activityLogSchema.statics.getProjectActivityCount = function(projectId, actionType = null) {
-  const query = { projectId };
-  if (actionType) {
-    query.actionType = actionType;
-  }
-  return this.countDocuments(query);
-};
-
-/**
- * Get recent activities across all projects
- */
-activityLogSchema.statics.getRecentActivities = function(userId = null, limit = 20) {
-  const query = userId ? { userId } : {};
-  return this.find(query)
+activityLogSchema.statics.getRecentActivities = async function (userId, limit = 10) {
+  return this.find({ userId })
     .sort({ timestamp: -1 })
     .limit(limit)
-    .populate('projectId', 'name projectType status coverImage')
+    .populate('projectId', 'name category status')
     .lean();
 };
 

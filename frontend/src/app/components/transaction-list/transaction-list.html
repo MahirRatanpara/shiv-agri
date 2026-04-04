@@ -1,0 +1,111 @@
+<div class="transaction-list" [class.compact]="compact">
+  <!-- Header -->
+  <div class="list-header">
+    <h3 class="list-title">
+      <i class="fas fa-exchange-alt"></i>
+      Transactions
+    </h3>
+    <button class="btn-add" (click)="onAddTransaction()">
+      <i class="fas fa-plus"></i>
+      <span>Add Transaction</span>
+    </button>
+  </div>
+
+  <!-- Summary Bar -->
+  <div class="summary-bar" *ngIf="summary">
+    <div class="summary-item debit">
+      <span class="summary-label">Total Debit</span>
+      <span class="summary-value">{{ formatCurrency(summary.totalDebit) }}</span>
+    </div>
+    <div class="summary-item credit">
+      <span class="summary-label">Total Credit</span>
+      <span class="summary-value">{{ formatCurrency(summary.totalCredit) }}</span>
+    </div>
+    <div class="summary-item net" [class.positive]="summary.netAmount >= 0" [class.negative]="summary.netAmount < 0">
+      <span class="summary-label">Net Amount</span>
+      <span class="summary-value">{{ formatCurrency(summary.netAmount) }}</span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <div class="filter-tabs">
+      <button class="filter-tab" [class.active]="activeFilter === 'all'" (click)="setFilter('all')">All</button>
+      <button class="filter-tab" [class.active]="activeFilter === 'debit'" (click)="setFilter('debit')">Debits</button>
+      <button class="filter-tab" [class.active]="activeFilter === 'credit'" (click)="setFilter('credit')">Credits</button>
+    </div>
+    <div class="category-filter">
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="onCategoryChange()">
+        <option value="">All Categories</option>
+        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <span>Loading transactions...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && transactions.length === 0">
+    <i class="fas fa-receipt"></i>
+    <p>No transactions found</p>
+    <button class="btn-add" (click)="onAddTransaction()">
+      <i class="fas fa-plus"></i> Add your first transaction
+    </button>
+  </div>
+
+  <!-- Transaction Table -->
+  <div class="table-container" *ngIf="!loading && transactions.length > 0">
+    <table class="transaction-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Vendor</th>
+          <th>Amount</th>
+          <th>Payment</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let txn of transactions" class="transaction-row">
+          <td class="cell-date">{{ formatDate(txn.date) }}</td>
+          <td class="cell-description">{{ txn.description }}</td>
+          <td class="cell-category">
+            <span class="category-badge">{{ txn.category }}</span>
+          </td>
+          <td class="cell-vendor">{{ txn.vendor?.name || '—' }}</td>
+          <td class="cell-amount" [class.debit]="txn.type === 'debit'" [class.credit]="txn.type === 'credit'">
+            <span>{{ txn.type === 'debit' ? '- ' : '+ ' }}{{ formatCurrency(txn.amount) }}</span>
+          </td>
+          <td class="cell-payment">
+            <i [class]="getPaymentMethodIcon(txn.paymentMethod)" [title]="txn.paymentMethod"></i>
+          </td>
+          <td class="cell-actions">
+            <button class="btn-icon" title="Edit" (click)="onEditTransaction(txn)">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button class="btn-icon btn-delete" title="Delete" (click)="onDeleteTransaction(txn)">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="!loading && totalPages > 1">
+    <button class="btn-page" [disabled]="currentPage <= 1" (click)="prevPage()">
+      <i class="fas fa-chevron-left"></i> Prev
+    </button>
+    <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+    <button class="btn-page" [disabled]="currentPage >= totalPages" (click)="nextPage()">
+      Next <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+</div>

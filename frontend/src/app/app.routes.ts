@@ -44,7 +44,7 @@ export const routes: Routes = [
   { path: 'blog-details/:id', component: BlogDetailsComponent },
   { path: 'projects/new', component: ProjectWizardComponent, canActivate: [authGuard] },
   { path: 'projects/edit/:id', component: ProjectWizardComponent, canActivate: [authGuard] },
-  { path: 'project-details/:id', component: ProjectDetailsComponent },
+  { path: 'projects/:id', component: ProjectDetailsComponent, canActivate: [authGuard] },
   { path: 'shop', component: ShopComponent },
   { path: 'shop-details/:id', component: ShopDetailsComponent },
   { path: 'team', component: TeamComponent },

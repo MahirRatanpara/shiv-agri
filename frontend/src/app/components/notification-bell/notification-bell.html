@@ -1,0 +1,64 @@
+<div class="notification-bell-wrapper">
+  <!-- Bell Button -->
+  <button class="bell-button" (click)="toggleDropdown()">
+    <i class="fas fa-bell"></i>
+    @if (unreadCount > 0) {
+      <span class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+    }
+  </button>
+
+  <!-- Dropdown Panel -->
+  @if (isOpen) {
+    <div class="dropdown-panel">
+      <div class="dropdown-header">
+        <h4>Notifications</h4>
+        @if (unreadCount > 0) {
+          <button class="mark-all-btn" (click)="markAllAsRead()">
+            Mark all as read
+          </button>
+        }
+      </div>
+
+      <!-- Loading -->
+      @if (loading) {
+        <div class="dropdown-loading">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+      }
+
+      <!-- Empty State -->
+      @if (!loading && notifications.length === 0) {
+        <div class="dropdown-empty">
+          <i class="fas fa-bell-slash"></i>
+          <p>No notifications</p>
+        </div>
+      }
+
+      <!-- Notification List -->
+      @if (!loading) {
+        <div class="notification-list">
+          @for (notification of notifications; track notification._id) {
+            <div
+              class="notification-item"
+              [class.unread]="!notification.isRead"
+              (click)="markAsRead(notification)">
+              <div class="notification-icon">
+                <i [class]="getTypeIcon(notification.type)"></i>
+              </div>
+              <div class="notification-content">
+                <span class="notification-title">{{ notification.title }}</span>
+                @if (notification.message) {
+                  <span class="notification-message">{{ notification.message }}</span>
+                }
+                <span class="notification-time">{{ getRelativeTime(notification.createdAt) }}</span>
+              </div>
+              <button class="notification-delete" (click)="deleteNotification(notification, $event)" title="Remove">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

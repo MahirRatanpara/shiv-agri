@@ -1,0 +1,55 @@
+<div class="budget-sliders">
+  <!-- Header -->
+  <div class="sliders-header">
+    <div class="total-info">
+      <span class="total-label">Total Allocation</span>
+      <span class="total-value" [class.valid]="isValid" [class.invalid]="!isValid && totalPercentage > 0">
+        {{ totalPercentage }}%
+      </span>
+      <span class="remaining" *ngIf="!isValid && remaining !== 0">
+        ({{ remaining > 0 ? remaining + '% remaining' : Math.abs(remaining) + '% over' }})
+      </span>
+    </div>
+    <button class="even-btn" (click)="distributeEvenly()">
+      <i class="fas fa-balance-scale"></i> Equal Split
+    </button>
+  </div>
+
+  <!-- Progress bar showing total -->
+  <div class="total-progress">
+    <div class="total-fill" [style.width.%]="Math.min(totalPercentage, 100)"
+      [class.over]="totalPercentage > 100" [class.valid]="isValid"></div>
+  </div>
+
+  <!-- Category sliders -->
+  <div class="category-list">
+    <div class="category-item" *ngFor="let cat of categories; let i = index">
+      <div class="category-header">
+        <span class="category-name">{{ cat.category }}</span>
+        <div class="category-values">
+          <span class="category-amount">{{ formatCurrency(cat.amount) }}</span>
+          <span class="category-pct">{{ cat.percentage }}%</span>
+        </div>
+      </div>
+      <div class="slider-row">
+        <input type="range" class="slider" min="0" max="100" step="1"
+          [(ngModel)]="cat.percentage" (ngModelChange)="onSliderChange(i)" />
+        <input type="number" class="pct-input" min="0" max="100"
+          [(ngModel)]="cat.percentage" (ngModelChange)="onSliderChange(i)" />
+        <button class="remove-btn" (click)="removeCategory(i)" *ngIf="categories.length > 1"
+          aria-label="Remove category">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add category -->
+  <div class="add-category">
+    <input type="text" class="add-input" placeholder="Add category..."
+      [(ngModel)]="newCategoryName" (keyup.enter)="onAddCategory()" />
+    <button class="add-btn" (click)="onAddCategory()" [disabled]="!newCategoryName.trim()">
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,105 @@
+<div class="media-gallery">
+  <div class="gallery-header">
+    <h3>Media Gallery</h3>
+  </div>
+
+  <!-- Category Tabs -->
+  <div class="category-tabs">
+    @for (cat of categories; track cat) {
+      <button
+        class="category-tab"
+        [class.active]="selectedCategory === cat"
+        (click)="selectCategory(cat)">
+        {{ cat }}
+      </button>
+    }
+  </div>
+
+  <!-- Upload Zone -->
+  <div
+    class="upload-zone"
+    [class.drag-over]="dragOver"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)">
+    @if (uploading) {
+      <div class="upload-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Uploading...</span>
+      </div>
+    } @else {
+      <i class="fas fa-cloud-upload-alt"></i>
+      <span>Drag & drop files here or</span>
+      <label class="upload-btn">
+        Browse
+        <input type="file" accept="image/*,.pdf,.doc,.docx" (change)="onFileSelected($event)" hidden>
+      </label>
+    }
+    <div class="upload-category">
+      <select [(ngModel)]="uploadCategory">
+        <option value="general">General</option>
+        <option value="site_photos">Site Photos</option>
+        <option value="soil_tests">Soil Tests</option>
+        <option value="crop_progress">Crop Progress</option>
+        <option value="documents">Documents</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Loading media...</p>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (!loading && filteredItems.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-images"></i>
+      <p>No media files yet</p>
+      <span>Upload your first file using the area above</span>
+    </div>
+  }
+
+  <!-- Image Grid -->
+  @if (!loading && filteredItems.length > 0) {
+    <div class="image-grid">
+      @for (item of filteredItems; track item._id; let i = $index) {
+        <div class="thumbnail-card" (click)="openLightbox(i)">
+          <img [src]="item.url" [alt]="item.filename" loading="lazy">
+          <div class="card-overlay">
+            <span class="filename">{{ item.filename }}</span>
+            <button class="delete-btn" (click)="deleteMedia(item._id, $event)" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Lightbox -->
+  @if (lightboxOpen && currentLightboxItem) {
+    <div class="lightbox" (click)="closeLightbox()">
+      <button class="lightbox-close" (click)="closeLightbox()">
+        <i class="fas fa-times"></i>
+      </button>
+      <button class="lightbox-prev" (click)="prevImage($event)">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="lightbox-content" (click)="$event.stopPropagation()">
+        <img [src]="currentLightboxItem.url" [alt]="currentLightboxItem.filename">
+        <div class="lightbox-info">
+          <span>{{ currentLightboxItem.filename }}</span>
+          <span>{{ lightboxIndex + 1 }} / {{ filteredItems.length }}</span>
+        </div>
+      </div>
+      <button class="lightbox-next" (click)="nextImage($event)">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  }
+</div>

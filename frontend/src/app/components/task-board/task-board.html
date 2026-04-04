@@ -1,0 +1,152 @@
+<div class="task-board">
+  <div class="board-header">
+    <h3>Task Board</h3>
+    <div class="board-stats">
+      <span class="stat-pill todo">{{ stats.todo }} To Do</span>
+      <span class="stat-pill in-progress">{{ stats.in_progress }} In Progress</span>
+      <span class="stat-pill review">{{ stats.review }} Review</span>
+      <span class="stat-pill done">{{ stats.done }} Done</span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Loading tasks...</p>
+    </div>
+  }
+
+  <!-- Board Columns -->
+  @if (!loading) {
+    <div class="board-columns">
+      @for (column of columns; track column.status) {
+        <div class="board-column" [attr.data-status]="column.status">
+          <div class="column-header">
+            <span class="column-title">{{ column.label }}</span>
+            <span class="column-count">{{ column.tasks.length }}</span>
+            <button class="add-task-btn" (click)="startAddTask(column.status)" title="Add task">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+
+          <!-- Inline Add Task -->
+          @if (addingToColumn === column.status) {
+            <div class="inline-add-task">
+              <input
+                type="text"
+                [(ngModel)]="newTaskTitle"
+                placeholder="Task title..."
+                (keyup.enter)="createTask(column.status)"
+                autofocus>
+              <select [(ngModel)]="newTaskPriority">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+              <div class="inline-actions">
+                <button class="create-btn" (click)="createTask(column.status)" [disabled]="!newTaskTitle.trim()">
+                  Add
+                </button>
+                <button class="cancel-btn" (click)="cancelAddTask()">Cancel</button>
+              </div>
+            </div>
+          }
+
+          <!-- Task Cards -->
+          <div class="task-list">
+            @for (task of column.tasks; track task._id) {
+              <div class="task-card" (click)="toggleTaskExpand(task._id)">
+                <div class="task-card-header">
+                  <span class="priority-dot" [class]="getPriorityClass(task.priority)"
+                        [title]="task.priority"></span>
+                  <span class="task-title">{{ task.title }}</span>
+                  <button class="delete-task-btn" (click)="deleteTask(task, $event)" title="Delete">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+
+                <!-- Tags -->
+                @if (task.tags && task.tags.length > 0) {
+                  <div class="task-tags">
+                    @for (tag of task.tags; track tag) {
+                      <span class="tag">{{ tag }}</span>
+                    }
+                  </div>
+                }
+
+                <!-- Checklist Progress -->
+                @if (task.checklist && task.checklist.length > 0) {
+                  <div class="checklist-progress">
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="getChecklistProgress(task)"></div>
+                    </div>
+                    <span class="progress-text">{{ getChecklistCount(task) }}</span>
+                  </div>
+                }
+
+                <div class="task-card-footer">
+                  <!-- Due Date -->
+                  @if (task.dueDate) {
+                    <span class="due-date" [class.overdue]="isOverdue(task)">
+                      <i class="fas fa-calendar-alt"></i>
+                      {{ formatDueDate(task.dueDate) }}
+                    </span>
+                  }
+                  <!-- Assignee -->
+                  @if (getAssigneeName(task)) {
+                    <span class="assignee-badge" [title]="getAssigneeName(task)">
+                      {{ getAssigneeInitial(task) }}
+                    </span>
+                  }
+                </div>
+
+                <!-- Expanded Detail -->
+                @if (expandedTaskId === task._id) {
+                  <div class="task-detail" (click)="$event.stopPropagation()">
+                    @if (task.description) {
+                      <p class="task-description">{{ task.description }}</p>
+                    }
+
+                    <!-- Checklist -->
+                    @if (task.checklist && task.checklist.length > 0) {
+                      <div class="task-checklist">
+                        @for (item of task.checklist; track $index) {
+                          <label class="checklist-item">
+                            <input
+                              type="checkbox"
+                              [checked]="item.isDone"
+                              (change)="toggleChecklistItem(task, $index)">
+                            <span [class.done]="item.isDone">{{ item.text }}</span>
+                          </label>
+                        }
+                      </div>
+                    }
+
+                    <!-- Move Actions -->
+                    <div class="move-actions">
+                      @for (next of getNextStatuses(task.status); track next.status) {
+                        <button class="move-btn" (click)="moveTask(task, next.status)">
+                          {{ next.label }}
+                          <i class="fas fa-arrow-right"></i>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Empty Column -->
+            @if (column.tasks.length === 0 && addingToColumn !== column.status) {
+              <div class="empty-column">
+                <p>No tasks</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,123 @@
+<div class="financial-charts" *ngIf="!loading; else loadingTpl">
+
+  <!-- Summary Cards -->
+  <div class="summary-cards">
+    <div class="summary-card expense">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+          <polyline points="17 18 23 18 23 12"/>
+        </svg>
+      </div>
+      <div class="card-content">
+        <span class="card-label">Total Expenses</span>
+        <span class="card-value">{{ formatCurrency(summary!.totalDebit) }}</span>
+      </div>
+    </div>
+
+    <div class="summary-card income">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+          <polyline points="17 6 23 6 23 12"/>
+        </svg>
+      </div>
+      <div class="card-content">
+        <span class="card-label">Total Income</span>
+        <span class="card-value">{{ formatCurrency(summary!.totalCredit) }}</span>
+      </div>
+    </div>
+
+    <div class="summary-card balance" [class.negative]="summary!.netAmount < 0">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div class="card-content">
+        <span class="card-label">Net Balance</span>
+        <span class="card-value">{{ formatCurrency(summary!.netAmount) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Breakdown -->
+  <div class="chart-section" *ngIf="categories.length > 0">
+    <h3 class="section-title">Category Breakdown</h3>
+    <div class="category-list">
+      <div class="category-item" *ngFor="let cat of categories; let i = index">
+        <div class="category-header">
+          <span class="category-name">{{ cat._id }}</span>
+          <span class="category-amount">{{ formatCurrency(cat.total) }}</span>
+        </div>
+        <div class="category-bar-track">
+          <div class="category-bar-fill"
+               [style.width.%]="cat.percentage || 0"
+               [style.backgroundColor]="getCategoryColor(i)">
+          </div>
+        </div>
+        <span class="category-percentage">{{ (cat.percentage || 0) | number:'1.1-1' }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Trends -->
+  <div class="chart-section" *ngIf="trends.length > 0">
+    <h3 class="section-title">Monthly Trends</h3>
+    <div class="trends-legend">
+      <span class="legend-item"><span class="legend-dot debit-dot"></span> Expenses</span>
+      <span class="legend-item"><span class="legend-dot credit-dot"></span> Income</span>
+    </div>
+    <div class="trends-chart">
+      <div class="trend-group" *ngFor="let trend of trends">
+        <div class="trend-bars">
+          <div class="trend-bar debit-bar"
+               [style.height.%]="getBarHeight(trend.totalDebit)"
+               [title]="formatCurrency(trend.totalDebit)">
+          </div>
+          <div class="trend-bar credit-bar"
+               [style.height.%]="getBarHeight(trend.totalCredit)"
+               [title]="formatCurrency(trend.totalCredit)">
+          </div>
+        </div>
+        <span class="trend-label">{{ getMonthLabel(trend) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget Utilization -->
+  <div class="chart-section" *ngIf="summary!.budget">
+    <h3 class="section-title">Budget Utilization</h3>
+    <div class="budget-container">
+      <div class="budget-circle" [style.background]="getBudgetGradient()">
+        <div class="budget-inner">
+          <span class="budget-percentage">{{ Math.round(getBudgetPercentage()) }}%</span>
+          <span class="budget-label">Used</span>
+        </div>
+      </div>
+      <div class="budget-details">
+        <div class="budget-row">
+          <span>Budget</span>
+          <span>{{ formatCurrency(summary!.budget!) }}</span>
+        </div>
+        <div class="budget-row">
+          <span>Spent</span>
+          <span>{{ formatCurrency(summary!.totalDebit) }}</span>
+        </div>
+        <div class="budget-row">
+          <span>Remaining</span>
+          <span>{{ formatCurrency(summary!.budget! - summary!.totalDebit) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Loading financial data...</p>
+  </div>
+</ng-template>

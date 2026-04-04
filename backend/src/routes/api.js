@@ -9,6 +9,11 @@ const usersRoutes = require('./users');
 const managerialWorkRoutes = require('./managerialWork');
 const projectRoutes = require('./projects');
 const transactionRoutes = require('./transactions');
+const visitRoutes = require('./visits');
+const commentRoutes = require('./comments');
+const taskRoutes = require('./tasks');
+const notificationRoutes = require('./notifications');
+const mediaRoutes = require('./media');
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome to Shiv Agri API' });
@@ -44,5 +49,20 @@ router.use('/projects', projectRoutes);
 
 // Transaction Management routes
 router.use('/transactions', transactionRoutes);
+
+// Visit Management routes
+router.use('/visits', visitRoutes);
+
+// Comment routes
+router.use('/comments', commentRoutes);
+
+// Task routes
+router.use('/tasks', taskRoutes);
+
+// Notification routes
+router.use('/notifications', notificationRoutes);
+
+// Media routes
+router.use('/media', mediaRoutes);
 
 module.exports = router;

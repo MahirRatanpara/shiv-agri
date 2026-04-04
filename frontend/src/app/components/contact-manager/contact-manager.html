@@ -1,0 +1,87 @@
+<!-- Contact cards -->
+<div class="contact-grid" *ngIf="contacts.length > 0">
+  <div class="contact-card" *ngFor="let contact of contacts; let i = index"
+    [class.inactive]="!contact.isActive" [class.primary]="contact.isPrimary">
+    <div class="contact-top">
+      <div class="contact-avatar">{{ getInitial(contact.fullName) }}</div>
+      <div class="contact-info">
+        <span class="contact-name">
+          {{ contact.fullName }}
+          <i class="fas fa-star primary-star" *ngIf="contact.isPrimary" title="Primary contact"></i>
+        </span>
+        <span class="contact-designation" *ngIf="contact.designation">{{ contact.designation }}</span>
+        <span class="contact-role-badge">{{ getRoleLabel(contact.role) }}</span>
+      </div>
+    </div>
+    <div class="contact-details">
+      <a *ngIf="contact.phone" [href]="'tel:' + contact.phone" class="detail-link">
+        <i class="fas fa-phone"></i> {{ contact.phone }}
+      </a>
+      <a *ngIf="contact.email" [href]="'mailto:' + contact.email" class="detail-link">
+        <i class="fas fa-envelope"></i> {{ contact.email }}
+      </a>
+    </div>
+    <div class="contact-actions" *ngIf="!readonly">
+      <button (click)="setPrimary(i)" *ngIf="!contact.isPrimary" title="Set as primary">
+        <i class="far fa-star"></i>
+      </button>
+      <button (click)="toggleActive(i)" [title]="contact.isActive ? 'Deactivate' : 'Activate'">
+        <i [class]="contact.isActive ? 'fas fa-toggle-on' : 'fas fa-toggle-off'"></i>
+      </button>
+      <button (click)="editContact(i)" title="Edit"><i class="fas fa-pen"></i></button>
+      <button (click)="removeContact(i)" class="action-danger" title="Remove"><i class="fas fa-trash"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- Empty state -->
+<div class="empty-contacts" *ngIf="contacts.length === 0 && !showForm">
+  <i class="fas fa-address-book"></i>
+  <p>No contacts added yet</p>
+</div>
+
+<!-- Add button -->
+<button class="add-contact-btn" *ngIf="!showForm && !readonly" (click)="openAddForm()">
+  <i class="fas fa-plus"></i> Add Contact
+</button>
+
+<!-- Add/Edit Form -->
+<div class="contact-form" *ngIf="showForm">
+  <h4>{{ editingIndex >= 0 ? 'Edit Contact' : 'Add Contact' }}</h4>
+  <div class="form-grid">
+    <div class="form-field">
+      <label>Full Name *</label>
+      <input type="text" [(ngModel)]="formData.fullName" placeholder="Contact name" />
+    </div>
+    <div class="form-field">
+      <label>Designation</label>
+      <input type="text" [(ngModel)]="formData.designation" placeholder="Job title" />
+    </div>
+    <div class="form-field">
+      <label>Phone</label>
+      <input type="tel" [(ngModel)]="formData.phone" placeholder="10-digit mobile" />
+    </div>
+    <div class="form-field">
+      <label>Email</label>
+      <input type="email" [(ngModel)]="formData.email" placeholder="email@example.com" />
+    </div>
+    <div class="form-field">
+      <label>Role</label>
+      <select [(ngModel)]="formData.role">
+        <option *ngFor="let r of roles" [value]="r.value">{{ r.label }}</option>
+      </select>
+    </div>
+    <div class="form-field form-checkbox">
+      <label>
+        <input type="checkbox" [(ngModel)]="formData.isPrimary" />
+        Primary contact
+      </label>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="btn-cancel" (click)="cancelForm()">Cancel</button>
+    <button class="btn-save" (click)="saveContact()" [disabled]="!formData.fullName.trim()">
+      {{ editingIndex >= 0 ? 'Update' : 'Add' }}
+    </button>
+  </div>
+</div>

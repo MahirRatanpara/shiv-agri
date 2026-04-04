@@ -1,0 +1,66 @@
+<div class="filter-overlay" *ngIf="isOpen" (click)="onClose()"></div>
+<div class="filter-panel" [class.open]="isOpen">
+  <div class="filter-header">
+    <h3>Filters</h3>
+    <div class="filter-header-actions">
+      <button class="clear-btn" *ngIf="activeFilterCount > 0" (click)="clearAll()">Clear all</button>
+      <button class="close-btn" (click)="onClose()"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+
+  <div class="filter-body">
+    <!-- Category -->
+    <div class="filter-section">
+      <h4 class="filter-label">Category</h4>
+      <div class="filter-chips">
+        <button *ngFor="let cat of categories"
+          class="filter-chip"
+          [class.active]="isCategorySelected(cat.value)"
+          (click)="toggleCategory(cat.value)">
+          <i [class]="cat.icon"></i>
+          {{ cat.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="filter-section">
+      <h4 class="filter-label">Status</h4>
+      <div class="filter-chips">
+        <button *ngFor="let s of statuses"
+          class="filter-chip"
+          [class.active]="isStatusSelected(s.value)"
+          (click)="toggleStatus(s.value)">
+          {{ s.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="filter-section">
+      <h4 class="filter-label">Location</h4>
+      <input type="text" class="filter-input" placeholder="City name..."
+        [(ngModel)]="city" (ngModelChange)="onCityChange()" />
+    </div>
+
+    <!-- Budget Range -->
+    <div class="filter-section">
+      <h4 class="filter-label">Budget Range</h4>
+      <div class="budget-range">
+        <input type="number" class="filter-input" placeholder="Min"
+          [(ngModel)]="budgetMin" (ngModelChange)="onBudgetChange()" />
+        <span class="range-separator">—</span>
+        <input type="number" class="filter-input" placeholder="Max"
+          [(ngModel)]="budgetMax" (ngModelChange)="onBudgetChange()" />
+      </div>
+    </div>
+
+    <!-- Favorites -->
+    <div class="filter-section">
+      <button class="filter-chip wide" [class.active]="favoritesOnly" (click)="toggleFavorites()">
+        <i [class]="favoritesOnly ? 'fas fa-star' : 'far fa-star'"></i>
+        Favorites only
+      </button>
+    </div>
+  </div>
+</div>

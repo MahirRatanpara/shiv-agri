@@ -1,0 +1,182 @@
+<div class="comment-thread">
+  <h3>Comments</h3>
+
+  <!-- New Comment Input -->
+  <div class="comment-input-box">
+    <textarea
+      [(ngModel)]="newCommentContent"
+      placeholder="Write a comment... Use @name to mention someone"
+      rows="3"
+      [disabled]="submitting">
+    </textarea>
+    <div class="input-actions">
+      <button
+        class="submit-btn"
+        (click)="submitComment()"
+        [disabled]="submitting || !newCommentContent.trim()">
+        @if (submitting) {
+          <i class="fas fa-spinner fa-spin"></i>
+        } @else {
+          <i class="fas fa-paper-plane"></i>
+        }
+        Post
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Loading comments...</p>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (!loading && comments.length === 0) {
+    <div class="empty-state">
+      <i class="fas fa-comments"></i>
+      <p>No comments yet</p>
+      <span>Be the first to leave a comment</span>
+    </div>
+  }
+
+  <!-- Comment List -->
+  @if (!loading) {
+    <div class="comment-list">
+      @for (comment of comments; track comment._id) {
+        <div class="comment-card">
+          <div class="comment-header">
+            <div class="avatar" [style.background]="getAvatarColor(comment.userName)">
+              {{ getInitial(comment.userName) }}
+            </div>
+            <div class="comment-meta">
+              <span class="user-name">{{ comment.userName }}</span>
+              <span class="timestamp">{{ getRelativeTime(comment.createdAt) }}</span>
+              @if (comment.isEdited) {
+                <span class="edited-tag">(edited)</span>
+              }
+            </div>
+          </div>
+
+          <!-- Comment Content / Edit Mode -->
+          @if (editingId === comment._id) {
+            <div class="edit-box">
+              <textarea [(ngModel)]="editContent" rows="2"></textarea>
+              <div class="edit-actions">
+                <button class="save-btn" (click)="saveEdit(comment._id)">Save</button>
+                <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </div>
+          } @else {
+            <p class="comment-content">{{ comment.content }}</p>
+          }
+
+          <!-- Reactions -->
+          @if (comment.reactions && comment.reactions.length > 0) {
+            <div class="reaction-list">
+              @for (r of getReactionCounts(comment.reactions); track r.emoji) {
+                <span class="reaction-badge" (click)="addReaction(comment._id, r.emoji)">
+                  {{ r.emoji }} {{ r.count }}
+                </span>
+              }
+            </div>
+          }
+
+          <!-- Actions -->
+          <div class="comment-actions">
+            <div class="reaction-picker">
+              @for (emoji of emojiOptions; track emoji) {
+                <button class="emoji-btn" (click)="addReaction(comment._id, emoji)">{{ emoji }}</button>
+              }
+            </div>
+            <button class="action-btn" (click)="startReply(comment._id)">
+              <i class="fas fa-reply"></i> Reply
+            </button>
+            <button class="action-btn" (click)="startEdit(comment)">
+              <i class="fas fa-pen"></i> Edit
+            </button>
+            <button class="action-btn delete" (click)="deleteComment(comment._id)">
+              <i class="fas fa-trash"></i> Delete
+            </button>
+          </div>
+
+          <!-- Reply Input -->
+          @if (replyingTo === comment._id) {
+            <div class="reply-input-box">
+              <textarea
+                [(ngModel)]="replyContent"
+                placeholder="Write a reply..."
+                rows="2">
+              </textarea>
+              <div class="reply-actions">
+                <button class="submit-btn small" (click)="submitReply(comment._id)" [disabled]="!replyContent.trim()">
+                  Reply
+                </button>
+                <button class="cancel-btn" (click)="replyingTo = null">Cancel</button>
+              </div>
+            </div>
+          }
+
+          <!-- Replies -->
+          @if (comment.replies && comment.replies.length > 0) {
+            <div class="replies-section">
+              @for (reply of comment.replies; track reply._id) {
+                <div class="comment-card reply">
+                  <div class="comment-header">
+                    <div class="avatar small" [style.background]="getAvatarColor(reply.userName)">
+                      {{ getInitial(reply.userName) }}
+                    </div>
+                    <div class="comment-meta">
+                      <span class="user-name">{{ reply.userName }}</span>
+                      <span class="timestamp">{{ getRelativeTime(reply.createdAt) }}</span>
+                      @if (reply.isEdited) {
+                        <span class="edited-tag">(edited)</span>
+                      }
+                    </div>
+                  </div>
+
+                  @if (editingId === reply._id) {
+                    <div class="edit-box">
+                      <textarea [(ngModel)]="editContent" rows="2"></textarea>
+                      <div class="edit-actions">
+                        <button class="save-btn" (click)="saveEdit(reply._id)">Save</button>
+                        <button class="cancel-btn" (click)="cancelEdit()">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <p class="comment-content">{{ reply.content }}</p>
+                  }
+
+                  @if (reply.reactions && reply.reactions.length > 0) {
+                    <div class="reaction-list">
+                      @for (r of getReactionCounts(reply.reactions); track r.emoji) {
+                        <span class="reaction-badge" (click)="addReaction(reply._id, r.emoji)">
+                          {{ r.emoji }} {{ r.count }}
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <div class="comment-actions">
+                    <div class="reaction-picker">
+                      @for (emoji of emojiOptions; track emoji) {
+                        <button class="emoji-btn" (click)="addReaction(reply._id, emoji)">{{ emoji }}</button>
+                      }
+                    </div>
+                    <button class="action-btn" (click)="startEdit(reply)">
+                      <i class="fas fa-pen"></i> Edit
+                    </button>
+                    <button class="action-btn delete" (click)="deleteComment(reply._id)">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

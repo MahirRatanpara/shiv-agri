@@ -1,0 +1,255 @@
+<div class="recorder-backdrop" *ngIf="visible" (click)="onCancel()">
+  <div class="recorder-modal" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <h3 class="modal-title">Record Visit</h3>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="step-indicator">
+      <div class="step" [class.active]="currentStep >= 1" [class.current]="currentStep === 1">
+        <span class="step-circle">1</span>
+        <span class="step-label">Inspection</span>
+      </div>
+      <div class="step-line" [class.active]="currentStep >= 2"></div>
+      <div class="step" [class.active]="currentStep >= 2" [class.current]="currentStep === 2">
+        <span class="step-circle">2</span>
+        <span class="step-label">Diagnosis</span>
+      </div>
+      <div class="step-line" [class.active]="currentStep >= 3"></div>
+      <div class="step" [class.active]="currentStep >= 3" [class.current]="currentStep === 3">
+        <span class="step-circle">3</span>
+        <span class="step-label">Prescription</span>
+      </div>
+    </div>
+
+    <!-- Step content -->
+    <div class="modal-body">
+
+      <!-- Step 1: Inspection -->
+      <div class="step-content" *ngIf="currentStep === 1">
+        <h4 class="section-title">Crop Health</h4>
+        <div class="health-options">
+          <button
+            class="health-btn"
+            *ngFor="let h of cropHealthOptions"
+            [class.selected]="inspection.cropHealth === h"
+            [style.--health-color]="getCropHealthColor(h)"
+            (click)="setCropHealth(h)"
+          >
+            {{ h }}
+          </button>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Soil Condition</label>
+            <input type="text" class="form-input" [(ngModel)]="inspection.soilCondition" placeholder="e.g., Moist, Dry, Waterlogged">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Water Level</label>
+            <input type="text" class="form-input" [(ngModel)]="inspection.waterLevel" placeholder="e.g., Adequate, Low">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group toggle-group">
+            <label class="form-label">Pest Presence</label>
+            <label class="toggle">
+              <input type="checkbox" [(ngModel)]="inspection.pestPresence">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="form-group toggle-group">
+            <label class="form-label">Disease Presence</label>
+            <label class="toggle">
+              <input type="checkbox" [(ngModel)]="inspection.diseasePresence">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Weather Condition</label>
+          <input type="text" class="form-input" [(ngModel)]="inspection.weatherCondition" placeholder="e.g., Sunny, Rainy, Overcast">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Observations</label>
+          <div class="dynamic-list">
+            <div class="list-item" *ngFor="let obs of inspection.observations; let i = index">
+              <span class="list-item-text">{{ obs }}</span>
+              <button class="btn-remove" (click)="removeObservation(i)" aria-label="Remove">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="add-item-row">
+            <input type="text" class="form-input" [(ngModel)]="newObservation" placeholder="Add observation" (keyup.enter)="addObservation()">
+            <button class="btn-add" (click)="addObservation()">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Diagnosis -->
+      <div class="step-content" *ngIf="currentStep === 2">
+        <div class="section-header">
+          <h4 class="section-title">Issues</h4>
+          <button class="btn-add-card" (click)="addIssue()">+ Add Issue</button>
+        </div>
+
+        <div class="card-list">
+          <div class="dynamic-card" *ngFor="let issue of diagnosis.issues; let i = index">
+            <button class="card-remove" (click)="removeIssue(i)" aria-label="Remove issue">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Type</label>
+                <input type="text" class="form-input" [(ngModel)]="issue.type" placeholder="e.g., Pest, Disease">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Severity</label>
+                <select class="form-input" [(ngModel)]="issue.severity">
+                  <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-input form-textarea" [(ngModel)]="issue.description" placeholder="Describe the issue" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Affected Area</label>
+              <input type="text" class="form-input" [(ngModel)]="issue.affectedArea" placeholder="e.g., North field, Row 5-10">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
+          <label class="form-label">Lab Tests Required</label>
+          <div class="dynamic-list">
+            <div class="list-item" *ngFor="let test of diagnosis.labTestsRequired; let i = index">
+              <span class="list-item-text">{{ test }}</span>
+              <button class="btn-remove" (click)="removeLabTest(i)" aria-label="Remove">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="add-item-row">
+            <input type="text" class="form-input" [(ngModel)]="newLabTest" placeholder="Add lab test" (keyup.enter)="addLabTest()">
+            <button class="btn-add" (click)="addLabTest()">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Prescription -->
+      <div class="step-content" *ngIf="currentStep === 3">
+        <div class="section-header">
+          <h4 class="section-title">Recommendations</h4>
+          <button class="btn-add-card" (click)="addRecommendation()">+ Add Recommendation</button>
+        </div>
+
+        <div class="card-list">
+          <div class="dynamic-card" *ngFor="let rec of prescription.recommendations; let i = index">
+            <button class="card-remove" (click)="removeRecommendation(i)" aria-label="Remove recommendation">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Action</label>
+                <input type="text" class="form-input" [(ngModel)]="rec.action" placeholder="e.g., Apply pesticide">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Product</label>
+                <input type="text" class="form-input" [(ngModel)]="rec.product" placeholder="Product name">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Dosage</label>
+                <input type="text" class="form-input" [(ngModel)]="rec.dosage" placeholder="e.g., 2ml/L">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Frequency</label>
+                <input type="text" class="form-input" [(ngModel)]="rec.frequency" placeholder="e.g., Every 7 days">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Duration</label>
+                <input type="text" class="form-input" [(ngModel)]="rec.duration" placeholder="e.g., 2 weeks">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-input" [(ngModel)]="rec.priority">
+                  <option *ngFor="let p of priorityOptions" [value]="p">{{ p }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top: 20px;">
+          <div class="form-group">
+            <label class="form-label">Next Visit Suggested</label>
+            <input type="date" class="form-input" [(ngModel)]="prescription.nextVisitSuggested">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duration (minutes)</label>
+            <input type="number" class="form-input" [(ngModel)]="duration" placeholder="e.g., 60" min="0">
+          </div>
+        </div>
+
+        <div class="form-group toggle-group">
+          <label class="form-label">Follow Up Required</label>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="prescription.followUpRequired">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-input form-textarea" [(ngModel)]="notes" placeholder="Additional notes..." rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="currentStep > 1 ? previousStep() : onCancel()">
+        {{ currentStep > 1 ? 'Previous' : 'Cancel' }}
+      </button>
+      <button
+        class="btn-primary"
+        *ngIf="currentStep < 3"
+        (click)="nextStep()"
+      >
+        Next
+      </button>
+      <button
+        class="btn-primary btn-complete"
+        *ngIf="currentStep === 3"
+        (click)="onComplete()"
+        [disabled]="loading"
+      >
+        <span class="spinner-sm" *ngIf="loading"></span>
+        {{ loading ? 'Completing...' : 'Complete Visit' }}
+      </button>
+    </div>
+  </div>
+</div>

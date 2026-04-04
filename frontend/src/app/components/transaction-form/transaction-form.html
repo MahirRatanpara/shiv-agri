@@ -1,0 +1,134 @@
+<div class="modal-overlay" *ngIf="visible" (click)="onBackdropClick($event)">
+  <div class="modal-card">
+    <!-- Header -->
+    <div class="modal-header">
+      <h2>
+        <i class="fa-solid fa-receipt"></i>
+        {{ isEditMode ? 'Edit Transaction' : 'New Transaction' }}
+      </h2>
+      <button class="close-btn" (click)="close()" type="button">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <!-- Type toggle -->
+      <div class="form-group full-width">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button
+            type="button"
+            class="type-btn debit"
+            [class.active]="type === 'debit'"
+            (click)="setType('debit')">
+            <i class="fa-solid fa-arrow-down"></i> Debit
+          </button>
+          <button
+            type="button"
+            class="type-btn credit"
+            [class.active]="type === 'credit'"
+            (click)="setType('credit')">
+            <i class="fa-solid fa-arrow-up"></i> Credit
+          </button>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="form-group full-width">
+        <label for="tf-description">Description <span class="required">*</span></label>
+        <input
+          id="tf-description"
+          type="text"
+          [(ngModel)]="description"
+          placeholder="Enter description"
+          required />
+      </div>
+
+      <!-- Amount -->
+      <div class="form-group">
+        <label for="tf-amount">Amount <span class="required">*</span></label>
+        <div class="input-prefix">
+          <span class="prefix">&#8377;</span>
+          <input
+            id="tf-amount"
+            type="number"
+            [(ngModel)]="amount"
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            required />
+        </div>
+      </div>
+
+      <!-- Category -->
+      <div class="form-group">
+        <label for="tf-category">Category <span class="required">*</span></label>
+        <select id="tf-category" [(ngModel)]="category" required>
+          <option value="" disabled>Select category</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group">
+        <label for="tf-date">Date</label>
+        <input id="tf-date" type="date" [(ngModel)]="date" />
+      </div>
+
+      <!-- Payment Method -->
+      <div class="form-group">
+        <label for="tf-payment">Payment Method</label>
+        <select id="tf-payment" [(ngModel)]="paymentMethod">
+          <option *ngFor="let pm of paymentMethods" [value]="pm.value">{{ pm.label }}</option>
+        </select>
+      </div>
+
+      <!-- Vendor Name -->
+      <div class="form-group">
+        <label for="tf-vendor-name">Vendor Name</label>
+        <input id="tf-vendor-name" type="text" [(ngModel)]="vendorName" placeholder="Vendor name" />
+      </div>
+
+      <!-- Vendor Phone -->
+      <div class="form-group">
+        <label for="tf-vendor-phone">Vendor Phone</label>
+        <input id="tf-vendor-phone" type="text" [(ngModel)]="vendorPhone" placeholder="Phone number" />
+      </div>
+
+      <!-- Reference Number -->
+      <div class="form-group">
+        <label for="tf-ref">Reference Number</label>
+        <input id="tf-ref" type="text" [(ngModel)]="referenceNumber" placeholder="Reference #" />
+      </div>
+
+      <!-- Invoice Number -->
+      <div class="form-group">
+        <label for="tf-invoice">Invoice Number</label>
+        <input id="tf-invoice" type="text" [(ngModel)]="invoiceNumber" placeholder="Invoice #" />
+      </div>
+
+      <!-- Tags -->
+      <div class="form-group full-width">
+        <label for="tf-tags">Tags</label>
+        <input id="tf-tags" type="text" [(ngModel)]="tags" placeholder="Comma-separated tags" />
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button type="button" class="btn btn-cancel" (click)="close()">
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-save"
+        [disabled]="!isFormValid || saving"
+        (click)="save()">
+        <i class="fa-solid fa-spinner fa-spin" *ngIf="saving"></i>
+        <i class="fa-solid fa-check" *ngIf="!saving"></i>
+        {{ saving ? 'Saving...' : (isEditMode ? 'Update' : 'Save') }}
+      </button>
+    </div>
+  </div>
+</div>

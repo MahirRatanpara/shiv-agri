@@ -1,298 +1,124 @@
-const TransactionService = require('../services/transactionService');
+const transactionService = require('../services/transactionService');
+const logger = require('../utils/logger');
 
-/**
- * Transaction Controller
- * Handles HTTP requests for transaction management
- */
-
-class TransactionController {
-  /**
-   * @route   GET /api/transactions?projectId=xxx
-   * @desc    Get transactions for a project with pagination
-   * @access  Private
-   */
-  static async getTransactions(req, res) {
-    try {
-      const { projectId } = req.query;
-
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId in query');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      const options = {
-        page: parseInt(req.query.page) || 1,
-        limit: Math.min(parseInt(req.query.limit) || 20, 100),
-        sortBy: req.query.sortBy || 'date',
-        sortOrder: req.query.sortOrder || 'desc',
-        type: req.query.type || null,
-        category: req.query.category || null,
-        startDate: req.query.startDate || null,
-        endDate: req.query.endDate || null
-      };
-
-      console.log(`[TransactionController] GET /api/transactions - Project: ${projectId}`, options);
-
-      const result = await TransactionService.getTransactionsByProject(projectId, options);
-
-      return res.status(200).json({
-        success: true,
-        ...result
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in getTransactions:', error);
-      return res.status(error.message === 'Project not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to fetch transactions'
-      });
+exports.getTransactions = async (req, res) => {
+  try {
+    const { projectId, page, limit, sortBy, sortOrder, type, category, dateFrom, dateTo } = req.query;
+    if (!projectId) {
+      return res.status(400).json({ success: false, error: 'projectId query parameter is required' });
     }
+
+    const result = await transactionService.getTransactionsByProject(projectId, {
+      page, limit, sortBy, sortOrder, type, category, dateFrom, dateTo
+    });
+
+    res.json({ success: true, data: result.transactions, pagination: result.pagination, summary: result.summary });
+  } catch (error) {
+    logger.error('[TransactionController] getTransactions error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch transactions', message: error.message });
   }
+};
 
-  /**
-   * @route   GET /api/transactions/:id
-   * @desc    Get single transaction by ID
-   * @access  Private
-   */
-  static async getTransactionById(req, res) {
-    try {
-      const { id } = req.params;
-      const { projectId } = req.query;
+exports.getTransaction = async (req, res) => {
+  try {
+    const transaction = await transactionService.getTransactionById(req.params.id);
+    res.json({ success: true, data: transaction });
+  } catch (error) {
+    logger.error(`[TransactionController] getTransaction ${req.params.id} error:`, error);
+    const status = error.message === 'Transaction not found' ? 404 : 500;
+    res.status(status).json({ success: false, error: error.message });
+  }
+};
 
-      console.log(`[TransactionController] GET /api/transactions/${id}`);
+exports.createTransaction = async (req, res) => {
+  try {
+    const { projectId, description, amount, type } = req.body;
 
-      const transaction = await TransactionService.getTransactionById(id, projectId);
-
-      return res.status(200).json({
-        success: true,
-        data: transaction
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in getTransactionById:', error);
-      return res.status(error.message === 'Transaction not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to fetch transaction'
-      });
+    // Validate required fields
+    if (!projectId) return res.status(400).json({ success: false, error: 'projectId is required' });
+    if (!description) return res.status(400).json({ success: false, error: 'description is required' });
+    if (amount === undefined || amount === null) return res.status(400).json({ success: false, error: 'amount is required' });
+    if (parseFloat(amount) < 0) return res.status(400).json({ success: false, error: 'amount must be positive' });
+    if (!type || !['debit', 'credit'].includes(type)) {
+      return res.status(400).json({ success: false, error: 'type must be "debit" or "credit"' });
     }
+
+    const transaction = await transactionService.createTransaction(req.body, req.user.id);
+    logger.info(`[TransactionController] created: ${transaction._id}`);
+    res.status(201).json({ success: true, data: transaction, message: 'Transaction created successfully' });
+  } catch (error) {
+    logger.error('[TransactionController] createTransaction error:', error);
+    const status = error.message === 'Project not found' ? 404 : 500;
+    res.status(status).json({ success: false, error: error.message });
   }
+};
 
-  /**
-   * @route   POST /api/transactions
-   * @desc    Create new transaction
-   * @access  Private
-   */
-  static async createTransaction(req, res) {
-    try {
-      const { projectId, description, amount, type, category, date, notes } = req.body;
-      const userId = req.user._id;
-
-      // Validation
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      if (!description || !amount) {
-        console.log('[TransactionController] Missing required fields');
-        return res.status(400).json({
-          success: false,
-          message: 'Description and amount are required'
-        });
-      }
-
-      if (type && !['debit', 'credit'].includes(type)) {
-        console.log('[TransactionController] Invalid transaction type');
-        return res.status(400).json({
-          success: false,
-          message: 'Type must be either "debit" or "credit"'
-        });
-      }
-
-      console.log(`[TransactionController] POST /api/transactions - Project: ${projectId}`, {
-        description,
-        amount,
-        type
-      });
-
-      const transaction = await TransactionService.createTransaction(
-        projectId,
-        { description, amount, type, category, date, notes },
-        userId
-      );
-
-      return res.status(201).json({
-        success: true,
-        data: transaction,
-        message: 'Transaction created successfully'
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in createTransaction:', error);
-      return res.status(error.message === 'Project not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to create transaction'
-      });
+exports.updateTransaction = async (req, res) => {
+  try {
+    if (req.body.type && !['debit', 'credit'].includes(req.body.type)) {
+      return res.status(400).json({ success: false, error: 'type must be "debit" or "credit"' });
     }
-  }
-
-  /**
-   * @route   PATCH /api/transactions/:id
-   * @desc    Update transaction
-   * @access  Private
-   */
-  static async updateTransaction(req, res) {
-    try {
-      const { id } = req.params;
-      const { projectId } = req.query;
-      const updateData = req.body;
-      const userId = req.user._id;
-
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      if (updateData.type && !['debit', 'credit'].includes(updateData.type)) {
-        console.log('[TransactionController] Invalid transaction type');
-        return res.status(400).json({
-          success: false,
-          message: 'Type must be either "debit" or "credit"'
-        });
-      }
-
-      console.log(`[TransactionController] PATCH /api/transactions/${id}`, updateData);
-
-      const transaction = await TransactionService.updateTransaction(
-        id,
-        projectId,
-        updateData,
-        userId
-      );
-
-      return res.status(200).json({
-        success: true,
-        data: transaction,
-        message: 'Transaction updated successfully'
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in updateTransaction:', error);
-      return res.status(error.message === 'Transaction not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to update transaction'
-      });
+    if (req.body.amount !== undefined && parseFloat(req.body.amount) < 0) {
+      return res.status(400).json({ success: false, error: 'amount must be positive' });
     }
+
+    const transaction = await transactionService.updateTransaction(req.params.id, req.body, req.user.id);
+    logger.info(`[TransactionController] updated: ${req.params.id}`);
+    res.json({ success: true, data: transaction, message: 'Transaction updated successfully' });
+  } catch (error) {
+    logger.error(`[TransactionController] updateTransaction ${req.params.id} error:`, error);
+    const status = error.message === 'Transaction not found' ? 404 : 500;
+    res.status(status).json({ success: false, error: error.message });
   }
+};
 
-  /**
-   * @route   DELETE /api/transactions/:id
-   * @desc    Delete transaction (soft delete)
-   * @access  Private
-   */
-  static async deleteTransaction(req, res) {
-    try {
-      const { id } = req.params;
-      const { projectId } = req.query;
-      const userId = req.user._id;
-
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      console.log(`[TransactionController] DELETE /api/transactions/${id}`);
-
-      await TransactionService.deleteTransaction(id, projectId, userId);
-
-      return res.status(200).json({
-        success: true,
-        message: 'Transaction deleted successfully'
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in deleteTransaction:', error);
-      return res.status(error.message === 'Transaction not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to delete transaction'
-      });
-    }
+exports.deleteTransaction = async (req, res) => {
+  try {
+    await transactionService.deleteTransaction(req.params.id, req.user.id);
+    logger.info(`[TransactionController] deleted: ${req.params.id}`);
+    res.json({ success: true, message: 'Transaction deleted successfully' });
+  } catch (error) {
+    logger.error(`[TransactionController] deleteTransaction ${req.params.id} error:`, error);
+    const status = error.message === 'Transaction not found' ? 404 : 500;
+    res.status(status).json({ success: false, error: error.message });
   }
+};
 
-  /**
-   * @route   GET /api/transactions/summary?projectId=xxx
-   * @desc    Get transaction summary for a project
-   * @access  Private
-   */
-  static async getProjectSummary(req, res) {
-    try {
-      const { projectId } = req.query;
+exports.getProjectSummary = async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    if (!projectId) return res.status(400).json({ success: false, error: 'projectId is required' });
 
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      console.log(`[TransactionController] GET /api/transactions/summary - Project: ${projectId}`);
-
-      const summary = await TransactionService.getProjectSummary(projectId);
-
-      return res.status(200).json({
-        success: true,
-        data: summary
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in getProjectSummary:', error);
-      return res.status(error.message === 'Project not found' ? 404 : 500).json({
-        success: false,
-        message: error.message || 'Failed to fetch transaction summary'
-      });
-    }
+    const summary = await transactionService.getProjectSummary(projectId);
+    res.json({ success: true, data: summary });
+  } catch (error) {
+    logger.error('[TransactionController] getProjectSummary error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
+};
 
-  /**
-   * @route   GET /api/transactions/categories?projectId=xxx
-   * @desc    Get category breakdown for a project
-   * @access  Private
-   */
-  static async getCategoryBreakdown(req, res) {
-    try {
-      const { projectId } = req.query;
+exports.getCategoryBreakdown = async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    if (!projectId) return res.status(400).json({ success: false, error: 'projectId is required' });
 
-      if (!projectId) {
-        console.log('[TransactionController] Missing projectId');
-        return res.status(400).json({
-          success: false,
-          message: 'Project ID is required'
-        });
-      }
-
-      console.log(`[TransactionController] GET /api/transactions/categories - Project: ${projectId}`);
-
-      const breakdown = await TransactionService.getCategoryBreakdown(projectId);
-
-      return res.status(200).json({
-        success: true,
-        data: breakdown
-      });
-    } catch (error) {
-      console.error('[TransactionController] Error in getCategoryBreakdown:', error);
-      return res.status(500).json({
-        success: false,
-        message: error.message || 'Failed to fetch category breakdown'
-      });
-    }
+    const breakdown = await transactionService.getCategoryBreakdown(projectId);
+    res.json({ success: true, data: breakdown });
+  } catch (error) {
+    logger.error('[TransactionController] getCategoryBreakdown error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
-}
+};
 
-module.exports = TransactionController;
+exports.getTransactionTrends = async (req, res) => {
+  try {
+    const { projectId, months } = req.query;
+    if (!projectId) return res.status(400).json({ success: false, error: 'projectId is required' });
+
+    const trends = await transactionService.getTransactionTrends(projectId, parseInt(months) || 12);
+    res.json({ success: true, data: trends });
+  } catch (error) {
+    logger.error('[TransactionController] getTransactionTrends error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

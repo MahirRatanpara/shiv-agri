@@ -1,499 +1,228 @@
-<div class="dashboard-wrapper">
-
-  <!-- Loading State -->
-  <div *ngIf="isLoading" class="loading-overlay">
-    <div class="loader-content">
-      <div class="spinner-modern"></div>
-      <p>Loading Workspace...</p>
-    </div>
-  </div>
-
-  <!-- Error State -->
-  <div *ngIf="!isLoading && !project" class="error-state">
-    <div class="glass-panel error-card">
-      <i class="fas fa-ghost"></i>
-      <h2>Project Not Found</h2>
-      <button class="btn-glow primary" (click)="goBack()">Return to Dashboard</button>
-    </div>
-  </div>
-
-  <div *ngIf="!isLoading && project" class="dashboard-layout fade-in-up">
-
-    <!-- LEFT SIDEBAR: IDENTITY & CONTEXT -->
-    <!-- LEFT SIDEBAR: IDENTITY, MAP & CONTEXT -->
-    <aside class="dashboard-sidebar">
-
-      <!-- Identity Card (Refined) -->
-      <div class="glass-panel identity-card">
-        <div class="card-cover" [style.background-image]="project.coverImage ? 'url(' + project.coverImage + ')' : ''">
-          <div class="cover-gradient"></div>
-          <button class="btn-back-floating" (click)="goBack()">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-        </div>
-
-        <div class="identity-content">
-          <div class="project-avatar-glow">
-            <div class="avatar-inner">
-              <i class="fas scale-icon" [class.fa-tractor]="project.category === 'FARM'"
-                [class.fa-tree]="project.category === 'LANDSCAPING'"
-                [class.fa-leaf]="project.category === 'GARDENING'"></i>
-            </div>
-          </div>
-
-          <h1 class="project-name">{{ project.name }}</h1>
-
-          <div class="status-badge" [class]="project.status | lowercase">
-            <span class="status-dot"></span>
-            {{ project.status }}
-          </div>
-
-          <div class="meta-row" *ngIf="project.location?.city">
-            <i class="fas fa-map-marker-alt"></i>
-            <span>{{ project.location?.city }}</span>
-            <span class="dot-sep" *ngIf="project.size">•</span>
-            <span *ngIf="project.size">{{ project.size.value }} {{ project.size.unit }}</span>
-          </div>
-
-          <!-- Primary Actions -->
-          <div class="action-stack">
-            <button class="btn-primary-action" (click)="openAddTransactionModal()">
-              <div class="icon-box"><i class="fas fa-plus"></i></div>
-              <span>Add Transaction</span>
-            </button>
-
-            <div class="secondary-actions">
-              <button class="btn-icon-soft" (click)="editProject()" title="Edit Project">
-                <i class="fas fa-pen"></i>
-              </button>
-              <button class="btn-icon-soft" (click)="openLocation()" title="Open Maps">
-                <i class="fas fa-external-link-alt"></i>
-              </button>
-              <button class="btn-icon-soft danger" *hasPermission="'farm.projects.delete'" (click)="deleteProject()"
-                title="Delete Project">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Map Widget (New) -->
-      <div class="glass-panel map-card" *ngIf="project.location?.coordinates || project.location?.mapUrl">
-        <div class="map-preview-container">
-          <iframe [src]="getMapEmbedUrl()" class="sidebar-map" allowfullscreen loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade">
-          </iframe>
-          <div class="map-overlay-shine"></div>
-        </div>
-        <div class="map-footer" (click)="openLocation()">
-          <span>View Full Map</span>
-          <i class="fas fa-chevron-right"></i>
-        </div>
-      </div>
-
-      <!-- Client Card (Refined) -->
-      <div class="glass-panel client-card">
-        <div class="client-header">
-          <span class="label">Client</span>
-          <a class="btn-mini-contact" *ngIf="project.clientPhone" [href]="'tel:'+project.clientPhone">
-            <i class="fas fa-phone"></i>
-          </a>
-        </div>
-        <div class="client-profile-row">
-          <div class="client-avatar-ring">
-            <img *ngIf="project.clientAvatar" [src]="project.clientAvatar">
-            <div *ngIf="!project.clientAvatar" class="avatar-ph">
-              {{ project.clientName.charAt(0) }}
-            </div>
-          </div>
-          <div class="client-info-group">
-            <span class="client-name">{{ project.clientName }}</span>
-            <a *ngIf="project.clientEmail" [href]="'mailto:'+project.clientEmail" class="client-email text-truncate">
-              {{ project.clientEmail }}
-            </a>
-          </div>
-        </div>
-      </div>
-
-    </aside>
-
-    <!-- RIGHT MAIN: HUD & CONTENT -->
-    <main class="dashboard-main">
-
-      <!-- HUD Grid -->
-      <div class="hud-grid">
-        <!-- Budget Health -->
-        <div class="hud-card glass-panel budget-theme">
-          <div class="hud-top">
-            <span class="hud-label">Budget Health</span>
-            <div class="icon-bubble"><i class="fas fa-wallet"></i></div>
-          </div>
-          <div class="hud-mid">
-            <div class="big-number" [class.negative]="getRemainingBudget() < 0">
-              {{ formatCurrency(getRemainingBudget()) }}
-            </div>
-            <span class="sub-label">Remaining Available</span>
-          </div>
-          <div class="hud-bot">
-            <div class="progress-bar-fancy">
-              <div class="bar-fill" [style.width.%]="getBudgetUtilization()"
-                [style.background]="getBudgetHealthColor()"></div>
-            </div>
-            <div class="bar-stats">
-              <span>{{ getBudgetUtilization() }}% utilized</span>
-              <span>{{ formatCurrency(project.budget) }} total</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Visit Velocity -->
-        <div class="hud-card glass-panel visit-theme">
-          <div class="hud-top">
-            <span class="hud-label">Visit Velocity</span>
-            <div class="icon-bubble"><i class="fas fa-route"></i></div>
-          </div>
-          <div class="hud-mid-row">
-            <div class="ring-chart">
-              <svg viewBox="0 0 36 36">
-                <path class="circle-bg"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle" [attr.stroke-dasharray]="project.visitCompletionPercentage + ', 100'"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              </svg>
-              <div class="ring-text">{{ project.visitCompletionPercentage }}%</div>
-            </div>
-            <div class="velocity-stats">
-              <div class="v-stat">
-                <strong>{{ project.totalVisitsCompleted }}</strong>
-                <span>Done</span>
-              </div>
-              <div class="v-stat">
-                <strong>{{ project.totalVisitsPlanned }}</strong>
-                <span>Plan</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Next Milestone -->
-        <div class="hud-card glass-panel milestone-theme">
-          <div class="hud-top">
-            <span class="hud-label">Next Milestone</span>
-            <div class="icon-bubble"><i class="fas fa-flag"></i></div>
-          </div>
-          <ng-container *ngIf="getUpcomingMilestones().length > 0; else emptyMilestone">
-            <div class="milestone-box">
-              <div class="date-tile">
-                <span class="m-day">{{ getUpcomingMilestones()[0].date | date:'dd' }}</span>
-                <span class="m-d-name">{{ getUpcomingMilestones()[0].date | date:'EEE' }}</span>
-              </div>
-              <div class="milestone-info">
-                <h4 class="text-truncate">{{ getUpcomingMilestones()[0].name }}</h4>
-                <p class="text-truncate">{{ getUpcomingMilestones()[0].description || 'Upcoming target' }}</p>
-              </div>
-            </div>
-            <div class="days-left-badge">
-              Upcoming
-            </div>
-          </ng-container>
-          <ng-template #emptyMilestone>
-            <div class="empty-state-hud">
-              <i class="fas fa-check-circle"></i>
-              <span>All milestones completed!</span>
-            </div>
-          </ng-template>
-        </div>
-      </div>
-
-      <!-- Content Navigation -->
-      <div class="nav-bar-container glass-panel">
-        <nav class="nav-bar">
-          <button class="nav-item" [class.active]="activeTab === 'overview'" (click)="setActiveTab('overview')">
-            <i class="fas fa-stream"></i> Overview
-          </button>
-          <button class="nav-item" [class.active]="activeTab === 'transactions'" (click)="setActiveTab('transactions')">
-            <i class="fas fa-receipt"></i> Transactions
-            <span class="counter-badge" *ngIf="project.expenseEntries?.length">{{ project.expenseEntries?.length
-              }}</span>
-          </button>
-          <button class="nav-item" [class.active]="activeTab === 'team'" (click)="setActiveTab('team')">
-            <i class="fas fa-users"></i> Team
-          </button>
-          <button class="nav-item" [class.active]="activeTab === 'timeline'" (click)="setActiveTab('timeline')">
-            <i class="fas fa-clock"></i> Timeline
-          </button>
-        </nav>
-      </div>
-
-      <!-- VIEWPORT (Dynamic Content) -->
-      <div class="viewport-area">
-
-        <!-- === TRANSACTIONS TAB === -->
-        <div class="tab-view fade-in" *ngIf="activeTab === 'transactions'">
-
-          <!-- Financial Breakdown Cards -->
-          <div class="finance-cards-row">
-            <div class="fin-card income">
-              <div class="fin-icon"><i class="fas fa-arrow-up"></i></div>
-              <div class="fin-data">
-                <span class="label">Total Income</span>
-                <span class="fin-val">{{ formatCurrency(getTotalCredits()) }}</span>
-              </div>
-              <div class="fin-bg-icon"><i class="fas fa-chart-line"></i></div>
-            </div>
-
-            <div class="fin-card expense">
-              <div class="fin-icon"><i class="fas fa-arrow-down"></i></div>
-              <div class="fin-data">
-                <span class="label">Total Expense</span>
-                <span class="fin-val">{{ formatCurrency(getTotalDebits()) }}</span>
-              </div>
-              <div class="fin-bg-icon"><i class="fas fa-chart-area"></i></div>
-            </div>
-
-            <div class="fin-card net">
-              <div class="fin-icon"><i class="fas fa-wallet"></i></div>
-              <div class="fin-data">
-                <span class="label">Net Position</span>
-                <span class="fin-val">{{ formatCurrency(getRemainingBudget()) }}</span>
-              </div>
-              <div class="fin-bg-icon"><i class="fas fa-balance-scale"></i></div>
-            </div>
-          </div>
-
-          <!-- Transaction List -->
-          <div class="glass-panel content-panel">
-            <div class="panel-head">
-              <h3>Transaction History</h3>
-              <button class="btn-sm-ghost" (click)="openAddTransactionModal()">+ Add New</button>
-            </div>
-
-            <div class="transaction-list">
-              <div class="no-data-illustration" *ngIf="transactions.length === 0">
-                <img src="assets/images/no-data.svg" alt="" onerror="this.style.display='none'">
-                <i class="fas fa-receipt phantom-icon"></i>
-                <p>No transactions found. Start by adding one.</p>
-              </div>
-
-              <div class="tx-item" *ngFor="let tx of transactions" (click)="openEditTransactionModal(tx)">
-                <div class="tx-left">
-                  <div class="tx-date-box">
-                    <span class="d-day">{{ tx.date | date:'dd' }}</span>
-                    <span class="d-mon">{{ tx.date | date:'MMM' }}</span>
-                  </div>
-                  <div class="tx-avatar" [class.in]="tx.type === 'credit'" [class.out]="tx.type === 'debit'">
-                    <i class="fas" [class.fa-arrow-down]="tx.type === 'credit'"
-                      [class.fa-arrow-up]="tx.type === 'debit'"></i>
-                  </div>
-                </div>
-
-                <div class="tx-mid">
-                  <div class="tx-desc">{{ tx.description }}</div>
-                  <div class="tx-meta">
-                    <span class="cat-pill" *ngIf="tx.category">{{ tx.category }}</span>
-                    <span class="notes-txt" *ngIf="tx.notes">{{ tx.notes }}</span>
-                  </div>
-                </div>
-
-                <div class="tx-right">
-                  <div class="tx-amt" [class.pos]="tx.type === 'credit'" [class.neg]="tx.type === 'debit'">
-                    {{ tx.type === 'debit' ? '-' : '+' }} {{ formatCurrency(tx.amount) }}
-                  </div>
-                  <div class="tx-actions">
-                    <button class="action-mini" (click)="$event.stopPropagation(); openEditTransactionModal(tx)"><i
-                        class="fas fa-pencil-alt"></i></button>
-                    <button class="action-mini danger" (click)="$event.stopPropagation(); deleteTransaction(tx)"><i
-                        class="fas fa-trash"></i></button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pagination -->
-            <div class="pagination-bar" *ngIf="transactionPagination && transactionPagination.totalPages > 1">
-              <button class="pg-btn" (click)="prevTransactionPage()"
-                [disabled]="!transactionPagination.hasPrev">Prev</button>
-              <span class="pg-info">Page {{ transactionPagination.page }} of {{ transactionPagination.totalPages
-                }}</span>
-              <button class="pg-btn" (click)="nextTransactionPage()"
-                [disabled]="!transactionPagination.hasNext">Next</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- === OVERVIEW TAB === -->
-        <div class="tab-view fade-in grid-2-1" *ngIf="activeTab === 'overview'">
-          <div class="col-main">
-            <div class="glass-panel content-panel">
-              <div class="panel-head">
-                <h3>About Project</h3>
-              </div>
-              <p class="long-text">{{ project.description || 'No description provided.' }}</p>
-            </div>
-
-            <div class="glass-panel content-panel" *ngIf="project.crops && project.crops.length">
-              <div class="panel-head">
-                <h3>Crops</h3>
-              </div>
-              <div class="crops-scroll-container">
-                <div class="crop-card-fancy" *ngFor="let c of project.crops">
-                  <div class="crop-img-ph"><i class="fas fa-seedling"></i></div>
-                  <div class="crop-info">
-                    <h4>{{ c.name }}</h4>
-                    <span *ngIf="c.area">{{ c.area }}{{ project.landDetails?.areaUnit }}</span>
-                    <span class="variety" *ngIf="c.variety">{{ c.variety }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-side">
-            <div class="glass-panel content-panel">
-              <div class="panel-head">
-                <h3>Specs</h3>
-              </div>
-              <div class="spec-list">
-                <div class="spec-row" *ngIf="project.landDetails?.soilType">
-                  <label>Soil Type</label>
-                  <span>{{ project.landDetails?.soilType }}</span>
-                </div>
-                <div class="spec-row" *ngIf="project.landDetails?.irrigationSystem">
-                  <label>Irrigation</label>
-                  <span>{{ project.landDetails?.irrigationSystem }}</span>
-                </div>
-                <div class="spec-row" *ngIf="project.startDate">
-                  <label>Started</label>
-                  <span>{{ project.startDate | date:'mediumDate' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="glass-panel content-panel" *ngIf="project.tags?.length">
-              <div class="panel-head">
-                <h3>Tags</h3>
-              </div>
-              <div class="tag-cloud">
-                <span class="tag-pill" *ngFor="let t of project.tags">#{{ t }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- === TEAM TAB === -->
-        <div class="tab-view fade-in" *ngIf="activeTab === 'team'">
-          <div class="team-grid-fancy">
-            <div class="glass-panel team-card" *ngFor="let member of project.fieldWorkers">
-              <div class="tc-avatar">{{ member.name.charAt(0) }}</div>
-              <div class="tc-info">
-                <h3>{{ member.name }}</h3>
-                <span class="role">Field Worker</span>
-              </div>
-              <div class="tc-actions">
-                <button class="tc-btn"><i class="fas fa-phone"></i></button>
-                <button class="tc-btn"><i class="fas fa-comment"></i></button>
-              </div>
-            </div>
-            <div class="empty-placeholder" *ngIf="!project.fieldWorkers?.length">
-              <div class="ph-content">
-                <i class="fas fa-users"></i>
-                <p>No field workers assigned yet.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- === TIMELINE TAB === -->
-        <div class="tab-view fade-in" *ngIf="activeTab === 'timeline'">
-          <div class="glass-panel content-panel">
-            <div class="timeline-v2">
-              <div class="tl-event" *ngFor="let m of project.milestones" [class.completed]="m.isCompleted">
-                <div class="tl-marker">
-                  <div class="tl-dot"><i class="fas fa-check" *ngIf="m.isCompleted"></i></div>
-                  <div class="tl-line"></div>
-                </div>
-                <div class="tl-content">
-                  <span class="tl-date">{{ m.date | date:'mediumDate' }}</span>
-                  <h4 class="tl-title">{{ m.name }}</h4>
-                  <p class="tl-desc">{{ m.description }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </main>
-  </div>
-
-  <!-- PREMIUM MODAL -->
-  <div class="modal-backdrop-premium" *ngIf="showTransactionModal" (click)="closeTransactionModal()">
-    <div class="modal-window" (click)="$event.stopPropagation()">
-      <div class="modal-top">
-        <h3>{{ isEditMode ? 'Edit' : 'New' }} Transaction</h3>
-        <button class="btn-close" (click)="closeTransactionModal()"><i class="fas fa-times"></i></button>
-      </div>
-
-      <div class="modal-mid">
-        <form class="premium-form">
-          <div class="form-group">
-            <label>Title / Description</label>
-            <input type="text" [(ngModel)]="transactionForm.description" name="d" placeholder="e.g. Purchase of seeds"
-              class="inp-field">
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Amount (₹)</label>
-              <input type="number" [(ngModel)]="transactionForm.amount" name="a" placeholder="0.00"
-                class="inp-field big-num">
-            </div>
-            <div class="form-group">
-              <label>Type</label>
-              <div class="seg-control">
-                <div class="seg-opt" [class.active]="transactionForm.type==='debit'"
-                  (click)="transactionForm.type='debit'">Expense</div>
-                <div class="seg-opt" [class.active]="transactionForm.type==='credit'"
-                  (click)="transactionForm.type='credit'">Income</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Category</label>
-              <select [(ngModel)]="transactionForm.category" name="c" class="inp-field">
-                <option value="">Select...</option>
-                <option value="Labor">Labor</option>
-                <option value="Materials">Materials</option>
-                <option value="Equipment">Equipment</option>
-                <option value="Fuel">Fuel</option>
-                <option value="Sales">Sales</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Date</label>
-              <input type="date" [(ngModel)]="transactionForm.date" name="dt" class="inp-field">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Notes (Optional)</label>
-            <textarea [(ngModel)]="transactionForm.notes" name="n" rows="3" class="inp-field"></textarea>
-          </div>
-        </form>
-      </div>
-
-      <div class="modal-bot">
-        <button class="btn-text" (click)="closeTransactionModal()">Cancel</button>
-        <button class="btn-glow primary" (click)="saveTransaction()">
-          <i class="fas fa-check"></i> {{ isEditMode ? 'Update' : 'Save Record' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
+<!-- Loading skeleton -->
+<div class="detail-loading" *ngIf="loading">
+  <div class="skel skel-header"></div>
+  <div class="skel skel-tabs"></div>
+  <div class="skel skel-body"></div>
 </div>
+
+<div class="detail-page" *ngIf="!loading && project">
+  <!-- Page Header -->
+  <div class="detail-header">
+    <div class="header-top">
+      <button class="back-btn" (click)="goBack()"><i class="fas fa-arrow-left"></i></button>
+      <div class="header-info">
+        <div class="header-title-row">
+          <h1>{{ project.name }}</h1>
+          <span class="status-badge" [class]="statusClass">{{ project.status }}</span>
+          <span class="priority-badge" [attr.data-priority]="project.priority">{{ project.priority | titlecase }}</span>
+        </div>
+        <div class="header-meta">
+          <span *ngIf="project.category" class="meta-item"><i class="fas fa-tag"></i> {{ project.category }}</span>
+          <span *ngIf="project.clientName" class="meta-item"><i class="fas fa-user"></i> {{ project.clientName }}</span>
+          <span *ngIf="project.location?.city" class="meta-item"><i class="fas fa-map-marker-alt"></i> {{ project.location.city }}</span>
+          <span *ngIf="project.startDate" class="meta-item"><i class="fas fa-calendar"></i> {{ formatDate(project.startDate) }}</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" (click)="toggleFavorite()" title="Favorite">
+          <i class="fas fa-star" style="color: #f59e0b" *ngIf="project.isFavorite?.length"></i>
+          <i class="far fa-star" *ngIf="!project.isFavorite?.length"></i>
+        </button>
+        <button class="action-btn" (click)="editProject()" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="action-btn danger" (click)="deleteProject()" title="Delete"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+
+    <!-- Quick stats -->
+    <div class="quick-stats">
+      <div class="stat-card">
+        <span class="stat-label">Budget</span>
+        <span class="stat-value">{{ formatCurrency(project.budget) }}</span>
+        <div class="stat-bar">
+          <div class="stat-fill" [style.width.%]="budgetPercent"
+            [class.over]="project.expenses > project.budget"></div>
+        </div>
+        <span class="stat-sub">{{ formatCurrency(project.expenses) }} spent</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Visits</span>
+        <span class="stat-value">{{ project.totalVisitsCompleted }} / {{ project.totalVisitsPlanned }}</span>
+        <div class="stat-bar">
+          <div class="stat-fill visit" [style.width.%]="visitPercent"></div>
+        </div>
+        <span class="stat-sub">{{ visitPercent }}% complete</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Crops</span>
+        <span class="stat-value">{{ project.crops?.length || 0 }}</span>
+        <span class="stat-sub">Active crops</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Contacts</span>
+        <span class="stat-value">{{ project.contacts?.length || 0 }}</span>
+        <span class="stat-sub">{{ activeContactCount }} active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn" *ngFor="let tab of tabs"
+      [class.active]="activeTab === tab.key"
+      (click)="switchTab(tab.key)">
+      <i [class]="tab.icon"></i>
+      <span>{{ tab.label }}</span>
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+
+    <!-- Overview Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'overview'">
+      <div class="overview-grid">
+        <!-- Description -->
+        <div class="info-card" *ngIf="project.description">
+          <h3><i class="fas fa-align-left"></i> Description</h3>
+          <p>{{ project.description }}</p>
+        </div>
+
+        <!-- Client Info -->
+        <div class="info-card" *ngIf="project.clientName">
+          <h3><i class="fas fa-user-tie"></i> Client</h3>
+          <div class="info-rows">
+            <div class="info-row"><span>Name</span><span>{{ project.clientName }}</span></div>
+            <div class="info-row" *ngIf="project.clientEmail"><span>Email</span><a [href]="'mailto:' + project.clientEmail">{{ project.clientEmail }}</a></div>
+            <div class="info-row" *ngIf="project.clientPhone"><span>Phone</span><a [href]="'tel:' + project.clientPhone">{{ project.clientPhone }}</a></div>
+            <div class="info-row" *ngIf="project.alternativeContact"><span>Alt. Contact</span><span>{{ project.alternativeContact }}</span></div>
+          </div>
+        </div>
+
+        <!-- Location -->
+        <div class="info-card" *ngIf="project.location?.address || project.location?.city">
+          <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
+          <div class="info-rows">
+            <div class="info-row" *ngIf="project.location?.address"><span>Address</span><span>{{ project.location.address }}</span></div>
+            <div class="info-row" *ngIf="project.location?.city"><span>City</span><span>{{ project.location.city }}</span></div>
+            <div class="info-row" *ngIf="project.location?.district"><span>District</span><span>{{ project.location.district }}</span></div>
+            <div class="info-row" *ngIf="project.location?.state"><span>State</span><span>{{ project.location.state }}</span></div>
+          </div>
+        </div>
+
+        <!-- Land Details -->
+        <div class="info-card" *ngIf="project.landDetails?.totalArea">
+          <h3><i class="fas fa-mountain"></i> Land Details</h3>
+          <div class="info-rows">
+            <div class="info-row"><span>Total Area</span><span>{{ project.landDetails.totalArea }} {{ project.landDetails.areaUnit || 'acres' }}</span></div>
+            <div class="info-row" *ngIf="project.landDetails.cultivableArea"><span>Cultivable</span><span>{{ project.landDetails.cultivableArea }} {{ project.landDetails.areaUnit || 'acres' }}</span></div>
+            <div class="info-row" *ngIf="project.landDetails.soilType"><span>Soil</span><span>{{ project.landDetails.soilType }}</span></div>
+            <div class="info-row" *ngIf="project.landDetails.terrainType"><span>Terrain</span><span>{{ project.landDetails.terrainType }}</span></div>
+            <div class="info-row" *ngIf="project.landDetails.irrigationSystem"><span>Irrigation</span><span>{{ project.landDetails.irrigationSystem }}</span></div>
+            <div class="info-row" *ngIf="project.landDetails.waterSource?.length">
+              <span>Water</span>
+              <span>{{ project.landDetails.waterSource?.join(', ') }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget Summary -->
+        <div class="info-card">
+          <h3><i class="fas fa-wallet"></i> Budget Summary</h3>
+          <div class="info-rows">
+            <div class="info-row"><span>Total Budget</span><span class="bold">{{ formatCurrency(project.budget) }}</span></div>
+            <div class="info-row"><span>Expenses</span><span class="text-red">{{ formatCurrency(project.expenses) }}</span></div>
+            <div class="info-row"><span>Income</span><span class="text-green">{{ formatCurrency(project.income) }}</span></div>
+            <div class="info-row"><span>Remaining</span><span [class.text-red]="project.expenses > project.budget" [class.text-green]="project.expenses <= project.budget">{{ formatCurrency(project.budget - project.expenses) }}</span></div>
+          </div>
+        </div>
+
+        <!-- Visit Schedule -->
+        <div class="info-card" *ngIf="project.visitFrequencyConfig?.frequency">
+          <h3><i class="fas fa-calendar-check"></i> Visit Schedule</h3>
+          <div class="info-rows">
+            <div class="info-row"><span>Frequency</span><span>{{ project.visitFrequencyConfig.frequency | titlecase }}</span></div>
+            <div class="info-row" *ngIf="project.visitFrequencyConfig.customDays"><span>Interval</span><span>Every {{ project.visitFrequencyConfig.customDays }} days</span></div>
+            <div class="info-row" *ngIf="project.visitFrequencyConfig.preferredDay"><span>Preferred Day</span><span>{{ project.visitFrequencyConfig.preferredDay }}</span></div>
+            <div class="info-row" *ngIf="project.visitFrequencyConfig.preferredTime"><span>Preferred Time</span><span>{{ project.visitFrequencyConfig.preferredTime }}</span></div>
+          </div>
+        </div>
+
+        <!-- Crops -->
+        <div class="info-card" *ngIf="project.crops?.length">
+          <h3><i class="fas fa-seedling"></i> Crops</h3>
+          <div class="crop-grid">
+            <div class="crop-detail-card" *ngFor="let crop of project.crops">
+              <div class="crop-icon"><i class="fas fa-seedling"></i></div>
+              <div class="crop-detail-info">
+                <span class="crop-detail-name">{{ crop.name }}</span>
+                <span class="crop-detail-variety" *ngIf="crop.variety">{{ crop.variety }}</span>
+              </div>
+              <div class="crop-detail-meta">
+                <span *ngIf="crop.season" class="crop-season-badge">{{ crop.season | titlecase }}</span>
+                <span *ngIf="crop.area" class="crop-area">{{ crop.area }} {{ project.landDetails?.areaUnit || 'acres' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contacts Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'contacts'">
+      <app-contact-manager
+        [contacts]="project.contacts || []"
+        (contactsChange)="onContactsChange($event)">
+      </app-contact-manager>
+    </div>
+
+    <!-- Transactions Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'transactions'">
+      <app-transaction-list
+        [projectId]="projectId"
+        (addTransaction)="openAddTransaction()"
+        (editTransaction)="openEditTransaction($event)"
+        (deleteTransaction)="onDeleteTransaction($event)">
+      </app-transaction-list>
+    </div>
+
+    <!-- Visits Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'visits'">
+      <app-visit-calendar
+        [projectId]="projectId"
+        (visitClick)="onVisitClick($event)"
+        (dateClick)="onDateClick($event)"
+        (scheduleVisit)="onScheduleVisit()">
+      </app-visit-calendar>
+    </div>
+
+    <!-- Media Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'media'">
+      <app-media-gallery [projectId]="projectId"></app-media-gallery>
+    </div>
+
+    <!-- Comments Tab -->
+    <div class="tab-panel" *ngIf="activeTab === 'comments'">
+      <app-comment-thread [projectId]="projectId"></app-comment-thread>
+    </div>
+
+  </div>
+</div>
+
+<!-- Visit Recorder Modal -->
+<app-visit-recorder
+  *ngIf="showVisitRecorder"
+  [visit]="selectedVisit"
+  [visible]="showVisitRecorder"
+  (completed)="onVisitCompleted()"
+  (cancelled)="showVisitRecorder = false">
+</app-visit-recorder>
+
+<!-- Transaction Form Modal -->
+<app-transaction-form
+  *ngIf="showTransactionForm"
+  [projectId]="projectId"
+  [transaction]="editingTransaction"
+  [visible]="showTransactionForm"
+  (saved)="onTransactionSaved()"
+  (cancelled)="showTransactionForm = false">
+</app-transaction-form>

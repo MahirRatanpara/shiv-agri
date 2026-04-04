@@ -1,0 +1,417 @@
+.transaction-list {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+/* Header */
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.list-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-title i {
+  color: hsl(250, 80%, 60%);
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: hsl(250, 80%, 60%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add:hover {
+  background: hsl(250, 80%, 50%);
+}
+
+/* Summary Bar */
+.summary-bar {
+  display: flex;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.summary-item.debit .summary-value {
+  color: #ef4444;
+}
+
+.summary-item.credit .summary-value {
+  color: #10b981;
+}
+
+.summary-item.net.positive .summary-value {
+  color: #10b981;
+}
+
+.summary-item.net.negative .summary-value {
+  color: #ef4444;
+}
+
+/* Filters */
+.filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.filter-tab {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tab.active {
+  background: hsl(250, 80%, 60%);
+  color: #fff;
+}
+
+.filter-tab:hover:not(.active) {
+  color: #1f2937;
+  background: #e5e7eb;
+}
+
+.category-filter select {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #374151;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  min-width: 160px;
+}
+
+.category-filter select:focus {
+  border-color: hsl(250, 80%, 60%);
+  box-shadow: 0 0 0 3px hsla(250, 80%, 60%, 0.15);
+}
+
+/* Loading */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: #9ca3af;
+  font-size: 0.9375rem;
+}
+
+.loading-state i {
+  font-size: 1.25rem;
+  color: hsl(250, 80%, 60%);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  gap: 12px;
+}
+
+.empty-state i {
+  font-size: 2.5rem;
+  color: #d1d5db;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+/* Table */
+.table-container {
+  overflow-x: auto;
+}
+
+.transaction-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transaction-table thead th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.transaction-row {
+  transition: background 0.15s;
+}
+
+.transaction-row:hover {
+  background: #f9fafb;
+}
+
+.transaction-row td {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
+}
+
+.cell-date {
+  color: #6b7280;
+  font-size: 0.8125rem;
+}
+
+.cell-description {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  background: #f3f4f6;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.cell-vendor {
+  color: #6b7280;
+}
+
+.cell-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cell-amount.debit {
+  color: #ef4444;
+}
+
+.cell-amount.credit {
+  color: #10b981;
+}
+
+.cell-payment i {
+  font-size: 1rem;
+  color: #9ca3af;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon:hover {
+  background: #f3f4f6;
+  color: hsl(250, 80%, 60%);
+}
+
+.btn-delete:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-page:hover:not(:disabled) {
+  border-color: hsl(250, 80%, 60%);
+  color: hsl(250, 80%, 60%);
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+/* Compact mode */
+.compact .list-header {
+  padding: 14px 16px;
+}
+
+.compact .list-title {
+  font-size: 1rem;
+}
+
+.compact .summary-bar {
+  padding: 12px 16px;
+  gap: 10px;
+}
+
+.compact .summary-item {
+  padding: 8px 12px;
+}
+
+.compact .summary-value {
+  font-size: 0.9375rem;
+}
+
+.compact .filters-bar {
+  padding: 10px 16px;
+}
+
+.compact .transaction-row td {
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+}
+
+.compact .pagination {
+  padding: 12px 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .summary-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-tabs {
+    justify-content: center;
+  }
+
+  .category-filter select {
+    width: 100%;
+  }
+
+  .list-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cell-description {
+    max-width: 140px;
+  }
+}

@@ -1,351 +1,193 @@
+const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
 const Project = require('../models/Project');
+const logger = require('../utils/logger');
 const { logActivity } = require('./activityLogService');
 
-/**
- * Transaction Service
- * Business logic for transaction management
- */
+async function getTransactionsByProject(projectId, options = {}) {
+  const { page = 1, limit = 50, sortBy = 'date', sortOrder = -1, type, category, dateFrom, dateTo } = options;
 
-class TransactionService {
-  /**
-   * Get transactions for a project with pagination and filtering
-   */
-  static async getTransactionsByProject(projectId, options = {}) {
-    const {
-      page = 1,
-      limit = 20,
-      sortBy = 'date',
-      sortOrder = 'desc',
-      type = null,
-      category = null,
-      startDate = null,
-      endDate = null
-    } = options;
-
-    console.log(`[TransactionService] Fetching transactions for project ${projectId}`, {
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-      filters: { type, category, startDate, endDate }
-    });
-
-    try {
-      // Validate project exists
-      const project = await Project.findById(projectId);
-      if (!project) {
-        throw new Error('Project not found');
-      }
-
-      // Fetch transactions
-      const transactions = await Transaction.getByProject(projectId, {
-        page,
-        limit,
-        sortBy,
-        sortOrder,
-        type,
-        category,
-        startDate,
-        endDate
-      });
-
-      // Count total
-      const filters = {};
-      if (type) filters.type = type;
-      if (category) filters.category = category;
-      if (startDate || endDate) {
-        filters.date = {};
-        if (startDate) filters.date.$gte = new Date(startDate);
-        if (endDate) filters.date.$lte = new Date(endDate);
-      }
-
-      const total = await Transaction.countByProject(projectId, filters);
-
-      // Get summary
-      const summary = await Transaction.getSummaryByProject(projectId);
-
-      // Add budget info from project
-      summary.budget = project.budget;
-      summary.budgetRemaining = project.budget - summary.netExpense;
-      summary.budgetUtilization = project.budget > 0
-        ? Math.round((summary.netExpense / project.budget) * 100)
-        : 0;
-
-      console.log(`[TransactionService] Found ${transactions.length} transactions (total: ${total})`);
-
-      return {
-        transactions,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          totalPages: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1
-        },
-        summary
-      };
-    } catch (error) {
-      console.error('[TransactionService] Error fetching transactions:', error);
-      throw error;
-    }
+  const query = { projectId, isDeleted: { $ne: true } };
+  if (type) query.type = type;
+  if (category) query.category = category;
+  if (dateFrom || dateTo) {
+    query.date = {};
+    if (dateFrom) query.date.$gte = new Date(dateFrom);
+    if (dateTo) query.date.$lte = new Date(dateTo);
   }
 
-  /**
-   * Get single transaction by ID
-   */
-  static async getTransactionById(transactionId, projectId = null) {
-    console.log(`[TransactionService] Fetching transaction ${transactionId}`);
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    try {
-      const query = { _id: transactionId };
-      if (projectId) query.projectId = projectId;
+  const [transactions, total, summary] = await Promise.all([
+    Transaction.find(query)
+      .sort({ [sortBy]: parseInt(sortOrder) })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('createdBy', 'name email profilePhoto')
+      .lean(),
+    Transaction.countDocuments(query),
+    Transaction.getSummaryByProject(projectId)
+  ]);
 
-      const transaction = await Transaction.findOne(query)
-        .populate('createdBy', 'name email')
-        .populate('lastUpdatedBy', 'name email');
+  // Get project budget for context
+  const project = await Project.findById(projectId).select('budget expenses income').lean();
 
-      if (!transaction) {
-        throw new Error('Transaction not found');
-      }
+  logger.info(`[TransactionService] getByProject ${projectId}: ${transactions.length} of ${total}`);
 
-      console.log(`[TransactionService] Transaction found:`, transaction.description);
-      return transaction;
-    } catch (error) {
-      console.error('[TransactionService] Error fetching transaction:', error);
-      throw error;
+  return {
+    transactions,
+    pagination: {
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      hasNext: parseInt(page) < Math.ceil(total / parseInt(limit)),
+      hasPrevious: parseInt(page) > 1
+    },
+    summary: {
+      ...summary,
+      budget: project?.budget || 0,
+      budgetRemaining: (project?.budget || 0) - (summary.totalDebits || 0),
+      budgetUtilization: project?.budget > 0
+        ? Math.round((summary.totalDebits / project.budget) * 100 * 100) / 100
+        : 0
     }
-  }
-
-  /**
-   * Create new transaction
-   */
-  static async createTransaction(projectId, transactionData, userId) {
-    console.log(`[TransactionService] Creating transaction for project ${projectId}`, transactionData);
-
-    try {
-      // Validate project exists
-      const project = await Project.findById(projectId);
-      if (!project) {
-        throw new Error('Project not found');
-      }
-
-      // Create transaction
-      const transaction = new Transaction({
-        projectId,
-        description: transactionData.description,
-        amount: transactionData.amount,
-        type: transactionData.type || 'debit',
-        category: transactionData.category,
-        date: transactionData.date || new Date(),
-        notes: transactionData.notes,
-        createdBy: userId
-      });
-
-      await transaction.save();
-
-      console.log(`[TransactionService] Transaction created: ${transaction._id}`);
-
-      // Log activity
-      await logActivity({
-        userId,
-        action: 'transaction.create',
-        entityType: 'Transaction',
-        entityId: transaction._id,
-        projectId,
-        description: `Added ${transaction.type} transaction: ${transaction.description} (₹${transaction.amount})`,
-        metadata: {
-          transactionType: transaction.type,
-          amount: transaction.amount,
-          category: transaction.category
-        }
-      });
-
-      return transaction;
-    } catch (error) {
-      console.error('[TransactionService] Error creating transaction:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update existing transaction
-   */
-  static async updateTransaction(transactionId, projectId, updateData, userId) {
-    console.log(`[TransactionService] Updating transaction ${transactionId}`, updateData);
-
-    try {
-      // Find transaction
-      const transaction = await Transaction.findOne({
-        _id: transactionId,
-        projectId
-      });
-
-      if (!transaction) {
-        throw new Error('Transaction not found');
-      }
-
-      // Store old values for logging
-      const oldAmount = transaction.amount;
-      const oldType = transaction.type;
-
-      // Update fields
-      if (updateData.description !== undefined) transaction.description = updateData.description;
-      if (updateData.amount !== undefined) transaction.amount = updateData.amount;
-      if (updateData.type !== undefined) transaction.type = updateData.type;
-      if (updateData.category !== undefined) transaction.category = updateData.category;
-      if (updateData.date !== undefined) transaction.date = updateData.date;
-      if (updateData.notes !== undefined) transaction.notes = updateData.notes;
-
-      transaction.lastUpdatedBy = userId;
-
-      await transaction.save();
-
-      console.log(`[TransactionService] Transaction updated: ${transaction._id}`);
-
-      // Log activity
-      await logActivity({
-        userId,
-        action: 'transaction.update',
-        entityType: 'Transaction',
-        entityId: transaction._id,
-        projectId,
-        description: `Updated transaction: ${transaction.description}`,
-        metadata: {
-          oldAmount,
-          newAmount: transaction.amount,
-          oldType,
-          newType: transaction.type
-        }
-      });
-
-      return transaction;
-    } catch (error) {
-      console.error('[TransactionService] Error updating transaction:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete transaction (soft delete)
-   */
-  static async deleteTransaction(transactionId, projectId, userId) {
-    console.log(`[TransactionService] Deleting transaction ${transactionId}`);
-
-    try {
-      // Find transaction
-      const transaction = await Transaction.findOne({
-        _id: transactionId,
-        projectId
-      });
-
-      if (!transaction) {
-        throw new Error('Transaction not found');
-      }
-
-      // Store details for logging
-      const transactionDetails = {
-        description: transaction.description,
-        amount: transaction.amount,
-        type: transaction.type
-      };
-
-      // Soft delete
-      await transaction.softDelete(userId);
-
-      console.log(`[TransactionService] Transaction deleted: ${transaction._id}`);
-
-      // Log activity
-      await logActivity({
-        userId,
-        action: 'transaction.delete',
-        entityType: 'Transaction',
-        entityId: transaction._id,
-        projectId,
-        description: `Deleted ${transactionDetails.type} transaction: ${transactionDetails.description} (₹${transactionDetails.amount})`,
-        metadata: transactionDetails
-      });
-
-      return transaction;
-    } catch (error) {
-      console.error('[TransactionService] Error deleting transaction:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get transaction summary for a project
-   */
-  static async getProjectSummary(projectId) {
-    console.log(`[TransactionService] Fetching summary for project ${projectId}`);
-
-    try {
-      const project = await Project.findById(projectId);
-      if (!project) {
-        throw new Error('Project not found');
-      }
-
-      const summary = await Transaction.getSummaryByProject(projectId);
-
-      // Add budget info
-      summary.budget = project.budget;
-      summary.budgetRemaining = project.budget - summary.netExpense;
-      summary.budgetUtilization = project.budget > 0
-        ? Math.round((summary.netExpense / project.budget) * 100)
-        : 0;
-
-      console.log(`[TransactionService] Summary:`, summary);
-      return summary;
-    } catch (error) {
-      console.error('[TransactionService] Error fetching summary:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get category breakdown for a project
-   */
-  static async getCategoryBreakdown(projectId) {
-    console.log(`[TransactionService] Fetching category breakdown for project ${projectId}`);
-
-    try {
-      const breakdown = await Transaction.getCategoryBreakdown(projectId);
-      console.log(`[TransactionService] Found ${breakdown.length} categories`);
-      return breakdown;
-    } catch (error) {
-      console.error('[TransactionService] Error fetching category breakdown:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Bulk delete transactions (for project deletion)
-   */
-  static async deleteProjectTransactions(projectId, userId) {
-    console.log(`[TransactionService] Deleting all transactions for project ${projectId}`);
-
-    try {
-      const result = await Transaction.deleteByProject(projectId, userId);
-      console.log(`[TransactionService] Deleted ${result.modifiedCount} transactions`);
-
-      // Log activity
-      await logActivity({
-        userId,
-        action: 'transaction.bulk_delete',
-        entityType: 'Project',
-        entityId: projectId,
-        projectId,
-        description: `Deleted ${result.modifiedCount} transactions due to project deletion`,
-        metadata: { deletedCount: result.modifiedCount }
-      });
-
-      return result;
-    } catch (error) {
-      console.error('[TransactionService] Error bulk deleting transactions:', error);
-      throw error;
-    }
-  }
+  };
 }
 
-module.exports = TransactionService;
+async function getTransactionById(transactionId) {
+  const transaction = await Transaction.findById(transactionId)
+    .populate('createdBy', 'name email profilePhoto')
+    .populate('lastUpdatedBy', 'name email profilePhoto');
+  if (!transaction) throw new Error('Transaction not found');
+  return transaction;
+}
+
+async function createTransaction(data, userId) {
+  const project = await Project.findById(data.projectId);
+  if (!project) throw new Error('Project not found');
+
+  const transaction = new Transaction({
+    ...data,
+    createdBy: userId,
+    lastUpdatedBy: userId
+  });
+  const saved = await transaction.save();
+
+  const actionType = saved.type === 'debit' ? 'expense_added' : 'payment_received';
+  const desc = saved.type === 'debit'
+    ? `Expense of ₹${saved.amount} added: ${saved.description}`
+    : `Payment of ₹${saved.amount} received: ${saved.description}`;
+
+  logActivity(saved.projectId, userId, actionType, desc, {
+    entityType: 'transaction',
+    entityId: saved._id,
+    amount: saved.amount,
+    type: saved.type,
+    category: saved.category
+  });
+
+  logger.info(`[TransactionService] created: ${saved._id} (${saved.type}) ₹${saved.amount} for project ${saved.projectId}`);
+  return saved;
+}
+
+async function updateTransaction(transactionId, updateData, userId) {
+  const transaction = await Transaction.findById(transactionId);
+  if (!transaction) throw new Error('Transaction not found');
+
+  const oldAmount = transaction.amount;
+  const oldType = transaction.type;
+
+  Object.assign(transaction, updateData);
+  transaction.lastUpdatedBy = userId;
+  const saved = await transaction.save();
+
+  logActivity(saved.projectId, userId, 'transaction_updated', `Transaction updated: ${saved.description} (₹${oldAmount} → ₹${saved.amount})`, {
+    entityType: 'transaction',
+    entityId: saved._id,
+    oldAmount,
+    newAmount: saved.amount,
+    oldType,
+    newType: saved.type
+  });
+
+  logger.info(`[TransactionService] updated: ${saved._id} (₹${oldAmount} → ₹${saved.amount})`);
+  return saved;
+}
+
+async function deleteTransaction(transactionId, userId) {
+  const transaction = await Transaction.findById(transactionId);
+  if (!transaction) throw new Error('Transaction not found');
+
+  await transaction.softDelete(userId);
+
+  logActivity(transaction.projectId, userId, 'transaction_deleted', `Transaction deleted: ${transaction.description} (₹${transaction.amount})`, {
+    entityType: 'transaction',
+    entityId: transactionId,
+    amount: transaction.amount,
+    type: transaction.type
+  });
+
+  logger.info(`[TransactionService] deleted: ${transactionId}`);
+  return { message: 'Transaction deleted' };
+}
+
+async function getProjectSummary(projectId) {
+  const [summary, project] = await Promise.all([
+    Transaction.getSummaryByProject(projectId),
+    Project.findById(projectId).select('budget expenses income').lean()
+  ]);
+
+  return {
+    ...summary,
+    budget: project?.budget || 0,
+    budgetRemaining: (project?.budget || 0) - (summary.totalDebits || 0),
+    budgetUtilization: project?.budget > 0
+      ? Math.round((summary.totalDebits / project.budget) * 100 * 100) / 100
+      : 0
+  };
+}
+
+async function getCategoryBreakdown(projectId) {
+  return Transaction.getCategoryBreakdown(projectId);
+}
+
+async function getTransactionTrends(projectId, months = 12) {
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+
+  const result = await Transaction.aggregate([
+    {
+      $match: {
+        projectId: new mongoose.Types.ObjectId(projectId),
+        isDeleted: { $ne: true },
+        date: { $gte: startDate }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$date' },
+          month: { $month: '$date' },
+          type: '$type'
+        },
+        total: { $sum: '$amount' },
+        count: { $sum: 1 }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } }
+  ]);
+
+  return result;
+}
+
+module.exports = {
+  getTransactionsByProject,
+  getTransactionById,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  getProjectSummary,
+  getCategoryBreakdown,
+  getTransactionTrends
+};

@@ -1,0 +1,93 @@
+<div class="visit-calendar">
+  <!-- Header -->
+  <div class="calendar-header">
+    <div class="header-left">
+      <h3 class="calendar-title">Visit Calendar</h3>
+      <div class="stats-summary" *ngIf="stats">
+        <span class="stat-badge stat-total">{{ stats.total }} total</span>
+        <span class="stat-badge stat-completed">{{ stats.completed }} completed</span>
+        <span class="stat-badge stat-upcoming">{{ upcomingCount }} upcoming</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-schedule" (click)="onScheduleVisit()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Schedule Visit
+      </button>
+    </div>
+  </div>
+
+  <!-- Month navigation -->
+  <div class="month-nav">
+    <button class="nav-btn" (click)="previousMonth()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <span class="month-label">{{ monthYearLabel }}</span>
+    <button class="nav-btn" (click)="nextMonth()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M7 4l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Calendar Grid (desktop) -->
+  <div class="calendar-grid" *ngIf="!loading">
+    <!-- Weekday headers -->
+    <div class="weekday-header" *ngFor="let day of weekDays">{{ day }}</div>
+
+    <!-- Day cells -->
+    <div
+      class="day-cell"
+      *ngFor="let day of calendarDays"
+      [class.other-month]="!day.isCurrentMonth"
+      [class.today]="day.isToday"
+      (click)="onDateClick(day)"
+    >
+      <span class="day-number">{{ day.day }}</span>
+      <div class="day-visits" *ngIf="day.visits.length">
+        <button
+          class="visit-chip"
+          [ngClass]="getStatusClass(visit.status)"
+          *ngFor="let visit of day.visits"
+          (click)="onVisitClick(visit, $event)"
+          [title]="getVisitLabel(visit)"
+        >
+          {{ getVisitLabel(visit) }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile list view -->
+  <div class="mobile-list" *ngIf="!loading">
+    <ng-container *ngFor="let day of calendarDays">
+      <div class="mobile-day" *ngIf="day.isCurrentMonth && day.visits.length" (click)="onDateClick(day)">
+        <div class="mobile-day-header">
+          <span class="mobile-day-number" [class.today]="day.isToday">{{ day.day }}</span>
+          <span class="mobile-day-label">
+            {{ day.date | date:'EEE, MMM d' }}
+          </span>
+        </div>
+        <div class="mobile-day-visits">
+          <button
+            class="visit-chip"
+            [ngClass]="getStatusClass(visit.status)"
+            *ngFor="let visit of day.visits"
+            (click)="onVisitClick(visit, $event)"
+          >
+            {{ getVisitLabel(visit) }}
+          </button>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
