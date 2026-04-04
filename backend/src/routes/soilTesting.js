@@ -636,13 +636,14 @@ router.post('/sessions/:id/upload-excel',
 
         try {
           // Extract data from Excel columns
-          // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka
+          // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name
           const sampleNumber = row.getCell(1).value?.toString().trim() || '';
           const farmersName = row.getCell(2).value?.toString().trim() || '';
           const mobileNo = row.getCell(3).value?.toString().trim() || '';
           const location = row.getCell(4).value?.toString().trim() || '';
           const farmsName = row.getCell(5).value?.toString().trim() || '';
           const taluka = row.getCell(6).value?.toString().trim() || '';
+          const cropName = row.getCell(7).value?.toString().trim() || '';
 
           // Validate required fields
           if (!sampleNumber) {
@@ -662,6 +663,7 @@ router.post('/sessions/:id/upload-excel',
             location,
             farmsName,
             taluka,
+            cropName,
             rowNumber
           });
         } catch (error) {
@@ -700,6 +702,7 @@ router.post('/sessions/:id/upload-excel',
           existingSample.location = excelRow.location;
           existingSample.farmsName = excelRow.farmsName;
           existingSample.taluka = excelRow.taluka;
+          if (excelRow.cropName) existingSample.cropName = excelRow.cropName;
 
           await existingSample.save();
           updatedCount++;
@@ -716,7 +719,8 @@ router.post('/sessions/:id/upload-excel',
             mobileNo: excelRow.mobileNo,
             location: excelRow.location,
             farmsName: excelRow.farmsName,
-            taluka: excelRow.taluka
+            taluka: excelRow.taluka,
+            cropName: excelRow.cropName || undefined
           });
 
           await newSample.save();

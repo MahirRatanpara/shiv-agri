@@ -18,7 +18,8 @@ async function createSoilTestingTemplate() {
     { header: 'Mobile No.', key: 'mobileNo', width: 15 },
     { header: 'Location', key: 'location', width: 20 },
     { header: "Farm's Name", key: 'farmsName', width: 20 },
-    { header: 'Taluka', key: 'taluka', width: 15 }
+    { header: 'Taluka', key: 'taluka', width: 15 },
+    { header: 'Crop Name', key: 'cropName', width: 20 }
   ];
 
   // Style the header row
@@ -38,7 +39,8 @@ async function createSoilTestingTemplate() {
     mobileNo: '9876543210',
     location: 'સૂરત',
     farmsName: 'પટેલ ફાર્મ',
-    taluka: 'ચોરયાસી'
+    taluka: 'ચોરયાસી',
+    cropName: 'કપાસ'
   });
 
   worksheet.addRow({
@@ -47,7 +49,8 @@ async function createSoilTestingTemplate() {
     mobileNo: '9876543211',
     location: 'બારડોલી',
     farmsName: 'શાહ ફાર્મ',
-    taluka: 'બારડોલી'
+    taluka: 'બારડોલી',
+    cropName: 'શેરડી'
   });
 
   worksheet.addRow({
@@ -56,7 +59,8 @@ async function createSoilTestingTemplate() {
     mobileNo: '9876543212',
     location: 'કડોદ',
     farmsName: 'દેસાઈ ફાર્મ',
-    taluka: 'કડોદ'
+    taluka: 'કડોદ',
+    cropName: 'ડાંગર'
   });
 
   // Add borders to all cells
@@ -82,7 +86,7 @@ async function createSoilTestingTemplate() {
   instructionsSheet.addRow(['How to use this template:']);
   instructionsSheet.addRow(['1. Fill in the data in the "Soil Testing Template" sheet']);
   instructionsSheet.addRow(['2. Required columns: Sample Number, Farmer\'s Name']);
-  instructionsSheet.addRow(['3. Optional columns: Mobile No., Location, Farm\'s Name, Taluka']);
+  instructionsSheet.addRow(['3. Optional columns: Mobile No., Location, Farm\'s Name, Taluka, Crop Name']);
   instructionsSheet.addRow(['4. You can add as many rows as needed']);
   instructionsSheet.addRow(['5. If Sample Number already exists in the session, the row will be updated']);
   instructionsSheet.addRow(['6. If Sample Number does not exist, a new row will be added']);
@@ -95,6 +99,7 @@ async function createSoilTestingTemplate() {
   instructionsSheet.addRow(['- Location: Location of the farm']);
   instructionsSheet.addRow(['- Farm\'s Name: Name of the farm']);
   instructionsSheet.addRow(['- Taluka: Taluka/Tehsil name']);
+  instructionsSheet.addRow(['- Crop Name: Name of the crop being grown']);
 
   instructionsSheet.getRow(1).font = { bold: true, size: 14 };
   instructionsSheet.getRow(3).font = { bold: true };
