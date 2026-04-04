@@ -139,6 +139,7 @@ Nginx Reverse Proxy (Port 443/80)
 ```
 shiv-agri/
 ├── backend/
+│   ├── sample-excel-templates/   (Soil & Water testing upload templates)
 │   └── src/
 │       ├── config/database.js
 │       ├── controllers/
@@ -171,7 +172,7 @@ shiv-agri/
 │       ├── utils/
 │       │   ├── jwt.js, logger.js
 │       │   ├── soilClassification.js, waterClassification.js
-│       ├── scripts/migrate-permissions.js
+│       ├── scripts/migrate-permissions.js, create-sample-excel-templates.js
 │       └── server.js
 ├── frontend/src/app/
 │   ├── app.ts, app.routes.ts, app.config.ts
@@ -326,7 +327,7 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 | PUT | `/api/soil-testing/sessions/:id` | soil.sessions.update | Update session & samples |
 | PATCH | `/api/soil-testing/sessions/:id/status` | soil.sessions.update | Update session status |
 | DELETE | `/api/soil-testing/sessions/:id` | — | Delete session & samples |
-| POST | `/api/soil-testing/sessions/:id/upload-excel` | soil.sessions.update | Upload Excel samples |
+| POST | `/api/soil-testing/sessions/:id/upload-excel` | soil.sessions.update | Upload Excel samples (columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name) |
 | GET | `/api/soil-testing/sessions/:sessionId/samples` | soil.sessions.view | Paginated samples |
 | PATCH | `/api/soil-testing/sessions/:sessionId/samples` | soil.sessions.update | Bulk upsert samples |
 | DELETE | `/api/soil-testing/sessions/:sessionId/samples` | soil.samples.delete | Bulk delete samples |
