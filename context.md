@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for LLM context. Each section is self-contained so an LLM can read only the relevant section for a given task. Organized by feature domain for efficient chunking.
 
-> **Last Updated:** 2026-03-21
+> **Last Updated:** 2026-04-11
 
 ---
 
@@ -141,7 +141,10 @@ shiv-agri/
 ├── backend/
 │   ├── sample-excel-templates/   (Soil & Water testing upload templates)
 │   └── src/
-│       ├── config/database.js
+│       ├── config/
+│       │   ├── database.js
+│       │   ├── fertilizerCropConfig.js   (in-memory crop defaults loader)
+│       │   └── fertilizerCropDefaults.json (per-crop fertilizer defaults)
 │       ├── controllers/
 │       │   ├── authController.js
 │       │   ├── projectController.js
@@ -180,6 +183,7 @@ shiv-agri/
 │   │   ├── header/, footer/, toast/, confirmation-modal/
 │   │   ├── download-progress/, dashboard-overview/
 │   │   ├── project-list/, project-detail-popup/, role-selection-modal/
+│   │   ├── ag-grid-editors/datalist-cell-editor.ts
 │   ├── pages/
 │   │   ├── home/, login/, not-found/, my-account/, contact/
 │   │   ├── lab-testing/, soil-testing/, water-testing/, fertilizer-testing/
@@ -319,7 +323,7 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| GET | `/api/soil-testing/sessions` | soil.sessions.view | Get all sessions with samples |
+| GET | `/api/soil-testing/sessions` | soil.sessions.view | Paginated session list (no samples). Query: `page`, `limit`, `status` (`active`/`completed`/enum). Returns `{ sessions, pagination }` |
 | GET | `/api/soil-testing/sessions/date/:date` | soil.sessions.view | Get sessions by date |
 | GET | `/api/soil-testing/sessions/count/:date` | soil.sessions.view | Session count for date |
 | GET | `/api/soil-testing/sessions/:id` | soil.sessions.view | Get session by ID |
@@ -335,8 +339,8 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 
 ### Frontend
 
-- **Component:** `pages/soil-testing/soil-testing.ts` — AG Grid table, Excel import, session state management, PDF generation, sample CRUD
-- **Service:** `services/soil-testing.service.ts` — All session/sample API calls
+- **Component:** `pages/soil-testing/soil-testing.ts` — AG Grid table, Excel import, session state management, PDF generation, sample CRUD. Uses `DatalistCellEditor` for cropName (searchable dropdown from fertilizer crop config). Server-side paginated active/completed session lists; completed sessions lazy-loaded on dropdown open.
+- **Service:** `services/soil-testing.service.ts` — All session/sample API calls. `getSessions(page, limit, status)` replaces old `getAllSessions()`. Also injects `FertilizerTestingService` for crop config.
 - **Routes:** `/lab-testing/soil-testing`, `/lab-testing/soil-testing/session/:sessionId`
 
 ---
@@ -368,11 +372,11 @@ Same state machine as soil testing: `started` → `details` → `ready` → `com
 - Water class code generation (C1S1, C3S2, etc.)
 
 ### API Endpoints (`backend/src/routes/waterTesting.js`)
-Same pattern as soil testing with `/api/water-testing/` prefix. Includes session CRUD, sample management, Excel upload, and PDF generation endpoints.
+Same pattern as soil testing with `/api/water-testing/` prefix. Includes session CRUD (paginated `GET /sessions` with `page`/`limit`/`status` params), sample management, Excel upload, and PDF generation endpoints.
 
 ### Frontend
-- **Component:** `pages/water-testing/water-testing.ts`
-- **Service:** `services/water-testing.service.ts`
+- **Component:** `pages/water-testing/water-testing.ts` — Server-side paginated active/completed session lists; completed sessions lazy-loaded on dropdown open.
+- **Service:** `services/water-testing.service.ts` — `getSessions(page, limit, status)` replaces old `getAllSessions()`.
 - **Routes:** `/lab-testing/water-testing`, `/lab-testing/water-testing/session/:sessionId`
 
 ---
@@ -403,12 +407,21 @@ Managed by `FertilizerSessionStateManager` (`models/fertilizer-session-state.mod
 - Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields; hormone dose unit is conditional on hormone name (Projib → grams, others → ml)
 - Fruit tree sections: `m1`-`m5` with sub-parameters
 
+### Fertilizer Crop Config (`backend/src/config/fertilizerCropConfig.js`)
+- Loaded once at server startup from `fertilizerCropDefaults.json`
+- JSON keyed by cropName, each containing variant entries (`normal`, `small-fruit`, `large-fruit`) with default field values
+- Case-insensitive lookup via `getDefaultsForCrop(cropName, type)`
+- `getCropNames()` returns sorted list for frontend dropdown
+- When soil samples are created/updated with a cropType, the linked fertilizer sample is auto-populated with crop defaults from this config
+
 ### API Endpoints (`backend/src/routes/fertilizerTesting.js`)
-Same pattern as soil/water testing with `/api/fertilizer-testing/` prefix. Additional: Excel upload supports `type` parameter for crop type.
+Same pattern as soil/water testing with `/api/fertilizer-testing/` prefix. Paginated `GET /sessions` with `page`/`limit`/`status` params. Additional endpoints:
+- `GET /crop-config` — Returns `{ cropNames, config }` from in-memory crop defaults (used by frontend for cropName dropdown and default previews)
+- Excel upload supports `type` parameter for crop type
 
 ### Frontend
-- **Component:** `pages/fertilizer-testing/fertilizer-testing.ts` — Complex form with multiple sections, spray schedules, fruit tree support, soil sample linking
-- **Service:** `services/fertilizer-testing.service.ts`
+- **Component:** `pages/fertilizer-testing/fertilizer-testing.ts` — Complex form with multiple sections, spray schedules, fruit tree support, soil sample linking. Server-side paginated active/completed session lists; completed sessions lazy-loaded on dropdown open. Applies crop config defaults to samples on load via `applyCropDefaults()`.
+- **Service:** `services/fertilizer-testing.service.ts` — `getSessions(page, limit, status)` replaces old `getAllSessions()`. Caches crop config via `getCropConfig()` (shareReplay). `getDefaultsForCrop(cropName, type)` for client-side lookup. `getCropNamesSnapshot()` for dropdown values.
 - **Routes:** `/lab-testing/fertilizer-testing`, `/lab-testing/fertilizer-testing/session/:sessionId`
 
 ---
@@ -885,6 +898,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | ProjectListComponent | `components/project-list/` | Project cards for home page |
 | ProjectDetailPopupComponent | `components/project-detail-popup/` | Modal for project details |
 | RoleSelectionModalComponent | `components/role-selection-modal/` | Role picker during first login |
+| DatalistCellEditor | `components/ag-grid-editors/datalist-cell-editor.ts` | AG Grid cell editor using `<input list>` + `<datalist>` for searchable dropdown with free-text fallback (used for cropName in soil testing) |
 
 ---
 
@@ -895,9 +909,9 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), currentUser$ BehaviorSubject |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
-| SoilTestingService | `soil-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel(), getSoilDataForSample() |
-| WaterTestingService | `water-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel() |
-| FertilizerTestingService | `fertilizer-testing.service.ts` | Session CRUD, sample CRUD, bulkUpdateSamples(), uploadExcel() with type |
+| SoilTestingService | `soil-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel(), getSoilDataForSample() |
+| WaterTestingService | `water-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel() |
+| FertilizerTestingService | `fertilizer-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel() with type, getCropConfig(), getDefaultsForCrop(), getCropNamesSnapshot() |
 | ManagerialWorkService | `managerial-work.service.ts` | Receipt/Invoice/Letter CRUD, getNextNumber(), getServiceOptions(), numberToWords() |
 | PdfService | `pdf.service.ts` | generateSinglePDF(), downloadBulkPDFs(), streamBulkSessionPDFs(), previewPDF() — for soil/water/fertilizer/receipt/invoice/letter |
 | DashboardService | `dashboard.service.ts` | Dashboard metrics and analytics |

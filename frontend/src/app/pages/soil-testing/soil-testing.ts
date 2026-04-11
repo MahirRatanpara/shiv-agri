@@ -12,16 +12,18 @@ import {
   ModuleRegistry,
 } from 'ag-grid-community';
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
+import { FertilizerTestingService } from '../../services/fertilizer-testing.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
+import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular, HasPermissionDirective],
-  providers: [SoilTestingService, PdfService],
+  providers: [SoilTestingService, FertilizerTestingService, PdfService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
 })
@@ -37,7 +39,13 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   // Session Management
   currentSession: Session | null = null;
   sessionActive: boolean = false;
-  allSessions: Session[] = [];
+  // Current page of sessions fetched from the backend. Samples are NOT
+  // embedded here — use getSession(id) to load a full session with its rows.
+  activeSessions: Session[] = [];
+  completedSessions: Session[] = [];
+  activeSessionsTotal: number = 0;
+  completedSessionsTotal: number = 0;
+  sessionsLoaded: boolean = false;
   currentDate = new Date();
   todaySessionCount: number = 0;
   isBackendConnected: boolean = false;
@@ -64,29 +72,10 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   completedPageSize: number = 10;
   completedTotalPages: number = 0;
   showCompletedSessions: boolean = false;
+  completedSessionsLoaded: boolean = false;
 
   // Auto-save timeout
   private saveTimeout: any = null;
-
-  get activeSessions(): Session[] {
-    return this.allSessions.filter(s => s.status !== 'completed');
-  }
-
-  get completedSessions(): Session[] {
-    return this.allSessions.filter(s => s.status === 'completed');
-  }
-
-  get paginatedActiveSessions(): Session[] {
-    const startIndex = (this.historyPage - 1) * this.historyPageSize;
-    const endIndex = startIndex + this.historyPageSize;
-    return this.activeSessions.slice(startIndex, endIndex);
-  }
-
-  get paginatedCompletedSessions(): Session[] {
-    const startIndex = (this.completedPage - 1) * this.completedPageSize;
-    const endIndex = startIndex + this.completedPageSize;
-    return this.completedSessions.slice(startIndex, endIndex);
-  }
 
   // Column Definitions
   colDefs: ColDef<SoilTestingData>[] = [
@@ -312,7 +301,13 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Crop Name',
       editable: true,
       filter: true,
-      minWidth: 140,
+      minWidth: 160,
+      // Custom editor: dropdown of known crops + free-text fallback so users
+      // can still enter a crop that isn't in the fertilizer config.
+      cellEditor: DatalistCellEditor,
+      cellEditorParams: {
+        values: () => this.fertilizerTestingService.getCropNamesSnapshot()
+      }
     },
     {
       field: 'cropType',
@@ -371,6 +366,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
   constructor(
     private soilTestingService: SoilTestingService,
+    private fertilizerTestingService: FertilizerTestingService,
     private pdfService: PdfService,
     private toastService: ToastService,
     private route: ActivatedRoute,
@@ -378,6 +374,19 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
+    // Preload the fertilizer crop config so the cropName datalist dropdown
+    // has values as soon as the soil testing grid becomes editable.
+    this.fertilizerTestingService.getCropConfig().pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        // Refresh grid columns once config is available so the editor picks up
+        // the latest crop names list.
+        if (this.gridApi) {
+          this.gridApi.setGridOption('columnDefs', this.colDefs);
+        }
+      },
+      error: err => console.warn('Failed to load fertilizer crop config', err)
+    });
+
     // Check backend connectivity first
     this.checkBackendConnection();
 
@@ -387,7 +396,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       if (sessionId && sessionId !== this.sessionIdFromUrl) {
         this.sessionIdFromUrl = sessionId;
         // Only load session from URL after backend is connected and sessions are loaded
-        if (this.isBackendConnected && this.allSessions.length > 0) {
+        if (this.isBackendConnected && this.sessionsLoaded) {
           this.loadSessionFromUrl(sessionId);
         }
       } else if (!sessionId && this.sessionActive) {
@@ -426,41 +435,77 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Load the current page of active AND completed sessions from the backend.
+   * Both lists are paginated server-side — only session metadata (no samples)
+   * comes back, so the landing page renders quickly regardless of history size.
+   */
   loadSessions() {
-    this.soilTestingService.getAllSessions().subscribe({
-      next: (sessions) => {
-        this.allSessions = sessions;
-        // Calculate pagination for active sessions
-        const activeCount = sessions.filter(s => s.status !== 'completed').length;
-        this.totalPages = Math.ceil(activeCount / this.historyPageSize);
-        // Calculate pagination for completed sessions
-        const completedCount = sessions.filter(s => s.status === 'completed').length;
-        this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
+    this.loadActiveSessionsPage();
+    // Completed sessions are lazy-loaded on first dropdown open.
+    // Reset so they re-fetch after state-changing actions.
+    this.completedSessionsLoaded = false;
+    this.completedPage = 1;
+    if (this.showCompletedSessions) {
+      this.loadCompletedSessionsPage();
+    }
+  }
 
-        // If we have a session ID from URL, load it now
-        if (this.sessionIdFromUrl && !this.sessionActive) {
-          this.loadSessionFromUrl(this.sessionIdFromUrl);
+  private loadActiveSessionsPage() {
+    this.soilTestingService
+      .getSessions(this.historyPage, this.historyPageSize, 'active')
+      .subscribe({
+        next: (response) => {
+          this.activeSessions = response.sessions;
+          this.activeSessionsTotal = response.pagination.total;
+          this.totalPages = response.pagination.totalPages;
+          this.sessionsLoaded = true;
+
+          // If we have a session ID from URL, load it now
+          if (this.sessionIdFromUrl && !this.sessionActive) {
+            this.loadSessionFromUrl(this.sessionIdFromUrl);
+          }
+        },
+        error: () => {
+          this.isBackendConnected = false;
         }
-      },
-      error: (error) => {
-        this.isBackendConnected = false;
-      }
-    });
+      });
+  }
+
+  private loadCompletedSessionsPage() {
+    this.soilTestingService
+      .getSessions(this.completedPage, this.completedPageSize, 'completed')
+      .subscribe({
+        next: (response) => {
+          this.completedSessions = response.sessions;
+          this.completedSessionsTotal = response.pagination.total;
+          this.completedTotalPages = response.pagination.totalPages;
+          this.completedSessionsLoaded = true;
+        },
+        error: () => {
+          // Non-fatal: completed list is secondary UI
+        }
+      });
   }
 
   toggleCompletedSessions() {
     this.showCompletedSessions = !this.showCompletedSessions;
+    if (this.showCompletedSessions && !this.completedSessionsLoaded) {
+      this.loadCompletedSessionsPage();
+    }
   }
 
   nextCompletedPage() {
     if (this.completedPage < this.completedTotalPages) {
       this.completedPage++;
+      this.loadCompletedSessionsPage();
     }
   }
 
   prevCompletedPage() {
     if (this.completedPage > 1) {
       this.completedPage--;
+      this.loadCompletedSessionsPage();
     }
   }
 
@@ -485,18 +530,21 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   nextPage() {
     if (this.historyPage < this.totalPages) {
       this.historyPage++;
+      this.loadActiveSessionsPage();
     }
   }
 
   prevPage() {
     if (this.historyPage > 1) {
       this.historyPage--;
+      this.loadActiveSessionsPage();
     }
   }
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
       this.historyPage = page;
+      this.loadActiveSessionsPage();
     }
   }
 

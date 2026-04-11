@@ -3,6 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const connectDB = require('./config/database');
+const fertilizerCropConfig = require('./config/fertilizerCropConfig');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 
@@ -10,6 +11,9 @@ const app = express();
 
 // Connect to database
 connectDB();
+
+// Load static backend configs (in-memory)
+fertilizerCropConfig.loadConfig();
 
 // Middleware
 app.use(cors({

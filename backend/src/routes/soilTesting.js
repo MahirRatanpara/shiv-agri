@@ -4,6 +4,7 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
+const fertilizerCropConfig = require('../config/fertilizerCropConfig');
 const { addClassifications } = require('../utils/soilClassification');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
@@ -43,21 +44,57 @@ const sortSamplesByNumber = (samples) => {
 router.use(authenticate);
 
 // Get all sessions with their samples
+/**
+ * Paginated session list for the testing landing page.
+ *
+ * Query params:
+ *   - page   (default 1)
+ *   - limit  (default 10, max 100)
+ *   - status (optional): 'active' (= not completed), 'completed', or a specific
+ *             enum value ('started', 'details', 'ready', 'completed')
+ *
+ * Samples are NOT embedded in the response — the landing page only needs
+ * session metadata (date, version, status, sampleCount). Use GET /sessions/:id
+ * to load a session with its samples. Dropping the embedded samples turns this
+ * from an N+1 sample fetch into a single indexed query and speeds up the
+ * landing page dramatically.
+ */
 router.get('/sessions', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
-    const sessions = await SoilSession.find().sort({ date: -1, version: -1 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const statusParam = (req.query.status || '').toString();
 
-    const sessionsWithSamples = [];
-    for (const session of sessions) {
-      const sessionObj = session.toObject();
-      let samples = await SoilSample.find({ sessionId: session._id });
-      samples = sortSamplesByNumber(samples);
-      sessionObj.data = samples;
-      sessionsWithSamples.push(sessionObj);
+    // Build filter from status param
+    const filter = {};
+    if (statusParam === 'active') {
+      filter.status = { $ne: 'completed' };
+    } else if (statusParam) {
+      filter.status = statusParam;
     }
 
-    logger.info(`Retrieved ${sessionsWithSamples.length} sessions with samples`);
-    res.json(sessionsWithSamples);
+    const skip = (page - 1) * limit;
+
+    const [sessions, total] = await Promise.all([
+      SoilSession.find(filter)
+        .sort({ date: -1, version: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SoilSession.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    logger.info(
+      `Retrieved soil sessions page ${page}/${totalPages || 1} ` +
+        `(status=${statusParam || 'all'}, count=${sessions.length}, total=${total})`
+    );
+
+    res.json({
+      sessions,
+      pagination: { page, limit, total, totalPages }
+    });
   } catch (error) {
     logger.error(`Error fetching sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
@@ -447,15 +484,19 @@ async function handleCropTypeChange(existingSample, updatedSample, soilSession) 
   // Case 3: Crop type changed - update existing or create new
   else if (oldCropType !== '' && newCropType !== '' && oldCropType !== newCropType) {
     if (existingSample.fertilizerSampleId) {
-      // Update existing fertilizer sample with new type
+      // Update existing fertilizer sample with new type + fresh defaults from config
+      const defaults = fertilizerCropConfig.getDefaultsForCrop(updatedSample.cropName, newCropType);
       await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
+        ...defaults,
         type: newCropType,
         farmerName: updatedSample.farmersName,
         farmsName: updatedSample.farmsName,
         sampleNumber: updatedSample.sampleNumber,
         cropName: updatedSample.cropName
       });
-      logger.info(`Updated fertilizer sample type to ${newCropType}`);
+      logger.info(
+        `Updated fertilizer sample type to ${newCropType} with ${Object.keys(defaults).length} config defaults for crop "${updatedSample.cropName}"`
+      );
     } else {
       // Create new fertilizer sample
       await createLinkedFertilizerSample(updatedSample, soilSession);
@@ -464,12 +505,30 @@ async function handleCropTypeChange(existingSample, updatedSample, soilSession) 
   // Case 4: Crop type unchanged but other fields changed - sync data
   else if (oldCropType !== '' && newCropType !== '' && oldCropType === newCropType) {
     if (existingSample.fertilizerSampleId) {
-      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
+      const oldCropName = existingSample.cropName || '';
+      const newCropName = updatedSample.cropName || '';
+      const cropNameChanged = oldCropName.trim().toLowerCase() !== newCropName.trim().toLowerCase();
+
+      const syncPayload = {
         farmerName: updatedSample.farmersName,
         farmsName: updatedSample.farmsName,
         sampleNumber: updatedSample.sampleNumber,
         cropName: updatedSample.cropName
-      });
+      };
+
+      // If cropName changed, re-apply defaults for the new crop so the
+      // fertilizer sample reflects the new crop's recommended values.
+      if (cropNameChanged) {
+        const defaults = fertilizerCropConfig.getDefaultsForCrop(newCropName, newCropType);
+        if (Object.keys(defaults).length > 0) {
+          Object.assign(syncPayload, defaults);
+          logger.info(
+            `Re-applied ${Object.keys(defaults).length} config defaults for crop "${newCropName}" (${newCropType})`
+          );
+        }
+      }
+
+      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, syncPayload);
     }
   }
 }
@@ -499,8 +558,25 @@ async function createLinkedFertilizerSample(soilSample, soilSession) {
     logger.info(`Created fertilizer session ${fertilizerSession._id} for ${soilSession.date} v${soilSession.version}`);
   }
 
-  // Create fertilizer sample
+  // Resolve default recommendation values from the fertilizer crop config by
+  // matching the soil sample's cropName (case-insensitive) to the config key.
+  const cropDefaults = fertilizerCropConfig.getDefaultsForCrop(
+    soilSample.cropName,
+    soilSample.cropType
+  );
+  if (Object.keys(cropDefaults).length > 0) {
+    logger.info(
+      `Applying ${Object.keys(cropDefaults).length} default values from config for crop "${soilSample.cropName}" (${soilSample.cropType})`
+    );
+  } else if (soilSample.cropName) {
+    logger.debug(
+      `No config defaults found for crop "${soilSample.cropName}" (${soilSample.cropType}) — creating blank fertilizer sample`
+    );
+  }
+
+  // Create fertilizer sample (defaults first so identity fields always win)
   const fertilizerSample = await FertilizerSample.create({
+    ...cropDefaults,
     sessionId: fertilizerSession._id,
     sessionDate: soilSession.date,
     sessionVersion: soilSession.version,

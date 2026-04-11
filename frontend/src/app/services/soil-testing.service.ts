@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
@@ -60,9 +60,11 @@ export interface Session {
   startTime: string;
   endTime?: string;
   status?: 'started' | 'details' | 'ready' | 'completed'; // Session lifecycle status
-  sampleCount?: number; // New field - denormalized count
-  lastActivity?: string; // New field - tracks when session was last modified
-  data: SoilTestingData[]; // Populated from SoilTestSample collection
+  sampleCount?: number; // Denormalized count — used on landing page list
+  lastActivity?: string; // Tracks when session was last modified
+  // Samples are embedded only when a single session is fetched via
+  // GET /sessions/:id — the paginated list endpoint omits them for speed.
+  data?: SoilTestingData[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -80,6 +82,23 @@ export interface SamplePaginationResponse {
   };
 }
 
+/**
+ * Paginated session-list response returned by GET /soil-testing/sessions.
+ * The backend no longer embeds samples in the list payload; call
+ * `getSession(id)` to load a single session together with its samples.
+ */
+export interface PaginatedSessionsResponse {
+  sessions: Session[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type SessionStatusFilter = 'active' | 'completed' | 'all';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -88,10 +107,22 @@ export class SoilTestingService {
 
   constructor(private http: HttpClient) { }
 
-  // Get all sessions
-  getAllSessions(): Observable<Session[]> {
-
-    return this.http.get<Session[]>(`${this.apiUrl}/sessions`);
+  /**
+   * Paginated session list for the landing page. Samples are NOT embedded —
+   * use `getSession(id)` to load a single session with its samples.
+   */
+  getSessions(
+    page: number = 1,
+    limit: number = 10,
+    status: SessionStatusFilter = 'all'
+  ): Observable<PaginatedSessionsResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (status && status !== 'all') {
+      params = params.set('status', status);
+    }
+    return this.http.get<PaginatedSessionsResponse>(`${this.apiUrl}/sessions`, { params });
   }
 
   // Get sessions by date

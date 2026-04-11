@@ -43,21 +43,46 @@ const sortSamplesByNumber = (samples) => {
 router.use(authenticate);
 
 // Get all sessions with their samples
+/**
+ * Paginated session list for the water testing landing page.
+ * See soilTesting.js for the full param/behavior contract — both routes share
+ * the same query contract: page / limit / status, samples not embedded.
+ */
 router.get('/sessions', requirePermission('water.sessions.view'), async (req, res) => {
   try {
-    const sessions = await WaterSession.find().sort({ date: -1, version: -1 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const statusParam = (req.query.status || '').toString();
 
-    const sessionsWithSamples = [];
-    for (const session of sessions) {
-      const sessionObj = session.toObject();
-      let samples = await WaterSample.find({ sessionId: session._id });
-      samples = sortSamplesByNumber(samples);
-      sessionObj.data = samples;
-      sessionsWithSamples.push(sessionObj);
+    const filter = {};
+    if (statusParam === 'active') {
+      filter.status = { $ne: 'completed' };
+    } else if (statusParam) {
+      filter.status = statusParam;
     }
 
-    logger.info(`Retrieved ${sessionsWithSamples.length} water sessions with samples`);
-    res.json(sessionsWithSamples);
+    const skip = (page - 1) * limit;
+
+    const [sessions, total] = await Promise.all([
+      WaterSession.find(filter)
+        .sort({ date: -1, version: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      WaterSession.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    logger.info(
+      `Retrieved water sessions page ${page}/${totalPages || 1} ` +
+        `(status=${statusParam || 'all'}, count=${sessions.length}, total=${total})`
+    );
+
+    res.json({
+      sessions,
+      pagination: { page, limit, total, totalPages }
+    });
   } catch (error) {
     logger.error(`Error fetching water sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
