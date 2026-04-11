@@ -37,7 +37,13 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   // Session Management
   currentSession: Session | null = null;
   sessionActive: boolean = false;
-  allSessions: Session[] = [];
+  // Current page of sessions fetched from the backend. Samples are NOT
+  // embedded here — use getSession(id) to load a full session with its rows.
+  activeSessions: Session[] = [];
+  completedSessions: Session[] = [];
+  activeSessionsTotal: number = 0;
+  completedSessionsTotal: number = 0;
+  sessionsLoaded: boolean = false;
   currentDate = new Date();
   todaySessionCount: number = 0;
   isBackendConnected: boolean = false;
@@ -64,26 +70,8 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   completedPageSize: number = 10;
   completedTotalPages: number = 0;
   showCompletedSessions: boolean = false;
+  completedSessionsLoaded: boolean = false;
 
-  get activeSessions(): Session[] {
-    return this.allSessions.filter(s => s.status !== 'completed');
-  }
-
-  get completedSessions(): Session[] {
-    return this.allSessions.filter(s => s.status === 'completed');
-  }
-
-  get paginatedActiveSessions(): Session[] {
-    const startIndex = (this.historyPage - 1) * this.historyPageSize;
-    const endIndex = startIndex + this.historyPageSize;
-    return this.activeSessions.slice(startIndex, endIndex);
-  }
-
-  get paginatedCompletedSessions(): Session[] {
-    const startIndex = (this.completedPage - 1) * this.completedPageSize;
-    const endIndex = startIndex + this.completedPageSize;
-    return this.completedSessions.slice(startIndex, endIndex);
-  }
 
   // Column Definitions
   colDefs: ColDef<WaterTestingData>[] = [
@@ -382,7 +370,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       if (sessionId && sessionId !== this.sessionIdFromUrl) {
         this.sessionIdFromUrl = sessionId;
         // Only load session from URL after backend is connected and sessions are loaded
-        if (this.isBackendConnected && this.allSessions.length > 0) {
+        if (this.isBackendConnected && this.sessionsLoaded) {
           this.loadSessionFromUrl(sessionId);
         }
       } else if (!sessionId && this.sessionActive) {
@@ -422,40 +410,71 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   }
 
   loadSessions() {
-    this.waterTestingService.getAllSessions().subscribe({
-      next: (sessions) => {
-        this.allSessions = sessions;
-        // Calculate pagination for active sessions
-        const activeCount = sessions.filter(s => s.status !== 'completed').length;
-        this.totalPages = Math.ceil(activeCount / this.historyPageSize);
-        // Calculate pagination for completed sessions
-        const completedCount = sessions.filter(s => s.status === 'completed').length;
-        this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
+    this.loadActiveSessionsPage();
+    // Completed sessions are lazy-loaded on first dropdown open.
+    // Reset so they re-fetch after state-changing actions.
+    this.completedSessionsLoaded = false;
+    this.completedPage = 1;
+    if (this.showCompletedSessions) {
+      this.loadCompletedSessionsPage();
+    }
+  }
 
-        // If we have a session ID from URL, load it now
-        if (this.sessionIdFromUrl && !this.sessionActive) {
-          this.loadSessionFromUrl(this.sessionIdFromUrl);
+  private loadActiveSessionsPage() {
+    this.waterTestingService
+      .getSessions(this.historyPage, this.historyPageSize, 'active')
+      .subscribe({
+        next: (response) => {
+          this.activeSessions = response.sessions;
+          this.activeSessionsTotal = response.pagination.total;
+          this.totalPages = response.pagination.totalPages;
+          this.sessionsLoaded = true;
+
+          // If we have a session ID from URL, load it now
+          if (this.sessionIdFromUrl && !this.sessionActive) {
+            this.loadSessionFromUrl(this.sessionIdFromUrl);
+          }
+        },
+        error: () => {
+          this.isBackendConnected = false;
         }
-      },
-      error: (error) => {
-        this.isBackendConnected = false;
-      }
-    });
+      });
+  }
+
+  private loadCompletedSessionsPage() {
+    this.waterTestingService
+      .getSessions(this.completedPage, this.completedPageSize, 'completed')
+      .subscribe({
+        next: (response) => {
+          this.completedSessions = response.sessions;
+          this.completedSessionsTotal = response.pagination.total;
+          this.completedTotalPages = response.pagination.totalPages;
+          this.completedSessionsLoaded = true;
+        },
+        error: () => {
+          this.isBackendConnected = false;
+        }
+      });
   }
 
   toggleCompletedSessions() {
     this.showCompletedSessions = !this.showCompletedSessions;
+    if (this.showCompletedSessions && !this.completedSessionsLoaded) {
+      this.loadCompletedSessionsPage();
+    }
   }
 
   nextCompletedPage() {
     if (this.completedPage < this.completedTotalPages) {
       this.completedPage++;
+      this.loadCompletedSessionsPage();
     }
   }
 
   prevCompletedPage() {
     if (this.completedPage > 1) {
       this.completedPage--;
+      this.loadCompletedSessionsPage();
     }
   }
 
@@ -682,18 +701,21 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   nextPage() {
     if (this.historyPage < this.totalPages) {
       this.historyPage++;
+      this.loadActiveSessionsPage();
     }
   }
 
   prevPage() {
     if (this.historyPage > 1) {
       this.historyPage--;
+      this.loadActiveSessionsPage();
     }
   }
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
       this.historyPage = page;
+      this.loadActiveSessionsPage();
     }
   }
 

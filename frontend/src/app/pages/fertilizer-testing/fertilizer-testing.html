@@ -82,11 +82,11 @@
             <i class="fas fa-tasks"></i>
             Active Sessions
           </h3>
-          <span class="session-count">{{ activeSessions.length }} active</span>
+          <span class="session-count">{{ activeSessionsTotal }} active</span>
         </div>
 
         <div class="sessions-list" *ngIf="activeSessions.length > 0">
-          <div class="session-item" *ngFor="let session of paginatedActiveSessions">
+          <div class="session-item" *ngFor="let session of activeSessions">
             <div class="session-main-info">
               <div class="session-badge-info">
                 <span class="session-date">
@@ -138,18 +138,19 @@
       </div>
 
       <!-- Completed Sessions Dropdown -->
-      <div class="completed-sessions-card" *ngIf="completedSessions.length > 0">
+      <div class="completed-sessions-card">
         <div class="completed-header" (click)="toggleCompletedSessions()">
           <div class="completed-title">
             <i class="fas fa-archive"></i>
-            <span>Completed Sessions ({{ completedSessions.length }})</span>
+            <span *ngIf="completedSessionsLoaded">Completed Sessions ({{ completedSessionsTotal }})</span>
+            <span *ngIf="!completedSessionsLoaded">Completed Sessions</span>
           </div>
           <i class="fas" [class.fa-chevron-down]="!showCompletedSessions"
             [class.fa-chevron-up]="showCompletedSessions"></i>
         </div>
 
         <div class="completed-sessions-list" *ngIf="showCompletedSessions">
-          <div class="session-item" *ngFor="let session of paginatedCompletedSessions">
+          <div class="session-item" *ngFor="let session of completedSessions">
             <div class="session-main-info">
               <div class="session-badge-info">
                 <span class="session-date">

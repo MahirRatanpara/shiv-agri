@@ -4,6 +4,7 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const FertilizerSession = require('../models/FertilizerSession');
 const FertilizerSample = require('../models/FertilizerSample');
+const fertilizerCropConfig = require('../config/fertilizerCropConfig');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -40,22 +41,64 @@ const sortSamplesByNumber = (samples) => {
 // All routes require authentication
 router.use(authenticate);
 
-// Get all sessions with their samples
+/**
+ * Get fertilizer crop defaults config (loaded in-memory at startup).
+ * Used by the frontend to populate the cropName dropdown in soil testing and
+ * to preview defaults before samples are persisted.
+ */
+router.get('/crop-config', (req, res) => {
+  try {
+    const config = fertilizerCropConfig.getConfig();
+    const cropNames = fertilizerCropConfig.getCropNames();
+    logger.debug(`Served fertilizer crop config (${cropNames.length} crops)`);
+    res.json({ cropNames, config });
+  } catch (error) {
+    logger.error(`Error serving fertilizer crop config: ${error.message}`);
+    res.status(500).json({ error: 'Failed to load crop config' });
+  }
+});
+
+/**
+ * Paginated session list for the fertilizer testing landing page.
+ * See soilTesting.js for the full param/behavior contract — all three testing
+ * routes share the same query contract: page / limit / status, samples not
+ * embedded in the response.
+ */
 router.get('/sessions', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
-    const sessions = await FertilizerSession.find().sort({ date: -1, version: -1 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const statusParam = (req.query.status || '').toString();
 
-    const sessionsWithSamples = [];
-    for (const session of sessions) {
-      const sessionObj = session.toObject();
-      let samples = await FertilizerSample.find({ sessionId: session._id });
-      samples = sortSamplesByNumber(samples);
-      sessionObj.data = samples;
-      sessionsWithSamples.push(sessionObj);
+    const filter = {};
+    if (statusParam === 'active') {
+      filter.status = { $ne: 'completed' };
+    } else if (statusParam) {
+      filter.status = statusParam;
     }
 
-    logger.info(`Retrieved ${sessionsWithSamples.length} fertilizer sessions with samples`);
-    res.json(sessionsWithSamples);
+    const skip = (page - 1) * limit;
+
+    const [sessions, total] = await Promise.all([
+      FertilizerSession.find(filter)
+        .sort({ date: -1, version: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      FertilizerSession.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    logger.info(
+      `Retrieved fertilizer sessions page ${page}/${totalPages || 1} ` +
+        `(status=${statusParam || 'all'}, count=${sessions.length}, total=${total})`
+    );
+
+    res.json({
+      sessions,
+      pagination: { page, limit, total, totalPages }
+    });
   } catch (error) {
     logger.error(`Error fetching fertilizer sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });

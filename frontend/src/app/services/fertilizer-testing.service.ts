@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 
 export interface FertilizerSession {
@@ -12,10 +13,24 @@ export interface FertilizerSession {
   status: 'started' | 'generate-reports' | 'completed';
   sampleCount: number;
   lastActivity: string;
+  // Samples are embedded only when a single session is fetched via
+  // GET /sessions/:id — the paginated list endpoint omits them for speed.
   data?: FertilizerSampleData[];
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface PaginatedFertilizerSessionsResponse {
+  sessions: FertilizerSession[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type FertilizerSessionStatusFilter = 'active' | 'completed' | 'all';
 
 export interface FertilizerSampleData {
   _id?: string;
@@ -157,6 +172,22 @@ export interface FertilizerSampleData {
   m5_micromix?: number | null;
 }
 
+/**
+ * Fertilizer crop config served by the backend. Keyed by cropName with one or
+ * more variant entries (`normal`, `small-fruit`, `large-fruit`) containing the
+ * default fertilizer field values for that crop/variant.
+ */
+export interface FertilizerCropConfig {
+  cropNames: string[];
+  config: {
+    [cropName: string]: {
+      normal?: Partial<FertilizerSampleData>;
+      'small-fruit'?: Partial<FertilizerSampleData>;
+      'large-fruit'?: Partial<FertilizerSampleData>;
+    };
+  };
+}
+
 export interface PaginatedSamplesResponse {
   samples: FertilizerSampleData[];
   pagination: {
@@ -173,11 +204,51 @@ export interface PaginatedSamplesResponse {
 export class FertilizerTestingService {
   private apiUrl = `${environment.apiUrl}/fertilizer-testing`;
 
+  // Cached crop config — fetched once from backend, replayed to all subscribers.
+  private cropConfig$?: Observable<FertilizerCropConfig>;
+  private cropConfigSnapshot: FertilizerCropConfig | null = null;
+
   constructor(private http: HttpClient) { }
 
-  // Session Management
-  getAllSessions(): Observable<FertilizerSession[]> {
-    return this.http.get<FertilizerSession[]>(`${this.apiUrl}/sessions`);
+  /**
+   * Case-insensitive lookup of defaults for a given crop name + variant.
+   * Returns an empty object when the crop/variant is not in the cached config.
+   */
+  getDefaultsForCrop(
+    cropName: string | null | undefined,
+    type: 'normal' | 'small-fruit' | 'large-fruit'
+  ): Partial<FertilizerSampleData> {
+    if (!this.cropConfigSnapshot || !cropName) return {};
+    const target = cropName.trim().toLowerCase();
+    const matchKey = Object.keys(this.cropConfigSnapshot.config).find(
+      k => k.trim().toLowerCase() === target
+    );
+    if (!matchKey) return {};
+    const variants = this.cropConfigSnapshot.config[matchKey] || {};
+    return { ...(variants[type] || {}) };
+  }
+
+  /** Snapshot of crop names for dropdowns (empty until config is loaded). */
+  getCropNamesSnapshot(): string[] {
+    return this.cropConfigSnapshot?.cropNames ?? [];
+  }
+
+  /**
+   * Paginated session list for the landing page. Samples are NOT embedded —
+   * use `getSession(id)` to load a single session with its samples.
+   */
+  getSessions(
+    page: number = 1,
+    limit: number = 10,
+    status: FertilizerSessionStatusFilter = 'all'
+  ): Observable<PaginatedFertilizerSessionsResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (status && status !== 'all') {
+      params = params.set('status', status);
+    }
+    return this.http.get<PaginatedFertilizerSessionsResponse>(`${this.apiUrl}/sessions`, { params });
   }
 
   getSession(id: string): Observable<FertilizerSession> {
@@ -225,6 +296,26 @@ export class FertilizerTestingService {
     return this.http.delete(`${this.apiUrl}/sessions/${sessionId}/samples`, {
       body: { sampleIds }
     });
+  }
+
+  /**
+   * Load (and cache) the fertilizer crop config from the backend. Subsequent
+   * calls are served from the in-memory replay, so this can be safely called
+   * from multiple components on app startup.
+   */
+  getCropConfig(): Observable<FertilizerCropConfig> {
+    if (this.cropConfigSnapshot) {
+      return of(this.cropConfigSnapshot);
+    }
+    if (!this.cropConfig$) {
+      this.cropConfig$ = this.http
+        .get<FertilizerCropConfig>(`${this.apiUrl}/crop-config`)
+        .pipe(
+          tap(cfg => (this.cropConfigSnapshot = cfg)),
+          shareReplay(1)
+        );
+    }
+    return this.cropConfig$;
   }
 
   // Excel Upload

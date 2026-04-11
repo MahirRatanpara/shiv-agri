@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
@@ -67,7 +67,9 @@ export interface Session {
   status?: 'started' | 'details' | 'ready' | 'completed'; // Session lifecycle status
   sampleCount?: number;
   lastActivity?: string;
-  data: WaterTestingData[];
+  // Samples are embedded only when a single session is fetched via
+  // GET /sessions/:id — the paginated list endpoint omits them for speed.
+  data?: WaterTestingData[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -85,6 +87,18 @@ export interface SamplePaginationResponse {
   };
 }
 
+export interface PaginatedSessionsResponse {
+  sessions: Session[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type SessionStatusFilter = 'active' | 'completed' | 'all';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -93,10 +107,22 @@ export class WaterTestingService {
 
   constructor(private http: HttpClient) { }
 
-  // Get all sessions
-  getAllSessions(): Observable<Session[]> {
-
-    return this.http.get<Session[]>(`${this.apiUrl}/sessions`);
+  /**
+   * Paginated session list for the landing page. Samples are NOT embedded —
+   * use `getSession(id)` to load a single session with its samples.
+   */
+  getSessions(
+    page: number = 1,
+    limit: number = 10,
+    status: SessionStatusFilter = 'all'
+  ): Observable<PaginatedSessionsResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (status && status !== 'all') {
+      params = params.set('status', status);
+    }
+    return this.http.get<PaginatedSessionsResponse>(`${this.apiUrl}/sessions`, { params });
   }
 
   // Get sessions by date

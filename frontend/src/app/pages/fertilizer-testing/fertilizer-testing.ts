@@ -34,7 +34,11 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   // Session Management
   currentSession: FertilizerSession | null = null;
   sessionActive: boolean = false;
-  allSessions: FertilizerSession[] = [];
+  activeSessions: FertilizerSession[] = [];
+  completedSessions: FertilizerSession[] = [];
+  activeSessionsTotal: number = 0;
+  completedSessionsTotal: number = 0;
+  sessionsLoaded: boolean = false;
   currentDate = new Date();
   todaySessionCount: number = 0;
   isBackendConnected: boolean = false;
@@ -64,26 +68,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   completedPageSize: number = 10;
   completedTotalPages: number = 0;
   showCompletedSessions: boolean = false;
-
-  get activeSessions(): FertilizerSession[] {
-    return this.allSessions.filter(s => s.status !== 'completed');
-  }
-
-  get completedSessions(): FertilizerSession[] {
-    return this.allSessions.filter(s => s.status === 'completed');
-  }
-
-  get paginatedActiveSessions(): FertilizerSession[] {
-    const startIndex = (this.historyPage - 1) * this.historyPageSize;
-    const endIndex = startIndex + this.historyPageSize;
-    return this.activeSessions.slice(startIndex, endIndex);
-  }
-
-  get paginatedCompletedSessions(): FertilizerSession[] {
-    const startIndex = (this.completedPage - 1) * this.completedPageSize;
-    const endIndex = startIndex + this.completedPageSize;
-    return this.completedSessions.slice(startIndex, endIndex);
-  }
+  completedSessionsLoaded: boolean = false;
 
   // Column Definitions for different crop types
   normalColDefs: ColDef<FertilizerSampleData>[] = [];
@@ -129,6 +114,13 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.initializeColumnDefinitions();
+
+    // Preload fertilizer crop config so sample defaults can be merged into
+    // any rows whose cropName matches a configured crop.
+    this.fertilizerTestingService.getCropConfig().pipe(takeUntil(this.destroy$)).subscribe({
+      error: err => console.warn('Failed to load fertilizer crop config', err)
+    });
+
     this.checkBackendConnection();
 
     // Subscribe to route params for session ID
@@ -137,7 +129,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       if (sessionId && sessionId !== this.sessionIdFromUrl) {
         this.sessionIdFromUrl = sessionId;
         // Only load session from URL after backend is connected and sessions are loaded
-        if (this.isBackendConnected && this.allSessions.length > 0) {
+        if (this.isBackendConnected && this.sessionsLoaded) {
           this.loadSessionFromUrl(sessionId);
         }
       } else if (!sessionId && this.sessionActive) {
@@ -524,40 +516,71 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   }
 
   loadSessions() {
-    this.fertilizerTestingService.getAllSessions().subscribe({
-      next: (sessions) => {
-        this.allSessions = sessions;
-        // Calculate pagination for active sessions
-        const activeCount = sessions.filter(s => s.status !== 'completed').length;
-        this.totalPages = Math.ceil(activeCount / this.historyPageSize);
-        // Calculate pagination for completed sessions
-        const completedCount = sessions.filter(s => s.status === 'completed').length;
-        this.completedTotalPages = Math.ceil(completedCount / this.completedPageSize);
+    this.loadActiveSessionsPage();
+    // Completed sessions are lazy-loaded on first dropdown open.
+    // Reset so they re-fetch after state-changing actions.
+    this.completedSessionsLoaded = false;
+    this.completedPage = 1;
+    if (this.showCompletedSessions) {
+      this.loadCompletedSessionsPage();
+    }
+  }
 
-        // If we have a session ID from URL, load it now
-        if (this.sessionIdFromUrl && !this.sessionActive) {
-          this.loadSessionFromUrl(this.sessionIdFromUrl);
+  private loadActiveSessionsPage() {
+    this.fertilizerTestingService
+      .getSessions(this.historyPage, this.historyPageSize, 'active')
+      .subscribe({
+        next: (response) => {
+          this.activeSessions = response.sessions;
+          this.activeSessionsTotal = response.pagination.total;
+          this.totalPages = response.pagination.totalPages;
+          this.sessionsLoaded = true;
+
+          // If we have a session ID from URL, load it now
+          if (this.sessionIdFromUrl && !this.sessionActive) {
+            this.loadSessionFromUrl(this.sessionIdFromUrl);
+          }
+        },
+        error: () => {
+          this.isBackendConnected = false;
         }
-      },
-      error: (error) => {
-        this.isBackendConnected = false;
-      }
-    });
+      });
+  }
+
+  private loadCompletedSessionsPage() {
+    this.fertilizerTestingService
+      .getSessions(this.completedPage, this.completedPageSize, 'completed')
+      .subscribe({
+        next: (response) => {
+          this.completedSessions = response.sessions;
+          this.completedSessionsTotal = response.pagination.total;
+          this.completedTotalPages = response.pagination.totalPages;
+          this.completedSessionsLoaded = true;
+        },
+        error: () => {
+          this.isBackendConnected = false;
+        }
+      });
   }
 
   toggleCompletedSessions() {
     this.showCompletedSessions = !this.showCompletedSessions;
+    if (this.showCompletedSessions && !this.completedSessionsLoaded) {
+      this.loadCompletedSessionsPage();
+    }
   }
 
   nextCompletedPage() {
     if (this.completedPage < this.completedTotalPages) {
       this.completedPage++;
+      this.loadCompletedSessionsPage();
     }
   }
 
   prevCompletedPage() {
     if (this.completedPage > 1) {
       this.completedPage--;
+      this.loadCompletedSessionsPage();
     }
   }
 
@@ -582,18 +605,21 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   nextPage() {
     if (this.historyPage < this.totalPages) {
       this.historyPage++;
+      this.loadActiveSessionsPage();
     }
   }
 
   prevPage() {
     if (this.historyPage > 1) {
       this.historyPage--;
+      this.loadActiveSessionsPage();
     }
   }
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
       this.historyPage = page;
+      this.loadActiveSessionsPage();
     }
   }
 
@@ -1042,6 +1068,30 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Merge default fertilizer values from the crop config into a sample. Only
+   * empty/null fields on the sample are filled — anything already set by the
+   * user (or by the backend at creation) is preserved.
+   *
+   * This acts as a safety net for samples created before the crop config
+   * existed, or for samples whose cropName was later corrected to match a
+   * configured crop.
+   */
+  private applyCropDefaults(sample: FertilizerSampleData): FertilizerSampleData {
+    if (!sample.cropName || !sample.type) return sample;
+    const defaults = this.fertilizerTestingService.getDefaultsForCrop(sample.cropName, sample.type);
+    if (!defaults || Object.keys(defaults).length === 0) return sample;
+
+    const merged: any = { ...sample };
+    for (const [key, value] of Object.entries(defaults)) {
+      const current = (merged as any)[key];
+      if (current === null || current === undefined || current === '') {
+        merged[key] = value;
+      }
+    }
+    return merged;
+  }
+
+  /**
    * Load next page of samples
    */
   loadMoreSamples() {
@@ -1056,7 +1106,9 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (response) => {
         // Filter by crop type
-        const newSamples = response.samples.filter(s => s.type === this.activeCropType);
+        const newSamples = response.samples
+          .filter(s => s.type === this.activeCropType)
+          .map(s => this.applyCropDefaults(s));
 
         if (newSamples.length < this.gridPageSize) {
           this.hasMoreData = false;
