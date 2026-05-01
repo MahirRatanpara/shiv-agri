@@ -211,7 +211,9 @@ shiv-agri/
 ├── nginx/nginx.conf, Dockerfile
 ├── mongodb/init-mongo.js
 ├── infra/ (Kubernetes YAMLs)
-├── .githooks/ (pre-commit: auto-update context.md, setup.sh: activate hooks)
+├── .githooks/ (pre-commit: auto-update context.md + graphify, setup.sh: activate hooks)
+├── .graphifyignore (graphify ignore patterns: images, videos, docs, context.md)
+├── graphify-out/ (knowledge graph output: cached JSON, chunks, detect, incremental)
 ├── scripts/ (vps-setup.sh, backup-mongodb.sh, init-letsencrypt.sh)
 ├── .github/workflows/ (8 CI/CD workflows)
 ├── docker-compose.yml, docker-compose.prod.yml
@@ -1164,7 +1166,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ### Git Hooks (`.githooks/`)
 
-- **pre-commit:** Automatically updates `context.md` via Claude CLI before each commit. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
+- **pre-commit:** Automatically updates `context.md` via Claude CLI, then runs `/graphify --update` to regenerate knowledge graph. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
 - **setup.sh:** Run once after cloning to activate hooks: `./githooks/setup.sh` (sets `core.hooksPath` to `.githooks/`)
 
 ### VPS Setup (`scripts/vps-setup.sh`)
