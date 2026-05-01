@@ -1,0 +1,27 @@
+<!-- converted from Soil_Testing_Upload_Template.xlsx -->
+
+## Sheet: Soil Testing Template
+| Sample Number | Farmer's Name | Mobile No. | Location | Farm's Name | Taluka | Crop Name |
+| --- | --- | --- | --- | --- | --- | --- |
+| S001 | રાજેશભાઈ પટેલ | 9876543210 | સૂરત | પટેલ ફાર્મ | ચોરયાસી | કપાસ |
+| S002 | મહેશભાઈ શાહ | 9876543211 | બારડોલી | શાહ ફાર્મ | બારડોલી | શેરડી |
+| S003 | રમેશભાઈ દેસાઈ | 9876543212 | કડોદ | દેસાઈ ફાર્મ | કડોદ | ડાંગર |
+## Sheet: Instructions
+| Soil Testing Excel Upload Instructions |
+| --- |
+| How to use this template: |
+| 1. Fill in the data in the "Soil Testing Template" sheet |
+| 2. Required columns: Sample Number, Farmer's Name |
+| 3. Optional columns: Mobile No., Location, Farm's Name, Taluka, Crop Name |
+| 4. You can add as many rows as needed |
+| 5. If Sample Number already exists in the session, the row will be updated |
+| 6. If Sample Number does not exist, a new row will be added |
+| 7. After filling the data, save the file and upload it in the Soil Testing page |
+| Column Descriptions: |
+| - Sample Number: Unique identifier for the sample (required) |
+| - Farmer's Name: Name of the farmer (required) |
+| - Mobile No.: Contact number |
+| - Location: Location of the farm |
+| - Farm's Name: Name of the farm |
+| - Taluka: Taluka/Tehsil name |
+| - Crop Name: Name of the crop being grown |
