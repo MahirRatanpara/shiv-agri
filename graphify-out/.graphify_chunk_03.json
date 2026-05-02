@@ -1,106 +1,88 @@
 {
   "nodes": [
     {
-      "id": "net_house_image",
-      "label": "Net House Image",
-      "type": "asset",
+      "id": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "type": "vector_font_asset",
+      "name": "DroidSans-Bold-webfont.svg",
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "summary": "SVG webfont asset containing embedded glyph definitions for the Droid Sans Bold font."
+    },
+    {
+      "id": "font:droid_sansbold",
+      "type": "font_face",
+      "name": "droid_sansbold",
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
       "properties": {
-        "file_path": "frontend/src/assets/images/Projects/net-house.webp",
-        "format": "webp",
-        "category": "project_image"
+        "units_per_em": 2048,
+        "ascent": 1638,
+        "descent": -410,
+        "default_horiz_adv_x": 1128
       }
     },
     {
-      "id": "net_house",
-      "label": "Net House",
-      "type": "agricultural_structure",
-      "properties": {
-        "description": "A shade house structure with green shade netting over a steel frame, used for protected cultivation of plants",
-        "aliases": ["shade house", "shade net house"]
-      }
+      "id": "asset_group:frontend/src/assets/webfonts",
+      "type": "frontend_asset_directory",
+      "name": "webfonts",
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "summary": "Frontend webfont asset directory containing Droid Sans and Font Awesome font files in multiple browser formats."
     },
     {
-      "id": "green_shade_net",
-      "label": "Green Shade Net",
-      "type": "material",
-      "properties": {
-        "color": "green/teal",
-        "purpose": "sun protection and microclimate control"
-      }
-    },
-    {
-      "id": "steel_frame",
-      "label": "Steel Frame",
-      "type": "material",
-      "properties": {
-        "description": "Structural metal framework forming gable-roof shape"
-      }
-    },
-    {
-      "id": "potted_plants",
-      "label": "Potted Plants",
-      "type": "crop",
-      "properties": {
-        "description": "Various green leafy and climbing plants grown in terracotta pots inside the net house",
-        "container": "terracotta pots"
-      }
-    },
-    {
-      "id": "protected_cultivation",
-      "label": "Protected Cultivation",
-      "type": "farming_technique",
-      "properties": {
-        "description": "Growing crops under controlled or semi-controlled environment structures"
-      }
-    },
-    {
-      "id": "shiv_agri_projects",
-      "label": "Shiv Agri Projects",
-      "type": "section",
-      "properties": {
-        "description": "Projects section of the Shiv Agri application"
-      }
+      "id": "font_family:Droid Sans",
+      "type": "font_family",
+      "name": "Droid Sans",
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     }
   ],
   "edges": [
     {
-      "source": "net_house_image",
-      "target": "net_house",
-      "relation": "depicts",
-      "confidence_score": 0.95
+      "source": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "target": "font:droid_sansbold",
+      "type": "defines",
+      "confidence_score": 0.98,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     },
     {
-      "source": "net_house",
-      "target": "green_shade_net",
-      "relation": "constructed_with",
-      "confidence_score": 0.95
+      "source": "font:droid_sansbold",
+      "target": "font_family:Droid Sans",
+      "type": "is_bold_variant_of",
+      "confidence_score": 0.86,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     },
     {
-      "source": "net_house",
-      "target": "steel_frame",
-      "relation": "constructed_with",
-      "confidence_score": 0.93
+      "source": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "target": "asset_group:frontend/src/assets/webfonts",
+      "type": "belongs_to",
+      "confidence_score": 0.99,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     },
     {
-      "source": "net_house",
-      "target": "potted_plants",
-      "relation": "contains",
-      "confidence_score": 0.92
+      "source": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "target": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.eot",
+      "type": "format_sibling",
+      "confidence_score": 0.92,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     },
     {
-      "source": "net_house",
-      "target": "protected_cultivation",
-      "relation": "implements",
-      "confidence_score": 0.90
-    },
-    {
-      "source": "net_house_image",
-      "target": "shiv_agri_projects",
-      "relation": "belongs_to",
-      "confidence_score": 0.88
+      "source": "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+      "target": "asset:frontend/src/assets/webfonts/droidsans-bold-webfont.woff2",
+      "type": "format_sibling",
+      "confidence_score": 0.9,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
     }
   ],
-  "hyperedges": [],
+  "hyperedges": [
+    {
+      "id": "hyperedge:droid_sans_bold_webfont_formats",
+      "type": "multi_format_font_distribution",
+      "members": [
+        "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg",
+        "asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.eot",
+        "asset:frontend/src/assets/webfonts/droidsans-bold-webfont.woff2"
+      ],
+      "confidence_score": 0.9,
+      "source_file": "frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg"
+    }
+  ],
   "input_tokens": 0,
   "output_tokens": 0
 }
