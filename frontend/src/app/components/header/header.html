@@ -20,7 +20,7 @@
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasFarmDashboardAccess">
-          <a class="nav-link" routerLink="/farm-dashboard">
+          <a class="nav-link" routerLink="/farm-management">
             <i class="fas fa-tractor"></i> Farms
           </a>
         </li>
@@ -36,6 +36,9 @@
         </li>
       </ul>
       <ul class="navbar-nav ml-auto auth-nav">
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <app-notification-bell></app-notification-bell>
+        </li>
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a class="nav-link" routerLink="/login">
             <i class="fas fa-sign-in-alt"></i> Login

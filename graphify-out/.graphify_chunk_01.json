@@ -1,1 +1,667 @@
-{"nodes":[{"id":"miyawaki_forest_image","label":"Miyawaki Forest Image","file_type":"image","source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},{"id":"miyawaki_forest_method","label":"Miyawaki Forest Method","file_type":"image","source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},{"id":"miyawaki_forest_dense_vegetation","label":"Dense Green Vegetation","file_type":"image","source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},{"id":"miyawaki_forest_pathway","label":"Forest Pathway","file_type":"image","source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},{"id":"shiv_agri_projects","label":"Shiv Agri Projects","file_type":"image","source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null}],"edges":[{"source":"miyawaki_forest_image","target":"miyawaki_forest_method","relation":"DEPICTS_RESULT_OF","confidence":"INFERRED","confidence_score":0.8,"source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"weight":1.0},{"source":"miyawaki_forest_image","target":"miyawaki_forest_dense_vegetation","relation":"CONTAINS","confidence":"EXTRACTED","confidence_score":1.0,"source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"weight":1.0},{"source":"miyawaki_forest_image","target":"miyawaki_forest_pathway","relation":"CONTAINS","confidence":"EXTRACTED","confidence_score":1.0,"source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"weight":1.0},{"source":"miyawaki_forest_image","target":"shiv_agri_projects","relation":"BELONGS_TO","confidence":"INFERRED","confidence_score":0.9,"source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"weight":1.0},{"source":"miyawaki_forest_method","target":"miyawaki_forest_dense_vegetation","relation":"PRODUCES","confidence":"INFERRED","confidence_score":0.7,"source_file":"frontend/src/assets/images/Projects/miyawaki-forest.webp","source_location":null,"weight":1.0}],"hyperedges":[],"input_tokens":0,"output_tokens":0}
+{
+  "nodes": [
+    {
+      "id": "permissions_rbac_permissions",
+      "label": "RBAC Permissions Configuration",
+      "file_type": "document",
+      "source_file": "backend/src/config/permissions.yml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "authController_google_oauth_session",
+      "label": "Google OAuth Session Controller",
+      "file_type": "code",
+      "source_file": "backend/src/controllers/authController.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "authController_current_user_profile",
+      "label": "Current User Profile Controller",
+      "file_type": "code",
+      "source_file": "backend/src/controllers/authController.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notificationController_notification_handlers",
+      "label": "Notification Request Handlers",
+      "file_type": "code",
+      "source_file": "backend/src/controllers/notificationController.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "projectController_farm_project_handlers",
+      "label": "Farm Project Request Handlers",
+      "file_type": "code",
+      "source_file": "backend/src/controllers/projectController.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "userController_user_management_handlers",
+      "label": "User Management Request Handlers",
+      "file_type": "code",
+      "source_file": "backend/src/controllers/userController.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "Notification_notification_model",
+      "label": "Notification Model",
+      "file_type": "code",
+      "source_file": "backend/src/models/Notification.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "Project_project_model",
+      "label": "Project Model",
+      "file_type": "code",
+      "source_file": "backend/src/models/Project.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "User_user_model",
+      "label": "User Model",
+      "file_type": "code",
+      "source_file": "backend/src/models/User.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "api_api_router",
+      "label": "API Router",
+      "file_type": "code",
+      "source_file": "backend/src/routes/api.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "auth_auth_routes",
+      "label": "Authentication Routes",
+      "file_type": "code",
+      "source_file": "backend/src/routes/auth.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notifications_notification_routes",
+      "label": "Notification Routes",
+      "file_type": "code",
+      "source_file": "backend/src/routes/notifications.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "projects_project_routes",
+      "label": "Project Routes",
+      "file_type": "code",
+      "source_file": "backend/src/routes/projects.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "users_user_routes",
+      "label": "User Routes",
+      "file_type": "code",
+      "source_file": "backend/src/routes/users.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notificationService_notification_service",
+      "label": "Notification Service",
+      "file_type": "code",
+      "source_file": "backend/src/services/notificationService.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "projectService_project_service",
+      "label": "Project Service",
+      "file_type": "code",
+      "source_file": "backend/src/services/projectService.js",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "MASTER_farm_management_design_system",
+      "label": "Farm Management Design System",
+      "file_type": "document",
+      "source_file": "design-system/shiv-agri-farm-management/MASTER.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app.routes_frontend_routes",
+      "label": "Frontend Application Routes",
+      "file_type": "code",
+      "source_file": "frontend/src/app/app.routes.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "farm-registration-form_farm_registration_component",
+      "label": "Farm Registration Form Component",
+      "file_type": "code",
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "farm-registration-form_farm_registration_template",
+      "label": "Farm Registration Form Template",
+      "file_type": "code",
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "header_permission_navigation",
+      "label": "Permission Driven Header Navigation",
+      "file_type": "code",
+      "source_file": "frontend/src/app/components/header/header.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "header_header_template",
+      "label": "Header Template",
+      "file_type": "code",
+      "source_file": "frontend/src/app/components/header/header.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "notification-bell_notification_bell_template",
+      "label": "Notification Bell Template",
+      "file_type": "code",
+      "source_file": "frontend/src/app/components/header/notification-bell/notification-bell.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "api_api_router",
+      "target": "projects_project_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/api.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "api_api_router",
+      "target": "users_user_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/api.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "api_api_router",
+      "target": "notifications_notification_routes",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/api.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "auth_auth_routes",
+      "target": "authController_google_oauth_session",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/auth.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "auth_auth_routes",
+      "target": "authController_current_user_profile",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/auth.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projects_project_routes",
+      "target": "projectController_farm_project_handlers",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/projects.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notifications_notification_routes",
+      "target": "notificationController_notification_handlers",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/notifications.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "users_user_routes",
+      "target": "userController_user_management_handlers",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/routes/users.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projectController_farm_project_handlers",
+      "target": "projectService_project_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/controllers/projectController.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notificationController_notification_handlers",
+      "target": "notificationService_notification_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/controllers/notificationController.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projectService_project_service",
+      "target": "Project_project_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/projectService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projectService_project_service",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/projectService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notificationService_notification_service",
+      "target": "Notification_notification_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/notificationService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notificationService_notification_service",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/notificationService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projectService_project_service",
+      "target": "notificationService_notification_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/projectService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "projectService_project_service",
+      "target": "notificationService_notification_service",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/services/projectService.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "Notification_notification_model",
+      "target": "Project_project_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/models/Notification.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "Notification_notification_model",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/models/Notification.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "Project_project_model",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/models/Project.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "permissions_rbac_permissions",
+      "target": "projects_project_routes",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/config/permissions.yml",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "permissions_rbac_permissions",
+      "target": "users_user_routes",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/config/permissions.yml",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "User_user_model",
+      "target": "permissions_rbac_permissions",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "backend/src/models/User.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "userController_user_management_handlers",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/controllers/userController.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "authController_google_oauth_session",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/controllers/authController.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "authController_current_user_profile",
+      "target": "User_user_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/controllers/authController.js",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app.routes_frontend_routes",
+      "target": "farm-registration-form_farm_registration_component",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "frontend/src/app/app.routes.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "farm-registration-form_farm_registration_template",
+      "target": "farm-registration-form_farm_registration_component",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "farm-registration-form_farm_registration_component",
+      "target": "projectService_project_service",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "farm-registration-form_farm_registration_component",
+      "target": "userController_user_management_handlers",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "farm-registration-form_farm_registration_component",
+      "target": "Project_project_model",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "frontend/src/app/components/farm-registration-form/farm-registration-form.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "header_header_template",
+      "target": "header_permission_navigation",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/components/header/header.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "header_permission_navigation",
+      "target": "permissions_rbac_permissions",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/components/header/header.ts",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "header_header_template",
+      "target": "notification-bell_notification_bell_template",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/components/header/header.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notification-bell_notification_bell_template",
+      "target": "notifications_notification_routes",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "frontend/src/app/components/header/notification-bell/notification-bell.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "notification-bell_notification_bell_template",
+      "target": "projectService_project_service",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.7,
+      "source_file": "frontend/src/app/components/header/notification-bell/notification-bell.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "MASTER_farm_management_design_system",
+      "target": "farm-registration-form_farm_registration_template",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.6,
+      "source_file": "design-system/shiv-agri-farm-management/MASTER.md",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "farm_registration_approval_workflow",
+      "label": "Farm Registration Approval Workflow",
+      "nodes": [
+        "farm-registration-form_farm_registration_component",
+        "projectController_farm_project_handlers",
+        "projectService_project_service",
+        "notificationService_notification_service",
+        "notification-bell_notification_bell_template"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "backend/src/services/projectService.js"
+    },
+    {
+      "id": "rbac_navigation_and_api_gatekeeping",
+      "label": "RBAC Navigation and API Gatekeeping",
+      "nodes": [
+        "permissions_rbac_permissions",
+        "projects_project_routes",
+        "users_user_routes",
+        "header_permission_navigation"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/src/config/permissions.yml"
+    },
+    {
+      "id": "farm_project_data_model_flow",
+      "label": "Farm Project Data Model Flow",
+      "nodes": [
+        "Project_project_model",
+        "User_user_model",
+        "Notification_notification_model",
+        "projectService_project_service",
+        "notificationService_notification_service"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "backend/src/models/Project.js"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

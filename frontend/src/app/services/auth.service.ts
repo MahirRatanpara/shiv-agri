@@ -8,6 +8,10 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  phoneCountryCode?: string;
+  phoneNumber?: string;
+  department?: string;
+  designation?: string;
   profilePhoto?: string;
   roleRef?: {
     id: string;
@@ -234,6 +238,27 @@ export class AuthService {
         this.currentUserSubject.next(response.user);
         localStorage.setItem('currentUser', JSON.stringify(response.user));
         this.isAuthenticated.set(true);
+      })
+    );
+  }
+
+  /**
+   * Update editable profile fields for the current user
+   */
+  updateProfile(profile: { phoneCountryCode: string; phoneNumber: string }): Observable<{ message: string; user: User }> {
+    const currentUser = this.currentUserSubject.value;
+    const payload = {
+      ...profile,
+      userId: currentUser?.id,
+      email: currentUser?.email
+    };
+
+    return this.http.patch<{ message: string; user: User }>(`${this.apiUrl}/auth/profile`, payload, {
+      withCredentials: true
+    }).pipe(
+      tap(response => {
+        this.currentUserSubject.next(response.user);
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
       })
     );
   }

@@ -1,0 +1,119 @@
+{
+  "nodes": [
+    {
+      "id": "asset:frontend/src/assets/webfonts/fa-regular-400.svg",
+      "type": "vector_font_asset",
+      "name": "fa-regular-400.svg",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "attributes": {
+        "format": "SVG font",
+        "font_id": "fontawesome-free",
+        "font_family": "Font Awesome 5 Free",
+        "font_weight": "400",
+        "font_style": "Regular",
+        "units_per_em": 512,
+        "glyph_count": 151,
+        "role": "regular icon webfont asset"
+      }
+    },
+    {
+      "id": "font:font-awesome-5-free-regular",
+      "type": "icon_font",
+      "name": "Font Awesome 5 Free Regular",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "attributes": {
+        "family": "Font Awesome 5 Free",
+        "weight": "400",
+        "style": "Regular"
+      }
+    },
+    {
+      "id": "directory:frontend/src/assets/webfonts",
+      "type": "asset_directory",
+      "name": "webfonts",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "attributes": {
+        "role": "frontend font and icon font asset directory"
+      }
+    },
+    {
+      "id": "css:frontend/src/assets/css/all.min.css",
+      "type": "stylesheet",
+      "name": "all.min.css",
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "attributes": {
+        "role": "Font Awesome CSS loader for webfont variants"
+      }
+    },
+    {
+      "id": "asset_group:font-awesome-5-free-regular-webfont-formats",
+      "type": "asset_group",
+      "name": "Font Awesome 5 Free regular webfont formats",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "attributes": {
+        "members": [
+          "frontend/src/assets/webfonts/fa-regular-400.eot",
+          "frontend/src/assets/webfonts/fa-regular-400d41d.eot",
+          "frontend/src/assets/webfonts/fa-regular-400.svg",
+          "frontend/src/assets/webfonts/fa-regular-400.ttf",
+          "frontend/src/assets/webfonts/fa-regular-400.woff",
+          "frontend/src/assets/webfonts/fa-regular-400.woff2"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-regular-400.svg",
+      "target": "font:font-awesome-5-free-regular",
+      "type": "encodes",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "confidence_score": 0.99
+    },
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-regular-400.svg",
+      "target": "directory:frontend/src/assets/webfonts",
+      "type": "located_in",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "css:frontend/src/assets/css/all.min.css",
+      "target": "asset:frontend/src/assets/webfonts/fa-regular-400.svg",
+      "type": "references_as_svg_font_source",
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "confidence_score": 0.98
+    },
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-regular-400.svg",
+      "target": "asset_group:font-awesome-5-free-regular-webfont-formats",
+      "type": "member_of",
+      "source_file": "frontend/src/assets/webfonts/fa-regular-400.svg",
+      "confidence_score": 0.97
+    },
+    {
+      "source": "font:font-awesome-5-free-regular",
+      "target": "css:frontend/src/assets/css/all.min.css",
+      "type": "loaded_by_font_face_rule",
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "confidence_score": 0.95
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "hyperedge:font-awesome-5-free-regular-webfont-sources",
+      "type": "multi_format_font_distribution",
+      "nodes": [
+        "font:font-awesome-5-free-regular",
+        "asset_group:font-awesome-5-free-regular-webfont-formats",
+        "css:frontend/src/assets/css/all.min.css",
+        "directory:frontend/src/assets/webfonts"
+      ],
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "confidence_score": 0.95,
+      "description": "CSS @font-face rule distributes Font Awesome 5 Free regular weight through several webfont formats, including this SVG asset."
+    }
+  ],
+  "input_tokens": 1540,
+  "output_tokens": 1130
+}

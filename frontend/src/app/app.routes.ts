@@ -29,6 +29,9 @@ import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
 import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
 import { LettersComponent } from './pages/managerial-work/letters/letters';
 import { FarmDashboardComponent } from './pages/farm-dashboard/farm-dashboard';
+import { FarmManagementComponent } from './pages/farm-management/farm-management';
+import { FarmProjectDetailsComponent } from './pages/farm-project-details/farm-project-details';
+import { FarmRegistrationPageComponent } from './pages/farm-registration/farm-registration';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -78,6 +81,9 @@ export const routes: Routes = [
     ],
   },
   { path: 'farm-dashboard', component: FarmDashboardComponent, canActivate: [authGuard] },
+  { path: 'farm-management', component: FarmManagementComponent, canActivate: [authGuard] },
+  { path: 'farm-management/new', component: FarmRegistrationPageComponent, canActivate: [authGuard] },
+  { path: 'farm-management/project/:id', component: FarmProjectDetailsComponent, canActivate: [authGuard] },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard] },
   { path: 'contact', component: ContactComponent },

@@ -39,7 +39,7 @@ const { authenticate, requirePermission } = require('../middleware/auth');
  */
 router.get('/',
   authenticate,
-  requirePermission('farm.projects.view'),
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
   projectController.getProjects
 );
 
@@ -76,7 +76,7 @@ router.get('/export',
  */
 router.get('/:id',
   authenticate,
-  requirePermission('farm.projects.view'),
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
   projectController.getProjectById
 );
 
@@ -147,8 +147,42 @@ router.post('/drafts/:id/complete',
  */
 router.post('/',
   authenticate,
-  requirePermission('project.create'),
   projectController.createProject
+);
+
+router.patch('/:id/approve',
+  authenticate,
+  requirePermission('farm.projects.approve'),
+  projectController.approveProject
+);
+
+router.patch('/:id/reject',
+  authenticate,
+  requirePermission('farm.projects.approve'),
+  projectController.rejectProject
+);
+
+router.patch('/:id/start',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.startFarmProject
+);
+
+router.patch('/:id/complete',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.completeFarmProject
+);
+
+router.patch('/:id/status',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.updateFarmProjectStatus
+);
+
+router.patch('/:id/request-edit',
+  authenticate,
+  projectController.requestProjectEdit
 );
 
 /**

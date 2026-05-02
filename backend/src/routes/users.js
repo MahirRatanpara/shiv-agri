@@ -4,7 +4,8 @@ const {
   getAllUsers,
   getUser,
   updateUserRole,
-  deleteUser
+  deleteUser,
+  lookupUserByPhone
 } = require('../controllers/userController');
 const { authenticate, requirePermission } = require('../middleware/auth');
 
@@ -17,6 +18,12 @@ router.use(authenticate);
 router.get('/',
   requirePermission('users.view'),
   getAllUsers
+);
+
+// Get user by ID
+router.get('/lookup/by-phone',
+  requirePermission('users.view'),
+  lookupUserByPhone
 );
 
 // Get user by ID

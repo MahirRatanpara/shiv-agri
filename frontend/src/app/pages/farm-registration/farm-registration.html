@@ -1,0 +1,59 @@
+<main class="registration-page">
+  <div class="page-shell">
+    <button class="back-btn" type="button" (click)="cancel()">
+      <i class="fas fa-arrow-left"></i>
+      Back to Farms
+    </button>
+
+    <header class="page-hero">
+      <div class="hero-pattern" aria-hidden="true"></div>
+      <div class="hero-orb" aria-hidden="true"></div>
+
+      <span class="eyebrow">
+        <i class="fas fa-seedling"></i>
+        {{ isFarmer ? 'Farm registration' : 'New farm record' }}
+      </span>
+      <h2>{{ isFarmer ? 'Register New Farm' : 'Create Approved Farm' }}</h2>
+      <p>{{ isFarmer ? 'Your registration will go to the team for review. You\'ll be notified once it\'s approved.' : 'Manager-created farms are approved immediately when a mobile-linked user is selected.' }}</p>
+
+      <div class="step-bar" *ngIf="isFarmer" aria-hidden="true">
+        <div class="step-item active">
+          <span class="step-num">1</span>
+          <span class="step-label">Submit details</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step-item">
+          <span class="step-num">2</span>
+          <span class="step-label">Team review</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step-item">
+          <span class="step-num">3</span>
+          <span class="step-label">Get notified</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="profile-alert" *ngIf="needsPhoneNumber" role="alert">
+      <div class="alert-icon"><i class="fas fa-mobile-screen-button"></i></div>
+      <div class="alert-text">
+        <strong>Mobile number required</strong>
+        <span>Add your mobile number in profile before submitting a farm registration. This is how we link your projects.</span>
+      </div>
+      <button type="button" (click)="goToAccount()">
+        <i class="fas fa-user-pen"></i>
+        Update Profile
+      </button>
+    </div>
+
+    <div class="form-container">
+      <app-farm-registration-form
+        [mode]="isFarmer ? 'farmer' : 'manager'"
+        [currentUser]="currentUser"
+        [isSubmitting]="isSubmitting"
+        (formSubmit)="submitFarm($event)"
+        (cancel)="cancel()"
+      ></app-farm-registration-form>
+    </div>
+  </div>
+</main>

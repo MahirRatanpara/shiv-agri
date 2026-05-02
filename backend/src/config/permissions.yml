@@ -381,6 +381,11 @@ permissions:
     action: delete
     description: Delete farm projects
 
+  - name: farm.projects.approve
+    resource: farm-projects
+    action: approve
+    description: Approve or reject farmer farm registrations
+
   # Visits Management
   - name: farm.visits.view
     resource: farm-visits
@@ -587,6 +592,7 @@ roles:
       - farm.projects.create
       - farm.projects.update
       - farm.projects.delete
+      - farm.projects.approve
       - farm.visits.view
       - farm.visits.create
       - farm.visits.update
@@ -745,6 +751,7 @@ roles:
       - farm.projects.view
       - farm.projects.create
       - farm.projects.update
+      - farm.projects.approve
       - farm.visits.view
       - farm.visits.create
       - farm.visits.update

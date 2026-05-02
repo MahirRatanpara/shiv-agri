@@ -39,6 +39,48 @@
                 </span>
               </div>
 
+              <div class="detail-item phone-detail" *ngIf="showPhoneProfileEditor">
+                <div>
+                  <label>Mobile Number</label>
+                  <p class="detail-help">Used to link farm registrations to your account.</p>
+                </div>
+
+                <div class="phone-summary" *ngIf="!isEditingProfile">
+                  <span class="detail-value" [class.missing]="!user.phoneNumber">
+                    {{ user.phoneNumber || 'Not added' }}
+                  </span>
+                  <button type="button" class="btn-edit-profile" (click)="startProfileEdit()">
+                    {{ user.phoneNumber ? 'Edit' : 'Add' }}
+                  </button>
+                </div>
+
+                <form class="phone-editor" *ngIf="isEditingProfile" (ngSubmit)="saveProfile()" novalidate>
+                  <select
+                    class="phone-code"
+                    name="phoneCountryCode"
+                    [(ngModel)]="phoneCountryCode"
+                    aria-label="Country code"
+                  >
+                    <option *ngFor="let option of countryCodeOptions" [value]="option.value">{{ option.label }}</option>
+                  </select>
+                  <input
+                    name="phoneNumber"
+                    [(ngModel)]="phoneNumber"
+                    type="tel"
+                    autocomplete="tel"
+                    placeholder="Enter mobile number"
+                    [class.invalid]="!!profileError"
+                  >
+                  <button type="submit" class="btn-save-profile" [disabled]="isSavingProfile">
+                    {{ isSavingProfile ? 'Saving...' : 'Save' }}
+                  </button>
+                  <button type="button" class="btn-cancel-profile" (click)="cancelProfileEdit()" [disabled]="isSavingProfile">
+                    Cancel
+                  </button>
+                  <small *ngIf="profileError">{{ profileError }}</small>
+                </form>
+              </div>
+
               <div class="detail-item">
                 <label>User ID</label>
                 <span class="detail-value">{{ user.id }}</span>

@@ -1,0 +1,117 @@
+{
+  "nodes": [
+    {
+      "id": "asset:frontend/src/assets/webfonts/fa-brands-400.svg",
+      "type": "vector_font_asset",
+      "name": "fa-brands-400.svg",
+      "source_file": "frontend/src/assets/webfonts/fa-brands-400.svg",
+      "summary": "SVG webfont asset for Font Awesome 5 Brands, regular weight 400, containing brand icon glyph outlines.",
+      "metadata": {
+        "font_id": "fontawesome-free",
+        "font_family": "Font Awesome 5 Brands",
+        "font_style": "Regular",
+        "font_weight": "400",
+        "units_per_em": 512,
+        "ascent": 448,
+        "descent": 64,
+        "glyph_count": 387
+      }
+    },
+    {
+      "id": "font:font-awesome-5-brands",
+      "type": "icon_font_family",
+      "name": "Font Awesome 5 Brands",
+      "summary": "Font Awesome brand icon font family used for social and brand glyphs."
+    },
+    {
+      "id": "css:frontend/src/assets/css/all.min.css",
+      "type": "stylesheet_asset",
+      "name": "all.min.css",
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "summary": "Bundled Font Awesome Free 5.4.1 stylesheet defining webfont sources and icon classes."
+    },
+    {
+      "id": "css_class:.fab",
+      "type": "css_icon_class",
+      "name": ".fab",
+      "source_file": "frontend/src/assets/css/all.min.css",
+      "summary": "Font Awesome Brands CSS class that selects the Font Awesome 5 Brands font family."
+    },
+    {
+      "id": "asset_dir:frontend/src/assets/webfonts",
+      "type": "frontend_asset_directory",
+      "name": "webfonts",
+      "source_file": "frontend/src/assets/webfonts",
+      "summary": "Frontend webfont asset directory containing Font Awesome and DroidSans font files."
+    },
+    {
+      "id": "asset_group:fa-brands-400-webfont-formats",
+      "type": "webfont_format_set",
+      "name": "fa-brands-400 webfont formats",
+      "source_file": "frontend/src/assets/webfonts",
+      "summary": "Sibling EOT, WOFF2, WOFF, TTF, and SVG files for the Font Awesome 5 Brands regular webfont."
+    }
+  ],
+  "edges": [
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-brands-400.svg",
+      "target": "font:font-awesome-5-brands",
+      "type": "implements_font_family",
+      "confidence_score": 0.99
+    },
+    {
+      "source": "css:frontend/src/assets/css/all.min.css",
+      "target": "asset:frontend/src/assets/webfonts/fa-brands-400.svg",
+      "type": "references_webfont_source",
+      "confidence_score": 0.99,
+      "evidence": "The @font-face rule includes url(../webfonts/fa-brands-400.svg#fontawesome) format(\"svg\")."
+    },
+    {
+      "source": "css:frontend/src/assets/css/all.min.css",
+      "target": "font:font-awesome-5-brands",
+      "type": "declares_font_face",
+      "confidence_score": 0.99
+    },
+    {
+      "source": "css_class:.fab",
+      "target": "font:font-awesome-5-brands",
+      "type": "selects_icon_font_family",
+      "confidence_score": 0.99
+    },
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-brands-400.svg",
+      "target": "asset_dir:frontend/src/assets/webfonts",
+      "type": "stored_in_asset_directory",
+      "confidence_score": 1.0
+    },
+    {
+      "source": "asset:frontend/src/assets/webfonts/fa-brands-400.svg",
+      "target": "asset_group:fa-brands-400-webfont-formats",
+      "type": "member_of_format_set",
+      "confidence_score": 0.98
+    },
+    {
+      "source": "asset_group:fa-brands-400-webfont-formats",
+      "target": "font:font-awesome-5-brands",
+      "type": "provides_cross_browser_font_formats_for",
+      "confidence_score": 0.98
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "hyperedge:font-awesome-brands-loading",
+      "type": "frontend_icon_font_loading_relationship",
+      "participants": [
+        "css:frontend/src/assets/css/all.min.css",
+        "css_class:.fab",
+        "font:font-awesome-5-brands",
+        "asset_group:fa-brands-400-webfont-formats",
+        "asset:frontend/src/assets/webfonts/fa-brands-400.svg"
+      ],
+      "summary": "The bundled stylesheet declares the Font Awesome 5 Brands webfont from multiple local formats, including this SVG fallback, and exposes it through the .fab icon class.",
+      "confidence_score": 0.98
+    }
+  ],
+  "input_tokens": 2750,
+  "output_tokens": 820
+}

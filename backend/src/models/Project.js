@@ -26,10 +26,41 @@ const projectSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled'],
+    enum: ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled', 'pending_approval', 'approved', 'rejected'],
     default: 'Upcoming',
     required: true,
     index: true // For filtering
+  },
+
+  submittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+
+  submittedAt: {
+    type: Date
+  },
+
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  approvedAt: {
+    type: Date
+  },
+
+  rejectedReason: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+
+  registrationSource: {
+    type: String,
+    enum: ['farmer_self', 'manager_direct'],
+    index: true
   },
 
   // Client Information
@@ -353,6 +384,8 @@ projectSchema.index({ category: 1, updatedAt: -1 }); // Category + recency
 // Legacy projectType indexes (for backward compatibility)
 projectSchema.index({ status: 1, projectType: 1 });
 projectSchema.index({ projectType: 1, 'location.city': 1 });
+projectSchema.index({ status: 1, submittedBy: 1 });
+projectSchema.index({ registrationSource: 1, status: 1 });
 
 // General indexes
 projectSchema.index({ status: 1, 'location.city': 1 });
