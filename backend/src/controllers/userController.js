@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Role = require('../models/Role');
 
+const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
+
 /**
  * Get all users with their roles
  */
@@ -173,9 +175,51 @@ const deleteUser = async (req, res) => {
   }
 };
 
+/**
+ * Lookup user by mobile number
+ */
+const lookupUserByPhone = async (req, res) => {
+  try {
+    const phone = String(req.query.phone || '').trim();
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const localPhone = normalizedPhone.startsWith('91') ? normalizedPhone.slice(2) : normalizedPhone;
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const user = await User.findOne({
+      $or: [
+        { 'metadata.phoneNumberNormalized': normalizedPhone },
+        { 'metadata.phoneNumberNormalized': localPhone },
+        { 'metadata.phoneNumber': phone },
+        { 'metadata.phoneNumber': phone.replace(/\s+/g, '') },
+        { 'metadata.phoneNumber': localPhone }
+      ]
+    }).select('_id name email role metadata.phoneNumber');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found for this mobile number' });
+    }
+
+    return res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phoneNumber: user.metadata?.phoneNumber || ''
+      }
+    });
+  } catch (error) {
+    console.error('Error looking up user by phone:', error);
+    res.status(500).json({ error: 'Failed to lookup user' });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUser,
   updateUserRole,
-  deleteUser
+  deleteUser,
+  lookupUserByPhone
 };

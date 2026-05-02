@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for LLM context. Each section is self-contained so an LLM can read only the relevant section for a given task. Organized by feature domain for efficient chunking.
 
-> **Last Updated:** 2026-04-11
+> **Last Updated:** 2026-05-02
 
 ---
 
@@ -162,16 +162,16 @@ shiv-agri/
 │       │   ├── WaterSession.js, WaterSample.js
 │       │   ├── FertilizerSession.js, FertilizerSample.js
 │       │   ├── Receipt.js, Invoice.js, Letter.js
-│       │   ├── ActivityLog.js, Draft.js
+│       │   ├── ActivityLog.js, Draft.js, Notification.js
 │       ├── routes/
 │       │   ├── api.js (main router)
 │       │   ├── auth.js, users.js, roles.js
 │       │   ├── projects.js, transactions.js
 │       │   ├── soilTesting.js, waterTesting.js, fertilizerTesting.js
-│       │   ├── managerialWork.js, pdfGeneration.js
+│       │   ├── managerialWork.js, pdfGeneration.js, notifications.js
 │       ├── services/
 │       │   ├── projectService.js, transactionService.js
-│       │   ├── pdfGenerator.js, draftService.js, activityLogService.js
+│       │   ├── pdfGenerator.js, draftService.js, activityLogService.js, notificationService.js
 │       ├── utils/
 │       │   ├── jwt.js, logger.js
 │       │   ├── soilClassification.js, waterClassification.js
@@ -248,6 +248,8 @@ shiv-agri/
 
 **Actions:** view, create, update, delete, approve, assign-role, generate, download, send, upload, export, assign, manage, record
 
+**Notable permissions:** `farm.projects.approve` (approve/reject farmer farm registrations — granted to admin and manager).
+
 ### JWT Utility (`backend/src/utils/jwt.js`)
 
 - `generateAccessToken(payload)` — 24-hour JWT
@@ -260,6 +262,7 @@ shiv-agri/
 |------|-------------|
 | admin | Full access, bypasses all permission checks |
 | user | Standard user |
+| end_user | Farmer self-registration role (creates farm projects in `pending_approval` state) |
 | assistant | Assistant role |
 | lab_technician | Lab testing access |
 | manager | Managerial work access |
@@ -438,8 +441,14 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 **Core Fields:**
 - `name` (String, required, text-indexed)
 - `category` (enum: FARM, LANDSCAPING, GARDENING, required, indexed)
-- `status` (enum: Upcoming, Running, Completed, On Hold, Cancelled)
+- `status` (enum: Upcoming, Running, Completed, On Hold, Cancelled, pending_approval, approved, rejected)
 - `budget` (Number, required, min: 0), `expenses` (Number, auto-updated)
+
+**Farm Approval Workflow:**
+- `submittedBy` (User ref, indexed), `submittedAt` (Date) — set when farm is submitted (self-registration or manager-direct)
+- `approvedBy` (User ref), `approvedAt` (Date) — set on approval
+- `rejectedReason` (String, max 500) — set on rejection
+- `registrationSource` (enum: farmer_self, manager_direct, indexed)
 
 **Client Info:**
 - `clientId`, `clientName`, `clientEmail`, `clientPhone`, `clientAvatar`, `alternativeContact`
@@ -467,17 +476,23 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
 
-**Indexes:** category+status, city, state, createdBy, budget, text search (name), geospatial (coordinates), date ranges
+**Indexes:** category+status, city, state, createdBy, budget, text search (name), geospatial (coordinates), date ranges, status+submittedBy, registrationSource+status
 
 ### API Endpoints (`backend/src/routes/projects.js`)
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| GET | `/api/projects` | farm.projects.view | Filtered/paginated list |
+| GET | `/api/projects` | farm.projects.view OR farms.view | Filtered/paginated list. Filters incl. `district`, `submittedBy=me`. End-users auto-filtered to own FARM submissions. |
 | GET | `/api/projects/stats` | farm.projects.view | Statistics |
 | GET | `/api/projects/export` | project.export | Export to Excel/CSV |
-| GET | `/api/projects/:id` | farm.projects.view | Get single project |
-| POST | `/api/projects` | project.create | Create project |
+| GET | `/api/projects/:id` | farm.projects.view OR farms.view | Get single project (end-users restricted to their own/client) |
+| POST | `/api/projects` | (role-based) | Create project. End/standard users → `pending_approval` farmer self-registration; managers/admins → `approved` direct registration with phone-based client lookup |
+| PATCH | `/api/projects/:id/approve` | farm.projects.approve | Approve a pending farm registration |
+| PATCH | `/api/projects/:id/reject` | farm.projects.approve | Reject a pending farm registration (body: `reason`) |
+| PATCH | `/api/projects/:id/start` | farm.projects.update | Move approved farm → Running |
+| PATCH | `/api/projects/:id/complete` | farm.projects.update | Move running farm → Completed |
+| PATCH | `/api/projects/:id/status` | farm.projects.update | Set farm status (approved/Running/Completed/On Hold/Cancelled) |
+| PATCH | `/api/projects/:id/request-edit` | (owner or approver) | Re-submits farm to `pending_approval` with edits |
 | PATCH | `/api/projects/:id` | project.update | Update project |
 | DELETE | `/api/projects/:id` | project.delete | Soft delete |
 | DELETE | `/api/projects/:id/hard` | — | Hard delete (admin) |
@@ -495,12 +510,24 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/bulk` | project.update | Bulk update |
 | POST | `/api/projects/bulk-delete` | project.delete | Bulk soft delete |
 
-**Query Filters:** category, projectType, status, city, state, budget range, date range, team, search text, favorites
+**Query Filters:** category, projectType, status, city, district, state, budget range, date range, team, search text, favorites, submittedBy
+
+### Farm Registration & Approval Workflow
+
+- **Farmer self-registration:** End-users (`end_user`/`user` role) submit via `POST /api/projects` → status `pending_approval`, `registrationSource=farmer_self`, clientId/clientPhone auto-populated from the user's profile. Notifications dispatched to all users with `farm.projects.approve`.
+- **Manager-direct registration:** Managers/admins POST a farm → resolves `clientPhone` to existing user via phone lookup (rejects if no match), status `approved` immediately, `registrationSource=manager_direct`.
+- **Approval/Rejection:** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`).
+- **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update an approved farm; resets it to `pending_approval` and re-notifies approvers.
 
 ### Frontend
 - **Component:** `pages/farm-dashboard/farm-dashboard.ts` — Project listing, activity tracking, budget/expense dashboard
 - **Component:** `pages/project-details/project-details.ts` — Full project view
-- **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`
+- **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
+- **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions
+- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows)
+- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`
+- **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
 
@@ -665,9 +692,9 @@ Admin can manage users, create custom roles with granular permissions, and assig
 
 **User** (`backend/src/models/User.js`)
 - `name`, `email` (unique, indexed), `googleId` (unique, sparse)
-- `profilePhoto`, `role` (enum: admin, user, assistant, lab_technician, manager)
+- `profilePhoto`, `role` (enum: admin, user, end_user, assistant, lab_technician, manager)
 - `roleRef` (ObjectId → Role — RBAC), `refreshToken`, `googleRefreshToken`
-- `lastLogin`, `metadata` (department, designation, phoneNumber)
+- `lastLogin`, `metadata` (department, designation, phoneCountryCode, phoneNumber, phoneNumberNormalized — normalized digits-only for lookup, indexed)
 - Methods: `toClientJSON()`, `hasPermission(name)`
 - Static: `findByRole(role)`
 
@@ -692,6 +719,7 @@ Admin can manage users, create custom roles with granular permissions, and assig
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
 | GET | `/api/users` | users.view | Paginated user list |
+| GET | `/api/users/lookup/by-phone` | users.view | Lookup user by `phone` query (matches normalized + raw phone variants) |
 | GET | `/api/users/:id` | users.view | Get user |
 | PUT | `/api/users/:userId/role` | users.assign-role | Change role |
 | DELETE | `/api/users/:userId` | users.delete | Delete user |
@@ -874,6 +902,9 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | `managerial-work/invoices` | InvoicesComponent | — | Child route |
 | `managerial-work/letters` | LettersComponent | — | Child route |
 | `farm-dashboard` | FarmDashboardComponent | authGuard | Project management |
+| `farm-management` | FarmManagementComponent | authGuard | Farms list with approval workflow |
+| `farm-management/new` | FarmRegistrationPageComponent | authGuard | Farmer self-registration |
+| `farm-management/project/:id` | FarmProjectDetailsComponent | authGuard | Farm detail with approve/reject/start/complete |
 | `projects/new` | ProjectWizardComponent | authGuard | Create project |
 | `projects/edit/:id` | ProjectWizardComponent | authGuard | Edit project |
 | `project-details/:id` | ProjectDetailsComponent | — | View project |
@@ -891,7 +922,9 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| HeaderComponent | `components/header/` | Navigation, auth display, permission-based menu items, logout |
+| HeaderComponent | `components/header/` | Navigation, auth display, permission-based menu items, logout. Embeds NotificationBell when authenticated; Farms link routes to `/farm-management`. |
+| NotificationBellComponent | `components/header/notification-bell/` | Header bell with unread count, dropdown list, mark-read & archive actions |
+| FarmRegistrationFormComponent | `components/farm-registration-form/` | Reusable farm registration form (location, land details, crops, contact) |
 | FooterComponent | `components/footer/` | Company info, links, social media |
 | ToastComponent | `components/toast/` | Notification display, auto-dismiss |
 | ConfirmationModalComponent | `components/confirmation-modal/` | Reusable confirm/cancel dialog |
@@ -908,7 +941,9 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Service | File | Key Methods |
 |---------|------|-------------|
-| AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), currentUser$ BehaviorSubject |
+| AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), currentUser$ BehaviorSubject |
+| FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), getFarmById(), lookupUserByPhone() |
+| NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
 | SoilTestingService | `soil-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel(), getSoilDataForSample() |
@@ -1013,10 +1048,10 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Collection | Model File | Key Indexes |
 |-----------|------------|-------------|
-| users | User.js | email (unique), role, createdAt |
+| users | User.js | email (unique), role, createdAt, metadata.phoneNumberNormalized |
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
-| projects | Project.js | category+status, city, state, createdBy, text(name), 2dsphere(coordinates) |
+| projects | Project.js | category+status, city, state, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status |
 | transactions | Transaction.js | projectId+date, projectId+type, projectId+category |
 | soilsessions | SoilSession.js | date, (date+version unique) |
 | soilsamples | SoilSample.js | sessionId, sessionDate |
@@ -1028,6 +1063,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | invoices | Invoice.js | invoiceNumber (unique), date |
 | letters | Letter.js | letterNumber (unique sparse), date |
 | activitylogs | ActivityLog.js | projectId+timestamp, userId+timestamp |
+| notifications | Notification.js | user, type, project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt |
 | drafts | Draft.js | projectId, createdBy |
 | media | MediaDocument.java | status+createdAt |
 
@@ -1035,6 +1071,9 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 ```
 User ─── roleRef ──→ Role ──── permissions[] ──→ Permission
+User ←── user ── Notification
+Project ←── project ── Notification
+User ←── submittedBy/approvedBy ── Project
 User ←── createdBy ── Project
 User ←── createdBy ── Transaction
 Project ←── projectId ── Transaction
@@ -1062,8 +1101,16 @@ Invoice ── linkedReceipts[] ──→ Receipt
 | POST | `/google` | No | Google OAuth ID token login |
 | POST | `/google-code` | No | Google OAuth auth code login |
 | POST | `/refresh` | No | Refresh JWT using Google refresh token |
+| PATCH | `/profile` | (self-identified) | Update phoneCountryCode/phoneNumber for current user; rejects duplicates against existing normalized phones |
 | POST | `/logout` | Yes | Logout & revoke tokens |
 | GET | `/me` | Yes | Get current user |
+
+### Notification Endpoints (`/api/notifications`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | Yes | List active (non-archived) notifications + unreadCount |
+| PATCH | `/:id/read` | Yes | Mark notification read |
+| DELETE | `/:id` | Yes | Archive notification |
 
 ### Standard Response Format
 ```json

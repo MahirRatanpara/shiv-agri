@@ -1,5 +1,10 @@
 const Project = require('../models/Project');
+const User = require('../models/User');
 const ExcelJS = require('exceljs'); // You'll need to npm install exceljs
+const notificationService = require('./notificationService');
+const logger = require('../utils/logger');
+
+const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
 
 /**
  * Project Service - Business Logic Layer
@@ -21,6 +26,7 @@ class ProjectService {
       projectType,
       status,
       city,
+      district,
       state,
       clientId,
       assignedTo,
@@ -32,6 +38,7 @@ class ProjectService {
       startAfter,
       startBefore,
       isFavorite,
+      submittedBy,
       showDrafts
     } = filters;
 
@@ -92,10 +99,15 @@ class ProjectService {
 
     // Location filters
     if (city) query['location.city'] = city;
+    if (district) query['location.district'] = district;
     if (state) query['location.state'] = state;
 
     // Client filter
     if (clientId) query.clientId = clientId;
+
+    if (submittedBy) {
+      query.submittedBy = submittedBy;
+    }
 
     // Team filters
     if (assignedTo) {
@@ -255,14 +267,356 @@ class ProjectService {
   /**
    * Create new project
    */
-  async createProject(projectData, userId) {
-    const project = new Project({
+  async createProject(projectData, userContext) {
+    const userId = userContext?._id || userContext;
+    const userRole = userContext?.role;
+    const isFarmerRegistration = userRole === 'end_user' || userRole === 'user';
+
+    const normalizedData = {
       ...projectData,
+      category: projectData.category || 'FARM',
+      projectType: projectData.projectType || 'farm',
+      budget: projectData.budget ?? 0
+    };
+
+    if (isFarmerRegistration) {
+      const farmerPhone = userContext?.metadata?.phoneNumber?.trim();
+      if (!farmerPhone) {
+        throw new Error('Mobile number is required. Please update your profile before registering a farm.');
+      }
+
+      normalizedData.status = 'pending_approval';
+      normalizedData.registrationSource = 'farmer_self';
+      normalizedData.submittedBy = userId;
+      normalizedData.submittedAt = new Date();
+      normalizedData.clientId = userId;
+      normalizedData.clientName = normalizedData.clientName || userContext.name;
+      normalizedData.clientEmail = normalizedData.clientEmail || userContext.email;
+      normalizedData.clientPhone = farmerPhone;
+    } else {
+      const isFarm = normalizedData.category === 'FARM' || normalizedData.projectType === 'farm';
+      const phone = String(normalizedData.clientPhone || '').trim();
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const localPhone = normalizedPhone.startsWith('91') ? normalizedPhone.slice(2) : normalizedPhone;
+
+      if (isFarm && !phone) {
+        throw new Error('Client mobile number is required to create a farm project.');
+      }
+
+      if (isFarm) {
+        const mappedUser = await User.findOne({
+          $or: [
+            { 'metadata.phoneNumberNormalized': normalizedPhone },
+            { 'metadata.phoneNumberNormalized': localPhone },
+            { 'metadata.phoneNumber': phone },
+            { 'metadata.phoneNumber': phone.replace(/\s+/g, '') },
+            { 'metadata.phoneNumber': localPhone }
+          ]
+        });
+
+        if (!mappedUser) {
+          throw new Error('No user found for this mobile number. Ask farmer to add mobile number in their profile first.');
+        }
+
+        normalizedData.clientId = mappedUser._id;
+        normalizedData.clientName = mappedUser.name;
+        normalizedData.clientEmail = mappedUser.email;
+        normalizedData.clientPhone = mappedUser.metadata?.phoneNumber || phone;
+      }
+
+      if (isFarm) {
+        normalizedData.status = 'approved';
+        normalizedData.registrationSource = 'manager_direct';
+        normalizedData.approvedBy = userId;
+        normalizedData.approvedAt = new Date();
+      }
+      normalizedData.submittedBy = normalizedData.submittedBy || userId;
+      normalizedData.submittedAt = normalizedData.submittedAt || new Date();
+    }
+
+    const project = new Project({
+      ...normalizedData,
       createdBy: userId,
       lastUpdatedBy: userId
     });
 
     await project.save();
+
+    if (project.status === 'pending_approval') {
+      await notificationService.createForUsersWithPermission('farm.projects.approve', {
+        type: 'farm_registration',
+        title: 'Farm registration pending',
+        message: `${project.clientName} submitted ${project.name}. Open request to review details.`,
+        project: project._id,
+        submittingUser: userId,
+        metadata: {
+          farmName: project.name,
+          submitterName: project.clientName
+        }
+      });
+    }
+
+    logger.info(`Project ${project._id} created by ${userId} with status ${project.status}`);
+    return project;
+  }
+
+  async approveProject(projectId, approverId) {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+    if (!project.clientPhone || !project.clientPhone.trim()) {
+      throw new Error('Project cannot be approved without a linked mobile number.');
+    }
+
+    project.status = 'approved';
+    project.approvedBy = approverId;
+    project.approvedAt = new Date();
+    project.rejectedReason = undefined;
+    project.lastUpdatedBy = approverId;
+
+    await project.save();
+    await notificationService.archiveFarmRegistration(project._id);
+
+    if (project.submittedBy) {
+      await notificationService.createForUser(project.submittedBy, {
+        type: 'farm_approved',
+        title: 'Farm approved',
+        message: `${project.name} has been approved.`,
+        project: project._id,
+        metadata: {
+          farmName: project.name
+        }
+      });
+    }
+
+    logger.info(`Project ${project._id} approved by ${approverId}`);
+    return project;
+  }
+
+  async rejectProject(projectId, rejectedBy, reason = '') {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    project.status = 'rejected';
+    project.approvedBy = undefined;
+    project.approvedAt = undefined;
+    project.rejectedReason = reason ? String(reason).trim().slice(0, 500) : '';
+    project.lastUpdatedBy = rejectedBy;
+
+    await project.save();
+    await notificationService.archiveFarmRegistration(project._id);
+
+    if (project.submittedBy) {
+      await notificationService.createForUser(project.submittedBy, {
+        type: 'farm_rejected',
+        title: 'Farm registration rejected',
+        message: project.rejectedReason
+          ? `${project.name} was rejected: ${project.rejectedReason}`
+          : `${project.name} was rejected.`,
+        project: project._id,
+        metadata: {
+          farmName: project.name,
+          rejectionReason: project.rejectedReason
+        }
+      });
+    }
+
+    logger.info(`Project ${project._id} rejected by ${rejectedBy}`);
+    return project;
+  }
+
+  async startFarmProject(projectId, startedBy) {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const isFarm = project.category === 'FARM' || project.projectType === 'farm';
+    if (!isFarm) {
+      throw new Error('Only farm projects can be started from this workflow.');
+    }
+
+    if (project.status !== 'approved') {
+      throw new Error('Only approved farm projects can be started.');
+    }
+
+    project.status = 'Running';
+    project.startDate = project.startDate || new Date();
+    project.lastUpdatedBy = startedBy;
+
+    await project.save();
+
+    logger.info(`Farm project ${project._id} started by ${startedBy}`);
+    return project;
+  }
+
+  async completeFarmProject(projectId, completedBy) {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const isFarm = project.category === 'FARM' || project.projectType === 'farm';
+    if (!isFarm) {
+      throw new Error('Only farm projects can be completed from this workflow.');
+    }
+
+    if (project.status !== 'Running') {
+      throw new Error('Only running farm projects can be completed.');
+    }
+
+    project.status = 'Completed';
+    project.completionDate = new Date();
+    project.lastUpdatedBy = completedBy;
+
+    await project.save();
+
+    logger.info(`Farm project ${project._id} completed by ${completedBy}`);
+    return project;
+  }
+
+  async updateFarmProjectStatus(projectId, status, updatedBy) {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const isFarm = project.category === 'FARM' || project.projectType === 'farm';
+    if (!isFarm) {
+      throw new Error('Only farm project status can be managed from this workflow.');
+    }
+
+    const allowedStatuses = ['approved', 'Running', 'Completed', 'On Hold', 'Cancelled'];
+    if (!allowedStatuses.includes(status)) {
+      throw new Error('Invalid project status.');
+    }
+
+    if (project.status === 'pending_approval') {
+      throw new Error('Pending farm requests must be approved or rejected first.');
+    }
+
+    if (project.status === 'rejected') {
+      throw new Error('Rejected farm requests must be approved before project state can be changed.');
+    }
+
+    project.status = status;
+    if (status === 'Running' && !project.startDate) {
+      project.startDate = new Date();
+    }
+    if (status === 'Completed') {
+      project.completionDate = new Date();
+    }
+    if (status !== 'Completed') {
+      project.completionDate = undefined;
+    }
+    project.lastUpdatedBy = updatedBy;
+
+    await project.save();
+
+    logger.info(`Farm project ${project._id} status changed to ${status} by ${updatedBy}`);
+    return project;
+  }
+
+  async requestProjectEdit(projectId, updates, requester) {
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const requesterId = requester?._id || requester;
+    const isApprover = requester?.role === 'admin' || requester?.roleRef?.permissions?.some((perm) => perm.name === 'farm.projects.approve');
+    const isSubmittedByRequester = project.submittedBy && String(project.submittedBy) === String(requesterId);
+    const isLinkedClient = project.clientId && String(project.clientId) === String(requesterId);
+    const isOwner = isSubmittedByRequester || isLinkedClient;
+
+    if (!isOwner && !isApprover) {
+      throw new Error('You are not allowed to edit this project.');
+    }
+
+    const blockedFields = new Set([
+      '_id', 'id', 'createdBy', 'createdAt', 'approvedBy', 'approvedAt', 'submittedBy', 'submittedAt', 'isDeleted', 'deletedAt', 'deletedBy'
+    ]);
+
+    const cleanedUpdates = { ...updates };
+    Object.keys(cleanedUpdates).forEach((key) => {
+      if (blockedFields.has(key)) delete cleanedUpdates[key];
+    });
+
+    if (!isApprover) {
+      const requesterPhone = requester?.metadata?.phoneNumber?.trim();
+      if (!requesterPhone) {
+        throw new Error('Mobile number is required before submitting edit requests.');
+      }
+      cleanedUpdates.clientPhone = requesterPhone;
+      cleanedUpdates.clientName = requester?.name || project.clientName;
+      cleanedUpdates.clientEmail = requester?.email || project.clientEmail;
+      cleanedUpdates.clientId = requesterId;
+    } else {
+      const isFarm = (cleanedUpdates.category || project.category) === 'FARM' ||
+        (cleanedUpdates.projectType || project.projectType) === 'farm';
+      const phone = String(cleanedUpdates.clientPhone || project.clientPhone || '').trim();
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const localPhone = normalizedPhone.startsWith('91') ? normalizedPhone.slice(2) : normalizedPhone;
+
+      if (isFarm && !phone) {
+        throw new Error('Client mobile number is required to edit a farm project.');
+      }
+
+      if (isFarm) {
+        const mappedUser = await User.findOne({
+          $or: [
+            { 'metadata.phoneNumberNormalized': normalizedPhone },
+            { 'metadata.phoneNumberNormalized': localPhone },
+            { 'metadata.phoneNumber': phone },
+            { 'metadata.phoneNumber': phone.replace(/\s+/g, '') },
+            { 'metadata.phoneNumber': localPhone }
+          ]
+        });
+
+        if (!mappedUser) {
+          throw new Error('No user found for this mobile number. Ask farmer to add mobile number in their profile first.');
+        }
+
+        cleanedUpdates.clientId = mappedUser._id;
+        cleanedUpdates.clientName = mappedUser.name;
+        cleanedUpdates.clientEmail = mappedUser.email;
+        cleanedUpdates.clientPhone = mappedUser.metadata?.phoneNumber || phone;
+      }
+    }
+
+    Object.assign(project, cleanedUpdates);
+    project.status = 'pending_approval';
+    project.registrationSource = 'farmer_self';
+    project.submittedBy = requesterId;
+    project.submittedAt = new Date();
+    project.rejectedReason = '';
+    project.approvedBy = undefined;
+    project.approvedAt = undefined;
+    project.lastUpdatedBy = requesterId;
+
+    await project.save();
+
+    await notificationService.createForUsersWithPermission('farm.projects.approve', {
+      type: 'farm_registration',
+      title: 'Farm update request pending',
+      message: `${project.clientName} requested updates for ${project.name}. Open request to review.`,
+      project: project._id,
+      submittingUser: requesterId,
+      metadata: {
+        farmName: project.name,
+        submitterName: project.clientName
+      }
+    });
+
+    logger.info(`Project ${project._id} edit requested by ${requesterId}`);
     return project;
   }
 

@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { googleLogin, googleLoginWithCode, refreshAccessToken, logout, getCurrentUser } = require('../controllers/authController');
+const { googleLogin, googleLoginWithCode, refreshAccessToken, logout, getCurrentUser, updateCurrentUserProfile } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
 // Public routes
 router.post('/google', googleLogin);
 router.post('/google-code', googleLoginWithCode);
 router.post('/refresh', refreshAccessToken);
+router.patch('/profile', updateCurrentUserProfile);
 
 // Protected routes
 router.post('/logout', authenticate, logout);

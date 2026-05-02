@@ -1,0 +1,28 @@
+<main class="registration-page">
+  <div class="page-header">
+    <button class="back-btn" (click)="cancel()">
+      <i class="fas fa-arrow-left"></i>
+      Back to Projects
+    </button>
+    <h2>{{ isFarmer ? 'Register New Farm' : 'Create Approved Farm' }}</h2>
+    <p>{{ isFarmer ? 'Your registration will go to the team for review.' : 'Manager-created farms are approved immediately when a mobile-linked user is selected.' }}</p>
+
+    <div class="profile-alert" *ngIf="needsPhoneNumber">
+      <div>
+        <strong>Mobile number required</strong>
+        <span>Add your mobile number in profile before submitting a farm registration.</span>
+      </div>
+      <button type="button" (click)="goToAccount()">Update Profile</button>
+    </div>
+  </div>
+
+  <div class="form-container">
+    <app-farm-registration-form
+      [mode]="isFarmer ? 'farmer' : 'manager'"
+      [currentUser]="currentUser"
+      [isSubmitting]="isSubmitting"
+      (formSubmit)="submitFarm($event)"
+      (cancel)="cancel()"
+    ></app-farm-registration-form>
+  </div>
+</main>

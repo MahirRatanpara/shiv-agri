@@ -2,6 +2,7 @@ const projectService = require('../services/projectService');
 const draftService = require('../services/draftService');
 const {log} = require("winston");
 const logger = require('../utils/logger');
+const { hasPermission } = require('../middleware/auth');
 
 /**
  * Project Controller - Request Handling Layer
@@ -26,8 +27,10 @@ exports.getProjects = async (req, res) => {
       projectType,
       status,
       city,
+      district,
       state,
       clientId,
+      submittedBy,
       assignedTo,
       assignedTeam,
       budgetMin,
@@ -57,6 +60,7 @@ exports.getProjects = async (req, res) => {
       projectType: projectType ? (typeof projectType === 'string' ? [projectType] : projectType) : undefined,
       status: status ? (typeof status === 'string' ? status.split(',') : status) : undefined,
       city,
+      district,
       state,
       clientId,
       assignedTo: assignedTo ? (typeof assignedTo === 'string' ? assignedTo.split(',') : assignedTo) : undefined,
@@ -67,8 +71,14 @@ exports.getProjects = async (req, res) => {
       createdBefore,
       startAfter,
       startBefore,
-      isFavorite: isFavorite === 'true'
+      isFavorite: isFavorite === 'true',
+      submittedBy: submittedBy === 'me' ? req.user._id : submittedBy
     };
+
+    if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
+      filters.submittedBy = req.user._id;
+      filters.categoryInclude = ['FARM'];
+    }
 
     const sort = {
       sortBy: sortBy || 'updatedAt',
@@ -128,6 +138,18 @@ exports.getProjectById = async (req, res) => {
   try {
     const project = await projectService.getProjectById(req.params.id);
 
+    if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
+      const isSubmittedByUser = project.submittedBy && String(project.submittedBy) === String(req.user._id);
+      const isClientUser = project.clientId && String(project.clientId) === String(req.user._id);
+
+      if (!isSubmittedByUser && !isClientUser) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied'
+        });
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: project
@@ -149,12 +171,27 @@ exports.getProjectById = async (req, res) => {
  */
 exports.createProject = async (req, res) => {
   try {
-    const project = await projectService.createProject(req.body, req.user._id);
+    const canCreateFarm = hasPermission(req.user, 'project.create') ||
+      hasPermission(req.user, 'farm.projects.create') ||
+      req.user.role === 'user' ||
+      req.user.role === 'end_user';
+
+    if (!canCreateFarm) {
+      return res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+        message: 'You do not have permission to create or register farms.'
+      });
+    }
+
+    const project = await projectService.createProject(req.body, req.user);
 
     res.status(201).json({
       success: true,
       data: project,
-      message: 'Project created successfully'
+      message: project.status === 'pending_approval'
+        ? 'Farm registration submitted for approval'
+        : 'Project created successfully'
     });
   } catch (error) {
     console.error('Error creating project:', error);
@@ -163,6 +200,137 @@ exports.createProject = async (req, res) => {
       error: 'Failed to create project',
       message: error.message,
       details: error.errors ? Object.values(error.errors).map(e => e.message) : []
+    });
+  }
+};
+
+exports.approveProject = async (req, res) => {
+  try {
+    const project = await projectService.approveProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm approved successfully'
+    });
+  } catch (error) {
+    logger.error(`Error approving project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to approve farm',
+      message: error.message
+    });
+  }
+};
+
+exports.rejectProject = async (req, res) => {
+  try {
+    const project = await projectService.rejectProject(
+      req.params.id,
+      req.user._id,
+      req.body?.reason
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm rejected successfully'
+    });
+  } catch (error) {
+    logger.error(`Error rejecting project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to reject farm',
+      message: error.message
+    });
+  }
+};
+
+exports.startFarmProject = async (req, res) => {
+  try {
+    const project = await projectService.startFarmProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project started successfully'
+    });
+  } catch (error) {
+    logger.error(`Error starting farm project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to start farm project',
+      message: error.message
+    });
+  }
+};
+
+exports.completeFarmProject = async (req, res) => {
+  try {
+    const project = await projectService.completeFarmProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project completed successfully'
+    });
+  } catch (error) {
+    logger.error(`Error completing farm project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to complete farm project',
+      message: error.message
+    });
+  }
+};
+
+exports.updateFarmProjectStatus = async (req, res) => {
+  try {
+    const project = await projectService.updateFarmProjectStatus(
+      req.params.id,
+      req.body?.status,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project status updated successfully'
+    });
+  } catch (error) {
+    logger.error(`Error updating farm project status ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update farm project status',
+      message: error.message
+    });
+  }
+};
+
+exports.requestProjectEdit = async (req, res) => {
+  try {
+    const project = await projectService.requestProjectEdit(req.params.id, req.body, req.user);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Project update submitted for approval'
+    });
+  } catch (error) {
+    logger.error(`Error submitting edit request for project ${req.params.id}: ${error.message}`);
+    const statusCode =
+      error.message === 'Project not found' ? 404 :
+      error.message.includes('not allowed') ? 403 : 400;
+
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to request project update',
+      message: error.message
     });
   }
 };

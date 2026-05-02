@@ -5,12 +5,13 @@ import { AuthService, User } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { ConfirmationModalService } from '../../services/confirmation-modal.service';
 import { ToastService } from '../../services/toast.service';
+import { NotificationBellComponent } from './notification-bell/notification-bell';
 
 declare var $: any;
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, CommonModule, NgOptimizedImage],
+  imports: [RouterLink, CommonModule, NgOptimizedImage, NotificationBellComponent],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })
@@ -89,6 +90,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     // Check if user has ANY farm management dashboard related permission
     this.hasFarmDashboardAccess = this.permissionService.hasAnyPermission([
       'farm.dashboard.view',
+      'farms.view',
       'farm.projects.view',
       'farm.visits.view',
       'farm.expenses.view',

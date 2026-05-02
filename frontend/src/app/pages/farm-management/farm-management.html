@@ -1,0 +1,189 @@
+<main class="farm-management">
+  <section class="hero-shell">
+    <div class="hero-gradient"></div>
+    <div class="hero-content">
+      <div>
+        <p class="eyebrow">{{ isFarmer ? 'Farm registration desk' : 'Farm operations approvals' }}</p>
+        <h1>{{ isFarmer ? 'Your Farm Projects' : 'Farm Management Studio' }}</h1>
+        <p class="lede">
+          {{ isFarmer ? 'Track approvals, update farm profiles, and keep each project ready for review.' : 'Handle pending requests, review full project profiles, and approve from dedicated request details.' }}
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-hero-primary" *ngIf="isFarmer || canCreateDirectly" (click)="openForm()">
+          <i class="fas fa-plus-circle"></i>
+          {{ isFarmer ? 'Register New Farm' : 'Create New Farm' }}
+        </button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <article class="stat-card pending">
+        <span>Pending Requests</span>
+        <strong>{{ pendingCount }}</strong>
+      </article>
+      <article class="stat-card total">
+        <span>Visible Projects</span>
+        <strong>{{ filteredFarms.length }}</strong>
+      </article>
+      <article class="stat-card phone" *ngIf="showLinkedMobileStat; else approvalDeskStat">
+        <span>Linked Mobile</span>
+        <strong>{{ currentUser?.phoneNumber || 'Missing' }}</strong>
+      </article>
+      <ng-template #approvalDeskStat>
+        <article class="stat-card phone">
+          <span>Review Mode</span>
+          <strong>{{ canApprove ? 'Approval Desk' : 'Operations' }}</strong>
+        </article>
+      </ng-template>
+    </div>
+  </section>
+
+  <section class="tab-strip" *ngIf="!isFarmer">
+    <button class="tab-btn" [class.active]="activeTab === 'all'" (click)="switchTab('all')">All Projects</button>
+    <button class="tab-btn" [class.active]="activeTab === 'pending'" (click)="switchTab('pending')">
+      Pending Requests
+      <span class="tab-badge">{{ pendingCount }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'mine'" (click)="switchTab('mine')">My Submitted</button>
+  </section>
+
+  <section class="toolbar-shell">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input
+        type="search"
+        placeholder="Search by farm, farmer, district, or mobile"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="applyFilters()"
+      >
+    </div>
+    <select [(ngModel)]="selectedStatus" (change)="applyFilters()">
+      <option value="">All status</option>
+      <option value="pending_approval">Pending Approval</option>
+      <option value="approved">Approved</option>
+      <option value="Running">Running</option>
+      <option value="Completed">Completed</option>
+      <option value="On Hold">On Hold</option>
+      <option value="Cancelled">Cancelled</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <select [(ngModel)]="selectedDistrict" (change)="applyFilters()">
+      <option value="">All districts</option>
+      <option *ngFor="let district of districtOptions" [value]="district">{{ district }}</option>
+    </select>
+    <select *ngIf="!isFarmer" [(ngModel)]="selectedSource" (change)="applyFilters()">
+      <option value="">All sources</option>
+      <option value="farmer_self">Farmer submitted</option>
+      <option value="manager_direct">Manager created</option>
+    </select>
+    <select [(ngModel)]="sortBy" (change)="applyFilters()">
+      <option value="updatedAt">Recently updated</option>
+      <option value="submittedAt">Recently submitted</option>
+      <option value="name">Farm name A-Z</option>
+    </select>
+    <button class="btn-apply" (click)="applyFilters()">
+      <i class="fas fa-sliders-h"></i>
+      Apply
+    </button>
+    <button class="btn-reset" (click)="resetFilters()">Reset</button>
+  </section>
+
+  <section class="form-panel" *ngIf="showForm">
+    <div class="panel-head">
+      <div>
+        <h2>Request Project Edit</h2>
+        <p>Edits route through the same approval flow before they go live.</p>
+      </div>
+      <button type="button" class="icon-button" (click)="closeForm()" aria-label="Close form">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <app-farm-registration-form
+      [mode]="isFarmer ? 'farmer' : 'manager'"
+      [action]="formMode === 'edit' ? 'edit' : 'create'"
+      [currentUser]="currentUser"
+      [initialData]="editingFarm"
+      [isSubmitting]="isSubmitting"
+      (formSubmit)="submitFarm($event)"
+      (cancel)="closeForm()"
+    ></app-farm-registration-form>
+  </section>
+
+  <section class="empty-state" *ngIf="!isLoading && !farms.length && !showForm">
+    <div class="empty-icon"><i class="fas fa-seedling"></i></div>
+    <h2>{{ isFarmer ? 'No farms registered yet' : 'No farms found' }}</h2>
+    <p>{{ isFarmer ? 'Start with your farm details. The team will review and notify you.' : 'New farmer registrations will appear here.' }}</p>
+    <button class="btn-primary" *ngIf="isFarmer || canCreateDirectly" (click)="openForm()">
+      <i class="fas fa-plus"></i>
+      {{ isFarmer ? 'Register Your Farm' : 'Create Farm' }}
+    </button>
+  </section>
+
+  <section class="farm-grid" *ngIf="isLoading">
+    <div class="farm-card skeleton" *ngFor="let item of [1,2,3,4]"></div>
+  </section>
+
+  <section class="farm-grid" *ngIf="!isLoading && filteredFarms.length">
+    <article class="farm-card" *ngFor="let farm of filteredFarms; trackBy: trackFarm" (click)="openProject(farm)">
+      <div class="card-top">
+        <span class="status-pill" [class.pending]="farm.status === 'pending_approval'" [class.approved]="farm.status === 'approved'" [class.rejected]="farm.status === 'rejected'" [class.running]="farm.status === 'Running'" [class.completed]="farm.status === 'Completed'" [class.on-hold]="farm.status === 'On Hold'" [class.cancelled]="farm.status === 'Cancelled'" [title]="farm.status === 'rejected' ? farm.rejectedReason || 'Rejected' : statusLabel(farm.status)">
+          {{ statusLabel(farm.status) }}
+        </span>
+        <span class="source" *ngIf="!isFarmer">{{ farm.registrationSource === 'farmer_self' ? 'Farmer' : 'Manager' }}</span>
+      </div>
+
+      <h2>{{ farm.name }}</h2>
+      <div class="owner-line">
+        <p class="owner" *ngIf="farm.clientName">
+          <i class="fas fa-user"></i>
+          {{ farm.clientName }}
+        </p>
+        <p class="owner phone" *ngIf="farm.clientPhone">
+          <i class="fas fa-phone"></i>
+          {{ farm.clientPhone }}
+        </p>
+      </div>
+
+      <div class="meta-grid">
+        <div>
+          <span>District</span>
+          <strong>{{ farm.location?.district || 'Not set' }}</strong>
+        </div>
+        <div>
+          <span>Area</span>
+          <strong>{{ farm.landDetails?.totalArea || '-' }} {{ farm.landDetails?.areaUnit || '' }}</strong>
+        </div>
+        <div>
+          <span>Soil</span>
+          <strong>{{ farm.landDetails?.soilType || 'Not set' }}</strong>
+        </div>
+        <div>
+          <span>Crops</span>
+          <strong>{{ cropNames(farm) }}</strong>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-view-inline" (click)="$event.stopPropagation(); openProject(farm)">
+          View Details
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <button class="btn-edit-inline" *ngIf="isFarmer || canCreateDirectly" (click)="$event.stopPropagation(); openForm('edit', farm)">
+          Request Edit
+        </button>
+      </div>
+
+      <p class="rejection" *ngIf="farm.status === 'rejected' && farm.rejectedReason">
+        <i class="fas fa-info-circle"></i>
+        {{ farm.rejectedReason }}
+      </p>
+    </article>
+  </section>
+
+  <section class="empty-state compact" *ngIf="!isLoading && farms.length && !filteredFarms.length">
+    <div class="empty-icon"><i class="fas fa-filter"></i></div>
+    <h2>No projects match these filters</h2>
+    <p>Adjust filters or clear them to view more projects.</p>
+    <button class="btn-primary" (click)="resetFilters()">Clear Filters</button>
+  </section>
+</main>

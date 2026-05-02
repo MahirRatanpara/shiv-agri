@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'user', 'assistant', 'lab_technician', 'manager'],
+    enum: ['admin', 'user', 'end_user', 'assistant', 'lab_technician', 'manager'],
     default: 'user',
     index: true
   },
@@ -45,7 +45,9 @@ const userSchema = new mongoose.Schema({
   metadata: {
     department: String,
     designation: String,
-    phoneNumber: String
+    phoneCountryCode: String,
+    phoneNumber: String,
+    phoneNumberNormalized: String
   },
   createdAt: {
     type: Date,
@@ -66,6 +68,7 @@ userSchema.pre('save', function(next) {
 
 // Indexes for performance
 userSchema.index({ role: 1 });
+userSchema.index({ 'metadata.phoneNumberNormalized': 1 });
 
 // Instance Methods
 userSchema.methods.toClientJSON = function() {
@@ -77,6 +80,7 @@ userSchema.methods.toClientJSON = function() {
     profilePhoto: this.profilePhoto,
     department: this.metadata?.department,
     designation: this.metadata?.designation,
+    phoneCountryCode: this.metadata?.phoneCountryCode,
     phoneNumber: this.metadata?.phoneNumber,
     lastLogin: this.lastLogin,
     createdAt: this.createdAt

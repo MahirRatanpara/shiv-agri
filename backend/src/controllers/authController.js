@@ -4,6 +4,21 @@ const { generateAccessToken, verifyToken, decodeToken } = require('../utils/jwt'
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
+
+const serializeUser = (user) => ({
+  id: user._id,
+  email: user.email,
+  name: user.name,
+  role: user.role,
+  profilePhoto: user.profilePhoto,
+  phoneCountryCode: user.metadata?.phoneCountryCode || '',
+  phoneNumber: user.metadata?.phoneNumber || '',
+  department: user.metadata?.department || '',
+  designation: user.metadata?.designation || '',
+  roleRef: user.roleRef
+});
+
 /**
  * Google OAuth login (legacy ID token flow - kept as fallback)
  */
@@ -54,14 +69,7 @@ const googleLogin = async (req, res) => {
       return res.status(201).json({
         message: 'Account created successfully',
         accessToken,
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          profilePhoto: user.profilePhoto,
-          roleRef: user.roleRef
-        }
+        user: serializeUser(user)
       });
     }
 
@@ -93,14 +101,7 @@ const googleLogin = async (req, res) => {
     res.json({
       message: 'Login successful',
       accessToken,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-        roleRef: user.roleRef
-      }
+      user: serializeUser(user)
     });
   } catch (error) {
     console.error('Google login error:', error);
@@ -214,14 +215,7 @@ const googleLoginWithCode = async (req, res) => {
     res.status(isNewUser ? 201 : 200).json({
       message: isNewUser ? 'Account created successfully' : 'Login successful',
       accessToken,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-        roleRef: user.roleRef
-      }
+      user: serializeUser(user)
     });
   } catch (error) {
     console.error('Google code login error:', error);
@@ -351,18 +345,96 @@ const getCurrentUser = async (req, res) => {
     const user = req.user;
 
     res.json({
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-        roleRef: user.roleRef
-      }
+      user: serializeUser(user)
     });
   } catch (error) {
     console.error('Get current user error:', error);
     res.status(500).json({ error: 'Failed to get user information' });
+  }
+};
+
+/**
+ * Update current user's editable profile fields
+ */
+const updateCurrentUserProfile = async (req, res) => {
+  try {
+    const phoneCountryCode = String(req.body.phoneCountryCode || '+91').trim();
+    const nationalPhoneNumber = String(req.body.phoneNumber || '').trim();
+    const phoneNumber = nationalPhoneNumber.startsWith('+')
+      ? nationalPhoneNumber
+      : `${phoneCountryCode} ${nationalPhoneNumber}`.trim();
+    const phoneNumberNormalized = normalizePhoneNumber(
+      nationalPhoneNumber.startsWith('+') ? nationalPhoneNumber : `${phoneCountryCode}${nationalPhoneNumber}`
+    );
+    const nationalPhoneNumberNormalized = normalizePhoneNumber(nationalPhoneNumber);
+
+    if (!nationalPhoneNumber) {
+      return res.status(400).json({ error: 'Mobile number is required' });
+    }
+
+    if (phoneNumberNormalized.length < 7) {
+      return res.status(400).json({ error: 'Enter a valid mobile number' });
+    }
+
+    const userId = req.user?._id || req.body.userId || req.body.id;
+    const email = String(req.user?.email || req.body.email || '').trim().toLowerCase();
+    const userQuery = userId ? { _id: userId } : email ? { email } : null;
+
+    if (!userQuery) {
+      return res.status(400).json({ error: 'User identifier is required to update mobile number' });
+    }
+
+    const user = await User.findOne(userQuery).populate({
+      path: 'roleRef',
+      populate: { path: 'permissions' }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const directDuplicate = await User.findOne({
+      _id: { $ne: user._id },
+      $or: [
+        { 'metadata.phoneNumberNormalized': phoneNumberNormalized },
+        { 'metadata.phoneNumber': phoneNumber },
+        { 'metadata.phoneNumber': phoneNumberNormalized },
+        { 'metadata.phoneNumber': nationalPhoneNumber },
+        { 'metadata.phoneNumber': nationalPhoneNumberNormalized }
+      ]
+    }).select('_id');
+    const usersWithPhones = directDuplicate ? [] : await User.find({
+      _id: { $ne: user._id },
+      $or: [
+        { 'metadata.phoneNumber': { $exists: true, $ne: '' } },
+        { 'metadata.phoneNumberNormalized': { $exists: true, $ne: '' } }
+      ]
+    }).select('_id metadata.phoneNumber metadata.phoneNumberNormalized');
+    const normalizedDuplicate = usersWithPhones.find((candidate) => {
+      const candidatePhone = candidate.metadata?.phoneNumberNormalized || normalizePhoneNumber(candidate.metadata?.phoneNumber);
+      return candidatePhone === phoneNumberNormalized || candidatePhone === nationalPhoneNumberNormalized;
+    });
+
+    if (directDuplicate || normalizedDuplicate) {
+      return res.status(409).json({ error: 'This mobile number is already linked to another user' });
+    }
+
+    user.metadata = {
+      ...(user.metadata?.toObject ? user.metadata.toObject() : user.metadata || {}),
+      phoneCountryCode,
+      phoneNumber,
+      phoneNumberNormalized
+    };
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: serializeUser(user)
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 };
 
@@ -371,5 +443,6 @@ module.exports = {
   googleLoginWithCode,
   refreshAccessToken,
   logout,
-  getCurrentUser
+  getCurrentUser,
+  updateCurrentUserProfile
 };
