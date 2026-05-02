@@ -2,7 +2,7 @@
   <section class="top-nav">
     <button class="back-btn" routerLink="/farm-management">
       <i class="fas fa-arrow-left"></i>
-      Back
+      Back to Farms
     </button>
   </section>
 
@@ -11,28 +11,57 @@
     <p>Loading project details...</p>
   </section>
 
+  <section *ngIf="!isLoading && project" class="page-hero">
+    <div class="hero-pattern" aria-hidden="true"></div>
+    <div class="hero-orb" aria-hidden="true"></div>
+
+    <div class="hero-meta">
+      <span
+        class="status-pill"
+        [class.pending]="project.status === 'pending_approval'"
+        [class.approved]="project.status === 'approved'"
+        [class.rejected]="project.status === 'rejected'"
+        [class.running]="project.status === 'Running'"
+        [class.completed]="project.status === 'Completed'"
+        [class.on-hold]="project.status === 'On Hold'"
+        [class.cancelled]="project.status === 'Cancelled'"
+      >
+        <span class="status-dot" aria-hidden="true"></span>
+        {{ statusLabel(project.status) }}
+      </span>
+      <span class="source-tag">
+        <i class="fas" [class.fa-user]="project.registrationSource === 'farmer_self'" [class.fa-user-tie]="project.registrationSource !== 'farmer_self'"></i>
+        {{ project.registrationSource === 'farmer_self' ? 'Farmer submitted' : 'Manager created' }}
+      </span>
+    </div>
+
+    <h1>{{ project.name }}</h1>
+
+    <div class="hero-contact">
+      <div class="contact-chip" *ngIf="project.clientName">
+        <i class="fas fa-user"></i>
+        <span>{{ project.clientName }}</span>
+      </div>
+      <div class="contact-chip" *ngIf="project.clientPhone">
+        <i class="fas fa-phone"></i>
+        <span>{{ project.clientPhone }}</span>
+      </div>
+      <div class="contact-chip" *ngIf="project.clientEmail">
+        <i class="fas fa-envelope"></i>
+        <span>{{ project.clientEmail }}</span>
+      </div>
+      <div class="contact-chip" *ngIf="project.location?.district">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>{{ project.location?.district }}{{ project.location?.state ? ', ' + project.location?.state : '' }}</span>
+      </div>
+    </div>
+  </section>
+
   <section *ngIf="!isLoading && project" class="details-layout">
     <article class="profile-card">
-      <div class="profile-head">
-        <span class="status-pill" [class.pending]="project.status === 'pending_approval'" [class.approved]="project.status === 'approved'" [class.rejected]="project.status === 'rejected'" [class.running]="project.status === 'Running'" [class.completed]="project.status === 'Completed'" [class.on-hold]="project.status === 'On Hold'" [class.cancelled]="project.status === 'Cancelled'">
-          {{ statusLabel(project.status) }}
-        </span>
-        <span class="source">{{ project.registrationSource === 'farmer_self' ? 'Farmer submitted' : 'Manager created' }}</span>
-      </div>
-
-      <h1>{{ project.name }}</h1>
-      <p class="owner">
-        <i class="fas fa-user"></i>
-        {{ project.clientName }}
-      </p>
-      <p class="owner">
-        <i class="fas fa-phone"></i>
-        {{ project.clientPhone || 'Missing mobile number' }}
-      </p>
-      <p class="owner" *ngIf="project.clientEmail">
-        <i class="fas fa-envelope"></i>
-        {{ project.clientEmail }}
-      </p>
+      <header class="card-section-head">
+        <h2><i class="fas fa-circle-check"></i> Approval & Lifecycle</h2>
+      </header>
 
       <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
         <button class="approve-btn" (click)="approve()" [disabled]="isSubmitting">
@@ -45,98 +74,109 @@
         </button>
       </div>
       <label class="reason-box" *ngIf="canApprove && project.status === 'pending_approval'">
-        <span>Optional rejection reason</span>
-        <textarea [(ngModel)]="rejectionReason" rows="3"></textarea>
+        <span><i class="fas fa-comment-dots"></i> Optional rejection reason</span>
+        <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Add context for the farmer..."></textarea>
       </label>
 
       <label class="state-control" *ngIf="canChangeLifecycleStatus">
-        <span>Project state</span>
+        <span><i class="fas fa-shuffle"></i> Project state</span>
         <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
           <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
         </select>
       </label>
 
       <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
-        <i class="fas fa-pen"></i>
+        <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
         {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
       </button>
+
+      <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
+        <div class="info-row">
+          <span><i class="fas fa-clock"></i> Submitted</span>
+          <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
+        </div>
+        <div class="info-row" *ngIf="project.approvedAt">
+          <span><i class="fas fa-circle-check"></i> Approved</span>
+          <strong>{{ project.approvedAt | date:'medium' }}</strong>
+        </div>
+        <div class="info-row" *ngIf="project.startDate">
+          <span><i class="fas fa-play"></i> Started</span>
+          <strong>{{ project.startDate | date:'mediumDate' }}</strong>
+        </div>
+        <div class="info-row" *ngIf="project.completionDate">
+          <span><i class="fas fa-flag-checkered"></i> Completed</span>
+          <strong>{{ project.completionDate | date:'mediumDate' }}</strong>
+        </div>
+      </div>
     </article>
 
-    <article class="facts-grid">
-      <div class="fact-card">
-        <span>District</span>
-        <strong>{{ project.location?.district || 'Not set' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>City</span>
-        <strong>{{ project.location?.city || 'Not set' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Total Area</span>
-        <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Cultivable Area</span>
-        <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Soil Type</span>
-        <strong>{{ project.landDetails?.soilType || '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Irrigation</span>
-        <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Terrain</span>
-        <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Water Sources</span>
-        <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
-      </div>
-      <div class="fact-card wide">
-        <span>Address</span>
-        <strong>{{ project.location?.address || '-' }}</strong>
-      </div>
-      <div class="fact-card wide">
-        <span>Crops</span>
-        <strong>{{ cropSummary() }}</strong>
-      </div>
-      <div class="fact-card wide" *ngIf="project.description">
-        <span>Description</span>
-        <strong>{{ project.description }}</strong>
-      </div>
-      <div class="fact-card wide" *ngIf="project.notes">
-        <span>Notes</span>
-        <strong>{{ project.notes }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Submitted At</span>
-        <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Approved At</span>
-        <strong>{{ project.approvedAt ? (project.approvedAt | date:'medium') : '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Started At</span>
-        <strong>{{ project.startDate ? (project.startDate | date:'mediumDate') : '-' }}</strong>
-      </div>
-      <div class="fact-card">
-        <span>Completed At</span>
-        <strong>{{ project.completionDate ? (project.completionDate | date:'mediumDate') : '-' }}</strong>
-      </div>
-      <div class="fact-card wide" *ngIf="project.status === 'rejected' && project.rejectedReason">
-        <span>Rejection Reason</span>
-        <strong>{{ project.rejectedReason }}</strong>
+    <article class="facts-section">
+      <header class="card-section-head">
+        <h2><i class="fas fa-leaf"></i> Farm Profile</h2>
+      </header>
+
+      <div class="facts-grid">
+        <div class="fact-card">
+          <span><i class="fas fa-map-marker-alt"></i> District</span>
+          <strong>{{ project.location?.district || 'Not set' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-city"></i> City</span>
+          <strong>{{ project.location?.city || 'Not set' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-ruler-combined"></i> Total Area</span>
+          <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
+          <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-mountain"></i> Soil Type</span>
+          <strong>{{ project.landDetails?.soilType || '-' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-droplet"></i> Irrigation</span>
+          <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-layer-group"></i> Terrain</span>
+          <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
+        </div>
+        <div class="fact-card">
+          <span><i class="fas fa-water"></i> Water Sources</span>
+          <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
+        </div>
+        <div class="fact-card wide">
+          <span><i class="fas fa-location-dot"></i> Address</span>
+          <strong>{{ project.location?.address || '-' }}</strong>
+        </div>
+        <div class="fact-card wide">
+          <span><i class="fas fa-seedling"></i> Crops</span>
+          <strong>{{ cropSummary() }}</strong>
+        </div>
+        <div class="fact-card wide" *ngIf="project.description">
+          <span><i class="fas fa-align-left"></i> Description</span>
+          <strong>{{ project.description }}</strong>
+        </div>
+        <div class="fact-card wide" *ngIf="project.notes">
+          <span><i class="fas fa-note-sticky"></i> Notes</span>
+          <strong>{{ project.notes }}</strong>
+        </div>
+        <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
+          <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
+          <strong>{{ project.rejectedReason }}</strong>
+        </div>
       </div>
     </article>
   </section>
 
   <section class="edit-panel" *ngIf="showEditForm && project">
-    <h2>Edit Project</h2>
-    <p>Changes are sent for approval before going live.</p>
+    <header class="card-section-head">
+      <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
+      <p>Changes are sent for approval before going live.</p>
+    </header>
     <app-farm-registration-form
       [mode]="isFarmer ? 'farmer' : 'manager'"
       action="edit"
