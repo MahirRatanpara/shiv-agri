@@ -1,7 +1,66 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
+const farmMediaController = require('../controllers/farmMediaController');
 const { authenticate, requirePermission } = require('../middleware/auth');
+
+const farmMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25 MB per file
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (/^(image|video)\//i.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+/**
+ * Allow farm media upload if the user has farm.projects.update OR
+ * is the farm's owner (submittedBy / clientId). Admin always passes.
+ */
+const requireFarmMediaUploadAccess = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (req.user.role === 'admin') return next();
+
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    if (userPermissions.includes('farm.projects.update')) return next();
+
+    const Project = require('../models/Project');
+    const project = await Project.findById(req.params.id)
+      .select('submittedBy clientId createdBy')
+      .lean();
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const userId = req.user._id.toString();
+    const isOwner = [project.submittedBy, project.clientId, project.createdBy]
+      .filter(Boolean)
+      .map((id) => id.toString())
+      .includes(userId);
+
+    if (isOwner) return next();
+
+    return res.status(403).json({
+      error: 'Insufficient permissions',
+      message: 'Only the farm owner or a manager can upload media for this farm.'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
 
 /**
  * Project Routes
@@ -367,6 +426,56 @@ router.get('/:id/activity',
   authenticate,
   requirePermission('farm.projects.view'),
   projectController.getProjectActivity
+);
+
+// ========================
+// Farm Media Routes (Photos & Videos)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/media
+ * @desc    List farm media (photos/videos) for a project, newest first
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmMediaController.listMedia
+);
+
+/**
+ * @route   GET /api/projects/:id/media/quota
+ * @desc    Get current week's media upload quota for the project
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media/quota',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmMediaController.getQuota
+);
+
+/**
+ * @route   POST /api/projects/:id/media
+ * @desc    Upload up to 5 photos/videos to a farm project (max 25MB each)
+ * @access  Private (farm.projects.update)
+ */
+router.post('/:id/media',
+  authenticate,
+  requireFarmMediaUploadAccess,
+  (req, res, next) => {
+    farmMediaUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmMediaController.uploadMedia
 );
 
 // ========================

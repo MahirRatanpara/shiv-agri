@@ -23,7 +23,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Profile("filesystem")
 public class FileSystemStorageService implements StorageService {
 
     private final Path rootDir;

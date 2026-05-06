@@ -57,134 +57,305 @@
     </div>
   </section>
 
-  <section *ngIf="!isLoading && project" class="details-layout">
-    <article class="profile-card">
+  <nav class="tab-bar" *ngIf="!isLoading && project" role="tablist">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'overview'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'overview'"
+      (click)="switchTab('overview')"
+    >
+      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+      Overview
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'media'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'media'"
+      (click)="switchTab('media')"
+    >
+      <i class="fas fa-images" aria-hidden="true"></i>
+      Photos &amp; Videos
+      <span class="tab-count" *ngIf="mediaItems.length">{{ mediaItems.length }}</span>
+    </button>
+  </nav>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
+    <section class="details-layout">
+      <article class="profile-card">
+        <header class="card-section-head">
+          <h2><i class="fas fa-circle-check"></i> Approval &amp; Lifecycle</h2>
+        </header>
+
+        <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
+          <button class="approve-btn" (click)="approve()" [disabled]="isSubmitting">
+            <i class="fas fa-check"></i>
+            Approve
+          </button>
+          <button class="reject-btn" (click)="reject()" [disabled]="isSubmitting">
+            <i class="fas fa-times"></i>
+            Reject
+          </button>
+        </div>
+        <label class="reason-box" *ngIf="canApprove && project.status === 'pending_approval'">
+          <span><i class="fas fa-comment-dots"></i> Optional rejection reason</span>
+          <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Add context for the farmer..."></textarea>
+        </label>
+
+        <label class="state-control" *ngIf="canChangeLifecycleStatus">
+          <span><i class="fas fa-shuffle"></i> Project state</span>
+          <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
+            <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
+          </select>
+        </label>
+
+        <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
+          <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
+          {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
+        </button>
+
+        <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
+          <div class="info-row">
+            <span><i class="fas fa-clock"></i> Submitted</span>
+            <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.approvedAt">
+            <span><i class="fas fa-circle-check"></i> Approved</span>
+            <strong>{{ project.approvedAt | date:'medium' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.startDate">
+            <span><i class="fas fa-play"></i> Started</span>
+            <strong>{{ project.startDate | date:'mediumDate' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.completionDate">
+            <span><i class="fas fa-flag-checkered"></i> Completed</span>
+            <strong>{{ project.completionDate | date:'mediumDate' }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="facts-section">
+        <header class="card-section-head">
+          <h2><i class="fas fa-leaf"></i> Farm Profile</h2>
+        </header>
+
+        <div class="facts-grid">
+          <div class="fact-card">
+            <span><i class="fas fa-map-marker-alt"></i> District</span>
+            <strong>{{ project.location?.district || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-city"></i> City</span>
+            <strong>{{ project.location?.city || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-ruler-combined"></i> Total Area</span>
+            <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
+            <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-mountain"></i> Soil Type</span>
+            <strong>{{ project.landDetails?.soilType || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-droplet"></i> Irrigation</span>
+            <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-layer-group"></i> Terrain</span>
+            <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-water"></i> Water Sources</span>
+            <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
+          </div>
+          <div class="fact-card wide">
+            <span><i class="fas fa-location-dot"></i> Address</span>
+            <strong>{{ project.location?.address || '-' }}</strong>
+          </div>
+          <div class="fact-card wide">
+            <span><i class="fas fa-seedling"></i> Crops</span>
+            <strong>{{ cropSummary() }}</strong>
+          </div>
+          <div class="fact-card wide" *ngIf="project.description">
+            <span><i class="fas fa-align-left"></i> Description</span>
+            <strong>{{ project.description }}</strong>
+          </div>
+          <div class="fact-card wide" *ngIf="project.notes">
+            <span><i class="fas fa-note-sticky"></i> Notes</span>
+            <strong>{{ project.notes }}</strong>
+          </div>
+          <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
+            <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
+            <strong>{{ project.rejectedReason }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="edit-panel" *ngIf="showEditForm && project">
       <header class="card-section-head">
-        <h2><i class="fas fa-circle-check"></i> Approval & Lifecycle</h2>
+        <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
+        <p>Changes are sent for approval before going live.</p>
+      </header>
+      <app-farm-registration-form
+        [mode]="isFarmer ? 'farmer' : 'manager'"
+        action="edit"
+        [currentUser]="currentUser"
+        [initialData]="project"
+        [isSubmitting]="isSubmitting"
+        (formSubmit)="submitEditRequest($event)"
+        (cancel)="showEditForm = false"
+      ></app-farm-registration-form>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'media'">
+    <section class="media-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-images"></i> Photos &amp; Videos</h2>
+          <p *ngIf="canUploadMedia">Upload up to {{ maxFilesPerBatch }} files at a time, max {{ maxFileSizeMb }}MB each. Newest first.</p>
+          <p *ngIf="!canUploadMedia">Photos and videos shared by the project team.</p>
+        </div>
+
+        <div class="media-head-actions">
+          <div
+            class="quota-chip"
+            *ngIf="quota"
+            [class.warning]="quotaStatus === 'warning'"
+            [class.critical]="quotaStatus === 'critical'"
+            [attr.aria-label]="'Used ' + quota.used + ' of ' + quota.limit + ' uploads this week'"
+          >
+            <i class="fas fa-camera-retro" aria-hidden="true"></i>
+            <div class="quota-text">
+              <strong>{{ quota.used }} / {{ quota.limit }}</strong>
+              <span>this week · resets {{ quotaResetsLabel }}</span>
+            </div>
+            <div class="quota-bar" aria-hidden="true">
+              <div class="quota-bar-fill" [style.width.%]="quotaPercent"></div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="upload-btn"
+            *ngIf="canUploadMedia"
+            [disabled]="isUploading || (quota && quota.used >= quota.limit)"
+            [class.at-limit]="quota && quota.used >= quota.limit"
+            (click)="triggerFilePicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploading"
+              [class.fa-circle-notch]="isUploading"
+              [class.fa-spin]="isUploading"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploading ? 'Uploading...' : (quota && quota.used >= quota.limit ? 'Weekly limit reached' : 'Upload Photos &amp; Videos') }}</span>
+          </button>
+        </div>
       </header>
 
-      <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
-        <button class="approve-btn" (click)="approve()" [disabled]="isSubmitting">
-          <i class="fas fa-check"></i>
-          Approve
+      <div class="upload-strip" *ngIf="uploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of uploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="mediaLoading && !mediaItems.length">
+        <div class="spinner"></div>
+        <p>Loading media...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!mediaLoading && mediaItems.length === 0 && uploadingBatch.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-camera"></i>
+        </div>
+        <h3>No photos or videos yet</h3>
+        <p *ngIf="canUploadMedia">Share what's happening at the farm — pick a few photos or videos to get started.</p>
+        <p *ngIf="!canUploadMedia">Once the team shares media, it will appear here.</p>
+        <button
+          type="button"
+          class="upload-btn empty-state-btn"
+          *ngIf="canUploadMedia"
+          [disabled]="isUploading || (quota && quota.used >= quota.limit)"
+          (click)="triggerFilePicker()"
+        >
+          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <span>Upload Photos &amp; Videos</span>
         </button>
-        <button class="reject-btn" (click)="reject()" [disabled]="isSubmitting">
-          <i class="fas fa-times"></i>
-          Reject
+      </div>
+
+      <div class="media-grid" *ngIf="mediaItems.length">
+        <button
+          type="button"
+          class="media-tile"
+          *ngFor="let item of mediaItems; trackBy: trackMedia"
+          (click)="openLightbox(item)"
+          [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+        >
+          <ng-container *ngIf="item.type === 'image'">
+            <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+          </ng-container>
+          <ng-container *ngIf="item.type === 'video'">
+            <video [src]="item.url" preload="metadata" muted playsinline></video>
+            <span class="play-icon" aria-hidden="true">
+              <i class="fas fa-play"></i>
+            </span>
+          </ng-container>
+          <div class="media-overlay">
+            <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+            <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+          </div>
         </button>
       </div>
-      <label class="reason-box" *ngIf="canApprove && project.status === 'pending_approval'">
-        <span><i class="fas fa-comment-dots"></i> Optional rejection reason</span>
-        <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Add context for the farmer..."></textarea>
-      </label>
+    </section>
 
-      <label class="state-control" *ngIf="canChangeLifecycleStatus">
-        <span><i class="fas fa-shuffle"></i> Project state</span>
-        <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
-          <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
-        </select>
-      </label>
+    <input
+      #mediaInput
+      type="file"
+      class="media-input"
+      accept="image/*,video/*"
+      multiple
+      (change)="onFilesSelected($event)"
+    />
+  </ng-container>
 
-      <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
-        <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
-        {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
-      </button>
-
-      <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
-        <div class="info-row">
-          <span><i class="fas fa-clock"></i> Submitted</span>
-          <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.approvedAt">
-          <span><i class="fas fa-circle-check"></i> Approved</span>
-          <strong>{{ project.approvedAt | date:'medium' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.startDate">
-          <span><i class="fas fa-play"></i> Started</span>
-          <strong>{{ project.startDate | date:'mediumDate' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.completionDate">
-          <span><i class="fas fa-flag-checkered"></i> Completed</span>
-          <strong>{{ project.completionDate | date:'mediumDate' }}</strong>
-        </div>
+  <div class="lightbox" *ngIf="lightboxItem" (click)="closeLightbox()" role="dialog" aria-modal="true">
+    <button type="button" class="lightbox-close" (click)="closeLightbox(); $event.stopPropagation()" aria-label="Close media viewer">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <img *ngIf="lightboxItem.type === 'image'" [src]="lightboxItem.url" [alt]="'Farm photo'" />
+      <video *ngIf="lightboxItem.type === 'video'" [src]="lightboxItem.url" controls autoplay playsinline></video>
+      <div class="lightbox-meta">
+        <span>{{ lightboxItem.uploadedAt | date:'medium' }}</span>
+        <span *ngIf="lightboxItem.uploadedByName">· {{ lightboxItem.uploadedByName }}</span>
       </div>
-    </article>
-
-    <article class="facts-section">
-      <header class="card-section-head">
-        <h2><i class="fas fa-leaf"></i> Farm Profile</h2>
-      </header>
-
-      <div class="facts-grid">
-        <div class="fact-card">
-          <span><i class="fas fa-map-marker-alt"></i> District</span>
-          <strong>{{ project.location?.district || 'Not set' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-city"></i> City</span>
-          <strong>{{ project.location?.city || 'Not set' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-ruler-combined"></i> Total Area</span>
-          <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
-          <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-mountain"></i> Soil Type</span>
-          <strong>{{ project.landDetails?.soilType || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-droplet"></i> Irrigation</span>
-          <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-layer-group"></i> Terrain</span>
-          <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-water"></i> Water Sources</span>
-          <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
-        </div>
-        <div class="fact-card wide">
-          <span><i class="fas fa-location-dot"></i> Address</span>
-          <strong>{{ project.location?.address || '-' }}</strong>
-        </div>
-        <div class="fact-card wide">
-          <span><i class="fas fa-seedling"></i> Crops</span>
-          <strong>{{ cropSummary() }}</strong>
-        </div>
-        <div class="fact-card wide" *ngIf="project.description">
-          <span><i class="fas fa-align-left"></i> Description</span>
-          <strong>{{ project.description }}</strong>
-        </div>
-        <div class="fact-card wide" *ngIf="project.notes">
-          <span><i class="fas fa-note-sticky"></i> Notes</span>
-          <strong>{{ project.notes }}</strong>
-        </div>
-        <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
-          <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
-          <strong>{{ project.rejectedReason }}</strong>
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <section class="edit-panel" *ngIf="showEditForm && project">
-    <header class="card-section-head">
-      <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
-      <p>Changes are sent for approval before going live.</p>
-    </header>
-    <app-farm-registration-form
-      [mode]="isFarmer ? 'farmer' : 'manager'"
-      action="edit"
-      [currentUser]="currentUser"
-      [initialData]="project"
-      [isSubmitting]="isSubmitting"
-      (formSubmit)="submitEditRequest($event)"
-      (cancel)="showEditForm = false"
-    ></app-farm-registration-form>
-  </section>
+    </div>
+  </div>
 </main>

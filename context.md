@@ -472,6 +472,8 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
 
+**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed) } — photos/videos uploaded via Media Service, embedded as references on the project.
+
 **Soft Delete:** `isDeleted`, `deletedAt`, `deletedBy`
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
@@ -507,6 +509,9 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/:id/transactions/:txId` | project.update | Update transaction |
 | DELETE | `/api/projects/:id/transactions/:txId` | project.update | Remove transaction |
 | GET | `/api/projects/:id/activity` | farm.projects.view | Activity log |
+| GET | `/api/projects/:id/media` | farm.projects.view OR farms.view | List farm media (paginated, newest first) |
+| GET | `/api/projects/:id/media/quota` | farm.projects.view OR farms.view | Current week's upload quota snapshot |
+| POST | `/api/projects/:id/media` | farm.projects.update OR farm owner (submittedBy/clientId/createdBy) | Upload up to 5 photos/videos (≤25MB each); enforces weekly quota |
 | PATCH | `/api/projects/bulk` | project.update | Bulk update |
 | POST | `/api/projects/bulk-delete` | project.delete | Bulk soft delete |
 
@@ -519,14 +524,24 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Approval/Rejection:** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`).
 - **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update an approved farm; resets it to `pending_approval` and re-notifies approvers.
 
+### Farm Media Upload (`backend/src/controllers/farmMediaController.js`, `services/farmMediaService.js`)
+
+- **Flow:** Backend receives multipart upload → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds returned reference on `Project.farmMedia[]` → notifies the farm owner (`farm_media_upload`).
+- **Limits:** ≤5 files/request, ≤25MB/file (multer memory storage), `image/*` or `video/*` only. Quota: `FARM_MEDIA_WEEKLY_LIMIT` (default 10) uploads per project per ISO week.
+- **Quota model (`backend/src/models/FarmMediaQuota.js`):** `{ projectId, isoWeek ("YYYY-Www"), uploadCount, lastUploadAt }`, unique index on `(projectId, isoWeek)`. Resets at start of next ISO week (Monday 00:00 UTC).
+- **Response headers:** `X-Media-Quota-Used`, `X-Media-Quota-Limit`, `X-Media-Quota-Resets-At` set on every media response.
+- **Status codes:** 201 all uploaded, 207 partial, 429 quota exceeded, 415 unsupported type, 502 media-service failure.
+- **Env:** `MEDIA_SERVICE_URL` (internal, default `http://localhost:8081`), `MEDIA_SERVICE_PUBLIC_URL` (browser-facing prefix for `contentUrl`).
+
 ### Frontend
 - **Component:** `pages/farm-dashboard/farm-dashboard.ts` — Project listing, activity tracking, budget/expense dashboard
 - **Component:** `pages/project-details/project-details.ts` — Full project view
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media) with photo/video upload, quota chip, per-file progress, and grid gallery
 - **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows)
-- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`
+- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` now exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks.
+- **Service:** `services/farm-media.service.ts` — `listMedia()`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType` for upload progress)
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
@@ -800,7 +815,7 @@ Dedicated Spring Boot microservice for media upload, storage, and retrieval. Use
 ### Technology
 - Spring Boot 3.2.5, Java 17, MongoDB, Maven
 - Port: 8081
-- Storage: Filesystem (`/var/media/uploads`)
+- Storage: `FileSystemStorageService` is the default (no Spring profile required); root dir from `MEDIA_STORAGE_FILESYSTEM_ROOT_DIR` (prod default `/var/media/uploads`, local dev default `/Users/mahirratanpara/uploads`)
 - Max file: 20MB
 - Allowed types: image/jpeg, image/png, image/webp, image/gif
 
@@ -943,6 +958,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 |---------|------|-------------|
 | AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), currentUser$ BehaviorSubject |
 | FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), getFarmById(), lookupUserByPhone() |
+| FarmMediaService | `farm-media.service.ts` | listMedia(projectId, page, limit), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
@@ -1063,9 +1079,10 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | invoices | Invoice.js | invoiceNumber (unique), date |
 | letters | Letter.js | letterNumber (unique sparse), date |
 | activitylogs | ActivityLog.js | projectId+timestamp, userId+timestamp |
-| notifications | Notification.js | user, type, project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt |
+| notifications | Notification.js | user, type (incl. `farm_media_upload`), project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt |
 | drafts | Draft.js | projectId, createdBy |
 | media | MediaDocument.java | status+createdAt |
+| farmmediaquotas | FarmMediaQuota.js | projectId, (projectId+isoWeek unique) — per-week upload counters for farm media |
 
 ### Cross-Collection Relationships
 

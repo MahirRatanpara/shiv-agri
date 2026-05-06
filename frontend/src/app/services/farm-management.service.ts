@@ -32,6 +32,9 @@ export interface FarmProject {
   };
   crops?: Array<{ name: string; variety?: string; season?: string; area?: number }>;
   registrationSource?: 'farmer_self' | 'manager_direct';
+  submittedBy?: string | { _id?: string; id?: string };
+  clientId?: string | { _id?: string; id?: string };
+  createdBy?: string | { _id?: string; id?: string };
   submittedAt?: string;
   approvedAt?: string;
   rejectedReason?: string;

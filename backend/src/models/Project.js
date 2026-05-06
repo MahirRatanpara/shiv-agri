@@ -225,6 +225,19 @@ const projectSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now }
   }],
 
+  // Farm media (photos/videos uploaded by managers via Media Service)
+  farmMedia: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video'], required: true },
+    sizeBytes: { type: Number },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true }
+  }],
+
   // Project Specific Data
   crops: [{
     name: { type: String, trim: true },
