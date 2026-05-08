@@ -3,8 +3,34 @@ const User = require('../models/User');
 const ExcelJS = require('exceljs'); // You'll need to npm install exceljs
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
+const { resolveAndParseLatLng, isValidLatLng } = require('../utils/mapUrlParser');
 
 const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
+
+/**
+ * If a map URL is present and coordinates haven't been set explicitly,
+ * try to derive { type: 'Point', coordinates: [lng, lat] } from the URL.
+ * For shortened Google Maps share links, this follows the redirect.
+ */
+async function applyDerivedCoordinates(location) {
+  if (!location || typeof location !== 'object') return;
+
+  const existing = location.coordinates;
+  const hasExistingCoords = existing
+    && Array.isArray(existing.coordinates)
+    && existing.coordinates.length === 2
+    && isValidLatLng(existing.coordinates[1], existing.coordinates[0]);
+
+  if (hasExistingCoords) return;
+
+  const parsed = await resolveAndParseLatLng(location.mapUrl);
+  if (!parsed) return;
+
+  location.coordinates = {
+    type: 'Point',
+    coordinates: [parsed.longitude, parsed.latitude]
+  };
+}
 
 /**
  * Project Service - Business Logic Layer
@@ -278,6 +304,8 @@ class ProjectService {
       projectType: projectData.projectType || 'farm',
       budget: projectData.budget ?? 0
     };
+
+    await applyDerivedCoordinates(normalizedData.location);
 
     if (isFarmerRegistration) {
       const farmerPhone = userContext?.metadata?.phoneNumber?.trim();
@@ -592,6 +620,10 @@ class ProjectService {
       }
     }
 
+    if (cleanedUpdates.location) {
+      await applyDerivedCoordinates(cleanedUpdates.location);
+    }
+
     Object.assign(project, cleanedUpdates);
     project.status = 'pending_approval';
     project.registrationSource = 'farmer_self';
@@ -628,6 +660,10 @@ class ProjectService {
 
     if (!project) {
       throw new Error('Project not found');
+    }
+
+    if (updateData?.location) {
+      await applyDerivedCoordinates(updateData.location);
     }
 
     // Update fields

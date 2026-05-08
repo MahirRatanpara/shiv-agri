@@ -225,7 +225,7 @@
         </div>
         <div>
           <span><i class="fas fa-ruler-combined"></i> Area</span>
-          <strong>{{ farm.landDetails?.totalArea || '-' }} {{ farm.landDetails?.areaUnit || '' }}</strong>
+          <strong>{{ farm.landDetails?.totalArea || '-' }} {{ areaUnitLabel(farm.landDetails?.areaUnit) }}</strong>
         </div>
         <div>
           <span><i class="fas fa-mountain"></i> Soil</span>

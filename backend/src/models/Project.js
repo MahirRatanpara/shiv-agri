@@ -93,6 +93,7 @@ const projectSchema = new mongoose.Schema({
   // Location Information
   location: {
     address: { type: String, trim: true },
+    taluka: { type: String, trim: true, index: true },
     city: { type: String, trim: true, index: true }, // Indexed for filtering
     district: { type: String, trim: true },
     state: { type: String, trim: true, index: true }, // Indexed for filtering
@@ -118,13 +119,38 @@ const projectSchema = new mongoose.Schema({
   // Land Details (for farms)
   landDetails: {
     totalArea: { type: Number },
-    areaUnit: { type: String, enum: ['acres', 'hectares', 'sqmeters'], default: 'acres' },
+    areaUnit: {
+      type: String,
+      enum: ['acres', 'hectares', 'sqmeters', 'vigha-16', 'vigha-24'],
+      default: 'acres'
+    },
     cultivableArea: { type: Number },
     cultivablePercentage: { type: Number }, // Calculated field
     soilType: { type: String },
-    waterSource: [{ type: String }], // Array: bore well, canal, river, rainwater
-    irrigationSystem: { type: String }, // drip, sprinkler, flood, mixed
+    waterSource: [{ type: String }], // Legacy: bore well, canal, river, rainwater
+    irrigationSystem: { type: String }, // Bore, Well, Mixed, Canal, River
     terrainType: { type: String } // flat, sloped, hilly, mixed
+  },
+
+  // Electricity / Power Supply (for farms)
+  electricity: {
+    transformerHp: { type: Number, min: 0 }, // Transformer TC Horse Power
+    motorCount: { type: Number, min: 0 }, // Number of electric motors
+    totalMotorHp: { type: Number, min: 0 } // Combined HP across all motors
+  },
+
+  // Landscaping consultancy tag — orthogonal to category, identifies a farm
+  // project that also needs landscaping consultancy work
+  needsLandscapingConsultancy: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  // Online (remote) visit projects skip on-site visit count tracking
+  isOnlineVisit: {
+    type: Boolean,
+    default: false
   },
 
   // Budget Information with categories

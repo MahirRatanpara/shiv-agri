@@ -225,4 +225,15 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   openProject(farm: FarmProject): void {
     this.router.navigate(['/farm-management/project', farm.id || farm._id]);
   }
+
+  areaUnitLabel(unit?: string): string {
+    const labels: Record<string, string> = {
+      acres: 'Acres',
+      hectares: 'Hectares',
+      sqmeters: 'Sq. meters',
+      'vigha-16': 'Vigha (16 gutha)',
+      'vigha-24': 'Vigha (24 gutha)'
+    };
+    return unit ? labels[unit] || unit : '';
+  }
 }

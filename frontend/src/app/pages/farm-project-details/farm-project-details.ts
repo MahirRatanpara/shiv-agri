@@ -10,6 +10,7 @@ import { PermissionService } from '../../services/permission.service';
 import { FarmManagementService, FarmProject, FarmRegistrationPayload } from '../../services/farm-management.service';
 import { ToastService } from '../../services/toast.service';
 import { FarmRegistrationFormComponent } from '../../components/farm-registration-form/farm-registration-form';
+import { FarmWeatherComponent } from '../../components/farm-weather/farm-weather';
 import {
   FarmMediaQuota,
   FarmMediaRef,
@@ -31,7 +32,7 @@ const FARMER_POLL_INTERVAL_MS = 25_000;
 @Component({
   selector: 'app-farm-project-details',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, FarmRegistrationFormComponent],
+  imports: [CommonModule, FormsModule, RouterLink, FarmRegistrationFormComponent, FarmWeatherComponent],
   templateUrl: './farm-project-details.html',
   styleUrl: './farm-project-details.css'
 })
@@ -519,5 +520,35 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   cropSummary(): string {
     if (!this.project?.crops?.length) return '-';
     return this.project.crops.map((crop) => crop.name).filter(Boolean).join(', ');
+  }
+
+  get farmLatitude(): number | null {
+    const coords = this.project?.location?.coordinates?.coordinates;
+    return Array.isArray(coords) && coords.length === 2 ? coords[1] : null;
+  }
+
+  get farmLongitude(): number | null {
+    const coords = this.project?.location?.coordinates?.coordinates;
+    return Array.isArray(coords) && coords.length === 2 ? coords[0] : null;
+  }
+
+  get weatherLocationLabel(): string {
+    const parts = [
+      this.project?.location?.taluka,
+      this.project?.location?.district,
+      this.project?.location?.state
+    ].filter(Boolean);
+    return parts.join(', ');
+  }
+
+  areaUnitLabel(unit?: string): string {
+    const labels: Record<string, string> = {
+      acres: 'Acres',
+      hectares: 'Hectares',
+      sqmeters: 'Sq. meters',
+      'vigha-16': 'Vigha (16 gutha)',
+      'vigha-24': 'Vigha (24 gutha)'
+    };
+    return unit ? labels[unit] || unit : '';
   }
 }

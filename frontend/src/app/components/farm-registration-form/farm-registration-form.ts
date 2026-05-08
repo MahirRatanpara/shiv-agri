@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { FarmManagementService, FarmProject, FarmRegistrationPayload } from '../../services/farm-management.service';
+import { AreaUnit, FarmManagementService, FarmProject, FarmRegistrationPayload } from '../../services/farm-management.service';
 import { User } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 
@@ -29,18 +29,26 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   lookupInProgress = false;
   userResolved = false;
   address = '';
+  taluka = '';
   district = '';
   city = '';
   state = 'Gujarat';
   postalCode = '';
   mapUrl = '';
+  detectingLocation = false;
+  latitude: number | null = null;
+  longitude: number | null = null;
   totalArea: number | null = null;
-  areaUnit: 'acres' | 'hectares' | 'sqmeters' = 'acres';
+  areaUnit: AreaUnit = 'acres';
   cultivableArea: number | null = null;
   soilType = '';
-  waterSources: string[] = [];
   irrigationSystem = '';
   terrainType = '';
+  transformerHp: number | null = null;
+  motorCount: number | null = null;
+  totalMotorHp: number | null = null;
+  needsLandscapingConsultancy = false;
+  isOnlineVisit = false;
   cropInput = '';
   crops: Array<{ name: string; variety?: string; season?: string; area?: number }> = [];
   description = '';
@@ -51,10 +59,16 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   expectedCompletionDate = '';
   errors: Record<string, string> = {};
   private lastResolvedPhone = '';
-  availableWaterSources = ['Bore Well', 'Canal', 'River', 'Rainwater', 'Municipal', 'Mixed'];
-  irrigationOptions = ['Drip', 'Sprinkler', 'Flood', 'Mixed', 'Manual'];
+  irrigationOptions = ['Bore', 'Well', 'Mixed', 'Canal', 'River'];
   terrainOptions = ['Flat', 'Sloped', 'Hilly', 'Mixed'];
   cropSeasonOptions = ['Kharif', 'Rabi', 'Zaid', 'Perennial'];
+  areaUnitOptions: Array<{ value: AreaUnit; label: string }> = [
+    { value: 'acres', label: 'Acres' },
+    { value: 'hectares', label: 'Hectares' },
+    { value: 'sqmeters', label: 'Sq. meters' },
+    { value: 'vigha-16', label: 'Vigha (16 gutha)' },
+    { value: 'vigha-24', label: 'Vigha (24 gutha)' }
+  ];
   countryCodeOptions = [
     { label: 'India (+91)', value: '+91' },
     { label: 'US/Canada (+1)', value: '+1' },
@@ -114,18 +128,28 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
       this.clientPhone = phoneParts.localNumber;
     }
     this.address = data.location?.address || this.address;
+    this.taluka = data.location?.taluka || this.taluka;
     this.city = data.location?.city || this.city;
     this.district = data.location?.district || this.district;
     this.state = data.location?.state || this.state;
     this.postalCode = data.location?.postalCode || this.postalCode;
     this.mapUrl = data.location?.mapUrl || this.mapUrl;
+    const existingCoords = data.location?.coordinates?.coordinates;
+    if (Array.isArray(existingCoords) && existingCoords.length === 2) {
+      this.longitude = existingCoords[0] ?? this.longitude;
+      this.latitude = existingCoords[1] ?? this.latitude;
+    }
     this.totalArea = data.landDetails?.totalArea ?? this.totalArea;
     this.areaUnit = data.landDetails?.areaUnit || this.areaUnit;
     this.cultivableArea = data.landDetails?.cultivableArea ?? this.cultivableArea;
     this.soilType = data.landDetails?.soilType || this.soilType;
-    this.waterSources = data.landDetails?.waterSource || this.waterSources;
     this.irrigationSystem = data.landDetails?.irrigationSystem || this.irrigationSystem;
     this.terrainType = data.landDetails?.terrainType || this.terrainType;
+    this.transformerHp = data.electricity?.transformerHp ?? this.transformerHp;
+    this.motorCount = data.electricity?.motorCount ?? this.motorCount;
+    this.totalMotorHp = data.electricity?.totalMotorHp ?? this.totalMotorHp;
+    this.needsLandscapingConsultancy = data.needsLandscapingConsultancy ?? this.needsLandscapingConsultancy;
+    this.isOnlineVisit = data.isOnlineVisit ?? this.isOnlineVisit;
     this.crops = data.crops ? [...data.crops] : this.crops;
     this.description = data.description || this.description;
     this.notes = data.notes || this.notes;
@@ -133,6 +157,38 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     this.visitFrequency = data.visitFrequency ?? this.visitFrequency;
     this.startDate = data.startDate || this.startDate;
     this.expectedCompletionDate = data.expectedCompletionDate || this.expectedCompletionDate;
+  }
+
+  onMapUrlChange(): void {
+    // Clear cached coordinates so backend re-parses from the new URL
+    this.latitude = null;
+    this.longitude = null;
+  }
+
+  useCurrentLocation(): void {
+    if (!navigator.geolocation) {
+      this.toastService.error('Geolocation is not supported by this browser.');
+      return;
+    }
+    this.detectingLocation = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        this.detectingLocation = false;
+        this.toastService.success('Current location captured.');
+      },
+      (error) => {
+        this.detectingLocation = false;
+        const message = error.code === error.PERMISSION_DENIED
+          ? 'Location permission denied. Enable it in your browser settings.'
+          : 'Unable to determine current location.';
+        this.toastService.error(message);
+      },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 }
+    );
   }
 
   addCrop(): void {
@@ -144,14 +200,6 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
 
   removeCrop(cropName: string): void {
     this.crops = this.crops.filter((item) => item.name !== cropName);
-  }
-
-  toggleWaterSource(value: string): void {
-    if (this.waterSources.includes(value)) {
-      this.waterSources = this.waterSources.filter((source) => source !== value);
-      return;
-    }
-    this.waterSources = [...this.waterSources, value];
   }
 
   onClientPhoneChange(): void {
@@ -201,6 +249,14 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
       ? (this.currentUser?.phoneNumber || '')
       : this.combinedClientPhone();
 
+    const electricity = (this.transformerHp != null || this.motorCount != null || this.totalMotorHp != null)
+      ? {
+          transformerHp: this.transformerHp ?? undefined,
+          motorCount: this.motorCount ?? undefined,
+          totalMotorHp: this.totalMotorHp ?? undefined
+        }
+      : undefined;
+
     this.formSubmit.emit({
       name: this.farmName.trim(),
       clientName: ownerName?.trim(),
@@ -211,21 +267,27 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
       budget: 0,
       location: {
         address: this.address.trim(),
+        taluka: this.taluka.trim() || undefined,
         city: this.city.trim(),
         district: this.district.trim(),
         state: this.state.trim(),
         postalCode: this.postalCode.trim(),
-        mapUrl: this.mapUrl.trim()
+        mapUrl: this.mapUrl.trim(),
+        coordinates: (this.latitude != null && this.longitude != null)
+          ? { type: 'Point', coordinates: [this.longitude, this.latitude] }
+          : undefined
       },
       landDetails: {
         totalArea: Number(this.totalArea),
         areaUnit: this.areaUnit,
         soilType: this.soilType.trim(),
         cultivableArea: this.cultivableArea || undefined,
-        waterSource: this.waterSources,
         irrigationSystem: this.irrigationSystem || undefined,
         terrainType: this.terrainType || undefined
       },
+      electricity,
+      needsLandscapingConsultancy: this.needsLandscapingConsultancy,
+      isOnlineVisit: this.isOnlineVisit,
       crops: this.crops.map((crop) => ({
         name: crop.name,
         variety: crop.variety?.trim() || undefined,
@@ -237,7 +299,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
       notes: this.notes.trim() || undefined,
       startDate: this.startDate || undefined,
       expectedCompletionDate: this.expectedCompletionDate || undefined,
-      visitFrequency: this.visitFrequency || undefined
+      visitFrequency: this.isOnlineVisit ? undefined : (this.visitFrequency || undefined)
     });
   }
 
@@ -251,7 +313,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     if (!this.district.trim()) errors['district'] = 'District is required.';
     if (!this.totalArea || this.totalArea <= 0) errors['totalArea'] = 'Enter a valid total area.';
     if (!this.soilType.trim()) errors['soilType'] = 'Soil type is required.';
-    if (!this.waterSources.length) errors['waterSources'] = 'Select at least one water source.';
+    if (!this.irrigationSystem) errors['irrigationSystem'] = 'Select an irrigation source.';
     if (!this.crops.length) errors['crops'] = 'Add at least one crop.';
 
     this.errors = errors;

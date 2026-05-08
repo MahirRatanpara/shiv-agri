@@ -2,12 +2,30 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../environments/environment';
 import { catchError, switchMap, throwError } from 'rxjs';
+
+function isInternalRequest(url: string): boolean {
+  // Relative URLs and the configured backend API are internal.
+  if (!/^https?:\/\//i.test(url)) return true;
+  try {
+    const requestOrigin = new URL(url).origin;
+    const apiOrigin = new URL(environment.apiUrl, window.location.origin).origin;
+    return requestOrigin === apiOrigin || requestOrigin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const accessToken = authService.getAccessToken();
+
+  // Don't attach auth headers or credentials to third-party APIs (e.g. Open-Meteo)
+  if (!isInternalRequest(req.url)) {
+    return next(req);
+  }
 
   // Skip auth logic for auth endpoints
   if (req.url.includes('/auth/')) {

@@ -454,12 +454,20 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - `clientId`, `clientName`, `clientEmail`, `clientPhone`, `clientAvatar`, `alternativeContact`
 
 **Location:**
-- `address`, `city`, `district`, `state`, `postalCode`
+- `address`, `taluka` (indexed), `city`, `district`, `state`, `postalCode`
 - `coordinates` (GeoJSON for geospatial queries), `mapUrl`
+- Coordinates auto-derived from `mapUrl` on create/update via `backend/src/utils/mapUrlParser.js` when not explicitly set (parses `?q=lat,lng`, `?ll=`, `@lat,lng`, raw "lat,lng"; follows redirects for `maps.app.goo.gl` / `goo.gl` / `g.co` shortlinks via `resolveAndParseLatLng`).
 
 **Land Details:**
-- `totalArea`, `areaUnit`, `cultivableArea`, `soilType`
-- `waterSource[]`, `irrigationSystem`, `terrainType`
+- `totalArea`, `areaUnit` (enum: acres, hectares, sqmeters, vigha-16, vigha-24), `cultivableArea`, `soilType`
+- `waterSource[]` (legacy), `irrigationSystem` (Bore, Well, Mixed, Canal, River), `terrainType`
+
+**Electricity / Power Supply:**
+- `electricity.transformerHp`, `electricity.motorCount`, `electricity.totalMotorHp`
+
+**Project Tags:**
+- `needsLandscapingConsultancy` (Boolean, indexed) — orthogonal to category, marks farms also needing landscaping consultancy
+- `isOnlineVisit` (Boolean) — when true, on-site visit count tracking is skipped (`visitFrequency` not collected)
 
 **Team:**
 - `assignedTo`, `projectManager`, `fieldWorkers[]`, `consultants[]`, `assignedTeam[]` (User refs)
@@ -478,7 +486,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
 
-**Indexes:** category+status, city, state, createdBy, budget, text search (name), geospatial (coordinates), date ranges, status+submittedBy, registrationSource+status
+**Indexes:** category+status, city, state, taluka, createdBy, budget, text search (name), geospatial (coordinates), date ranges, status+submittedBy, registrationSource+status, needsLandscapingConsultancy
 
 ### API Endpoints (`backend/src/routes/projects.js`)
 
@@ -538,8 +546,9 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Component:** `pages/project-details/project-details.ts` — Full project view
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media) with photo/video upload, quota chip, per-file progress, and grid gallery
-- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows)
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media) with photo/video upload, quota chip, per-file progress, and grid gallery; embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present; shows landscaping/online tags, taluka fact card, electricity facts, and a "Navigate / Open in Maps" link
+- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required.
+- **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
 - **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` now exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks.
 - **Service:** `services/farm-media.service.ts` — `listMedia()`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType` for upload progress)
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
@@ -939,7 +948,8 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 |-----------|----------|---------|
 | HeaderComponent | `components/header/` | Navigation, auth display, permission-based menu items, logout. Embeds NotificationBell when authenticated; Farms link routes to `/farm-management`. |
 | NotificationBellComponent | `components/header/notification-bell/` | Header bell with unread count, dropdown list, mark-read & archive actions |
-| FarmRegistrationFormComponent | `components/farm-registration-form/` | Reusable farm registration form (location, land details, crops, contact) |
+| FarmRegistrationFormComponent | `components/farm-registration-form/` | Reusable farm registration form (location incl. taluka + map URL with "Use current location", land details, electricity, project tags, crops, contact) |
+| FarmWeatherComponent | `components/farm-weather/` | Open-Meteo weather card: current conditions + 7-day forecast + 30-day rainfall summary, driven by lat/lng inputs |
 | FooterComponent | `components/footer/` | Company info, links, social media |
 | ToastComponent | `components/toast/` | Notification display, auto-dismiss |
 | ConfirmationModalComponent | `components/confirmation-modal/` | Reusable confirm/cancel dialog |
@@ -985,6 +995,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 - Adds `Authorization: Bearer <token>` to non-auth requests
 - Proactive token refresh if expiring within 5 minutes
 - Retries failed requests with new token on 401
+- Skips third-party requests (e.g. Open-Meteo) — only attaches auth headers/credentials to relative URLs, the configured `environment.apiUrl` origin, or the current window origin
 
 ### Error Interceptor (`interceptors/error.interceptor.ts`)
 - Maps HTTP status codes (400-504) to user-friendly toast messages
@@ -1067,7 +1078,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | users | User.js | email (unique), role, createdAt, metadata.phoneNumberNormalized |
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
-| projects | Project.js | category+status, city, state, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status |
+| projects | Project.js | category+status, city, state, taluka, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status, needsLandscapingConsultancy |
 | transactions | Transaction.js | projectId+date, projectId+type, projectId+category |
 | soilsessions | SoilSession.js | date, (date+version unique) |
 | soilsamples | SoilSample.js | sessionId, sessionDate |
@@ -1230,7 +1241,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ### Git Hooks (`.githooks/`)
 
-- **pre-commit:** Automatically updates `context.md` via Claude CLI, then runs `/graphify --update` to regenerate knowledge graph. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
+- **pre-commit:** Automatically updates `context.md` via Claude CLI to reflect staged changes. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
 - **setup.sh:** Run once after cloning to activate hooks: `./githooks/setup.sh` (sets `core.hooksPath` to `.githooks/`)
 
 ### VPS Setup (`scripts/vps-setup.sh`)

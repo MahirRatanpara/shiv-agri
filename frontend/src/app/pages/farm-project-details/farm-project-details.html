@@ -33,6 +33,14 @@
         <i class="fas" [class.fa-user]="project.registrationSource === 'farmer_self'" [class.fa-user-tie]="project.registrationSource !== 'farmer_self'"></i>
         {{ project.registrationSource === 'farmer_self' ? 'Farmer submitted' : 'Manager created' }}
       </span>
+      <span class="source-tag landscaping-tag" *ngIf="project.needsLandscapingConsultancy">
+        <i class="fas fa-leaf"></i>
+        Landscaping consultancy
+      </span>
+      <span class="source-tag online-tag" *ngIf="project.isOnlineVisit">
+        <i class="fas fa-laptop"></i>
+        Online visit
+      </span>
     </div>
 
     <h1>{{ project.name }}</h1>
@@ -146,12 +154,16 @@
             <strong>{{ project.location?.district || 'Not set' }}</strong>
           </div>
           <div class="fact-card">
+            <span><i class="fas fa-signs-post"></i> Taluka</span>
+            <strong>{{ project.location?.taluka || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
             <span><i class="fas fa-city"></i> City</span>
             <strong>{{ project.location?.city || 'Not set' }}</strong>
           </div>
           <div class="fact-card">
             <span><i class="fas fa-ruler-combined"></i> Total Area</span>
-            <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
+            <strong>{{ project.landDetails?.totalArea || '-' }} {{ areaUnitLabel(project.landDetails?.areaUnit) }}</strong>
           </div>
           <div class="fact-card">
             <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
@@ -162,7 +174,7 @@
             <strong>{{ project.landDetails?.soilType || '-' }}</strong>
           </div>
           <div class="fact-card">
-            <span><i class="fas fa-droplet"></i> Irrigation</span>
+            <span><i class="fas fa-droplet"></i> Irrigation Source</span>
             <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
           </div>
           <div class="fact-card">
@@ -170,12 +182,35 @@
             <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
           </div>
           <div class="fact-card">
-            <span><i class="fas fa-water"></i> Water Sources</span>
-            <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
+            <span><i class="fas fa-bolt"></i> Transformer (TC) HP</span>
+            <strong>{{ project.electricity?.transformerHp ?? '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-plug"></i> Electric Motors</span>
+            <strong>{{ project.electricity?.motorCount ?? '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-gauge-high"></i> Total Motor HP</span>
+            <strong>{{ project.electricity?.totalMotorHp ?? '-' }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="!project.isOnlineVisit">
+            <span><i class="fas fa-route"></i> Visits / year</span>
+            <strong>{{ project.visitFrequency || '-' }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="project.isOnlineVisit">
+            <span><i class="fas fa-laptop"></i> Visit Mode</span>
+            <strong>Online (no on-site visit count)</strong>
           </div>
           <div class="fact-card wide">
             <span><i class="fas fa-location-dot"></i> Address</span>
             <strong>{{ project.location?.address || '-' }}</strong>
+          </div>
+          <div class="fact-card wide map-card" *ngIf="project.location?.mapUrl">
+            <span><i class="fas fa-map-location-dot"></i> Location on Map</span>
+            <a class="map-link" [href]="project.location?.mapUrl" target="_blank" rel="noopener">
+              <i class="fas fa-diamond-turn-right"></i>
+              Navigate / Open in Maps
+            </a>
           </div>
           <div class="fact-card wide">
             <span><i class="fas fa-seedling"></i> Crops</span>
@@ -196,6 +231,12 @@
         </div>
       </article>
     </section>
+
+    <app-farm-weather
+      [latitude]="farmLatitude"
+      [longitude]="farmLongitude"
+      [locationLabel]="weatherLocationLabel"
+    ></app-farm-weather>
 
     <section class="edit-panel" *ngIf="showEditForm && project">
       <header class="card-section-head">
@@ -256,7 +297,7 @@
               [class.fa-spin]="isUploading"
               aria-hidden="true"
             ></i>
-            <span>{{ isUploading ? 'Uploading...' : (quota && quota.used >= quota.limit ? 'Weekly limit reached' : 'Upload Photos &amp; Videos') }}</span>
+            <span>{{ isUploading ? 'Uploading...' : (quota && quota.used >= quota.limit ? 'Weekly limit reached' : 'Upload Photos & Videos') }}</span>
           </button>
         </div>
       </header>

@@ -67,6 +67,11 @@
     </label>
 
     <label class="field">
+      <span>Taluka</span>
+      <input name="taluka" [(ngModel)]="taluka" type="text">
+    </label>
+
+    <label class="field">
       <span>District</span>
       <input name="district" [(ngModel)]="district" type="text" [class.invalid]="errors['district']">
       <small *ngIf="errors['district']">{{ errors['district'] }}</small>
@@ -87,11 +92,31 @@
       <input name="postalCode" [(ngModel)]="postalCode" type="text">
     </label>
 
-    <label class="field field-wide">
-      <span>Map URL</span>
-      <input name="mapUrl" [(ngModel)]="mapUrl" type="url" placeholder="https://maps.google.com/...">
-    </label>
+    <div class="field field-wide">
+      <span>Map URL / Current location</span>
+      <div class="map-url-row">
+        <input name="mapUrl" [(ngModel)]="mapUrl" type="url" placeholder="https://maps.google.com/..." (ngModelChange)="onMapUrlChange()">
+        <button
+          type="button"
+          class="btn-locate"
+          (click)="useCurrentLocation()"
+          [disabled]="detectingLocation"
+        >
+          <i class="fas" [class.fa-location-crosshairs]="!detectingLocation" [class.fa-spinner]="detectingLocation" [class.fa-spin]="detectingLocation"></i>
+          {{ detectingLocation ? 'Detecting...' : 'Use current location' }}
+        </button>
+      </div>
+      <a *ngIf="mapUrl" class="map-preview-link" [href]="mapUrl" target="_blank" rel="noopener">
+        <i class="fas fa-map-location-dot"></i> Open in Maps
+      </a>
+    </div>
   </div>
+
+  <div class="section-title">Project Tags</div>
+  <label class="checkbox-row">
+    <input name="needsLandscapingConsultancy" type="checkbox" [(ngModel)]="needsLandscapingConsultancy">
+    <span>Needs landscaping consultancy</span>
+  </label>
 
   <div class="section-title">Land & Water Profile</div>
   <div class="form-grid">
@@ -104,9 +129,7 @@
     <label class="field">
       <span>Unit</span>
       <select name="areaUnit" [(ngModel)]="areaUnit">
-        <option value="acres">Acres</option>
-        <option value="hectares">Hectares</option>
-        <option value="sqmeters">Sq. meters</option>
+        <option *ngFor="let option of areaUnitOptions" [value]="option.value">{{ option.label }}</option>
       </select>
     </label>
 
@@ -116,11 +139,12 @@
     </label>
 
     <label class="field">
-      <span>Irrigation system</span>
-      <select name="irrigationSystem" [(ngModel)]="irrigationSystem">
+      <span>Irrigation source</span>
+      <select name="irrigationSystem" [(ngModel)]="irrigationSystem" [class.invalid]="errors['irrigationSystem']">
         <option value="">Select</option>
         <option *ngFor="let option of irrigationOptions" [value]="option">{{ option }}</option>
       </select>
+      <small *ngIf="errors['irrigationSystem']">{{ errors['irrigationSystem'] }}</small>
     </label>
 
     <label class="field">
@@ -130,22 +154,24 @@
         <option *ngFor="let option of terrainOptions" [value]="option">{{ option }}</option>
       </select>
     </label>
+  </div>
 
-    <div class="field field-wide">
-      <span>Water sources</span>
-      <div class="choice-grid">
-        <button
-          type="button"
-          *ngFor="let source of availableWaterSources"
-          class="choice-pill"
-          [class.active]="waterSources.includes(source)"
-          (click)="toggleWaterSource(source)"
-        >
-          {{ source }}
-        </button>
-      </div>
-      <small *ngIf="errors['waterSources']">{{ errors['waterSources'] }}</small>
-    </div>
+  <div class="section-title">Electricity / Power Supply</div>
+  <div class="form-grid">
+    <label class="field">
+      <span>Transformer (TC) horse power</span>
+      <input name="transformerHp" [(ngModel)]="transformerHp" type="number" min="0" step="0.01">
+    </label>
+
+    <label class="field">
+      <span>Number of electric motors</span>
+      <input name="motorCount" [(ngModel)]="motorCount" type="number" min="0" step="1">
+    </label>
+
+    <label class="field">
+      <span>Total HP of electric motors</span>
+      <input name="totalMotorHp" [(ngModel)]="totalMotorHp" type="number" min="0" step="0.01">
+    </label>
   </div>
 
   <div class="section-title">Crop Plan</div>
@@ -189,6 +215,12 @@
   <small class="error-inline" *ngIf="errors['crops']">{{ errors['crops'] }}</small>
 
   <div class="section-title">Planning Notes</div>
+
+  <label class="checkbox-row checkbox-row--inline">
+    <input name="isOnlineVisit" type="checkbox" [(ngModel)]="isOnlineVisit">
+    <span>Online visit only</span>
+  </label>
+
   <div class="form-grid">
     <label class="field">
       <span>Start date</span>
@@ -200,7 +232,7 @@
       <input name="expectedCompletionDate" [(ngModel)]="expectedCompletionDate" type="date">
     </label>
 
-    <label class="field">
+    <label class="field" *ngIf="!isOnlineVisit">
       <span>Visit frequency (per year)</span>
       <input name="visitFrequency" [(ngModel)]="visitFrequency" type="number" min="0">
     </label>

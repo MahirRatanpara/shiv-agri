@@ -5,6 +5,8 @@ import { environment } from '../environments/environment';
 
 export type FarmStatus = 'pending_approval' | 'approved' | 'rejected' | 'Upcoming' | 'Running' | 'Completed' | 'On Hold' | 'Cancelled';
 
+export type AreaUnit = 'acres' | 'hectares' | 'sqmeters' | 'vigha-16' | 'vigha-24';
+
 export interface FarmProject {
   id: string;
   _id?: string;
@@ -15,21 +17,30 @@ export interface FarmProject {
   clientPhone?: string;
   location?: {
     address: string;
+    taluka?: string;
     city?: string;
     district: string;
     state?: string;
     postalCode?: string;
     mapUrl?: string;
+    coordinates?: { type: 'Point'; coordinates: [number, number] };
   };
   landDetails?: {
     totalArea: number;
-    areaUnit: 'acres' | 'hectares' | 'sqmeters';
+    areaUnit: AreaUnit;
     soilType: string;
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
     terrainType?: string;
   };
+  electricity?: {
+    transformerHp?: number;
+    motorCount?: number;
+    totalMotorHp?: number;
+  };
+  needsLandscapingConsultancy?: boolean;
+  isOnlineVisit?: boolean;
   crops?: Array<{ name: string; variety?: string; season?: string; area?: number }>;
   registrationSource?: 'farmer_self' | 'manager_direct';
   submittedBy?: string | { _id?: string; id?: string };
@@ -59,21 +70,30 @@ export interface FarmRegistrationPayload {
   budget: number;
   location: {
     address: string;
+    taluka?: string;
     city?: string;
     district: string;
     state?: string;
     postalCode?: string;
     mapUrl?: string;
+    coordinates?: { type: 'Point'; coordinates: [number, number] };
   };
   landDetails: {
     totalArea: number;
-    areaUnit: 'acres' | 'hectares' | 'sqmeters';
+    areaUnit: AreaUnit;
     soilType: string;
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
     terrainType?: string;
   };
+  electricity?: {
+    transformerHp?: number;
+    motorCount?: number;
+    totalMotorHp?: number;
+  };
+  needsLandscapingConsultancy?: boolean;
+  isOnlineVisit?: boolean;
   crops: Array<{ name: string; variety?: string; season?: string; area?: number }>;
   alternativeContact?: string;
   description?: string;
