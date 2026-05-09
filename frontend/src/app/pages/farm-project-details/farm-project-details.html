@@ -91,6 +91,29 @@
       Photos &amp; Videos
       <span class="tab-count" *ngIf="mediaItems.length">{{ mediaItems.length }}</span>
     </button>
+    <button
+      class="tab-btn"
+      *ngIf="showDesignsTab"
+      [class.active]="activeTab === 'designs'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'designs'"
+      (click)="switchTab('designs')"
+    >
+      <i class="fas fa-drafting-compass" aria-hidden="true"></i>
+      Designs
+      <span class="tab-count" *ngIf="designItems.length">{{ designItems.length }}</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'prescriptions'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'prescriptions'"
+      (click)="switchTab('prescriptions')"
+    >
+      <i class="fas fa-file-prescription" aria-hidden="true"></i>
+      Prescriptions
+      <span class="tab-count" *ngIf="prescriptionItems.length">{{ prescriptionItems.length }}</span>
+    </button>
   </nav>
 
   <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
@@ -569,6 +592,310 @@
       (change)="onFilesSelected($event)"
     />
   </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'designs' && showDesignsTab">
+    <section class="media-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-drafting-compass"></i> Landscaping Designs</h2>
+          <p *ngIf="canUploadDesigns">Upload landscape design images or videos for the farm owner to review.</p>
+          <p *ngIf="!canUploadDesigns">Designs shared by the design team for this landscaping project.</p>
+        </div>
+
+        <div class="media-head-actions" *ngIf="canUploadDesigns">
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isUploadingDesigns"
+            (click)="triggerDesignPicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploadingDesigns"
+              [class.fa-circle-notch]="isUploadingDesigns"
+              [class.fa-spin]="isUploadingDesigns"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploadingDesigns ? 'Uploading...' : 'Upload Designs' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="upload-strip" *ngIf="designUploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of designUploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="designsLoading && !designItems.length">
+        <div class="spinner"></div>
+        <p>Loading designs...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!designsLoading && designItems.length === 0 && designUploadingBatch.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-drafting-compass"></i>
+        </div>
+        <h3>No designs yet</h3>
+        <p *ngIf="canUploadDesigns">Share concept boards, plan drawings, or rendered visuals for this landscaping project.</p>
+        <p *ngIf="!canUploadDesigns">The design team hasn't shared any designs yet. You'll see them here as they upload.</p>
+        <button
+          type="button"
+          class="upload-btn empty-state-btn"
+          *ngIf="canUploadDesigns"
+          [disabled]="isUploadingDesigns"
+          (click)="triggerDesignPicker()"
+        >
+          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <span>Upload Designs</span>
+        </button>
+      </div>
+
+      <div class="media-grid" *ngIf="designItems.length">
+        <button
+          type="button"
+          class="media-tile"
+          *ngFor="let item of designItems; trackBy: trackDesign"
+          (click)="openDesignLightbox(item)"
+          [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : 'View design uploaded ') + (item.uploadedAt | date:'medium')"
+        >
+          <ng-container *ngIf="item.type === 'image'">
+            <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+          </ng-container>
+          <ng-container *ngIf="item.type === 'video'">
+            <video [src]="item.url" preload="metadata" muted playsinline></video>
+            <span class="play-icon" aria-hidden="true">
+              <i class="fas fa-play"></i>
+            </span>
+          </ng-container>
+          <div class="media-overlay">
+            <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+            <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <input
+      #designInput
+      type="file"
+      class="media-input"
+      accept="image/*,video/*"
+      multiple
+      (change)="onDesignFilesSelected($event)"
+    />
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'prescriptions'">
+    <section class="media-section prescriptions-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-file-prescription"></i> Prescriptions &amp; Documents</h2>
+          <p *ngIf="canUploadPrescriptions">Add prescriptions or upload supporting documents (images, PDF, Word, text).</p>
+          <p *ngIf="!canUploadPrescriptions">Prescriptions and reference documents shared by your manager.</p>
+        </div>
+
+        <div class="media-head-actions" *ngIf="canUploadPrescriptions">
+          <button
+            type="button"
+            class="upload-btn ghost"
+            [disabled]="isSavingTextPrescription"
+            (click)="openAddPrescriptionForm()"
+          >
+            <i class="fas fa-prescription" aria-hidden="true"></i>
+            <span>Add Prescription</span>
+          </button>
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isUploadingPrescriptions"
+            (click)="triggerPrescriptionPicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploadingPrescriptions"
+              [class.fa-circle-notch]="isUploadingPrescriptions"
+              [class.fa-spin]="isUploadingPrescriptions"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploadingPrescriptions ? 'Uploading...' : 'Upload Document' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="text-prescription-form" *ngIf="showTextPrescriptionForm && canUploadPrescriptions">
+        <label class="rx-field">
+          <span><i class="fas fa-heading"></i> Title (optional)</span>
+          <input
+            type="text"
+            [(ngModel)]="textPrescriptionTitle"
+            placeholder="e.g. Foliar spray schedule"
+            maxlength="120"
+          />
+        </label>
+        <label class="rx-field">
+          <span><i class="fas fa-align-left"></i> Prescription</span>
+          <textarea
+            [(ngModel)]="textPrescriptionBody"
+            rows="6"
+            placeholder="Type the prescription details. The full prescription builder will be wired up next."
+          ></textarea>
+        </label>
+        <div class="rx-actions">
+          <button type="button" class="rx-cancel" (click)="cancelTextPrescription()" [disabled]="isSavingTextPrescription">
+            Cancel
+          </button>
+          <button type="button" class="rx-save" (click)="saveTextPrescription()" [disabled]="isSavingTextPrescription || !textPrescriptionBody.trim()">
+            <i class="fas" [class.fa-check]="!isSavingTextPrescription" [class.fa-circle-notch]="isSavingTextPrescription" [class.fa-spin]="isSavingTextPrescription"></i>
+            {{ isSavingTextPrescription ? 'Saving...' : 'Save Prescription' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="upload-strip" *ngIf="prescriptionUploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of prescriptionUploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="prescriptionsLoading && !prescriptionItems.length">
+        <div class="spinner"></div>
+        <p>Loading prescriptions...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!prescriptionsLoading && prescriptionItems.length === 0 && prescriptionUploadingBatch.length === 0 && !showTextPrescriptionForm">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-file-prescription"></i>
+        </div>
+        <h3>No prescriptions yet</h3>
+        <p *ngIf="canUploadPrescriptions">Add a prescription or upload a supporting document for the farm owner to review.</p>
+        <p *ngIf="!canUploadPrescriptions">Once your manager shares prescriptions or related documents, they'll appear here.</p>
+      </div>
+
+      <ul class="rx-list" *ngIf="prescriptionItems.length">
+        <li
+          class="rx-item"
+          *ngFor="let item of prescriptionItems; trackBy: trackPrescription"
+          [class.expanded]="expandedPrescriptionId === prescriptionId(item)"
+        >
+          <div class="rx-row" (click)="togglePrescription(item)" role="button" tabindex="0" (keyup.enter)="togglePrescription(item)">
+            <span class="rx-icon" [attr.aria-hidden]="true">
+              <i class="fas" [ngClass]="prescriptionIcon(item)"></i>
+            </span>
+            <div class="rx-meta">
+              <strong class="rx-title">{{ item.title || item.fileName || 'Prescription' }}</strong>
+              <div class="rx-sub">
+                <span class="rx-type">{{ prescriptionTypeLabel(item) }}</span>
+                <span>·</span>
+                <span>{{ item.uploadedAt | date:'MMM d, y, h:mm a' }}</span>
+                <span *ngIf="item.uploadedByName">· by {{ item.uploadedByName }}</span>
+                <span *ngIf="item.sizeBytes">· {{ formatSize(item.sizeBytes) }}</span>
+              </div>
+            </div>
+            <span class="rx-toggle" [attr.aria-hidden]="true">
+              <i class="fas" [class.fa-chevron-down]="expandedPrescriptionId !== prescriptionId(item)" [class.fa-chevron-up]="expandedPrescriptionId === prescriptionId(item)"></i>
+            </span>
+          </div>
+
+          <div class="rx-body" *ngIf="expandedPrescriptionId === prescriptionId(item)">
+            <ng-container *ngIf="item.docType === 'image' && item.url">
+              <img class="rx-image" [src]="item.url" [alt]="item.title || 'Prescription image'" loading="lazy" />
+            </ng-container>
+
+            <ng-container *ngIf="item.docType === 'pdf' && item.url">
+              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
+                <i class="fas fa-up-right-from-square"></i>
+                Open PDF in new tab
+              </a>
+            </ng-container>
+
+            <ng-container *ngIf="item.docType === 'docx' && item.url">
+              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
+                <i class="fas fa-download"></i>
+                Download Word document
+              </a>
+            </ng-container>
+
+            <ng-container *ngIf="(item.docType === 'text' || item.docType === 'manual') && item.textContent">
+              <pre class="rx-text">{{ item.textContent }}</pre>
+            </ng-container>
+
+            <ng-container *ngIf="item.docType === 'text' && !item.textContent && item.url">
+              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
+                <i class="fas fa-up-right-from-square"></i>
+                Open text file
+              </a>
+            </ng-container>
+
+            <p class="rx-notes" *ngIf="item.notes">
+              <i class="fas fa-note-sticky"></i> {{ item.notes }}
+            </p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <input
+      #prescriptionInput
+      type="file"
+      class="media-input"
+      [attr.accept]="prescriptionAccept"
+      multiple
+      (change)="onPrescriptionFilesSelected($event)"
+    />
+  </ng-container>
+
+  <div class="lightbox" *ngIf="designLightboxItem" (click)="closeDesignLightbox()" role="dialog" aria-modal="true">
+    <button type="button" class="lightbox-close" (click)="closeDesignLightbox(); $event.stopPropagation()" aria-label="Close design viewer">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <img *ngIf="designLightboxItem.type === 'image'" [src]="designLightboxItem.url" [alt]="'Landscaping design'" />
+      <video *ngIf="designLightboxItem.type === 'video'" [src]="designLightboxItem.url" controls autoplay playsinline></video>
+      <div class="lightbox-meta">
+        <span>{{ designLightboxItem.uploadedAt | date:'medium' }}</span>
+        <span *ngIf="designLightboxItem.uploadedByName">· {{ designLightboxItem.uploadedByName }}</span>
+      </div>
+    </div>
+  </div>
 
   <div class="lightbox" *ngIf="lightboxItem" (click)="closeLightbox()" role="dialog" aria-modal="true">
     <button type="button" class="lightbox-close" (click)="closeLightbox(); $event.stopPropagation()" aria-label="Close media viewer">

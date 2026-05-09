@@ -11,6 +11,8 @@ export interface FarmProject {
   id: string;
   _id?: string;
   name: string;
+  category?: 'FARM' | 'LANDSCAPING' | 'GARDENING';
+  projectType?: 'farm' | 'landscaping' | 'gardening';
   status: FarmStatus;
   clientName?: string;
   clientEmail?: string;

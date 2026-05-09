@@ -9,7 +9,15 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['farm_registration', 'farm_approved', 'farm_rejected', 'farm_media_upload', 'system'],
+    enum: [
+      'farm_registration',
+      'farm_approved',
+      'farm_rejected',
+      'farm_media_upload',
+      'farm_design_upload',
+      'farm_prescription_upload',
+      'system'
+    ],
     required: true,
     index: true
   },
@@ -38,7 +46,9 @@ const notificationSchema = new mongoose.Schema({
     rejectionReason: String,
     mediaId: String,
     mediaType: String,
-    uploaderName: String
+    uploaderName: String,
+    documentType: String,
+    itemCount: Number
   },
   isRead: {
     type: Boolean,

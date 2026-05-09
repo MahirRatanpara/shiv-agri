@@ -17,6 +17,14 @@ import {
   FarmMediaRef,
   FarmMediaService
 } from '../../services/farm-media.service';
+import {
+  FarmDesignRef,
+  FarmDesignService
+} from '../../services/farm-design.service';
+import {
+  PrescriptionRef,
+  FarmPrescriptionService
+} from '../../services/farm-prescription.service';
 
 interface UploadProgressItem {
   filename: string;
@@ -30,6 +38,12 @@ const MAX_FILES_PER_BATCH = 5;
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const FARMER_POLL_INTERVAL_MS = 25_000;
 
+const PRESCRIPTION_ACCEPT = 'image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,.txt,.md';
+const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
+const DESIGN_MIME_PATTERN = /^(image|video)\//i;
+
+type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions';
+
 @Component({
   selector: 'app-farm-project-details',
   standalone: true,
@@ -41,6 +55,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   @ViewChild('mediaInput') mediaInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('designInput') designInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('prescriptionInput') prescriptionInput?: ElementRef<HTMLInputElement>;
 
   projectId = '';
   project: FarmProject | null = null;
@@ -49,7 +65,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   showEditForm = false;
   rejectionReason = '';
   currentUser: User | null = null;
-  activeTab: 'overview' | 'media' = 'overview';
+  activeTab: TabKey = 'overview';
 
   // Unattended media — shown as thumbnails immediately.
   mediaItems: FarmMediaRef[] = [];
@@ -74,6 +90,28 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   readonly maxFilesPerBatch = MAX_FILES_PER_BATCH;
   readonly maxFileSizeMb = Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024));
 
+  // Designs (landscaping)
+  designItems: FarmDesignRef[] = [];
+  designsLoading = false;
+  isUploadingDesigns = false;
+  designUploadingBatch: UploadProgressItem[] = [];
+  designLightboxItem: FarmDesignRef | null = null;
+
+  // Prescriptions
+  prescriptionItems: PrescriptionRef[] = [];
+  prescriptionsLoading = false;
+  isUploadingPrescriptions = false;
+  prescriptionUploadingBatch: UploadProgressItem[] = [];
+  expandedPrescriptionId: string | null = null;
+
+  // Add prescription dummy modal toggles
+  showTextPrescriptionForm = false;
+  textPrescriptionTitle = '';
+  textPrescriptionBody = '';
+  isSavingTextPrescription = false;
+
+  readonly prescriptionAccept = PRESCRIPTION_ACCEPT;
+
   private knownMediaIds = new Set<string>();
   private pollSubscription?: Subscription;
 
@@ -93,7 +131,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private farmService: FarmManagementService,
     private toastService: ToastService,
     private farmMediaService: FarmMediaService,
-    private confirmationModalService: ConfirmationModalService
+    private confirmationModalService: ConfirmationModalService,
+    private farmDesignService: FarmDesignService,
+    private farmPrescriptionService: FarmPrescriptionService
   ) {}
 
   ngOnInit(): void {
@@ -228,7 +268,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     if (!this.project) return false;
     if (this.project.isArchived) return false;
     if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
-    if (this.permissionService.hasPermission('farm.projects.update')) return true;
+    // Photos & Videos: ONLY the farm owner who registered the farm.
     return this.isFarmOwner;
   }
 
@@ -250,6 +290,39 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
    */
   get canAttendMedia(): boolean {
     return this.isAdmin || this.permissionService.hasPermission('farm.projects.approve');
+  }
+
+  get isManagerOrAdmin(): boolean {
+    if (!this.currentUser) return false;
+    if (this.currentUser.role === 'admin') return true;
+    return this.permissionService.hasPermission('farm.projects.update');
+  }
+
+  get canUploadDesigns(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
+    return this.isManagerOrAdmin;
+  }
+
+  get canUploadPrescriptions(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
+    return this.isManagerOrAdmin;
+  }
+
+  get isLandscapingProject(): boolean {
+    if (!this.project) return false;
+    const cat = (this.project.category || '').toUpperCase();
+    if (cat === 'LANDSCAPING') return true;
+    const pt = (this.project.projectType || '').toLowerCase();
+    if (pt === 'landscaping') return true;
+    return !!this.project.needsLandscapingConsultancy;
+  }
+
+  get showDesignsTab(): boolean {
+    return this.isLandscapingProject;
   }
 
   get quotaPercent(): number {
@@ -292,13 +365,19 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  switchTab(tab: 'overview' | 'media'): void {
+  switchTab(tab: TabKey): void {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
-    if (tab === 'media' && this.mediaItems.length === 0 && !this.mediaLoading) {
-      this.loadMedia();
-    } else if (tab === 'media' && !this.quota) {
-      this.refreshQuota();
+    if (tab === 'media') {
+      if (this.mediaItems.length === 0 && !this.mediaLoading) {
+        this.loadMedia();
+      } else if (!this.quota) {
+        this.refreshQuota();
+      }
+    } else if (tab === 'designs' && this.designItems.length === 0 && !this.designsLoading) {
+      this.loadDesigns();
+    } else if (tab === 'prescriptions' && this.prescriptionItems.length === 0 && !this.prescriptionsLoading) {
+      this.loadPrescriptions();
     }
   }
 
@@ -637,6 +716,344 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   trackUpload(_: number, item: UploadProgressItem): string {
     return item.filename;
+  }
+
+  // ========================
+  // Designs (Landscaping)
+  // ========================
+
+  loadDesigns(): void {
+    if (!this.projectId) return;
+    this.designsLoading = true;
+    this.farmDesignService.listDesigns(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.designItems = response.items;
+          this.designsLoading = false;
+        },
+        error: () => {
+          this.designsLoading = false;
+          this.toastService.error('Unable to load landscaping designs.');
+        }
+      });
+  }
+
+  triggerDesignPicker(): void {
+    if (!this.canUploadDesigns || this.isUploadingDesigns) return;
+    this.designInput?.nativeElement.click();
+  }
+
+  onDesignFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const files = Array.from(fileList);
+    input.value = '';
+
+    if (files.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can upload up to ${MAX_FILES_PER_BATCH} files at a time.`);
+      return;
+    }
+
+    const oversize = files.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+
+    const invalid = files.find((f) => !DESIGN_MIME_PATTERN.test(f.type));
+    if (invalid) {
+      this.toastService.error(`${invalid.name} is not a supported image or video.`);
+      return;
+    }
+
+    this.uploadDesignFiles(files);
+  }
+
+  private uploadDesignFiles(files: File[]): void {
+    if (!this.projectId) return;
+    this.isUploadingDesigns = true;
+    this.designUploadingBatch = files.map((file) => ({
+      filename: file.name,
+      size: file.size,
+      status: 'uploading',
+      progress: 0
+    }));
+
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+
+    this.farmDesignService.uploadDesigns(this.projectId, files)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (event) => {
+          if (event.kind === 'progress') {
+            const ratio = totalBytes > 0 ? event.loaded / totalBytes : 0;
+            this.designUploadingBatch = this.designUploadingBatch.map((item) =>
+              item.status === 'uploading'
+                ? { ...item, progress: Math.min(99, Math.round(ratio * 100)) }
+                : item
+            );
+          } else if (event.kind === 'done') {
+            const { uploaded, failures } = event.result;
+
+            const failedNames = new Set(failures.map((f) => f.filename));
+            this.designUploadingBatch = this.designUploadingBatch.map((item) => {
+              if (failedNames.has(item.filename)) {
+                const failure = failures.find((f) => f.filename === item.filename);
+                return { ...item, status: 'error', progress: 100, message: failure?.message };
+              }
+              return { ...item, status: 'success', progress: 100 };
+            });
+
+            this.designItems = [...uploaded, ...this.designItems];
+
+            if (uploaded.length) {
+              this.toastService.success(
+                uploaded.length === 1
+                  ? '1 design uploaded'
+                  : `${uploaded.length} designs uploaded`
+              );
+            }
+            if (failures.length) {
+              this.toastService.error(
+                `${failures.length} file${failures.length > 1 ? 's' : ''} failed to upload.`
+              );
+            }
+
+            setTimeout(() => (this.designUploadingBatch = []), 2200);
+            this.isUploadingDesigns = false;
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isUploadingDesigns = false;
+          this.toastService.error(err.error?.message || 'Upload failed. Please try again.');
+          this.designUploadingBatch = this.designUploadingBatch.map((item) => ({
+            ...item,
+            status: 'error',
+            progress: 100,
+            message: 'Upload failed'
+          }));
+          setTimeout(() => (this.designUploadingBatch = []), 2500);
+        }
+      });
+  }
+
+  openDesignLightbox(item: FarmDesignRef): void {
+    this.designLightboxItem = item;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDesignLightbox(): void {
+    this.designLightboxItem = null;
+    document.body.style.overflow = '';
+  }
+
+  trackDesign(_: number, item: FarmDesignRef): string {
+    return item.mediaId;
+  }
+
+  // ========================
+  // Prescriptions
+  // ========================
+
+  loadPrescriptions(): void {
+    if (!this.projectId) return;
+    this.prescriptionsLoading = true;
+    this.farmPrescriptionService.listPrescriptions(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.prescriptionItems = response.items;
+          this.prescriptionsLoading = false;
+        },
+        error: () => {
+          this.prescriptionsLoading = false;
+          this.toastService.error('Unable to load prescriptions.');
+        }
+      });
+  }
+
+  triggerPrescriptionPicker(): void {
+    if (!this.canUploadPrescriptions || this.isUploadingPrescriptions) return;
+    this.prescriptionInput?.nativeElement.click();
+  }
+
+  onPrescriptionFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const files = Array.from(fileList);
+    input.value = '';
+
+    if (files.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can upload up to ${MAX_FILES_PER_BATCH} files at a time.`);
+      return;
+    }
+
+    const oversize = files.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+
+    const invalid = files.find((f) => !PRESCRIPTION_MIME_PATTERN.test(f.type));
+    if (invalid) {
+      this.toastService.error(`${invalid.name} is not a supported document type.`);
+      return;
+    }
+
+    this.uploadPrescriptionFiles(files);
+  }
+
+  private uploadPrescriptionFiles(files: File[]): void {
+    if (!this.projectId) return;
+    this.isUploadingPrescriptions = true;
+    this.prescriptionUploadingBatch = files.map((file) => ({
+      filename: file.name,
+      size: file.size,
+      status: 'uploading',
+      progress: 0
+    }));
+
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+
+    this.farmPrescriptionService.uploadPrescriptions(this.projectId, files)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (event) => {
+          if (event.kind === 'progress') {
+            const ratio = totalBytes > 0 ? event.loaded / totalBytes : 0;
+            this.prescriptionUploadingBatch = this.prescriptionUploadingBatch.map((item) =>
+              item.status === 'uploading'
+                ? { ...item, progress: Math.min(99, Math.round(ratio * 100)) }
+                : item
+            );
+          } else if (event.kind === 'done') {
+            const { uploaded, failures } = event.result;
+
+            const failedNames = new Set(failures.map((f) => f.filename));
+            this.prescriptionUploadingBatch = this.prescriptionUploadingBatch.map((item) => {
+              if (failedNames.has(item.filename)) {
+                const failure = failures.find((f) => f.filename === item.filename);
+                return { ...item, status: 'error', progress: 100, message: failure?.message };
+              }
+              return { ...item, status: 'success', progress: 100 };
+            });
+
+            this.prescriptionItems = [...uploaded, ...this.prescriptionItems];
+
+            if (uploaded.length) {
+              this.toastService.success(
+                uploaded.length === 1
+                  ? '1 document uploaded'
+                  : `${uploaded.length} documents uploaded`
+              );
+            }
+            if (failures.length) {
+              this.toastService.error(
+                `${failures.length} file${failures.length > 1 ? 's' : ''} failed to upload.`
+              );
+            }
+
+            setTimeout(() => (this.prescriptionUploadingBatch = []), 2200);
+            this.isUploadingPrescriptions = false;
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isUploadingPrescriptions = false;
+          this.toastService.error(err.error?.message || 'Upload failed. Please try again.');
+          this.prescriptionUploadingBatch = this.prescriptionUploadingBatch.map((item) => ({
+            ...item,
+            status: 'error',
+            progress: 100,
+            message: 'Upload failed'
+          }));
+          setTimeout(() => (this.prescriptionUploadingBatch = []), 2500);
+        }
+      });
+  }
+
+  // Dummy "Add Prescription" button — opens an inline form for now.
+  // Real prescription builder will be wired once the user provides spec.
+  openAddPrescriptionForm(): void {
+    if (!this.canUploadPrescriptions) return;
+    this.showTextPrescriptionForm = true;
+    this.textPrescriptionTitle = '';
+    this.textPrescriptionBody = '';
+  }
+
+  cancelTextPrescription(): void {
+    this.showTextPrescriptionForm = false;
+    this.textPrescriptionTitle = '';
+    this.textPrescriptionBody = '';
+  }
+
+  saveTextPrescription(): void {
+    if (!this.projectId || !this.canUploadPrescriptions) return;
+    const text = this.textPrescriptionBody.trim();
+    if (!text) {
+      this.toastService.warning('Please enter the prescription text before saving.');
+      return;
+    }
+
+    this.isSavingTextPrescription = true;
+    this.farmPrescriptionService.addTextPrescription(this.projectId, {
+      title: this.textPrescriptionTitle.trim() || undefined,
+      textContent: text
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.prescriptionItems = [response.prescription, ...this.prescriptionItems];
+          this.toastService.success('Prescription added.');
+          this.showTextPrescriptionForm = false;
+          this.textPrescriptionTitle = '';
+          this.textPrescriptionBody = '';
+          this.isSavingTextPrescription = false;
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isSavingTextPrescription = false;
+          this.toastService.error(err.error?.error || err.error?.message || 'Unable to save prescription.');
+        }
+      });
+  }
+
+  togglePrescription(item: PrescriptionRef): void {
+    const id = this.prescriptionId(item);
+    this.expandedPrescriptionId = this.expandedPrescriptionId === id ? null : id;
+  }
+
+  prescriptionId(item: PrescriptionRef): string {
+    return item.mediaId || `${item.uploadedAt}-${item.title || 'rx'}`;
+  }
+
+  trackPrescription(_: number, item: PrescriptionRef): string {
+    return this.prescriptionId(item);
+  }
+
+  prescriptionIcon(item: PrescriptionRef): string {
+    switch (item.docType) {
+      case 'image': return 'fa-file-image';
+      case 'pdf': return 'fa-file-pdf';
+      case 'docx': return 'fa-file-word';
+      case 'text': return 'fa-file-lines';
+      case 'manual': return 'fa-prescription';
+      default: return 'fa-file';
+    }
+  }
+
+  prescriptionTypeLabel(item: PrescriptionRef): string {
+    switch (item.docType) {
+      case 'image': return 'Image';
+      case 'pdf': return 'PDF';
+      case 'docx': return 'Word doc';
+      case 'text': return 'Text';
+      case 'manual': return 'Prescription';
+      default: return 'Document';
+    }
   }
 
   formatSize(bytes?: number): string {

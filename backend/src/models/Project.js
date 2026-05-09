@@ -251,7 +251,7 @@ const projectSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now }
   }],
 
-  // Farm media (photos/videos uploaded by managers via Media Service)
+  // Farm media (photos/videos uploaded by the farm owner via Media Service)
   farmMedia: [{
     mediaId: { type: String, required: true },
     url: { type: String, required: true },
@@ -269,6 +269,46 @@ const projectSchema = new mongoose.Schema({
     attendedAt: { type: Date },
     attendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     attendedByName: { type: String }
+  }],
+
+  // Landscaping designs (images/videos uploaded by managers/admins for landscaping projects)
+  landscapingDesigns: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video'], required: true },
+    sizeBytes: { type: Number },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true }
+  }],
+
+  // Prescriptions and ad-hoc documents (uploaded by managers/admins; farm user reads only)
+  prescriptions: [{
+    // 'file' for uploaded media or 'manual' for prescriptions composed via the in-app builder
+    source: { type: String, enum: ['file', 'manual'], default: 'file' },
+    docType: {
+      type: String,
+      enum: ['image', 'pdf', 'docx', 'text', 'manual'],
+      required: true
+    },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    // Inline text for text-based or manual prescriptions
+    textContent: { type: String, trim: true },
+    // For uploaded files
+    mediaId: { type: String },
+    url: { type: String },
+    mimeType: { type: String },
+    sizeBytes: { type: Number },
+    fileName: { type: String, trim: true },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true }
   }],
 
   // Project Specific Data

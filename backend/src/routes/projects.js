@@ -3,6 +3,8 @@ const multer = require('multer');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
 const farmMediaController = require('../controllers/farmMediaController');
+const farmDesignController = require('../controllers/farmDesignController');
+const farmPrescriptionController = require('../controllers/farmPrescriptionController');
 const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
 
 const farmMediaUpload = multer({
@@ -20,21 +22,50 @@ const farmMediaUpload = multer({
   }
 });
 
+const farmDesignUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (/^(image|video)\//i.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
+
+const farmPrescriptionUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (PRESCRIPTION_MIME_PATTERN.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
 /**
- * Allow farm media upload if the user has farm.projects.update OR
- * is the farm's owner (submittedBy / clientId). Admin always passes.
+ * Owner-only media upload guard.
+ * Photos & videos in the "Photos & Videos" section can ONLY be uploaded by the
+ * farm owner who registered the farm (submittedBy / clientId / createdBy).
+ * Managers and admins are intentionally excluded — they have separate
+ * "Designs" and "Prescriptions" sections.
  */
-const requireFarmMediaUploadAccess = async (req, res, next) => {
+const requireFarmOwner = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
-    if (req.user.role === 'admin') return next();
-
-    const userPermissions = (req.user.roleRef?.permissions || [])
-      .map((p) => (typeof p === 'string' ? p : p.name));
-    if (userPermissions.includes('farm.projects.update')) return next();
 
     const Project = require('../models/Project');
     const project = await Project.findById(req.params.id)
@@ -55,7 +86,32 @@ const requireFarmMediaUploadAccess = async (req, res, next) => {
 
     return res.status(403).json({
       error: 'Insufficient permissions',
-      message: 'Only the farm owner or a manager can upload media for this farm.'
+      message: 'Only the farm owner can upload photos for this farm.'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
+
+/**
+ * Manager/admin-only guard for design and prescription uploads.
+ * Admin role always passes; otherwise requires the farm.projects.update
+ * permission.
+ */
+const requireManagerOrAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (req.user.role === 'admin') return next();
+
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    if (userPermissions.includes('farm.projects.update')) return next();
+
+    return res.status(403).json({
+      error: 'Insufficient permissions',
+      message: 'Only managers or admins can perform this action.'
     });
   } catch (error) {
     return res.status(500).json({ error: 'Permission check failed' });
@@ -552,12 +608,14 @@ router.delete('/:id/media/:mediaId',
 
 /**
  * @route   POST /api/projects/:id/media
- * @desc    Upload up to 5 photos/videos to a farm project (max 25MB each)
- * @access  Private (farm.projects.update)
+ * @desc    Upload up to 5 photos/videos to a farm project (max 25MB each).
+ *          ONLY the farm owner who registered the farm may upload here.
+ *          Managers and admins use /designs or /prescriptions instead.
+ * @access  Private (farm owner only)
  */
 router.post('/:id/media',
   authenticate,
-  requireFarmMediaUploadAccess,
+  requireFarmOwner,
   (req, res, next) => {
     farmMediaUpload.array('files', 5)(req, res, (err) => {
       if (err) {
@@ -572,6 +630,76 @@ router.post('/:id/media',
     });
   },
   farmMediaController.uploadMedia
+);
+
+// ========================
+// Landscaping Designs Routes (manager / admin only; landscaping projects)
+// ========================
+
+router.get('/:id/designs',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmDesignController.listDesigns
+);
+
+router.post('/:id/designs',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmDesignUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmDesignController.uploadDesigns
+);
+
+// ========================
+// Prescription Routes (manager / admin upload, owner read-only)
+// ========================
+
+router.get('/:id/prescriptions',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmPrescriptionController.listPrescriptions
+);
+
+router.post('/:id/prescriptions',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmPrescriptionUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmPrescriptionController.uploadPrescriptions
+);
+
+router.post('/:id/prescriptions/text',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.addTextPrescription
+);
+
+router.post('/:id/prescriptions/manual',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.addManualPrescription
 );
 
 // ========================

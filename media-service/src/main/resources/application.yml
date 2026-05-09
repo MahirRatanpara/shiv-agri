@@ -10,24 +10,40 @@ spring:
       auto-index-creation: true
   servlet:
     multipart:
-      max-file-size: 20MB
-      max-request-size: 25MB
+      max-file-size: 25MB
+      max-request-size: 30MB
 
 media:
   storage:
     active-backend: ${MEDIA_STORAGE_ACTIVE_BACKEND:filesystem}
-    max-file-size-bytes: 20971520
+    max-file-size-bytes: 26214400
     allowed-mime-types:
       - image/jpeg
       - image/png
       - image/webp
       - image/gif
+      - video/mp4
+      - video/quicktime
+      - video/webm
+      - application/pdf
+      - application/msword
+      - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      - text/plain
+      - text/markdown
     allowed-extensions:
       - jpg
       - jpeg
       - png
       - webp
       - gif
+      - mp4
+      - mov
+      - webm
+      - pdf
+      - doc
+      - docx
+      - txt
+      - md
     filesystem:
       root-dir: ${MEDIA_STORAGE_FILESYSTEM_ROOT_DIR:/Users/mahirratanpara/uploads}
 
