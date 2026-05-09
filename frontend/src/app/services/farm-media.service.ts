@@ -15,6 +15,9 @@ export interface FarmMediaRef {
   uploadedBy?: string;
   uploadedByName?: string;
   uploadedAt: string;
+  attended?: boolean;
+  attendedAt?: string;
+  attendedByName?: string;
 }
 
 export interface FarmMediaQuota {
@@ -27,8 +30,14 @@ export interface FarmMediaQuota {
 
 export interface FarmMediaListResponse {
   items: FarmMediaRef[];
-  pagination: { page: number; limit: number; total: number; totalPages: number };
+  attendedTotal: number;
+  total: number;
   quota: FarmMediaQuota;
+}
+
+export interface FarmMediaAttendedResponse {
+  items: FarmMediaRef[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export interface FarmMediaUploadResult {
@@ -47,18 +56,66 @@ export class FarmMediaService {
 
   constructor(private http: HttpClient) {}
 
-  listMedia(projectId: string, page = 1, limit = 50): Observable<FarmMediaListResponse> {
+  /**
+   * Returns unattended media (newly uploaded, not yet acknowledged) plus a
+   * count of attended items so the UI can show "View attended photos" without
+   * loading all thumbnails. Attended items are NOT fetched here — call
+   * listAttendedMedia() on demand.
+   */
+  listMedia(projectId: string): Observable<FarmMediaListResponse> {
     return this.http
-      .get<any>(`${this.apiUrl}/projects/${projectId}/media`, {
+      .get<any>(`${this.apiUrl}/projects/${projectId}/media`)
+      .pipe(
+        map((response) => ({
+          items: response.items || [],
+          attendedTotal: response.attendedTotal || 0,
+          total: response.total || (response.items?.length ?? 0),
+          quota: response.quota
+        }))
+      );
+  }
+
+  /**
+   * Paginated list of attended (acknowledged) photos. Loaded lazily on user expand.
+   */
+  listAttendedMedia(projectId: string, page = 1, limit = 20): Observable<FarmMediaAttendedResponse> {
+    return this.http
+      .get<any>(`${this.apiUrl}/projects/${projectId}/media/older`, {
         params: { page: String(page), limit: String(limit) }
       })
       .pipe(
         map((response) => ({
           items: response.items || [],
-          pagination: response.pagination,
-          quota: response.quota
+          pagination: response.pagination
         }))
       );
+  }
+
+  /**
+   * Mark an unattended media item as attended.
+   */
+  markAttended(projectId: string, mediaId: string): Observable<void> {
+    return this.http
+      .patch<any>(`${this.apiUrl}/projects/${projectId}/media/${mediaId}/attend`, {})
+      .pipe(map(() => undefined));
+  }
+
+  /**
+   * Mark every unattended media item on the project as attended at once.
+   */
+  markAllAttended(projectId: string): Observable<{ attendedCount: number }> {
+    return this.http
+      .patch<any>(`${this.apiUrl}/projects/${projectId}/media/attend-all`, {})
+      .pipe(map((response) => ({ attendedCount: response.attendedCount || 0 })));
+  }
+
+  /**
+   * Soft-delete a media item. Admin-only (server enforces).
+   */
+  deleteMedia(projectId: string, mediaId: string): Observable<void> {
+    return this.http
+      .delete<any>(`${this.apiUrl}/projects/${projectId}/media/${mediaId}`)
+      .pipe(map(() => undefined));
   }
 
   getQuota(projectId: string): Observable<FarmMediaQuota> {

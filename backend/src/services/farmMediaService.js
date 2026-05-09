@@ -11,8 +11,6 @@ const MAX_FILES_PER_UPLOAD = 5;
 class FarmMediaService {
   /**
    * Compute ISO 8601 week string ("2026-W18") for a given date.
-   * Uses ISO week date rules: weeks start on Monday, week 1 is the
-   * week containing the first Thursday of the year.
    */
   getIsoWeek(date = new Date()) {
     const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -35,10 +33,57 @@ class FarmMediaService {
     return d;
   }
 
+  async getCurrentQuotaRecord(projectId, isoWeek = this.getIsoWeek()) {
+    const now = new Date();
+    const quota = await FarmMediaQuota.findOne({ projectId })
+      .sort({ updatedAt: -1, _id: -1 });
+
+    if (!quota || quota.isoWeek === isoWeek) {
+      return quota;
+    }
+
+    const currentWeekQuota = await FarmMediaQuota.findOne({ projectId, isoWeek })
+      .sort({ updatedAt: -1, _id: -1 });
+    if (currentWeekQuota) {
+      return currentWeekQuota;
+    }
+
+    return FarmMediaQuota.findByIdAndUpdate(
+      quota._id,
+      [
+        {
+          $set: {
+            isoWeek,
+            uploadCount: {
+              $cond: [
+                { $eq: ['$isoWeek', isoWeek] },
+                { $ifNull: ['$uploadCount', 0] },
+                0
+              ]
+            },
+            lastUploadAt: {
+              $cond: [
+                { $eq: ['$isoWeek', isoWeek] },
+                '$lastUploadAt',
+                null
+              ]
+            },
+            updatedAt: now
+          }
+        }
+      ],
+      { new: true }
+    );
+  }
+
+  /**
+   * Snapshot of the current week's quota. The quota document is project-scoped;
+   * when ISO week changes, the existing row is rolled forward and reset.
+   */
   async getQuotaSnapshot(projectId) {
     const isoWeek = this.getIsoWeek();
     const resetsAt = this.getResetsAt();
-    const quota = await FarmMediaQuota.findOne({ projectId, isoWeek }).lean();
+    const quota = await this.getCurrentQuotaRecord(projectId, isoWeek);
     return {
       used: quota?.uploadCount || 0,
       limit: WEEKLY_LIMIT,
@@ -49,16 +94,112 @@ class FarmMediaService {
   }
 
   async incrementQuota(projectId) {
+    const reservation = await this.reserveQuota(projectId, 1);
+    if (!reservation.reserved) {
+      throw { status: 429, message: 'Weekly upload limit reached', quota: reservation.snapshot };
+    }
+    return reservation.quota;
+  }
+
+  async reserveQuota(projectId, count = 1) {
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new Error('Quota reservation count must be a positive integer');
+    }
+
     const isoWeek = this.getIsoWeek();
+    const now = new Date();
+
+    if (count > WEEKLY_LIMIT) {
+      const snapshot = await this.getQuotaSnapshot(projectId);
+      return { reserved: false, snapshot };
+    }
+
+    const quota = await this.getCurrentQuotaRecord(projectId, isoWeek);
+
+    if (!quota) {
+      try {
+        const created = await FarmMediaQuota.create({
+          projectId,
+          isoWeek,
+          uploadCount: count,
+          lastUploadAt: now
+        });
+        return {
+          reserved: true,
+          quota: created,
+          snapshot: this.toQuotaSnapshot(created, isoWeek)
+        };
+      } catch (err) {
+        if (err?.code === 11000) {
+          return this.reserveQuota(projectId, count);
+        }
+        throw err;
+      }
+    }
+
     const updated = await FarmMediaQuota.findOneAndUpdate(
-      { projectId, isoWeek },
       {
-        $inc: { uploadCount: 1 },
-        $set: { lastUploadAt: new Date() }
+        _id: quota._id,
+        isoWeek,
+        uploadCount: { $lte: WEEKLY_LIMIT - count }
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      {
+        $inc: { uploadCount: count },
+        $set: {
+          lastUploadAt: now,
+          updatedAt: now
+        }
+      },
+      { new: true }
     );
-    return updated;
+
+    if (!updated) {
+      const snapshot = await this.getQuotaSnapshot(projectId);
+      return { reserved: false, snapshot };
+    }
+
+    return {
+      reserved: true,
+      quota: updated,
+      snapshot: this.toQuotaSnapshot(updated, isoWeek)
+    };
+  }
+
+  async releaseQuota(projectId, count = 1) {
+    if (!Number.isInteger(count) || count <= 0) return null;
+
+    const isoWeek = this.getIsoWeek();
+    const quota = await this.getCurrentQuotaRecord(projectId, isoWeek);
+    if (!quota) return null;
+
+    return FarmMediaQuota.findByIdAndUpdate(
+      quota._id,
+      [
+        {
+          $set: {
+            uploadCount: {
+              $cond: [
+                { $lt: [{ $subtract: [{ $ifNull: ['$uploadCount', 0] }, count] }, 0] },
+                0,
+                { $subtract: [{ $ifNull: ['$uploadCount', 0] }, count] }
+              ]
+            },
+            updatedAt: new Date()
+          }
+        }
+      ],
+      { new: true }
+    );
+  }
+
+  toQuotaSnapshot(quota, isoWeek = this.getIsoWeek()) {
+    return {
+      used: quota?.uploadCount || 0,
+      limit: WEEKLY_LIMIT,
+      isoWeek,
+      resetsAt: this.getResetsAt().toISOString(),
+      lastUploadAt: quota?.lastUploadAt || null
+    };
   }
 
   /**
@@ -69,7 +210,6 @@ class FarmMediaService {
     const start = Date.now();
     logger.info(`[FarmMedia] Upload start: project=${projectId}, file=${file.originalname}, size=${file.size}, mime=${file.mimetype}, user=${user._id}`);
 
-    // 1. Initiate upload
     const initiateRes = await fetch(`${MEDIA_SERVICE_URL}/api/v1/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,7 +231,6 @@ class FarmMediaService {
     const initiated = await initiateRes.json();
     logger.info(`[FarmMedia] Initiated: mediaId=${initiated.id}`);
 
-    // 2. Complete upload (PUT with multipart)
     const formData = new FormData();
     const blob = new Blob([file.buffer], { type: file.mimetype });
     formData.append('file', blob, file.originalname);
@@ -110,7 +249,6 @@ class FarmMediaService {
     const completed = await uploadRes.json();
     logger.info(`[FarmMedia] Upload complete: id=${completed.id}, checksum=${completed.checksum}, durationMs=${Date.now() - start}`);
 
-    // 3. Build embedded reference
     const type = file.mimetype.startsWith('video/') ? 'video' : 'image';
     const fullUrl = completed.contentUrl?.startsWith('http')
       ? completed.contentUrl
@@ -125,10 +263,10 @@ class FarmMediaService {
       status: 'ACTIVE',
       uploadedBy: user._id,
       uploadedByName: user.name || user.email,
-      uploadedAt: new Date(completed.createdAt || Date.now())
+      uploadedAt: new Date(completed.createdAt || Date.now()),
+      attended: false
     };
 
-    // 4. Push reference into project document
     await Project.updateOne(
       { _id: projectId },
       { $push: { farmMedia: mediaRef }, $set: { updatedAt: new Date() } }
@@ -138,53 +276,113 @@ class FarmMediaService {
   }
 
   /**
-   * Send notification to farm owner after upload.
-   * Best-effort; failures are logged but do not affect the upload result.
+   * Resolve the set of users associated with a project (owner + workers).
+   * Notifications are scoped to this set only — no global admin/manager fan-out.
    */
-  async notifyOwner(project, count, user) {
-    try {
-      const ownerId = project.submittedBy || project.clientId;
-      if (!ownerId) {
-        logger.debug(`[FarmMedia] No owner to notify for project ${project._id}`);
-        return;
-      }
-      // Don't self-notify
-      if (ownerId.toString() === user._id.toString()) return;
+  collectProjectStakeholders(project) {
+    const ids = new Set();
+    const push = (value) => {
+      if (!value) return;
+      if (Array.isArray(value)) return value.forEach(push);
+      const id = (typeof value === 'object' && (value._id || value.id)) || value;
+      if (id) ids.add(id.toString());
+    };
 
+    // Owner / client side
+    push(project.submittedBy);
+    push(project.clientId);
+
+    // Worker / team side
+    push(project.assignedTo);
+    push(project.projectManager);
+    push(project.fieldWorkers);
+    push(project.consultants);
+    push(project.assignedTeam);
+
+    return ids;
+  }
+
+  /**
+   * Notify only the project's stakeholders — owner and assigned workers.
+   * The uploader is excluded so they don't notify themselves.
+   * Best-effort; failures are logged and don't fail the upload.
+   */
+  async notifyOnUpload(project, count, user) {
+    try {
       const message = count > 1
         ? `${count} new photos added to ${project.name}`
         : `New photo added to ${project.name}`;
 
-      await notificationService.createForUser(ownerId, {
+      const basePayload = {
         type: 'farm_media_upload',
-        title: 'New media uploaded',
+        title: 'New farm media uploaded',
         message,
         project: project._id,
         submittingUser: user._id,
         metadata: {
           farmName: project.name,
-          uploaderName: user.name || user.email
+          uploaderName: user.name || user.email,
+          mediaCount: count
         }
-      });
-      logger.info(`[FarmMedia] Notification sent to owner=${ownerId} for project=${project._id}`);
+      };
+
+      const stakeholderIds = this.collectProjectStakeholders(project);
+      stakeholderIds.delete(user._id.toString());
+
+      if (!stakeholderIds.size) {
+        logger.debug(`[FarmMedia] No stakeholders to notify for project ${project._id}`);
+        return;
+      }
+
+      await Promise.all(
+        Array.from(stakeholderIds).map((uid) =>
+          notificationService.createForUser(uid, basePayload)
+        )
+      );
+
+      logger.info(`[FarmMedia] Notifications sent: project=${project._id}, recipients=${stakeholderIds.size}`);
     } catch (err) {
       logger.error(`[FarmMedia] Notification failed: ${err.message}`);
     }
   }
 
-  async listMedia(projectId, page = 1, limit = 50) {
+  /**
+   * List unattended media (newly uploaded, not yet acknowledged) plus a count
+   * of how many attended items exist. Unattended items show as thumbnails;
+   * attended items live behind a paginated drawer (see listAttendedMedia).
+   */
+  async listUnattendedMedia(projectId) {
+    const project = await Project.findById(projectId)
+      .select('farmMedia')
+      .lean();
+    if (!project) return { unattended: [], attendedTotal: 0, total: 0 };
+
+    const all = (project.farmMedia || []).filter((m) => m.status !== 'DELETED');
+    const unattended = all
+      .filter((m) => !m.attended)
+      .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    const attendedTotal = all.length - unattended.length;
+
+    return { unattended, attendedTotal, total: all.length };
+  }
+
+  /**
+   * Paginated list of attended media. Loaded lazily when the user opens the
+   * "View attended photos" drawer in the UI.
+   */
+  async listAttendedMedia(projectId, page = 1, limit = 20) {
     const project = await Project.findById(projectId)
       .select('farmMedia')
       .lean();
     if (!project) return { items: [], total: 0, page, totalPages: 0 };
 
-    const all = (project.farmMedia || [])
-      .filter((m) => m.status !== 'DELETED')
-      .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    const attended = (project.farmMedia || [])
+      .filter((m) => m.status !== 'DELETED' && m.attended)
+      .sort((a, b) => new Date(b.attendedAt || b.uploadedAt) - new Date(a.attendedAt || a.uploadedAt));
 
-    const total = all.length;
+    const total = attended.length;
     const start = (page - 1) * limit;
-    const items = all.slice(start, start + limit);
+    const items = attended.slice(start, start + limit);
 
     return {
       items,
@@ -192,6 +390,106 @@ class FarmMediaService {
       page,
       totalPages: Math.ceil(total / limit) || 1
     };
+  }
+
+  /**
+   * Mark a single media item as attended. Uses $elemMatch so the positional
+   * `$` operator targets the same element that satisfied both conditions —
+   * a plain dot-path query like `{'farmMedia.mediaId': X, 'farmMedia.attended': {$ne:true}}`
+   * matches at the document level (any element X, any element not-attended)
+   * which can fail to update in mixed-state arrays.
+   */
+  async markAttended(projectId, mediaId, user) {
+    const result = await Project.updateOne(
+      {
+        _id: projectId,
+        farmMedia: {
+          $elemMatch: { mediaId, status: { $ne: 'DELETED' } }
+        }
+      },
+      {
+        $set: {
+          'farmMedia.$.attended': true,
+          'farmMedia.$.attendedAt': new Date(),
+          'farmMedia.$.attendedBy': user._id,
+          'farmMedia.$.attendedByName': user.name || user.email,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (!result.matchedCount) {
+      throw { status: 404, message: 'Media not found on this project' };
+    }
+
+    logger.info(`[FarmMedia] Media attended: project=${projectId}, mediaId=${mediaId}, by=${user._id}, modified=${result.modifiedCount}`);
+    return { success: true, alreadyAttended: result.modifiedCount === 0 };
+  }
+
+  /**
+   * Bulk-attend every unattended, non-deleted media item on the project.
+   * Returns the number of items transitioned. Uses arrayFilters so it scales
+   * as the project's history grows.
+   */
+  async markAllAttended(projectId, user) {
+    const project = await Project.findById(projectId).select('farmMedia').lean();
+    if (!project) throw { status: 404, message: 'Project not found' };
+
+    const unattendedCount = (project.farmMedia || []).filter(
+      (m) => m.status !== 'DELETED' && !m.attended
+    ).length;
+
+    if (unattendedCount === 0) {
+      return { success: true, attendedCount: 0 };
+    }
+
+    const now = new Date();
+    await Project.updateOne(
+      { _id: projectId },
+      {
+        $set: {
+          'farmMedia.$[elem].attended': true,
+          'farmMedia.$[elem].attendedAt': now,
+          'farmMedia.$[elem].attendedBy': user._id,
+          'farmMedia.$[elem].attendedByName': user.name || user.email,
+          updatedAt: now
+        }
+      },
+      {
+        arrayFilters: [
+          {
+            'elem.attended': { $ne: true },
+            'elem.status': { $ne: 'DELETED' }
+          }
+        ]
+      }
+    );
+
+    logger.info(`[FarmMedia] Bulk attended: project=${projectId}, count=${unattendedCount}, by=${user._id}`);
+    return { success: true, attendedCount: unattendedCount };
+  }
+
+  /**
+   * Soft-delete a media item by marking its status. Authorization (admin only)
+   * is enforced at the route layer.
+   */
+  async deleteMedia(projectId, mediaId, user) {
+    const result = await Project.updateOne(
+      { _id: projectId, 'farmMedia.mediaId': mediaId },
+      {
+        $set: {
+          'farmMedia.$.status': 'DELETED',
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (!result.matchedCount) {
+      throw { status: 404, message: 'Media not found on this project' };
+    }
+
+    logger.info(`[FarmMedia] Media deleted: project=${projectId}, mediaId=${mediaId}, by=${user._id}`);
+    return { success: true };
   }
 
   getWeeklyLimit() {

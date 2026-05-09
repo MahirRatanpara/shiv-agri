@@ -3,10 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
+export type AppNotificationType =
+  | 'farm_registration'
+  | 'farm_approved'
+  | 'farm_rejected'
+  | 'farm_media_upload'
+  | 'system';
+
 export interface AppNotification {
   id: string;
   _id?: string;
-  type: 'farm_registration' | 'farm_approved' | 'farm_rejected' | 'system';
+  type: AppNotificationType;
   title: string;
   message: string;
   project?: { _id: string; id?: string; name: string; status: string; rejectedReason?: string };
@@ -15,6 +22,8 @@ export interface AppNotification {
     farmName?: string;
     submitterName?: string;
     rejectionReason?: string;
+    uploaderName?: string;
+    mediaCount?: number;
   };
   isRead: boolean;
   createdAt: string;

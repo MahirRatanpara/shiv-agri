@@ -75,7 +75,27 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     if (!projectId) return;
     this.markRead(notification.id);
     this.isOpen = false;
-    this.router.navigate(['/farm-management/project', projectId], { queryParams: { from: 'notification' } });
+
+    const queryParams: Record<string, string> = { from: 'notification' };
+    if (notification.type === 'farm_media_upload') {
+      queryParams['tab'] = 'media';
+    }
+
+    this.router.navigate(['/farm-management/project', projectId], { queryParams });
+  }
+
+  ctaLabelFor(notification: AppNotification): string {
+    switch (notification.type) {
+      case 'farm_media_upload': return 'Review Photos';
+      case 'farm_registration': return 'Review Request';
+      case 'farm_approved':
+      case 'farm_rejected': return 'View Project';
+      default: return 'Open';
+    }
+  }
+
+  hasCta(notification: AppNotification): boolean {
+    return !!this.projectId(notification) && notification.type !== 'system';
   }
 
   archive(notification: AppNotification): void {
@@ -112,6 +132,7 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
       case 'farm_registration': return 'fa-seedling';
       case 'farm_approved': return 'fa-circle-check';
       case 'farm_rejected': return 'fa-circle-xmark';
+      case 'farm_media_upload': return 'fa-images';
       default: return 'fa-bell';
     }
   }

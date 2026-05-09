@@ -58,6 +58,8 @@ export interface FarmProject {
   completionDate?: string;
   expectedCompletionDate?: string;
   visitFrequency?: number;
+  isArchived?: boolean;
+  archivedAt?: string;
 }
 
 export interface FarmRegistrationPayload {
@@ -209,6 +211,24 @@ export class FarmManagementService {
 
   requestFarmEdit(projectId: string, payload: Partial<FarmRegistrationPayload>): Observable<FarmProject> {
     return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/request-edit`, payload).pipe(
+      map((response) => ({
+        ...response.data,
+        id: response.data?.id || response.data?._id
+      }))
+    );
+  }
+
+  archiveFarm(projectId: string): Observable<FarmProject> {
+    return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/archive`, {}).pipe(
+      map((response) => ({
+        ...response.data,
+        id: response.data?.id || response.data?._id
+      }))
+    );
+  }
+
+  unarchiveFarm(projectId: string): Observable<FarmProject> {
+    return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/unarchive`, {}).pipe(
       map((response) => ({
         ...response.data,
         id: response.data?.id || response.data?._id

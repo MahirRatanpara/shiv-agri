@@ -206,10 +206,101 @@ const hasPermission = (user, permissionName) => {
   return userPermissionNames.includes(permissionName);
 };
 
+/**
+ * Allow access to a single project if the user is:
+ *   - admin
+ *   - holds any of the supplied permissions
+ *   - a stakeholder on the project (owner / client / assigned worker)
+ *
+ * This is the right gate for read-style routes that need to be reachable by
+ * notification recipients (farmer + workers) who otherwise lack the broad
+ * farm.projects.view permission.
+ *
+ * @param {string|string[]} permissions
+ * @example
+ * router.get('/:id', authenticate,
+ *   requireProjectAccess(['farm.projects.view', 'farms.view']),
+ *   projectController.getProjectById
+ * );
+ */
+const requireProjectAccess = (permissions = []) => {
+  // Any of these permissions implicitly grants read access — managers who
+  // can approve/update farms obviously need to see them too.
+  const IMPLICIT_READ = [
+    'farm.projects.view',
+    'farms.view',
+    'farm.projects.approve',
+    'farm.projects.update',
+    'project.update',
+    'project.delete'
+  ];
+  const explicit = Array.isArray(permissions) ? permissions : [permissions];
+  const acceptable = Array.from(new Set([...explicit, ...IMPLICIT_READ]));
+
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      if (req.user.role === 'admin') return next();
+
+      const userPermissionNames = (req.user.roleRef?.permissions || [])
+        .map((p) => (typeof p === 'string' ? p : p.name));
+      if (acceptable.some((perm) => userPermissionNames.includes(perm))) {
+        return next();
+      }
+
+      const Project = require('../models/Project');
+      const project = await Project.findById(req.params.id)
+        .select('submittedBy clientId createdBy assignedTo projectManager fieldWorkers consultants assignedTeam')
+        .lean();
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      const userId = req.user._id.toString();
+      const stakeholders = new Set();
+      const push = (val) => {
+        if (!val) return;
+        if (Array.isArray(val)) return val.forEach(push);
+        const id = (typeof val === 'object' && (val._id || val.id)) || val;
+        if (id) stakeholders.add(id.toString());
+      };
+      push(project.submittedBy);
+      push(project.clientId);
+      push(project.createdBy);
+      push(project.assignedTo);
+      push(project.projectManager);
+      push(project.fieldWorkers);
+      push(project.consultants);
+      push(project.assignedTeam);
+
+      if (stakeholders.has(userId)) return next();
+
+      console.warn(
+        `[requireProjectAccess] denied user=${userId} role=${req.user.role} ` +
+        `project=${req.params.id} perms=${userPermissionNames.join(',') || 'none'} ` +
+        `stakeholders=${Array.from(stakeholders).join(',')}`
+      );
+
+      return res.status(403).json({
+        error: 'Insufficient permissions',
+        message: 'You do not have access to this project.'
+      });
+    } catch (error) {
+      console.error('Project access check error:', error);
+      return res.status(500).json({ error: 'Project access check failed' });
+    }
+  };
+};
+
 module.exports = {
   authenticate,
   authorize,
   requirePermission,
   requireOwnership,
+  requireProjectAccess,
   hasPermission
 };

@@ -78,10 +78,20 @@
             {{ notification.metadata?.submitterName || notification.submittingUser?.name || 'Farmer' }}
           </small>
 
-          <div class="review-actions" *ngIf="notification.type === 'farm_registration'">
+          <small *ngIf="notification.type === 'farm_media_upload'" class="media-meta">
+            <span class="farm-chip">
+              <i class="fas fa-leaf"></i>
+              {{ notification.metadata?.farmName || notification.project?.name }}
+            </span>
+            <span class="new-badge" *ngIf="!notification.isRead">New uploads</span>
+            <span class="dot">•</span>
+            <span>by {{ notification.metadata?.uploaderName || notification.submittingUser?.name || 'Manager' }}</span>
+          </small>
+
+          <div class="review-actions" *ngIf="hasCta(notification)">
             <button type="button" class="view-request" (click)="openRequest(notification)">
-              <i class="fas fa-arrow-right"></i>
-              Review Request
+              <i class="fas" [ngClass]="notification.type === 'farm_media_upload' ? 'fa-image' : 'fa-arrow-right'"></i>
+              {{ ctaLabelFor(notification) }}
             </button>
           </div>
         </div>

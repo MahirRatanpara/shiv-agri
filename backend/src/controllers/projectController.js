@@ -139,10 +139,24 @@ exports.getProjectById = async (req, res) => {
     const project = await projectService.getProjectById(req.params.id);
 
     if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
-      const isSubmittedByUser = project.submittedBy && String(project.submittedBy) === String(req.user._id);
-      const isClientUser = project.clientId && String(project.clientId) === String(req.user._id);
+      const userId = String(req.user._id);
+      const stakeholderIds = new Set();
+      const push = (val) => {
+        if (!val) return;
+        if (Array.isArray(val)) return val.forEach(push);
+        const id = (typeof val === 'object' && (val._id || val.id)) || val;
+        if (id) stakeholderIds.add(String(id));
+      };
+      push(project.submittedBy);
+      push(project.clientId);
+      push(project.createdBy);
+      push(project.assignedTo);
+      push(project.projectManager);
+      push(project.fieldWorkers);
+      push(project.consultants);
+      push(project.assignedTeam);
 
-      if (!isSubmittedByUser && !isClientUser) {
+      if (!stakeholderIds.has(userId)) {
         return res.status(403).json({
           success: false,
           error: 'Access denied'
@@ -416,6 +430,72 @@ exports.hardDeleteProject = async (req, res) => {
     res.status(statusCode).json({
       success: false,
       error: 'Failed to permanently delete project',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/archive
+ * @desc    Archive a project (admin only). Archived projects become read-only.
+ * @access  Private (Admin)
+ */
+exports.archiveProject = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required to archive projects.'
+      });
+    }
+
+    const project = await projectService.archiveProject(req.params.id, req.user._id);
+    logger.info(`Project ${req.params.id} archived by admin ${req.user._id}`);
+
+    res.status(200).json({
+      success: true,
+      data: { ...project.toObject(), id: project._id },
+      message: 'Project archived'
+    });
+  } catch (error) {
+    logger.error(`Error archiving project: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to archive project',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/unarchive
+ * @desc    Restore an archived project (admin only).
+ * @access  Private (Admin)
+ */
+exports.unarchiveProject = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const project = await projectService.unarchiveProject(req.params.id);
+    logger.info(`Project ${req.params.id} unarchived by admin ${req.user._id}`);
+
+    res.status(200).json({
+      success: true,
+      data: { ...project.toObject(), id: project._id },
+      message: 'Project restored'
+    });
+  } catch (error) {
+    logger.error(`Error unarchiving project: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to restore project',
       message: error.message
     });
   }

@@ -689,6 +689,36 @@ class ProjectService {
   }
 
   /**
+   * Archive a project — admin only. Archived projects remain visible
+   * but reject uploads and lifecycle changes downstream.
+   */
+  async archiveProject(projectId, userId) {
+    const project = await Project.findById(projectId);
+    if (!project) throw new Error('Project not found');
+
+    project.isArchived = true;
+    project.archivedAt = new Date();
+    project.archivedBy = userId;
+    project.lastUpdatedBy = userId;
+    await project.save();
+    return project;
+  }
+
+  /**
+   * Restore a previously archived project — admin only.
+   */
+  async unarchiveProject(projectId) {
+    const project = await Project.findById(projectId);
+    if (!project) throw new Error('Project not found');
+
+    project.isArchived = false;
+    project.archivedAt = undefined;
+    project.archivedBy = undefined;
+    await project.save();
+    return project;
+  }
+
+  /**
    * Permanently delete a project (admin only)
    */
   async hardDeleteProject(projectId) {

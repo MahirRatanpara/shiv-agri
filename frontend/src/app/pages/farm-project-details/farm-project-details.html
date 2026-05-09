@@ -41,6 +41,10 @@
         <i class="fas fa-laptop"></i>
         Online visit
       </span>
+      <span class="source-tag archived-tag" *ngIf="project.isArchived">
+        <i class="fas fa-box-archive"></i>
+        Archived
+      </span>
     </div>
 
     <h1>{{ project.name }}</h1>
@@ -121,6 +125,17 @@
         <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
           <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
           {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
+        </button>
+
+        <button
+          class="archive-btn"
+          *ngIf="canArchiveProject"
+          [class.is-archived]="project.isArchived"
+          [disabled]="isArchiving"
+          (click)="confirmArchiveProject()"
+        >
+          <i class="fas" [class.fa-box-archive]="!project.isArchived" [class.fa-rotate-left]="project.isArchived"></i>
+          {{ project.isArchived ? 'Restore Project' : 'Archive Project' }}
         </button>
 
         <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
@@ -286,7 +301,7 @@
             type="button"
             class="upload-btn"
             *ngIf="canUploadMedia"
-            [disabled]="isUploading || (quota && quota.used >= quota.limit)"
+            [disabled]="isUploading"
             [class.at-limit]="quota && quota.used >= quota.limit"
             (click)="triggerFilePicker()"
           >
@@ -297,7 +312,7 @@
               [class.fa-spin]="isUploading"
               aria-hidden="true"
             ></i>
-            <span>{{ isUploading ? 'Uploading...' : (quota && quota.used >= quota.limit ? 'Weekly limit reached' : 'Upload Photos & Videos') }}</span>
+            <span>{{ isUploading ? 'Uploading...' : 'Upload Photos & Videos' }}</span>
           </button>
         </div>
       </header>
@@ -332,7 +347,7 @@
         <p>Loading media...</p>
       </div>
 
-      <div class="media-empty" *ngIf="!mediaLoading && mediaItems.length === 0 && uploadingBatch.length === 0">
+      <div class="media-empty" *ngIf="!mediaLoading && mediaItems.length === 0 && attendedMediaTotal === 0 && uploadingBatch.length === 0">
         <div class="empty-illustration" aria-hidden="true">
           <i class="fas fa-camera"></i>
         </div>
@@ -343,7 +358,7 @@
           type="button"
           class="upload-btn empty-state-btn"
           *ngIf="canUploadMedia"
-          [disabled]="isUploading || (quota && quota.used >= quota.limit)"
+          [disabled]="isUploading"
           (click)="triggerFilePicker()"
         >
           <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
@@ -351,28 +366,197 @@
         </button>
       </div>
 
-      <div class="media-grid" *ngIf="mediaItems.length">
+      <div class="recent-media-block" *ngIf="mediaItems.length || attendedMediaTotal > 0">
+        <header class="recent-media-head" *ngIf="mediaItems.length">
+          <div class="recent-media-head-text">
+            <h3><i class="fas fa-bolt"></i> Unattended</h3>
+            <span class="recent-meta">{{ mediaItems.length }} new item{{ mediaItems.length === 1 ? '' : 's' }} awaiting review</span>
+          </div>
+          <button
+            type="button"
+            class="attend-all-btn"
+            *ngIf="canAttendMedia"
+            [disabled]="isAttendingAll"
+            (click)="markAllAsAttended()"
+          >
+            <i
+              class="fas"
+              [class.fa-check-double]="!isAttendingAll"
+              [class.fa-circle-notch]="isAttendingAll"
+              [class.fa-spin]="isAttendingAll"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isAttendingAll ? 'Attending...' : 'Mark all as attended' }}</span>
+          </button>
+        </header>
+
+        <div class="media-empty-soft" *ngIf="!mediaItems.length && attendedMediaTotal > 0">
+          <i class="fas fa-circle-check"></i>
+          <p>You're all caught up — no unattended photos.</p>
+        </div>
+
+        <div class="media-grid" *ngIf="mediaItems.length">
+          <div
+            class="media-tile-wrap"
+            *ngFor="let item of mediaItems; trackBy: trackMedia"
+          >
+            <button
+              type="button"
+              class="media-tile"
+              (click)="openLightbox(item)"
+              [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+            >
+              <ng-container *ngIf="item.type === 'image'">
+                <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+              </ng-container>
+              <ng-container *ngIf="item.type === 'video'">
+                <video [src]="item.url" preload="metadata" muted playsinline></video>
+                <span class="play-icon" aria-hidden="true">
+                  <i class="fas fa-play"></i>
+                </span>
+              </ng-container>
+              <span class="recent-badge" aria-hidden="true">New</span>
+              <div class="media-overlay">
+                <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+                <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="media-attend"
+              *ngIf="canAttendMedia"
+              [disabled]="attendingMediaIds.has(item.mediaId)"
+              (click)="markAsAttended(item, $event)"
+              aria-label="Mark as attended"
+              title="Mark as attended"
+            >
+              <i
+                class="fas"
+                [class.fa-check]="!attendingMediaIds.has(item.mediaId)"
+                [class.fa-circle-notch]="attendingMediaIds.has(item.mediaId)"
+                [class.fa-spin]="attendingMediaIds.has(item.mediaId)"
+              ></i>
+              <span>Mark attended</span>
+            </button>
+
+            <button
+              type="button"
+              class="media-delete"
+              *ngIf="canDeleteMedia"
+              [disabled]="deletingMediaIds.has(item.mediaId)"
+              (click)="confirmDeleteMedia(item, $event)"
+              aria-label="Delete photo"
+              title="Delete photo (admin)"
+            >
+              <i
+                class="fas"
+                [class.fa-trash-alt]="!deletingMediaIds.has(item.mediaId)"
+                [class.fa-circle-notch]="deletingMediaIds.has(item.mediaId)"
+                [class.fa-spin]="deletingMediaIds.has(item.mediaId)"
+              ></i>
+            </button>
+          </div>
+        </div>
+
         <button
           type="button"
-          class="media-tile"
-          *ngFor="let item of mediaItems; trackBy: trackMedia"
-          (click)="openLightbox(item)"
-          [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+          class="older-toggle"
+          *ngIf="attendedMediaTotal > 0"
+          (click)="toggleAttendedMedia()"
+          [attr.aria-expanded]="showAttendedMedia"
         >
-          <ng-container *ngIf="item.type === 'image'">
-            <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
-          </ng-container>
-          <ng-container *ngIf="item.type === 'video'">
-            <video [src]="item.url" preload="metadata" muted playsinline></video>
-            <span class="play-icon" aria-hidden="true">
-              <i class="fas fa-play"></i>
-            </span>
-          </ng-container>
-          <div class="media-overlay">
-            <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
-            <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
-          </div>
+          <i class="fas" [class.fa-chevron-down]="!showAttendedMedia" [class.fa-chevron-up]="showAttendedMedia"></i>
+          <span>{{ showAttendedMedia ? 'Hide attended photos' : 'View attended photos' }}</span>
+          <span class="older-count">{{ attendedMediaTotal }}</span>
         </button>
+
+        <section class="older-media" *ngIf="showAttendedMedia">
+          <header class="older-head">
+            <h3><i class="fas fa-circle-check"></i> Attended photos</h3>
+            <span class="older-sub">{{ attendedMediaTotal }} reviewed item{{ attendedMediaTotal === 1 ? '' : 's' }}</span>
+          </header>
+
+          <div class="media-loading older-loading" *ngIf="attendedMediaLoading && attendedMediaItems.length === 0">
+            <div class="spinner"></div>
+            <p>Loading attended photos...</p>
+          </div>
+
+          <div class="media-grid older-grid" *ngIf="attendedMediaItems.length">
+            <div
+              class="media-tile-wrap"
+              *ngFor="let item of attendedMediaItems; trackBy: trackMedia"
+            >
+              <button
+                type="button"
+                class="media-tile"
+                (click)="openLightbox(item)"
+                [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+              >
+                <ng-container *ngIf="item.type === 'image'">
+                  <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+                </ng-container>
+                <ng-container *ngIf="item.type === 'video'">
+                  <video [src]="item.url" preload="metadata" muted playsinline></video>
+                  <span class="play-icon" aria-hidden="true">
+                    <i class="fas fa-play"></i>
+                  </span>
+                </ng-container>
+                <div class="media-overlay">
+                  <span class="media-date">{{ item.uploadedAt | date:'MMM d, y' }}</span>
+                  <span class="media-author" *ngIf="item.attendedByName">attended by {{ item.attendedByName }}</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                class="media-delete"
+                *ngIf="canDeleteMedia"
+                [disabled]="deletingMediaIds.has(item.mediaId)"
+                (click)="confirmDeleteMedia(item, $event)"
+                aria-label="Delete photo"
+                title="Delete photo (admin)"
+              >
+                <i
+                  class="fas"
+                  [class.fa-trash-alt]="!deletingMediaIds.has(item.mediaId)"
+                  [class.fa-circle-notch]="deletingMediaIds.has(item.mediaId)"
+                  [class.fa-spin]="deletingMediaIds.has(item.mediaId)"
+                ></i>
+              </button>
+            </div>
+          </div>
+
+          <nav class="older-pagination" *ngIf="attendedMediaTotalPages > 1" aria-label="Attended photos pagination">
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="attendedMediaPage === 1 || attendedMediaLoading"
+              (click)="goToAttendedPage(attendedMediaPage - 1)"
+              aria-label="Previous page"
+            >
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button
+              type="button"
+              class="page-btn"
+              *ngFor="let page of attendedPageNumbers"
+              [class.active]="page === attendedMediaPage"
+              [disabled]="attendedMediaLoading"
+              (click)="goToAttendedPage(page)"
+            >
+              {{ page }}
+            </button>
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="attendedMediaPage === attendedMediaTotalPages || attendedMediaLoading"
+              (click)="goToAttendedPage(attendedMediaPage + 1)"
+              aria-label="Next page"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </nav>
+        </section>
       </div>
     </section>
 

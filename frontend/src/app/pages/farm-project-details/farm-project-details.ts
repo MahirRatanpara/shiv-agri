@@ -9,6 +9,7 @@ import { AuthService, User } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
 import { FarmManagementService, FarmProject, FarmRegistrationPayload } from '../../services/farm-management.service';
 import { ToastService } from '../../services/toast.service';
+import { ConfirmationModalService } from '../../services/confirmation-modal.service';
 import { FarmRegistrationFormComponent } from '../../components/farm-registration-form/farm-registration-form';
 import { FarmWeatherComponent } from '../../components/farm-weather/farm-weather';
 import {
@@ -50,12 +51,26 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   activeTab: 'overview' | 'media' = 'overview';
 
+  // Unattended media — shown as thumbnails immediately.
   mediaItems: FarmMediaRef[] = [];
+  // Attended media — fetched lazily when the user expands the drawer.
+  attendedMediaItems: FarmMediaRef[] = [];
+  attendedMediaTotal = 0;
+  attendedMediaPage = 1;
+  attendedMediaTotalPages = 1;
+  attendedMediaLoading = false;
+  showAttendedMedia = false;
+  readonly attendedPageSize = 12;
+
   mediaLoading = false;
   quota: FarmMediaQuota | null = null;
   uploadingBatch: UploadProgressItem[] = [];
   isUploading = false;
   lightboxItem: FarmMediaRef | null = null;
+  deletingMediaIds = new Set<string>();
+  attendingMediaIds = new Set<string>();
+  isAttendingAll = false;
+  isArchiving = false;
   readonly maxFilesPerBatch = MAX_FILES_PER_BATCH;
   readonly maxFileSizeMb = Math.round(MAX_FILE_SIZE_BYTES / (1024 * 1024));
 
@@ -77,7 +92,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private permissionService: PermissionService,
     private farmService: FarmManagementService,
     private toastService: ToastService,
-    private farmMediaService: FarmMediaService
+    private farmMediaService: FarmMediaService,
+    private confirmationModalService: ConfirmationModalService
   ) {}
 
   ngOnInit(): void {
@@ -90,6 +106,13 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       this.projectId = params['id'];
       this.loadProject();
       this.startFarmerPollingIfNeeded();
+    });
+
+    // Auto-open Photos tab when arriving from a media-upload notification.
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((qp) => {
+      if (qp['tab'] === 'media') {
+        this.activeTab = 'media';
+      }
     });
   }
 
@@ -113,6 +136,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           this.knownMediaIds = new Set(response.items.map((m) => m.mediaId));
           if (this.activeTab === 'media') {
             this.mediaItems = response.items;
+            this.attendedMediaTotal = response.attendedTotal;
             this.quota = response.quota;
           }
         },
@@ -136,15 +160,13 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           fresh.forEach((item) => this.knownMediaIds.add(item.mediaId));
 
           this.mediaItems = response.items;
+          this.attendedMediaTotal = response.attendedTotal;
           this.quota = response.quota;
 
           const message = fresh.length === 1
             ? 'New photo added to your farm. Tap Photos & Videos to view.'
             : `${fresh.length} new photos added to your farm.`;
           this.toastService.info(message, 5000);
-
-          // If they're already on the media tab, the new tiles will appear at the top.
-          // If they're on Overview, surface the count via the tab badge.
         },
         error: () => {/* silent — keep retrying on next tick */}
       });
@@ -172,7 +194,21 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   get canChangeLifecycleStatus(): boolean {
     return !!this.project &&
       this.canManageLifecycle &&
+      !this.project.isArchived &&
       !['pending_approval', 'rejected'].includes(this.project.status);
+  }
+
+  get attendedPageNumbers(): number[] {
+    const total = this.attendedMediaTotalPages;
+    if (total <= 1) return [];
+    const max = 5;
+    const half = Math.floor(max / 2);
+    let start = Math.max(1, this.attendedMediaPage - half);
+    let end = Math.min(total, start + max - 1);
+    start = Math.max(1, end - max + 1);
+    const pages: number[] = [];
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
   }
 
   get isFarmOwner(): boolean {
@@ -190,9 +226,30 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   get canUploadMedia(): boolean {
     if (!this.project) return false;
+    if (this.project.isArchived) return false;
     if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
     if (this.permissionService.hasPermission('farm.projects.update')) return true;
     return this.isFarmOwner;
+  }
+
+  get isAdmin(): boolean {
+    return this.currentUser?.role === 'admin';
+  }
+
+  get canDeleteMedia(): boolean {
+    return this.isAdmin;
+  }
+
+  get canArchiveProject(): boolean {
+    return this.isAdmin;
+  }
+
+  /**
+   * Mark-as-attended actions are limited to admins and farm managers
+   * (anyone holding farm.projects.approve). The backend enforces the same.
+   */
+  get canAttendMedia(): boolean {
+    return this.isAdmin || this.permissionService.hasPermission('farm.projects.approve');
   }
 
   get quotaPercent(): number {
@@ -253,15 +310,186 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.mediaItems = response.items;
+          this.attendedMediaTotal = response.attendedTotal;
           this.quota = response.quota;
           this.knownMediaIds = new Set(response.items.map((m) => m.mediaId));
           this.mediaLoading = false;
+
+          // If the attended drawer is already open (e.g. after a mark/delete), refresh it.
+          if (this.showAttendedMedia) this.loadAttendedMedia(this.attendedMediaPage);
         },
         error: () => {
           this.mediaLoading = false;
           this.toastService.error('Unable to load farm media.');
         }
       });
+  }
+
+  toggleAttendedMedia(): void {
+    this.showAttendedMedia = !this.showAttendedMedia;
+    if (this.showAttendedMedia && this.attendedMediaItems.length === 0) {
+      this.loadAttendedMedia(1);
+    }
+  }
+
+  loadAttendedMedia(page: number): void {
+    if (!this.projectId || page < 1) return;
+    this.attendedMediaLoading = true;
+    this.attendedMediaPage = page;
+    this.farmMediaService.listAttendedMedia(this.projectId, page, this.attendedPageSize)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.attendedMediaItems = response.items;
+          this.attendedMediaTotal = response.pagination.total;
+          this.attendedMediaTotalPages = response.pagination.totalPages;
+          this.attendedMediaLoading = false;
+        },
+        error: () => {
+          this.attendedMediaLoading = false;
+          this.toastService.error('Unable to load attended photos.');
+        }
+      });
+  }
+
+  goToAttendedPage(page: number): void {
+    if (page < 1 || page > this.attendedMediaTotalPages || page === this.attendedMediaPage) return;
+    this.loadAttendedMedia(page);
+  }
+
+  markAsAttended(item: FarmMediaRef, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!this.canAttendMedia) return;
+    if (this.attendingMediaIds.has(item.mediaId)) return;
+
+    this.attendingMediaIds.add(item.mediaId);
+    this.farmMediaService.markAttended(this.projectId, item.mediaId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.attendingMediaIds.delete(item.mediaId);
+          this.mediaItems = this.mediaItems.filter((m) => m.mediaId !== item.mediaId);
+          this.knownMediaIds.delete(item.mediaId);
+          this.attendedMediaTotal += 1;
+          if (this.showAttendedMedia) this.loadAttendedMedia(1);
+          this.toastService.success('Marked as attended');
+        },
+        error: (err) => {
+          this.attendingMediaIds.delete(item.mediaId);
+          this.toastService.error(err?.error?.message || 'Could not mark as attended.');
+        }
+      });
+  }
+
+  markAllAsAttended(): void {
+    if (!this.canAttendMedia || this.isAttendingAll || this.mediaItems.length === 0) return;
+
+    this.isAttendingAll = true;
+    this.farmMediaService.markAllAttended(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ attendedCount }) => {
+          this.isAttendingAll = false;
+          if (attendedCount === 0) {
+            this.toastService.info('No unattended photos to mark.');
+            return;
+          }
+          this.mediaItems.forEach((m) => this.knownMediaIds.delete(m.mediaId));
+          this.mediaItems = [];
+          this.attendedMediaTotal += attendedCount;
+          if (this.showAttendedMedia) this.loadAttendedMedia(1);
+          this.toastService.success(
+            attendedCount === 1
+              ? '1 photo marked as attended.'
+              : `${attendedCount} photos marked as attended.`
+          );
+        },
+        error: (err) => {
+          this.isAttendingAll = false;
+          this.toastService.error(err?.error?.message || 'Could not mark all as attended.');
+        }
+      });
+  }
+
+  async confirmDeleteMedia(item: FarmMediaRef, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!this.canDeleteMedia || this.deletingMediaIds.has(item.mediaId)) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Delete this photo?',
+      message: `This will permanently remove the ${item.type} from the farm record. This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash-alt'
+    });
+    if (!confirmed) return;
+
+    this.deletingMediaIds.add(item.mediaId);
+    this.farmMediaService.deleteMedia(this.projectId, item.mediaId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingMediaIds.delete(item.mediaId);
+          const wasAttended = this.attendedMediaItems.some((m) => m.mediaId === item.mediaId);
+          this.attendedMediaItems = this.attendedMediaItems.filter((m) => m.mediaId !== item.mediaId);
+          this.mediaItems = this.mediaItems.filter((m) => m.mediaId !== item.mediaId);
+          this.knownMediaIds.delete(item.mediaId);
+          if (wasAttended) {
+            this.attendedMediaTotal = Math.max(0, this.attendedMediaTotal - 1);
+          }
+
+          if (this.showAttendedMedia && this.attendedMediaItems.length === 0 && this.attendedMediaPage > 1) {
+            this.loadAttendedMedia(this.attendedMediaPage - 1);
+          }
+          this.toastService.success('Photo removed.');
+        },
+        error: (err) => {
+          this.deletingMediaIds.delete(item.mediaId);
+          this.toastService.error(err?.error?.message || 'Unable to delete this photo.');
+        }
+      });
+  }
+
+  async confirmArchiveProject(): Promise<void> {
+    if (!this.project || !this.canArchiveProject || this.isArchiving) return;
+
+    const archived = !!this.project.isArchived;
+    const confirmed = await this.confirmationModalService.confirm({
+      title: archived ? 'Restore this project?' : 'Archive this project?',
+      message: archived
+        ? 'Restoring will allow uploads and lifecycle changes again.'
+        : 'Archived projects become read-only — no further uploads or status changes will be accepted. You can restore later.',
+      confirmText: archived ? 'Restore' : 'Archive',
+      cancelText: 'Cancel',
+      confirmClass: archived ? 'btn-primary' : 'btn-danger',
+      icon: archived ? 'fas fa-rotate-left' : 'fas fa-box-archive'
+    });
+    if (!confirmed) return;
+
+    this.isArchiving = true;
+    const projectId = this.project.id || this.project._id || '';
+    const request$ = archived
+      ? this.farmService.unarchiveFarm(projectId)
+      : this.farmService.archiveFarm(projectId);
+
+    request$.pipe(takeUntil(this.destroy$)).subscribe({
+      next: (project) => {
+        this.project = project;
+        this.isArchiving = false;
+        this.toastService.success(archived ? 'Project restored.' : 'Project archived.');
+      },
+      error: (err) => {
+        this.isArchiving = false;
+        this.toastService.error(err?.error?.message || 'Unable to update archive state.');
+      }
+    });
   }
 
   refreshQuota(): void {
@@ -276,10 +504,6 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   triggerFilePicker(): void {
     if (!this.canUploadMedia || this.isUploading) return;
-    if (this.quota && this.quota.used >= this.quota.limit) {
-      this.toastService.warning(`Weekly upload limit of ${this.quota.limit} reached. Resets ${this.quotaResetsLabel}.`);
-      return;
-    }
     this.mediaInput?.nativeElement.click();
   }
 
@@ -305,16 +529,6 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     const invalid = files.find((f) => !/^(image|video)\//i.test(f.type));
     if (invalid) {
       this.toastService.error(`${invalid.name} is not a supported image or video.`);
-      return;
-    }
-
-    if (this.quota && this.quota.used + files.length > this.quota.limit) {
-      const remaining = Math.max(this.quota.limit - this.quota.used, 0);
-      this.toastService.warning(
-        remaining > 0
-          ? `Only ${remaining} more upload(s) allowed this week.`
-          : `Weekly upload limit reached.`
-      );
       return;
     }
 

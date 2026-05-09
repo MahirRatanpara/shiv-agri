@@ -242,6 +242,8 @@ shiv-agri/
 
 **`requireOwnership(userIdField, resourceGetter)`** — Checks resource ownership. Admins can access all.
 
+**`requireProjectAccess(permissions)`** — Project-scoped read gate. Allows admins, holders of any of the supplied permissions (plus an implicit set including `farm.projects.view`, `farms.view`, `farm.projects.approve`, `farm.projects.update`, `project.update`, `project.delete`), and **stakeholders** of the target project (`submittedBy`, `clientId`, `createdBy`, `assignedTo`, `projectManager`, `fieldWorkers`, `consultants`, `assignedTeam`). Used to grant farmers and assigned workers access to their own farm without granting the broad `farm.projects.view` permission.
+
 ### Permission Format
 
 `resource.action` — e.g., `soil.sessions.view`, `project.create`, `managerial.receipts.delete`
@@ -480,9 +482,11 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
 
-**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed) } — photos/videos uploaded via Media Service, embedded as references on the project.
+**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed), attended (Boolean, default false), attendedAt, attendedBy, attendedByName } — photos/videos uploaded via Media Service, embedded as references. New uploads land in the unattended bucket (shown as thumbnails); admins/farm managers acknowledge them via mark-attended, which moves them into the paginated drawer.
 
 **Soft Delete:** `isDeleted`, `deletedAt`, `deletedBy`
+
+**Archive:** `isArchived` (Boolean, indexed, default false), `archivedAt`, `archivedBy` — admin-controlled. Archived projects remain visible but are read-only: uploads are rejected (409) and lifecycle status changes are blocked client-side.
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
 
@@ -495,7 +499,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects` | farm.projects.view OR farms.view | Filtered/paginated list. Filters incl. `district`, `submittedBy=me`. End-users auto-filtered to own FARM submissions. |
 | GET | `/api/projects/stats` | farm.projects.view | Statistics |
 | GET | `/api/projects/export` | project.export | Export to Excel/CSV |
-| GET | `/api/projects/:id` | farm.projects.view OR farms.view | Get single project (end-users restricted to their own/client) |
+| GET | `/api/projects/:id` | requireProjectAccess(farm.projects.view, farms.view) | Get single project — gate also lets stakeholders (submitter/client/assigned workers/PM/consultants/team) read |
 | POST | `/api/projects` | (role-based) | Create project. End/standard users → `pending_approval` farmer self-registration; managers/admins → `approved` direct registration with phone-based client lookup |
 | PATCH | `/api/projects/:id/approve` | farm.projects.approve | Approve a pending farm registration |
 | PATCH | `/api/projects/:id/reject` | farm.projects.approve | Reject a pending farm registration (body: `reason`) |
@@ -506,6 +510,8 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/:id` | project.update | Update project |
 | DELETE | `/api/projects/:id` | project.delete | Soft delete |
 | DELETE | `/api/projects/:id/hard` | — | Hard delete (admin) |
+| PATCH | `/api/projects/:id/archive` | admin | Archive project (sets `isArchived=true`); blocks uploads and lifecycle changes |
+| PATCH | `/api/projects/:id/unarchive` | admin | Restore an archived project |
 | PATCH | `/api/projects/:id/favorite` | — | Toggle favorite |
 | POST | `/api/projects/:id/contacts` | project.update | Add contact |
 | PUT | `/api/projects/:id/contacts/:contactId` | project.update | Update contact |
@@ -517,9 +523,13 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/:id/transactions/:txId` | project.update | Update transaction |
 | DELETE | `/api/projects/:id/transactions/:txId` | project.update | Remove transaction |
 | GET | `/api/projects/:id/activity` | farm.projects.view | Activity log |
-| GET | `/api/projects/:id/media` | farm.projects.view OR farms.view | List farm media (paginated, newest first) |
-| GET | `/api/projects/:id/media/quota` | farm.projects.view OR farms.view | Current week's upload quota snapshot |
-| POST | `/api/projects/:id/media` | farm.projects.update OR farm owner (submittedBy/clientId/createdBy) | Upload up to 5 photos/videos (≤25MB each); enforces weekly quota |
+| GET | `/api/projects/:id/media` | requireProjectAccess(farm.projects.view, farms.view) | List **unattended** media (no pagination) plus `attendedTotal` count for the drawer |
+| GET | `/api/projects/:id/media/older` | requireProjectAccess(farm.projects.view, farms.view) | Paginated list of **attended** media (page/limit query params; route preserved for back-compat — semantically "attended", not "older") |
+| GET | `/api/projects/:id/media/quota` | requireProjectAccess(farm.projects.view, farms.view) | Current week's upload quota snapshot |
+| POST | `/api/projects/:id/media` | farm.projects.update OR farm owner (submittedBy/clientId/createdBy) | Upload up to 5 photos/videos (≤25MB each); enforces weekly quota; rejects 409 if project is archived |
+| PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
+| PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
+| DELETE | `/api/projects/:id/media/:mediaId` | admin | Soft-delete a media item (sets `farmMedia.$.status='DELETED'`) |
 | PATCH | `/api/projects/bulk` | project.update | Bulk update |
 | POST | `/api/projects/bulk-delete` | project.delete | Bulk soft delete |
 
@@ -534,9 +544,10 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 ### Farm Media Upload (`backend/src/controllers/farmMediaController.js`, `services/farmMediaService.js`)
 
-- **Flow:** Backend receives multipart upload → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds returned reference on `Project.farmMedia[]` → notifies the farm owner (`farm_media_upload`).
+- **Flow:** Controller checks the project is not archived → calls `reserveQuota(projectId, files.length)` to atomically debit the weekly counter → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds reference on `Project.farmMedia[]` (with `attended:false`) → on partial failure, calls `releaseQuota(projectId, failures.length)` to refund the unused reservation → notifies all project **stakeholders** (owner + assigned workers/PM/consultants/team, excluding the uploader) via `notifyOnUpload` with type `farm_media_upload`.
+- **Attended workflow:** New uploads start unattended. `markAttended` (single, via `$elemMatch` + positional `$`) and `markAllAttended` (bulk, via `arrayFilters`) flip `attended=true` and stamp `attendedAt/attendedBy/attendedByName`. The default `GET /:id/media` returns only unattended items plus an `attendedTotal` count; the attended drawer is loaded on demand via `GET /:id/media/older`. `deleteMedia` soft-deletes by setting `status='DELETED'`.
 - **Limits:** ≤5 files/request, ≤25MB/file (multer memory storage), `image/*` or `video/*` only. Quota: `FARM_MEDIA_WEEKLY_LIMIT` (default 10) uploads per project per ISO week.
-- **Quota model (`backend/src/models/FarmMediaQuota.js`):** `{ projectId, isoWeek ("YYYY-Www"), uploadCount, lastUploadAt }`, unique index on `(projectId, isoWeek)`. Resets at start of next ISO week (Monday 00:00 UTC).
+- **Quota model (`backend/src/models/FarmMediaQuota.js`):** `{ projectId, isoWeek ("YYYY-Www"), uploadCount, lastUploadAt }`. The service treats the row as project-scoped: `getCurrentQuotaRecord` rolls a stale row forward when the ISO week changes (resets `uploadCount` to 0 in-place via aggregation pipeline). `reserveQuota` is the atomic debit (conditional `findOneAndUpdate` requiring `uploadCount ≤ WEEKLY_LIMIT - count`); `releaseQuota` refunds for failed uploads (clamped at 0). Resets at start of next ISO week (Monday 00:00 UTC).
 - **Response headers:** `X-Media-Quota-Used`, `X-Media-Quota-Limit`, `X-Media-Quota-Resets-At` set on every media response.
 - **Status codes:** 201 all uploaded, 207 partial, 429 quota exceeded, 415 unsupported type, 502 media-service failure.
 - **Env:** `MEDIA_SERVICE_URL` (internal, default `http://localhost:8081`), `MEDIA_SERVICE_PUBLIC_URL` (browser-facing prefix for `contentUrl`).
@@ -546,11 +557,11 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Component:** `pages/project-details/project-details.ts` — Full project view
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media) with photo/video upload, quota chip, per-file progress, and grid gallery; embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present; shows landscaping/online tags, taluka fact card, electricity facts, and a "Navigate / Open in Maps" link
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media). Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
 - **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required.
 - **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
-- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` now exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks.
-- **Service:** `services/farm-media.service.ts` — `listMedia()`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType` for upload progress)
+- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `archiveFarm()`, `unarchiveFarm()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks plus `isArchived`/`archivedAt`.
+- **Service:** `services/farm-media.service.ts` — `listMedia()` (unattended + `attendedTotal`), `listAttendedMedia(page, limit)`, `markAttended(mediaId)`, `markAllAttended()`, `deleteMedia(mediaId)`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType`).
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
@@ -967,8 +978,8 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | Service | File | Key Methods |
 |---------|------|-------------|
 | AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), currentUser$ BehaviorSubject |
-| FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), getFarmById(), lookupUserByPhone() |
-| FarmMediaService | `farm-media.service.ts` | listMedia(projectId, page, limit), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
+| FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), archiveFarm(), unarchiveFarm(), getFarmById(), lookupUserByPhone() |
+| FarmMediaService | `farm-media.service.ts` | listMedia(projectId) → unattended + attendedTotal, listAttendedMedia(projectId, page, limit), markAttended(projectId, mediaId), markAllAttended(projectId), deleteMedia(projectId, mediaId), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |

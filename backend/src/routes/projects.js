@@ -3,7 +3,7 @@ const multer = require('multer');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
 const farmMediaController = require('../controllers/farmMediaController');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
 
 const farmMediaUpload = multer({
   storage: multer.memoryStorage(),
@@ -135,7 +135,7 @@ router.get('/export',
  */
 router.get('/:id',
   authenticate,
-  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
   projectController.getProjectById
 );
 
@@ -275,6 +275,26 @@ router.delete('/:id',
 router.delete('/:id/hard',
   authenticate,
   projectController.hardDeleteProject
+);
+
+/**
+ * @route   PATCH /api/projects/:id/archive
+ * @desc    Archive a project (admin only). Disables uploads & lifecycle changes.
+ * @access  Private (Admin)
+ */
+router.patch('/:id/archive',
+  authenticate,
+  projectController.archiveProject
+);
+
+/**
+ * @route   PATCH /api/projects/:id/unarchive
+ * @desc    Restore an archived project (admin only).
+ * @access  Private (Admin)
+ */
+router.patch('/:id/unarchive',
+  authenticate,
+  projectController.unarchiveProject
 );
 
 /**
@@ -434,13 +454,27 @@ router.get('/:id/activity',
 
 /**
  * @route   GET /api/projects/:id/media
- * @desc    List farm media (photos/videos) for a project, newest first
+ * @desc    List recent farm media (within recent-days window) plus a count
+ *          of older items so the UI can show "View older photos" without
+ *          loading all thumbnails at once.
  * @access  Private (farm.projects.view)
  */
 router.get('/:id/media',
   authenticate,
-  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
   farmMediaController.listMedia
+);
+
+/**
+ * @route   GET /api/projects/:id/media/older
+ * @desc    Paginated list of older photos (uploaded before the recent cutoff).
+ *          Loaded lazily when the user opens the older-photos drawer.
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media/older',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmMediaController.listOlderMedia
 );
 
 /**
@@ -450,8 +484,70 @@ router.get('/:id/media',
  */
 router.get('/:id/media/quota',
   authenticate,
-  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
   farmMediaController.getQuota
+);
+
+/**
+ * Attend actions are limited to admins and farm managers — the people
+ * actually responsible for triaging incoming farm media.
+ */
+const requireAttendAccess = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role === 'admin') return next();
+
+  const userPermissions = (req.user.roleRef?.permissions || [])
+    .map((p) => (typeof p === 'string' ? p : p.name));
+  if (userPermissions.includes('farm.projects.approve')) return next();
+
+  return res.status(403).json({
+    success: false,
+    error: 'Insufficient permissions',
+    message: 'Only an admin or farm manager can mark photos as attended.'
+  });
+};
+
+/**
+ * @route   PATCH /api/projects/:id/media/attend-all
+ * @desc    Mark every unattended media item on the project as attended.
+ * @access  Private (Admin or farm manager)
+ */
+router.patch('/:id/media/attend-all',
+  authenticate,
+  requireAttendAccess,
+  farmMediaController.markAllAttended
+);
+
+/**
+ * @route   PATCH /api/projects/:id/media/:mediaId/attend
+ * @desc    Mark a single unattended media item as attended.
+ * @access  Private (Admin or farm manager)
+ */
+router.patch('/:id/media/:mediaId/attend',
+  authenticate,
+  requireAttendAccess,
+  farmMediaController.markAttended
+);
+
+/**
+ * @route   DELETE /api/projects/:id/media/:mediaId
+ * @desc    Soft-delete a single media item from a project (admin only).
+ * @access  Private (Admin)
+ */
+router.delete('/:id/media/:mediaId',
+  authenticate,
+  (req, res, next) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required to delete farm media.'
+      });
+    }
+    next();
+  },
+  farmMediaController.deleteMedia
 );
 
 /**

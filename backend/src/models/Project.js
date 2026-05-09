@@ -261,7 +261,14 @@ const projectSchema = new mongoose.Schema({
     status: { type: String, default: 'ACTIVE' },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedByName: { type: String },
-    uploadedAt: { type: Date, default: Date.now, index: true }
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Attended workflow: new uploads land in the "unattended" bucket
+    // (shown as thumbnails). The project's owner/workers can acknowledge
+    // them by marking attended, which moves them to the paginated drawer.
+    attended: { type: Boolean, default: false },
+    attendedAt: { type: Date },
+    attendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    attendedByName: { type: String }
   }],
 
   // Project Specific Data
@@ -400,6 +407,23 @@ const projectSchema = new mongoose.Schema({
   },
 
   deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  // Archive (admin-controlled). Archived projects remain visible but
+  // are read-only — no further uploads or status changes allowed.
+  isArchived: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  archivedAt: {
+    type: Date
+  },
+
+  archivedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }
