@@ -1927,3 +1927,237 @@ h1 {
     justify-content: center;
   }
 }
+
+/* ============== Admin Transactions ============== */
+.transactions-section .tx-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 18px;
+}
+
+.tx-stat {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.tx-stat .tx-stat-label {
+  align-items: center;
+  color: #64748B;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.tx-stat strong {
+  color: #0F172A;
+  font-family: 'Lora', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.tx-stat.tx-credit {
+  background: #F0FDF4;
+  border-color: #BBF7D0;
+}
+.tx-stat.tx-credit strong { color: #15803D; }
+.tx-stat.tx-credit .tx-stat-label i { color: #15803D; }
+
+.tx-stat.tx-debit {
+  background: #FEF2F2;
+  border-color: #FECACA;
+}
+.tx-stat.tx-debit strong { color: #B91C1C; }
+.tx-stat.tx-debit .tx-stat-label i { color: #B91C1C; }
+
+.tx-stat.tx-net-positive strong { color: #15803D; }
+.tx-stat.tx-net-negative strong { color: #B91C1C; }
+
+.tx-form .rx-field-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.rx-field select {
+  background: #ffffff;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  color: #0F172A;
+  font-family: 'Inter', 'Raleway', sans-serif;
+  font-size: 14px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.rx-field select:focus {
+  border-color: #22C55E;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+  outline: none;
+}
+
+.tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tx-item {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 44px 1fr auto auto;
+  padding: 14px 16px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.tx-item:hover {
+  border-color: #BBF7D0;
+  box-shadow: 0 6px 18px rgba(20, 83, 45, 0.06);
+}
+
+.tx-item.editing {
+  border-color: #86EFAC;
+  box-shadow: 0 8px 18px rgba(20, 83, 45, 0.1);
+}
+
+.tx-icon {
+  align-items: center;
+  border-radius: 12px;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 16px;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.tx-item-credit .tx-icon {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.tx-item-debit .tx-icon {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.tx-meta {
+  min-width: 0;
+}
+
+.tx-title {
+  color: #0F172A;
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-sub {
+  color: #64748B;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tx-type-pill {
+  background: #ECFDF5;
+  border-radius: 999px;
+  color: #15803D;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.tx-item-debit .tx-type-pill {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+.tx-amount {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tx-amount.credit { color: #15803D; }
+.tx-amount.debit { color: #B91C1C; }
+
+.tx-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tx-icon-btn {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  width: 36px;
+}
+
+.tx-icon-btn:hover:not(:disabled) {
+  background: #F0FDF4;
+  border-color: #BBF7D0;
+  color: #15803D;
+}
+
+.tx-icon-btn.danger:hover:not(:disabled) {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #B91C1C;
+}
+
+.tx-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 767.98px) {
+  .tx-item {
+    grid-template-columns: 44px 1fr;
+    grid-template-areas:
+      "icon meta"
+      "amount amount"
+      "actions actions";
+    row-gap: 8px;
+  }
+
+  .tx-icon { grid-area: icon; }
+  .tx-meta { grid-area: meta; }
+  .tx-amount {
+    grid-area: amount;
+    text-align: right;
+  }
+  .tx-actions {
+    grid-area: actions;
+    justify-content: flex-end;
+  }
+}

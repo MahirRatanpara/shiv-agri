@@ -25,6 +25,12 @@ import {
   PrescriptionRef,
   FarmPrescriptionService
 } from '../../services/farm-prescription.service';
+import {
+  FarmTransaction,
+  FarmTransactionPayload,
+  FarmTransactionSummary,
+  FarmAdminTransactionService
+} from '../../services/farm-admin-transaction.service';
 
 interface UploadProgressItem {
   filename: string;
@@ -42,7 +48,7 @@ const PRESCRIPTION_ACCEPT = 'image/*,application/pdf,.doc,.docx,application/mswo
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
 const DESIGN_MIME_PATTERN = /^(image|video)\//i;
 
-type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions';
+type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'transactions';
 
 @Component({
   selector: 'app-farm-project-details',
@@ -112,6 +118,23 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   readonly prescriptionAccept = PRESCRIPTION_ACCEPT;
 
+  // Admin-only transactions
+  transactions: FarmTransaction[] = [];
+  transactionsLoading = false;
+  transactionsSummary: FarmTransactionSummary | null = null;
+  showTransactionForm = false;
+  editingTransactionId: string | null = null;
+  isSavingTransaction = false;
+  isDeletingTransactionId: string | null = null;
+  transactionForm: FarmTransactionPayload = {
+    description: '',
+    amount: 0,
+    type: 'credit',
+    category: '',
+    date: '',
+    notes: ''
+  };
+
   private knownMediaIds = new Set<string>();
   private pollSubscription?: Subscription;
 
@@ -133,7 +156,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private farmMediaService: FarmMediaService,
     private confirmationModalService: ConfirmationModalService,
     private farmDesignService: FarmDesignService,
-    private farmPrescriptionService: FarmPrescriptionService
+    private farmPrescriptionService: FarmPrescriptionService,
+    private farmAdminTransactionService: FarmAdminTransactionService
   ) {}
 
   ngOnInit(): void {
@@ -325,6 +349,11 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     return this.isLandscapingProject;
   }
 
+  get showTransactionsTab(): boolean {
+    // Admin-only — managers and other roles do not see this tab.
+    return this.isAdmin;
+  }
+
   get quotaPercent(): number {
     if (!this.quota || this.quota.limit === 0) return 0;
     return Math.min(100, Math.round((this.quota.used / this.quota.limit) * 100));
@@ -378,6 +407,13 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       this.loadDesigns();
     } else if (tab === 'prescriptions' && this.prescriptionItems.length === 0 && !this.prescriptionsLoading) {
       this.loadPrescriptions();
+    } else if (tab === 'transactions' && this.showTransactionsTab) {
+      if (this.transactions.length === 0 && !this.transactionsLoading) {
+        this.loadTransactions();
+      }
+      if (!this.transactionsSummary) {
+        this.refreshTransactionsSummary();
+      }
     }
   }
 
@@ -1181,5 +1217,175 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       'vigha-24': 'Vigha (24 gutha)'
     };
     return unit ? labels[unit] || unit : '';
+  }
+
+  // ========================
+  // Admin-only Transactions
+  // ========================
+
+  loadTransactions(): void {
+    if (!this.projectId || !this.showTransactionsTab) return;
+    this.transactionsLoading = true;
+    this.farmAdminTransactionService.list(this.projectId, 1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.transactions = response.transactions;
+          this.transactionsLoading = false;
+        },
+        error: () => {
+          this.transactionsLoading = false;
+          this.toastService.error('Unable to load transactions.');
+        }
+      });
+  }
+
+  refreshTransactionsSummary(): void {
+    if (!this.projectId || !this.showTransactionsTab) return;
+    this.farmAdminTransactionService.getSummary(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (summary) => (this.transactionsSummary = summary),
+        error: () => { /* silent */ }
+      });
+  }
+
+  startNewTransaction(): void {
+    if (!this.showTransactionsTab) return;
+    this.editingTransactionId = null;
+    this.transactionForm = {
+      description: '',
+      amount: 0,
+      type: 'credit',
+      category: '',
+      date: this.todayIso(),
+      notes: ''
+    };
+    this.showTransactionForm = true;
+  }
+
+  startEditTransaction(tx: FarmTransaction): void {
+    if (!this.showTransactionsTab) return;
+    this.editingTransactionId = tx._id;
+    this.transactionForm = {
+      description: tx.description,
+      amount: tx.amount,
+      type: tx.type,
+      category: tx.category || '',
+      date: tx.date ? tx.date.substring(0, 10) : this.todayIso(),
+      notes: tx.notes || ''
+    };
+    this.showTransactionForm = true;
+  }
+
+  cancelTransactionForm(): void {
+    this.showTransactionForm = false;
+    this.editingTransactionId = null;
+    this.isSavingTransaction = false;
+  }
+
+  saveTransaction(): void {
+    if (!this.projectId || !this.showTransactionsTab) return;
+
+    const description = this.transactionForm.description?.trim();
+    const amount = Number(this.transactionForm.amount);
+
+    if (!description) {
+      this.toastService.warning('Please enter a description.');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.toastService.warning('Please enter a valid amount.');
+      return;
+    }
+
+    const payload: FarmTransactionPayload = {
+      description,
+      amount,
+      type: this.transactionForm.type,
+      category: this.transactionForm.category?.trim() || undefined,
+      date: this.transactionForm.date || undefined,
+      notes: this.transactionForm.notes?.trim() || undefined
+    };
+
+    this.isSavingTransaction = true;
+
+    const request$ = this.editingTransactionId
+      ? this.farmAdminTransactionService.update(this.projectId, this.editingTransactionId, payload)
+      : this.farmAdminTransactionService.create(this.projectId, payload);
+
+    request$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (saved) => {
+          if (this.editingTransactionId) {
+            this.transactions = this.transactions.map((tx) => (tx._id === saved._id ? saved : tx));
+            this.toastService.success('Transaction updated.');
+          } else {
+            this.transactions = [saved, ...this.transactions];
+            this.toastService.success('Transaction recorded.');
+          }
+          this.refreshTransactionsSummary();
+          this.cancelTransactionForm();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isSavingTransaction = false;
+          this.toastService.error(err.error?.error || err.error?.message || 'Unable to save transaction.');
+        }
+      });
+  }
+
+  async deleteTransaction(tx: FarmTransaction): Promise<void> {
+    if (!this.projectId || !this.showTransactionsTab) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Delete transaction?',
+      message: `Are you sure you want to delete "${tx.description}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash'
+    });
+    if (!confirmed) return;
+
+    this.isDeletingTransactionId = tx._id;
+    this.farmAdminTransactionService.delete(this.projectId, tx._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.transactions = this.transactions.filter((t) => t._id !== tx._id);
+          this.toastService.success('Transaction deleted.');
+          this.refreshTransactionsSummary();
+          this.isDeletingTransactionId = null;
+          if (this.editingTransactionId === tx._id) {
+            this.cancelTransactionForm();
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isDeletingTransactionId = null;
+          this.toastService.error(err.error?.error || err.error?.message || 'Unable to delete transaction.');
+        }
+      });
+  }
+
+  trackTransaction(_: number, tx: FarmTransaction): string {
+    return tx._id;
+  }
+
+  formatCurrency(value: number | undefined | null): string {
+    const num = Number(value || 0);
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(num);
+  }
+
+  private todayIso(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
 }

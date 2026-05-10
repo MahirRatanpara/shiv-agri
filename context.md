@@ -537,6 +537,11 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | POST | `/api/projects/:id/prescriptions` | manager or admin | Upload up to 5 prescription files (image/pdf/doc/docx/text, ≤25MB each) |
 | POST | `/api/projects/:id/prescriptions/text` | manager or admin | Add an inline text-only prescription |
 | POST | `/api/projects/:id/prescriptions/manual` | manager or admin | Add a prescription composed via the in-app manual builder |
+| GET | `/api/projects/:id/admin-transactions` | admin only | List manual transactions for the farm (page/limit/sortBy/sortOrder/type/category/startDate/endDate) |
+| GET | `/api/projects/:id/admin-transactions/summary` | admin only | Totals + count summary |
+| POST | `/api/projects/:id/admin-transactions` | admin only | Record a manual debit/credit (description + amount required) |
+| PATCH | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Update a manual transaction |
+| DELETE | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Soft-delete a manual transaction |
 | PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
 | PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
 | DELETE | `/api/projects/:id/media/:mediaId` | admin | Soft-delete a media item (sets `farmMedia.$.status='DELETED'`) |
@@ -569,13 +574,14 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Component:** `pages/project-details/project-details.ts` — Full project view
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions). Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions / Transactions (admin-only)). The Transactions tab lists, creates, edits, and deletes admin-only manual debit/credit entries with an income/expense/net summary card. Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
 - **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required.
 - **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
 - **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `archiveFarm()`, `unarchiveFarm()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks plus `isArchived`/`archivedAt`, and now also `category` / `projectType` (so the UI can gate Designs visibility to landscaping projects).
 - **Service:** `services/farm-media.service.ts` — `listMedia()` (unattended + `attendedTotal`), `listAttendedMedia(page, limit)`, `markAttended(mediaId)`, `markAllAttended()`, `deleteMedia(mediaId)`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType`).
 - **Service:** `services/farm-design.service.ts` — `listDesigns(projectId)`, `uploadDesigns(projectId, files)` (progress/done events) for landscaping design uploads.
 - **Service:** `services/farm-prescription.service.ts` — `listPrescriptions(projectId)`, `uploadPrescriptions(projectId, files)`, `addTextPrescription(projectId, payload)`, `addManualPrescription(projectId, payload)`.
+- **Service:** `services/farm-admin-transaction.service.ts` — `list(projectId, page, limit)`, `getSummary(projectId)`, `create(projectId, payload)`, `update(projectId, txId, payload)`, `delete(projectId, txId)` for admin-only farm transactions.
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
@@ -614,6 +620,12 @@ Track debits and credits against projects. Auto-updates project expenses. Suppor
 | GET | `/api/transactions/:id` | farm.projects.view | Get single |
 | PATCH | `/api/transactions/:id` | project.update | Update |
 | DELETE | `/api/transactions/:id` | project.update | Soft delete |
+
+### Admin-Only Manual Farm Transactions (`backend/src/controllers/farmTransactionController.js`)
+
+- Per-farm admin-recorded debits/credits exposed under `/api/projects/:id/admin-transactions` (mounted in `routes/projects.js`). Wraps `TransactionService` with the project id taken from the URL path so each route is naturally scoped to one farm.
+- Gated by a strict `requireAdmin` middleware in `routes/projects.js` (admins only — even managers are excluded). Reuses the same `Transaction` model as section 9, so entries flow through the same `expenses` auto-update hooks.
+- Validates `type ∈ {debit, credit}` and non-negative numeric `amount`; returns 404 if the project does not exist.
 
 ---
 
@@ -996,6 +1008,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | FarmMediaService | `farm-media.service.ts` | listMedia(projectId) → unattended + attendedTotal, listAttendedMedia(projectId, page, limit), markAttended(projectId, mediaId), markAllAttended(projectId), deleteMedia(projectId, mediaId), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
 | FarmDesignService | `farm-design.service.ts` | listDesigns(projectId), uploadDesigns(projectId, files) → progress/done events |
 | FarmPrescriptionService | `farm-prescription.service.ts` | listPrescriptions(projectId), uploadPrescriptions(projectId, files), addTextPrescription(projectId, payload), addManualPrescription(projectId, payload) |
+| FarmAdminTransactionService | `farm-admin-transaction.service.ts` | list(projectId, page, limit), getSummary(projectId), create(projectId, payload), update(projectId, txId, payload), delete(projectId, txId) — admin-only manual farm transactions |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |

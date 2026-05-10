@@ -114,6 +114,18 @@
       Prescriptions
       <span class="tab-count" *ngIf="prescriptionItems.length">{{ prescriptionItems.length }}</span>
     </button>
+    <button
+      class="tab-btn"
+      *ngIf="showTransactionsTab"
+      [class.active]="activeTab === 'transactions'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'transactions'"
+      (click)="switchTab('transactions')"
+    >
+      <i class="fas fa-coins" aria-hidden="true"></i>
+      Transactions
+      <span class="tab-count" *ngIf="transactions.length">{{ transactions.length }}</span>
+    </button>
   </nav>
 
   <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
@@ -881,6 +893,176 @@
       multiple
       (change)="onPrescriptionFilesSelected($event)"
     />
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'transactions' && showTransactionsTab">
+    <section class="media-section transactions-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-coins"></i> Manual Transactions</h2>
+          <p>Record incoming payments and expenses for this farm. Admin only.</p>
+        </div>
+
+        <div class="media-head-actions">
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isSavingTransaction"
+            (click)="startNewTransaction()"
+          >
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            <span>Record Transaction</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="tx-summary" *ngIf="transactionsSummary">
+        <div class="tx-stat tx-credit">
+          <span class="tx-stat-label"><i class="fas fa-arrow-down"></i> Income</span>
+          <strong>{{ formatCurrency(transactionsSummary.totalCredits) }}</strong>
+        </div>
+        <div class="tx-stat tx-debit">
+          <span class="tx-stat-label"><i class="fas fa-arrow-up"></i> Expense</span>
+          <strong>{{ formatCurrency(transactionsSummary.totalDebits) }}</strong>
+        </div>
+        <div class="tx-stat" [class.tx-net-positive]="transactionsSummary.netExpense < 0" [class.tx-net-negative]="transactionsSummary.netExpense > 0">
+          <span class="tx-stat-label"><i class="fas fa-scale-balanced"></i> Net</span>
+          <strong>{{ formatCurrency(-transactionsSummary.netExpense) }}</strong>
+        </div>
+        <div class="tx-stat tx-count">
+          <span class="tx-stat-label"><i class="fas fa-list"></i> Entries</span>
+          <strong>{{ transactionsSummary.transactionCount }}</strong>
+        </div>
+      </div>
+
+      <div class="text-prescription-form tx-form" *ngIf="showTransactionForm">
+        <div class="rx-field-row">
+          <label class="rx-field">
+            <span><i class="fas fa-tag"></i> Type</span>
+            <select [(ngModel)]="transactionForm.type" name="txType">
+              <option value="credit">Credit (income)</option>
+              <option value="debit">Debit (expense)</option>
+            </select>
+          </label>
+          <label class="rx-field">
+            <span><i class="fas fa-rupee-sign"></i> Amount</span>
+            <input type="number" min="0" step="1" [(ngModel)]="transactionForm.amount" name="txAmount" placeholder="0" />
+          </label>
+          <label class="rx-field">
+            <span><i class="fas fa-calendar"></i> Date</span>
+            <input type="date" [(ngModel)]="transactionForm.date" name="txDate" />
+          </label>
+        </div>
+
+        <label class="rx-field">
+          <span><i class="fas fa-align-left"></i> Description</span>
+          <input
+            type="text"
+            [(ngModel)]="transactionForm.description"
+            name="txDescription"
+            placeholder="e.g. Payment received via UPI"
+            maxlength="500"
+          />
+        </label>
+
+        <label class="rx-field">
+          <span><i class="fas fa-folder-open"></i> Category (optional)</span>
+          <input
+            type="text"
+            [(ngModel)]="transactionForm.category"
+            name="txCategory"
+            placeholder="e.g. Materials, Labor, Visit fee"
+            maxlength="100"
+          />
+        </label>
+
+        <label class="rx-field">
+          <span><i class="fas fa-note-sticky"></i> Notes (optional)</span>
+          <textarea
+            [(ngModel)]="transactionForm.notes"
+            name="txNotes"
+            rows="3"
+            placeholder="Any additional context..."
+            maxlength="1000"
+          ></textarea>
+        </label>
+
+        <div class="rx-actions">
+          <button type="button" class="rx-cancel" (click)="cancelTransactionForm()" [disabled]="isSavingTransaction">
+            Cancel
+          </button>
+          <button type="button" class="rx-save" (click)="saveTransaction()" [disabled]="isSavingTransaction">
+            <i class="fas" [class.fa-check]="!isSavingTransaction" [class.fa-circle-notch]="isSavingTransaction" [class.fa-spin]="isSavingTransaction"></i>
+            {{ isSavingTransaction ? 'Saving...' : (editingTransactionId ? 'Save Changes' : 'Record Transaction') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="transactionsLoading && !transactions.length">
+        <div class="spinner"></div>
+        <p>Loading transactions...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!transactionsLoading && transactions.length === 0 && !showTransactionForm">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-coins"></i>
+        </div>
+        <h3>No transactions recorded</h3>
+        <p>Use the form to record any payment received or paid for this farm.</p>
+        <button type="button" class="upload-btn empty-state-btn" (click)="startNewTransaction()">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>Record Transaction</span>
+        </button>
+      </div>
+
+      <ul class="tx-list" *ngIf="transactions.length">
+        <li
+          class="tx-item"
+          *ngFor="let tx of transactions; trackBy: trackTransaction"
+          [class.tx-item-credit]="tx.type === 'credit'"
+          [class.tx-item-debit]="tx.type === 'debit'"
+          [class.editing]="editingTransactionId === tx._id"
+        >
+          <div class="tx-icon" [attr.aria-hidden]="true">
+            <i class="fas" [class.fa-arrow-down]="tx.type === 'credit'" [class.fa-arrow-up]="tx.type === 'debit'"></i>
+          </div>
+          <div class="tx-meta">
+            <strong class="tx-title">{{ tx.description }}</strong>
+            <div class="tx-sub">
+              <span class="tx-type-pill">{{ tx.type === 'credit' ? 'Income' : 'Expense' }}</span>
+              <span *ngIf="tx.category">· {{ tx.category }}</span>
+              <span>· {{ tx.date | date:'mediumDate' }}</span>
+            </div>
+            <p class="rx-notes" *ngIf="tx.notes">
+              <i class="fas fa-note-sticky"></i> {{ tx.notes }}
+            </p>
+          </div>
+          <div class="tx-amount" [class.credit]="tx.type === 'credit'" [class.debit]="tx.type === 'debit'">
+            {{ tx.type === 'credit' ? '+' : '−' }}{{ formatCurrency(tx.amount) }}
+          </div>
+          <div class="tx-actions">
+            <button
+              type="button"
+              class="tx-icon-btn"
+              (click)="startEditTransaction(tx)"
+              [disabled]="isSavingTransaction || isDeletingTransactionId === tx._id"
+              [attr.aria-label]="'Edit ' + tx.description"
+            >
+              <i class="fas fa-pen"></i>
+            </button>
+            <button
+              type="button"
+              class="tx-icon-btn danger"
+              (click)="deleteTransaction(tx)"
+              [disabled]="isSavingTransaction || isDeletingTransactionId === tx._id"
+              [attr.aria-label]="'Delete ' + tx.description"
+            >
+              <i class="fas" [class.fa-trash]="isDeletingTransactionId !== tx._id" [class.fa-circle-notch]="isDeletingTransactionId === tx._id" [class.fa-spin]="isDeletingTransactionId === tx._id"></i>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
   </ng-container>
 
   <div class="lightbox" *ngIf="designLightboxItem" (click)="closeDesignLightbox()" role="dialog" aria-modal="true">

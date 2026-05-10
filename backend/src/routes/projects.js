@@ -5,6 +5,7 @@ const projectController = require('../controllers/projectController');
 const farmMediaController = require('../controllers/farmMediaController');
 const farmDesignController = require('../controllers/farmDesignController');
 const farmPrescriptionController = require('../controllers/farmPrescriptionController');
+const farmTransactionController = require('../controllers/farmTransactionController');
 const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
 
 const farmMediaUpload = multer({
@@ -91,6 +92,21 @@ const requireFarmOwner = async (req, res, next) => {
   } catch (error) {
     return res.status(500).json({ error: 'Permission check failed' });
   }
+};
+
+/**
+ * Strict admin-only guard. Used for sensitive farm operations like manually
+ * recording transactions where even managers must be excluded.
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role === 'admin') return next();
+  return res.status(403).json({
+    error: 'Insufficient permissions',
+    message: 'This action is restricted to administrators.'
+  });
 };
 
 /**
@@ -700,6 +716,41 @@ router.post('/:id/prescriptions/manual',
   authenticate,
   requireManagerOrAdmin,
   farmPrescriptionController.addManualPrescription
+);
+
+// ========================
+// Admin-only Manual Transactions (per farm)
+// Admins record incoming/outgoing payments by hand. Managers are excluded.
+// ========================
+
+router.get('/:id/admin-transactions',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.listTransactions
+);
+
+router.get('/:id/admin-transactions/summary',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.getSummary
+);
+
+router.post('/:id/admin-transactions',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.createTransaction
+);
+
+router.patch('/:id/admin-transactions/:transactionId',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.updateTransaction
+);
+
+router.delete('/:id/admin-transactions/:transactionId',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.deleteTransaction
 );
 
 // ========================
