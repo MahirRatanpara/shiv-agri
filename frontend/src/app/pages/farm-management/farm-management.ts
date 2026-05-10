@@ -32,6 +32,7 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   selectedStatus = '';
   selectedDistrict = '';
   selectedSource = '';
+  showLandscapingOnly = false;
   sortBy: 'updatedAt' | 'name' | 'submittedAt' = 'updatedAt';
   formMode: 'create' | 'edit' = 'create';
   editingFarm: FarmProject | null = null;
@@ -126,9 +127,10 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
 
       const matchesStatus = !status || farm.status === status;
       const matchesSource = !source || farm.registrationSource === source;
+      const matchesLandscaping = !this.showLandscapingOnly || farm.needsLandscapingConsultancy === true;
       const matchesDistrict = !district || (farm.location?.district || '').toLowerCase() === district;
 
-      return matchesText && matchesStatus && matchesSource && matchesDistrict;
+      return matchesText && matchesStatus && matchesSource && matchesLandscaping && matchesDistrict;
     });
   }
 
@@ -148,6 +150,7 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     this.selectedStatus = '';
     this.selectedDistrict = '';
     this.selectedSource = '';
+    this.showLandscapingOnly = false;
     this.sortBy = 'updatedAt';
     this.loadFarms();
   }
@@ -216,6 +219,14 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     const crops = farm.crops || [];
     if (!crops.length) return 'No crops added';
     return crops.map((crop) => crop.name).filter(Boolean).join(', ');
+  }
+
+  isLandscapingProject(farm: FarmProject): boolean {
+    return farm.needsLandscapingConsultancy === true;
+  }
+
+  landscapingLabel(farm: FarmProject): string {
+    return 'Landscaping';
   }
 
   trackFarm(_: number, farm: FarmProject): string {
