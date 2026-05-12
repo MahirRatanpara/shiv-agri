@@ -310,6 +310,7 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 - Link: `fertilizerSampleId` (→ FertilizerSample)
 - Classification (Gujarati): `phResult`, `ecResult`, `nitrogenResult`, `phosphorusResult`, `potashResult`
 - Classification (English): `phResultEn`, `ecResultEn`, `nitrogenResultEn`, `phosphorusResultEn`, `potashResultEn`
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation by `farmReportLinker` when `farmsName` + `mobileNo` match a Project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone).
 
 ### Classification Logic (`backend/src/utils/soilClassification.js`)
 
@@ -373,6 +374,7 @@ Same state machine as soil testing: `started` → `details` → `ready` → `com
 - Classification (English): `phResultEn`, `ecResultEn`, `sarResultEn`, `rscResultEn`
 - Water class codes: `ecClass`, `sarClass`, `rscClass`, `waterClass` (combined like "C3S1")
 - `classification`, `finalDeduction`
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation via `farmReportLinker`.
 
 ### Classification Logic (`backend/src/utils/waterClassification.js`)
 - pH, EC, SAR, RSC classification ranges
@@ -413,6 +415,7 @@ Managed by `FertilizerSessionStateManager` (`models/fertilizer-session-state.mod
 - Dose schedule: includes `day45` (Urea) and `day45As` (Ammonium Sulphate) as alternative options for day 45; similarly `day75` (Urea) and `day75As` (Ammonium Sulphate) for day 75
 - Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields; hormone dose unit is conditional on hormone name (Projib → grams, others → ml)
 - Fruit tree sections: `m1`-`m5` with sub-parameters
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation via `farmReportLinker`. Fertilizer samples don't carry `mobileNo` themselves; the linker resolves it via the linked `SoilSample`.
 
 ### Fertilizer Crop Config (`backend/src/config/fertilizerCropConfig.js`)
 - Loaded once at server startup from `fertilizerCropDefaults.json`
@@ -488,6 +491,8 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Prescriptions:** `prescriptions[]` of { source (file|manual), docType (image|pdf|docx|text|manual), title, notes, textContent, mediaId, url, mimeType, sizeBytes, fileName, status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin upload only, owner read-only. Supports uploaded files (image/pdf/doc/docx/text), inline text snippets, and prescriptions composed via the in-app manual builder.
 
+**Lab Reports:** `reports[]` of { sampleType (soil|water|fertilizer, indexed), sampleId (ObjectId, refPath sampleModel, indexed), sampleModel (SoilSample|WaterSample|FertilizerSample), sessionId, sampleNumber, farmerName, farmsName, mobileNo, cropName, fertilizerType, sessionDate, generatedAt (indexed), generatedBy (User ref), generatedByName } — auto-populated on PDF generation by `backend/src/services/farmReportLinker.js` when the sample's `farmsName` + `mobileNo` match this project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone). One entry per (sampleType + sampleId); re-runs update the existing entry rather than duplicating.
+
 **Soft Delete:** `isDeleted`, `deletedAt`, `deletedBy`
 
 **Archive:** `isArchived` (Boolean, indexed, default false), `archivedAt`, `archivedBy` — admin-controlled. Archived projects remain visible but are read-only: uploads are rejected (409) and lifecycle status changes are blocked client-side.
@@ -542,6 +547,9 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | POST | `/api/projects/:id/admin-transactions` | admin only | Record a manual debit/credit (description + amount required) |
 | PATCH | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Update a manual transaction |
 | DELETE | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Soft-delete a manual transaction |
+| GET | `/api/projects/:id/reports` | requireProjectAccess(farm.projects.view, farms.view) | List soil/water/fertilizer reports auto-linked to this farm (newest first) |
+| GET | `/api/projects/:id/reports/:reportId/pdf` | requireProjectAccess(farm.projects.view, farms.view) | Inline PDF for the in-app overlay viewer |
+| GET | `/api/projects/:id/reports/:reportId/pdf/download` | requireProjectAccess(farm.projects.view, farms.view) | Attachment-disposition PDF for explicit download |
 | PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
 | PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
 | DELETE | `/api/projects/:id/media/:mediaId` | admin | Soft-delete a media item (sets `farmMedia.$.status='DELETED'`) |
@@ -574,7 +582,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Component:** `pages/project-details/project-details.ts` — Full project view
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route). Toolbar exposes a "Landscaping" filter toggle (`showLandscapingOnly`) that client-side filters to farms with `needsLandscapingConsultancy === true`; matching cards render a "Landscaping" project tag next to the status pill.
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions / Transactions (admin-only)). The Transactions tab lists, creates, edits, and deletes admin-only manual debit/credit entries with an income/expense/net summary card. Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions / Reports / Transactions (admin-only)). The Reports tab lists auto-linked soil/water/fertilizer lab reports (filter chips by type, inline PDF overlay via iframe + blob URL, attachment download). Auto-opens on `?tab=reports`. The Transactions tab lists, creates, edits, and deletes admin-only manual debit/credit entries with an income/expense/net summary card. Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
 - **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required.
 - **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
 - **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `archiveFarm()`, `unarchiveFarm()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks plus `isArchived`/`archivedAt`, and now also `category` / `projectType` (so the UI can gate Designs visibility to landscaping projects).
@@ -582,6 +590,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Service:** `services/farm-design.service.ts` — `listDesigns(projectId)`, `uploadDesigns(projectId, files)` (progress/done events) for landscaping design uploads.
 - **Service:** `services/farm-prescription.service.ts` — `listPrescriptions(projectId)`, `uploadPrescriptions(projectId, files)`, `addTextPrescription(projectId, payload)`, `addManualPrescription(projectId, payload)`.
 - **Service:** `services/farm-admin-transaction.service.ts` — `list(projectId, page, limit)`, `getSummary(projectId)`, `create(projectId, payload)`, `update(projectId, txId, payload)`, `delete(projectId, txId)` for admin-only farm transactions.
+- **Service:** `services/farm-report.service.ts` — `listReports(projectId)`, `viewReportPdf(projectId, reportId)` (inline blob), `downloadReportPdf(projectId, reportId)` (attachment blob), `triggerBrowserDownload(blob, filename)` for the auto-linked lab reports tab.
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
@@ -843,6 +852,8 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 
 Water and fertilizer testing have equivalent PDF endpoints under their respective route files.
 
+**Farm linkage on PDF generation:** Soil, water, and fertilizer single-sample PDF endpoints (`POST /api/pdf/sample/:sampleId`, the water/fertilizer equivalents) invoke `backend/src/services/farmReportLinker.js` (`linkSampleToFarm`) before sending the PDF. The linker is best-effort (errors are swallowed): it matches `farmsName` + `mobileNo` against `Project.name` + `Project.clientPhone` (case-insensitive name, last-10-digits phone with implicit +91), stamps `linkedProjectId`/`linkedAt` on the sample, and idempotently upserts an entry into `Project.reports[]`. Soil PDF route now requires `authenticate` middleware so `req.user` can be recorded as `generatedBy`/`generatedByName`.
+
 ### Frontend Service (`services/pdf.service.ts`)
 
 Handles download, preview, streaming with progress tracking. Key features:
@@ -1009,6 +1020,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | FarmDesignService | `farm-design.service.ts` | listDesigns(projectId), uploadDesigns(projectId, files) → progress/done events |
 | FarmPrescriptionService | `farm-prescription.service.ts` | listPrescriptions(projectId), uploadPrescriptions(projectId, files), addTextPrescription(projectId, payload), addManualPrescription(projectId, payload) |
 | FarmAdminTransactionService | `farm-admin-transaction.service.ts` | list(projectId, page, limit), getSummary(projectId), create(projectId, payload), update(projectId, txId, payload), delete(projectId, txId) — admin-only manual farm transactions |
+| FarmReportService | `farm-report.service.ts` | listReports(projectId), viewReportPdf(projectId, reportId) → Blob (inline), downloadReportPdf(projectId, reportId) → Blob (attachment), triggerBrowserDownload(blob, filename) — auto-linked lab reports |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
@@ -1152,6 +1164,8 @@ WaterSession ←── sessionId ── WaterSample
 FertilizerSession ←── sessionId ── FertilizerSample
 SoilSample ←── soilSampleId ── FertilizerSample
 SoilSample ── fertilizerSampleId ──→ FertilizerSample
+Project ←── linkedProjectId ── SoilSample / WaterSample / FertilizerSample
+Project ── reports[].sampleId ──→ SoilSample / WaterSample / FertilizerSample (refPath sampleModel)
 Invoice ── linkedReceipts[] ──→ Receipt
 ```
 

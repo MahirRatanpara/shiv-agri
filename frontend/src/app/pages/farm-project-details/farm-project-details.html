@@ -116,6 +116,17 @@
     </button>
     <button
       class="tab-btn"
+      [class.active]="activeTab === 'reports'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'reports'"
+      (click)="switchTab('reports')"
+    >
+      <i class="fas fa-file-pdf" aria-hidden="true"></i>
+      Reports
+      <span class="tab-count" *ngIf="reports.length">{{ reports.length }}</span>
+    </button>
+    <button
+      class="tab-btn"
       *ngIf="showTransactionsTab"
       [class.active]="activeTab === 'transactions'"
       role="tab"
@@ -1064,6 +1075,191 @@
       </ul>
     </section>
   </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'reports'">
+    <section class="media-section reports-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-file-pdf"></i> Lab Reports</h2>
+          <p>
+            Soil, water, and fertilizer testing reports linked to this farm. Reports appear here automatically when a
+            generated PDF's farm name and mobile number match this farm.
+          </p>
+        </div>
+        <div class="media-head-actions">
+          <button
+            type="button"
+            class="upload-btn ghost"
+            [disabled]="reportsLoading"
+            (click)="refreshReports()"
+            aria-label="Refresh reports"
+          >
+            <i class="fas" [class.fa-rotate-right]="!reportsLoading" [class.fa-circle-notch]="reportsLoading" [class.fa-spin]="reportsLoading"></i>
+            <span>{{ reportsLoading ? 'Refreshing...' : 'Refresh' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-filter-bar" *ngIf="reports.length">
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'all'"
+          (click)="setReportFilter('all')"
+        >
+          All <span class="chip-count">{{ reportCounts.all }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'soil'"
+          (click)="setReportFilter('soil')"
+        >
+          <i class="fas fa-mound"></i> Soil <span class="chip-count">{{ reportCounts.soil }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'water'"
+          (click)="setReportFilter('water')"
+        >
+          <i class="fas fa-droplet"></i> Water <span class="chip-count">{{ reportCounts.water }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'fertilizer'"
+          (click)="setReportFilter('fertilizer')"
+        >
+          <i class="fas fa-flask"></i> Fertilizer <span class="chip-count">{{ reportCounts.fertilizer }}</span>
+        </button>
+      </div>
+
+      <div class="media-loading" *ngIf="reportsLoading && !reports.length">
+        <div class="spinner"></div>
+        <p>Loading reports...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!reportsLoading && reports.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-file-pdf"></i>
+        </div>
+        <h3>No reports linked yet</h3>
+        <p>Once a soil, water, or fertilizer report is generated for a sample with this farm's name and mobile number, it will appear here.</p>
+      </div>
+
+      <div class="media-empty muted" *ngIf="!reportsLoading && reports.length > 0 && filteredReports.length === 0">
+        <p>No {{ reportTypeLabel(reportFilter === 'all' ? 'soil' : reportFilter) }} reports under this filter.</p>
+      </div>
+
+      <ul class="report-list" *ngIf="filteredReports.length">
+        <li
+          class="report-item"
+          *ngFor="let report of filteredReports; trackBy: trackReport"
+          [attr.data-type]="report.sampleType"
+        >
+          <div class="report-icon" [attr.data-type]="report.sampleType" aria-hidden="true">
+            <i class="fas" [ngClass]="reportTypeIcon(report.sampleType)"></i>
+          </div>
+          <div class="report-body">
+            <div class="report-title-row">
+              <h3 class="report-title">
+                {{ reportTypeLabel(report.sampleType) }} Report
+                <span class="report-sample-num" *ngIf="report.sampleNumber">· #{{ report.sampleNumber }}</span>
+              </h3>
+              <span class="report-type-tag" [attr.data-type]="report.sampleType">
+                {{ reportTypeLabel(report.sampleType) }}
+                <span *ngIf="report.fertilizerType"> · {{ report.fertilizerType }}</span>
+              </span>
+            </div>
+            <div class="report-meta">
+              <span *ngIf="report.farmerName"><i class="fas fa-user"></i> {{ report.farmerName }}</span>
+              <span *ngIf="report.cropName"><i class="fas fa-seedling"></i> {{ report.cropName }}</span>
+              <span *ngIf="report.sessionDate"><i class="fas fa-calendar"></i> {{ report.sessionDate }}</span>
+              <span><i class="fas fa-clock"></i> Generated {{ report.generatedAt | date:'medium' }}</span>
+              <span *ngIf="report.generatedByName"><i class="fas fa-pen"></i> {{ report.generatedByName }}</span>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button
+              type="button"
+              class="report-btn primary"
+              (click)="openReportOverlay(report)"
+              [disabled]="isLoadingReportPreview && activeReport?.reportId === report.reportId"
+            >
+              <i class="fas fa-eye"></i>
+              <span>View Report</span>
+            </button>
+            <button
+              type="button"
+              class="report-btn ghost"
+              (click)="downloadReport(report)"
+              [disabled]="isDownloadingReportId === report.reportId"
+              [attr.aria-label]="'Download ' + reportTypeLabel(report.sampleType) + ' report'"
+            >
+              <i class="fas" [class.fa-download]="isDownloadingReportId !== report.reportId" [class.fa-circle-notch]="isDownloadingReportId === report.reportId" [class.fa-spin]="isDownloadingReportId === report.reportId"></i>
+              <span>Download</span>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+
+  <div
+    class="report-overlay"
+    *ngIf="activeReport"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeReportOverlay()"
+  >
+    <div class="report-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="report-overlay-head">
+        <div class="report-overlay-title">
+          <span class="report-overlay-tag" [attr.data-type]="activeReport.sampleType">
+            <i class="fas" [ngClass]="reportTypeIcon(activeReport.sampleType)"></i>
+            {{ reportTypeLabel(activeReport.sampleType) }} Report
+          </span>
+          <h3>
+            {{ activeReport.farmerName || 'Unknown farmer' }}
+            <span *ngIf="activeReport.sampleNumber" class="report-overlay-sub">· Sample #{{ activeReport.sampleNumber }}</span>
+          </h3>
+        </div>
+        <div class="report-overlay-actions">
+          <button
+            type="button"
+            class="report-btn primary"
+            (click)="downloadReport(activeReport)"
+            [disabled]="isDownloadingReportId === activeReport.reportId"
+          >
+            <i class="fas" [class.fa-download]="isDownloadingReportId !== activeReport.reportId" [class.fa-circle-notch]="isDownloadingReportId === activeReport.reportId" [class.fa-spin]="isDownloadingReportId === activeReport.reportId"></i>
+            <span>Download PDF</span>
+          </button>
+          <button
+            type="button"
+            class="report-overlay-close"
+            (click)="closeReportOverlay()"
+            aria-label="Close report viewer"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-overlay-body">
+        <div class="report-overlay-loading" *ngIf="isLoadingReportPreview">
+          <div class="spinner"></div>
+          <p>Generating PDF preview...</p>
+        </div>
+        <iframe
+          *ngIf="reportPreviewUrl && !isLoadingReportPreview"
+          class="report-overlay-frame"
+          [src]="reportPreviewUrl"
+          title="Report PDF preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
 
   <div class="lightbox" *ngIf="designLightboxItem" (click)="closeDesignLightbox()" role="dialog" aria-modal="true">
     <button type="button" class="lightbox-close" (click)="closeDesignLightbox(); $event.stopPropagation()" aria-label="Close design viewer">

@@ -286,6 +286,41 @@ const projectSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now, index: true }
   }],
 
+  // Lab testing reports linked to this farm (soil / water / fertilizer).
+  // Auto-populated on PDF generation when the sample's farmsName + mobileNo
+  // match this project's name + clientPhone (case-insensitive farmsName,
+  // last-10-digits mobileNo). One entry per (sampleType + sampleId).
+  reports: [{
+    sampleType: {
+      type: String,
+      enum: ['soil', 'water', 'fertilizer'],
+      required: true,
+      index: true
+    },
+    sampleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: 'reports.sampleModel',
+      index: true
+    },
+    sampleModel: {
+      type: String,
+      enum: ['SoilSample', 'WaterSample', 'FertilizerSample'],
+      required: true
+    },
+    sessionId: { type: mongoose.Schema.Types.ObjectId },
+    sampleNumber: { type: String, trim: true },
+    farmerName: { type: String, trim: true },
+    farmsName: { type: String, trim: true },
+    mobileNo: { type: String, trim: true },
+    cropName: { type: String, trim: true },
+    fertilizerType: { type: String, trim: true },
+    sessionDate: { type: String, trim: true },
+    generatedAt: { type: Date, default: Date.now, index: true },
+    generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    generatedByName: { type: String }
+  }],
+
   // Prescriptions and ad-hoc documents (uploaded by managers/admins; farm user reads only)
   prescriptions: [{
     // 'file' for uploaded media or 'manual' for prescriptions composed via the in-app builder

@@ -6,6 +6,7 @@ const WaterSession = require('../models/WaterSession');
 const WaterSample = require('../models/WaterSample');
 const { addClassifications } = require('../utils/waterClassification');
 const { authenticate, requirePermission } = require('../middleware/auth');
+const farmReportLinker = require('../services/farmReportLinker');
 const logger = require('../utils/logger');
 
 // Configure multer for file uploads (memory storage)
@@ -346,6 +347,13 @@ router.post('/samples/:sampleId/pdf', async (req, res) => {
       logger.warn(`Water sample not found: ${req.params.sampleId}`);
       return res.status(404).json({ error: 'Sample not found' });
     }
+
+    // Best-effort link to a matching farm project before sending the PDF.
+    await farmReportLinker.linkSampleToFarm({
+      sampleType: 'water',
+      sample,
+      user: req.user
+    });
 
     // Add classifications to sample data
     const sampleWithClassifications = addClassifications(sample.toObject());

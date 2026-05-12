@@ -3,13 +3,15 @@ const router = express.Router();
 const SoilSample = require('../models/SoilSample');
 const SoilSession = require('../models/SoilSession');
 const pdfGeneratorService = require('../services/pdfGenerator');
+const farmReportLinker = require('../services/farmReportLinker');
+const { authenticate } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 /**
  * Generate PDF for a single soil sample
  * POST /api/pdf/sample/:sampleId
  */
-router.post('/sample/:sampleId', async (req, res) => {
+router.post('/sample/:sampleId', authenticate, async (req, res) => {
   try {
     const { sampleId } = req.params;
 
@@ -21,6 +23,15 @@ router.post('/sample/:sampleId', async (req, res) => {
       logger.warn(`Sample not found: ${sampleId}`);
       return res.status(404).json({ error: 'Sample not found' });
     }
+
+    // Best-effort link to a matching farm project (case-insensitive farm name
+    // + last-10-digits mobile number). Errors are swallowed inside the linker
+    // so they cannot break the PDF response.
+    await farmReportLinker.linkSampleToFarm({
+      sampleType: 'soil',
+      sample,
+      user: req.user
+    });
 
     // Generate PDF
     const pdfBuffer = await pdfGeneratorService.generateSinglePDF(sample);

@@ -177,7 +177,21 @@ const sampleSchema = new mongoose.Schema({
   m5_npk0052: { type: Number, default: null },
   m5_npk1261: { type: Number, default: null },
   m5_npk1300: { type: Number, default: null },
-  m5_micromix: { type: Number, default: null }
+  m5_micromix: { type: Number, default: null },
+
+  // Link to farm project (auto-set on PDF generation when farmsName + mobileNo
+  // match a Project's name + clientPhone). Fertilizer samples don't carry
+  // mobileNo themselves — the linker resolves it via the linked SoilSample.
+  linkedProjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    default: null,
+    index: true
+  },
+  linkedAt: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true
 });

@@ -6,6 +6,7 @@ const farmMediaController = require('../controllers/farmMediaController');
 const farmDesignController = require('../controllers/farmDesignController');
 const farmPrescriptionController = require('../controllers/farmPrescriptionController');
 const farmTransactionController = require('../controllers/farmTransactionController');
+const farmReportController = require('../controllers/farmReportController');
 const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
 
 const farmMediaUpload = multer({
@@ -716,6 +717,46 @@ router.post('/:id/prescriptions/manual',
   authenticate,
   requireManagerOrAdmin,
   farmPrescriptionController.addManualPrescription
+);
+
+// ========================
+// Lab Reports (auto-linked from soil/water/fertilizer testing PDFs)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/reports
+ * @desc    List soil/water/fertilizer reports linked to this farm.
+ *          Reports are auto-linked when a sample's farmsName + mobileNo
+ *          match this project's name + clientPhone (case-insensitive name,
+ *          last-10-digits phone) at PDF generation time.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.listReports
+);
+
+/**
+ * @route   GET /api/projects/:id/reports/:reportId/pdf
+ * @desc    Inline PDF for the in-app overlay viewer.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports/:reportId/pdf',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.viewReportPdf
+);
+
+/**
+ * @route   GET /api/projects/:id/reports/:reportId/pdf/download
+ * @desc    Attachment-disposition PDF for explicit download.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports/:reportId/pdf/download',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.downloadReportPdf
 );
 
 // ========================

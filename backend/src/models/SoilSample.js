@@ -122,6 +122,20 @@ const sampleSchema = new mongoose.Schema({
     index: true
   },
 
+  // Link to farm project (auto-set on PDF generation when farmsName + mobileNo
+  // match a Project's name + clientPhone). Allows the project's Reports tab
+  // to find this sample without re-running the match query each time.
+  linkedProjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    default: null,
+    index: true
+  },
+  linkedAt: {
+    type: Date,
+    default: null
+  },
+
   // Classification Results (Gujarati)
   phResult: {
     type: String,

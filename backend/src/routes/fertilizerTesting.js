@@ -6,6 +6,7 @@ const FertilizerSession = require('../models/FertilizerSession');
 const FertilizerSample = require('../models/FertilizerSample');
 const fertilizerCropConfig = require('../config/fertilizerCropConfig');
 const { authenticate, requirePermission } = require('../middleware/auth');
+const farmReportLinker = require('../services/farmReportLinker');
 const logger = require('../utils/logger');
 
 // Configure multer for file uploads (memory storage)
@@ -686,6 +687,15 @@ router.post('/samples/:sampleId/pdf', async (req, res) => {
     }
 
     logger.info(`Found sample - ID: ${sample._id}, Type: ${sample.type}, Farmer: ${sample.farmerName}`);
+
+    // Best-effort link to a matching farm project. Fertilizer samples don't
+    // carry a mobile number themselves — the linker resolves it via the
+    // linked SoilSample.
+    await farmReportLinker.linkSampleToFarm({
+      sampleType: 'fertilizer',
+      sample,
+      user: req.user
+    });
 
     // Generate PDF
     const pdfBuffer = await pdfGenerator.generateFertilizerPDF(sample);

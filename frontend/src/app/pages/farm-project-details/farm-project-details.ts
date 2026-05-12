@@ -31,6 +31,12 @@ import {
   FarmTransactionSummary,
   FarmAdminTransactionService
 } from '../../services/farm-admin-transaction.service';
+import {
+  FarmReport,
+  FarmReportType,
+  FarmReportService
+} from '../../services/farm-report.service';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 interface UploadProgressItem {
   filename: string;
@@ -48,7 +54,7 @@ const PRESCRIPTION_ACCEPT = 'image/*,application/pdf,.doc,.docx,application/mswo
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
 const DESIGN_MIME_PATTERN = /^(image|video)\//i;
 
-type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'transactions';
+type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'reports' | 'transactions';
 
 @Component({
   selector: 'app-farm-project-details',
@@ -118,6 +124,16 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   readonly prescriptionAccept = PRESCRIPTION_ACCEPT;
 
+  // Lab reports (auto-linked from soil/water/fertilizer testing PDFs)
+  reports: FarmReport[] = [];
+  reportsLoading = false;
+  reportFilter: 'all' | FarmReportType = 'all';
+  activeReport: FarmReport | null = null;
+  reportPreviewUrl: SafeResourceUrl | null = null;
+  private reportPreviewBlobUrl: string | null = null;
+  isLoadingReportPreview = false;
+  isDownloadingReportId: string | null = null;
+
   // Admin-only transactions
   transactions: FarmTransaction[] = [];
   transactionsLoading = false;
@@ -157,7 +173,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private confirmationModalService: ConfirmationModalService,
     private farmDesignService: FarmDesignService,
     private farmPrescriptionService: FarmPrescriptionService,
-    private farmAdminTransactionService: FarmAdminTransactionService
+    private farmAdminTransactionService: FarmAdminTransactionService,
+    private farmReportService: FarmReportService,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -176,12 +194,15 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((qp) => {
       if (qp['tab'] === 'media') {
         this.activeTab = 'media';
+      } else if (qp['tab'] === 'reports') {
+        this.switchTab('reports');
       }
     });
   }
 
   ngOnDestroy(): void {
     document.body.style.overflow = '';
+    this.revokeReportPreview();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -407,6 +428,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       this.loadDesigns();
     } else if (tab === 'prescriptions' && this.prescriptionItems.length === 0 && !this.prescriptionsLoading) {
       this.loadPrescriptions();
+    } else if (tab === 'reports' && this.reports.length === 0 && !this.reportsLoading) {
+      this.loadReports();
     } else if (tab === 'transactions' && this.showTransactionsTab) {
       if (this.transactions.length === 0 && !this.transactionsLoading) {
         this.loadTransactions();
@@ -1387,5 +1410,128 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // ====================================================================
+  // Reports — auto-linked soil / water / fertilizer testing PDFs
+  // ====================================================================
+
+  loadReports(): void {
+    if (!this.projectId) return;
+    this.reportsLoading = true;
+    this.farmReportService.listReports(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.reports = response.reports;
+          this.reportsLoading = false;
+        },
+        error: () => {
+          this.reportsLoading = false;
+          this.toastService.error('Unable to load reports.');
+        }
+      });
+  }
+
+  refreshReports(): void {
+    this.reports = [];
+    this.loadReports();
+  }
+
+  setReportFilter(filter: 'all' | FarmReportType): void {
+    this.reportFilter = filter;
+  }
+
+  get filteredReports(): FarmReport[] {
+    if (this.reportFilter === 'all') return this.reports;
+    return this.reports.filter((r) => r.sampleType === this.reportFilter);
+  }
+
+  get reportCounts(): { all: number; soil: number; water: number; fertilizer: number } {
+    const counts = { all: this.reports.length, soil: 0, water: 0, fertilizer: 0 };
+    for (const r of this.reports) {
+      if (r.sampleType === 'soil') counts.soil++;
+      else if (r.sampleType === 'water') counts.water++;
+      else if (r.sampleType === 'fertilizer') counts.fertilizer++;
+    }
+    return counts;
+  }
+
+  reportTypeLabel(type: FarmReportType): string {
+    if (type === 'soil') return 'Soil';
+    if (type === 'water') return 'Water';
+    return 'Fertilizer';
+  }
+
+  reportTypeIcon(type: FarmReportType): string {
+    if (type === 'soil') return 'fa-mound';
+    if (type === 'water') return 'fa-droplet';
+    return 'fa-flask';
+  }
+
+  reportFileName(report: FarmReport): string {
+    const base = this.reportTypeLabel(report.sampleType).toLowerCase();
+    const farmer = (report.farmerName || 'Unknown').replace(/\s+/g, '_');
+    const sample = report.sampleNumber ? `${report.sampleNumber}_` : '';
+    return `${base}_report_${sample}${farmer}.pdf`;
+  }
+
+  trackReport(_: number, r: FarmReport): string {
+    return r.reportId;
+  }
+
+  openReportOverlay(report: FarmReport): void {
+    if (!this.projectId) return;
+    this.activeReport = report;
+    this.isLoadingReportPreview = true;
+    this.revokeReportPreview();
+    document.body.style.overflow = 'hidden';
+
+    this.farmReportService.viewReportPdf(this.projectId, report.reportId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          this.reportPreviewBlobUrl = url;
+          this.reportPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+          this.isLoadingReportPreview = false;
+        },
+        error: () => {
+          this.isLoadingReportPreview = false;
+          this.toastService.error('Unable to load the report PDF.');
+          this.closeReportOverlay();
+        }
+      });
+  }
+
+  closeReportOverlay(): void {
+    this.activeReport = null;
+    this.revokeReportPreview();
+    document.body.style.overflow = '';
+  }
+
+  private revokeReportPreview(): void {
+    if (this.reportPreviewBlobUrl) {
+      window.URL.revokeObjectURL(this.reportPreviewBlobUrl);
+      this.reportPreviewBlobUrl = null;
+    }
+    this.reportPreviewUrl = null;
+  }
+
+  downloadReport(report: FarmReport): void {
+    if (!this.projectId) return;
+    this.isDownloadingReportId = report.reportId;
+    this.farmReportService.downloadReportPdf(this.projectId, report.reportId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          this.farmReportService.triggerBrowserDownload(blob, this.reportFileName(report));
+          this.isDownloadingReportId = null;
+        },
+        error: () => {
+          this.isDownloadingReportId = null;
+          this.toastService.error('Unable to download the report.');
+        }
+      });
   }
 }
