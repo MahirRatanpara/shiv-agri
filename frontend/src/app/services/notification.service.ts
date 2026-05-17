@@ -8,6 +8,9 @@ export type AppNotificationType =
   | 'farm_approved'
   | 'farm_rejected'
   | 'farm_media_upload'
+  | 'farm_quotation_required'
+  | 'farm_quotation_received'
+  | 'farm_quotation_accepted'
   | 'system';
 
 export interface AppNotification {
@@ -24,6 +27,8 @@ export interface AppNotification {
     rejectionReason?: string;
     uploaderName?: string;
     mediaCount?: number;
+    quotationId?: string;
+    amountPerYear?: number;
   };
   isRead: boolean;
   createdAt: string;

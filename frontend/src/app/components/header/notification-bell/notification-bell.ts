@@ -76,9 +76,21 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     this.markRead(notification.id);
     this.isOpen = false;
 
-    const queryParams: Record<string, string> = { from: 'notification' };
+    // `t` is a per-click nonce so Angular treats this as a fresh navigation
+    // even when the user is already on the destination URL — without it,
+    // clicking a notification while on the same project does nothing.
+    const queryParams: Record<string, string> = {
+      from: 'notification',
+      t: String(Date.now())
+    };
     if (notification.type === 'farm_media_upload') {
       queryParams['tab'] = 'media';
+    } else if (
+      notification.type === 'farm_quotation_required' ||
+      notification.type === 'farm_quotation_received' ||
+      notification.type === 'farm_quotation_accepted'
+    ) {
+      queryParams['tab'] = 'quotation';
     }
 
     this.router.navigate(['/farm-management/project', projectId], { queryParams });
@@ -88,6 +100,9 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     switch (notification.type) {
       case 'farm_media_upload': return 'Review Photos';
       case 'farm_registration': return 'Review Request';
+      case 'farm_quotation_required': return 'Send Quotation';
+      case 'farm_quotation_received': return 'View Quotation';
+      case 'farm_quotation_accepted': return 'View Farm';
       case 'farm_approved':
       case 'farm_rejected': return 'View Project';
       default: return 'Open';
@@ -133,6 +148,9 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
       case 'farm_approved': return 'fa-circle-check';
       case 'farm_rejected': return 'fa-circle-xmark';
       case 'farm_media_upload': return 'fa-images';
+      case 'farm_quotation_required': return 'fa-file-invoice-dollar';
+      case 'farm_quotation_received': return 'fa-file-invoice';
+      case 'farm_quotation_accepted': return 'fa-handshake';
       default: return 'fa-bell';
     }
   }

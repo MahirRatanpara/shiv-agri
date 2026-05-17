@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page { size: A4; margin: 0; }
+
+        html, body {
+            font-family: 'Noto Sans Gujarati', 'Noto Sans', Arial, sans-serif;
+            color: #111;
+            background: #fff;
+            font-size: 9.5pt;
+            line-height: 1.25;
+        }
+
+        /* ============================================================ */
+        /* PAGE 1 — main slip                                            */
+        /* ============================================================ */
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 6mm 8mm;
+            margin: 0 auto;
+            background: #fff;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page:last-child { page-break-after: auto; }
+
+        .sheet {
+            border: 1.5px solid #111;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── HEADER ─────────────────────────────────────────────────── */
+        .header {
+            border-bottom: 1.5px solid #111;
+            text-align: center;
+            padding: 6px 12px 7px;
+        }
+
+        .header h1 {
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 21pt;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #111;
+            line-height: 1.02;
+            margin: 0;
+        }
+
+        .header .addr {
+            font-size: 9pt;
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+
+        .header .contact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 8.5pt;
+            margin-top: 5px;
+            padding-top: 4px;
+            border-top: 1px solid #111;
+        }
+
+        /* ── META ROW ───────────────────────────────────────────────── */
+        .meta-row {
+            display: flex;
+            border-bottom: 1.5px solid #111;
+        }
+
+        .meta-row .cell {
+            padding: 5px 10px;
+            font-size: 9.5pt;
+        }
+
+        .meta-row .cell-name { flex: 2; border-right: 1.5px solid #111; }
+        .meta-row .cell-date { flex: 1; }
+
+        .meta-row .label { font-weight: 600; }
+        .meta-row .value {
+            display: inline-block;
+            font-weight: 700;
+            text-decoration: underline;
+            min-width: 50px;
+            padding-left: 6px;
+        }
+
+        .review-row {
+            padding: 5px 10px 7px;
+            border-bottom: 1.5px solid #111;
+            font-size: 9.5pt;
+            min-height: 28px;
+        }
+
+        .review-row .label { font-weight: 600; }
+        .review-row .value {
+            display: inline-block;
+            font-weight: 700;
+            padding-left: 8px;
+            text-decoration: underline;
+        }
+
+        /* ── SECTIONS ───────────────────────────────────────────────── */
+        .section {
+            padding: 4px 10px;
+            border-bottom: 1px solid #111;
+            font-size: 9.5pt;
+        }
+
+        .section:last-of-type { border-bottom: none; }
+
+        .row {
+            display: flex;
+            align-items: flex-start;
+            padding: 2px 0;
+            gap: 8px;
+        }
+
+        .row .num {
+            font-weight: 600;
+            min-width: 26px;
+        }
+
+        .row .label {
+            min-width: 150px;
+            font-weight: 500;
+        }
+
+        .row .colon {
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .row .value {
+            flex: 1;
+            border-bottom: 1px dotted #555;
+            min-height: 14px;
+            padding: 0 4px 1px;
+            font-weight: 600;
+        }
+
+        /* ── Section 3 — checkbox chips ─────────────────────────────── */
+        .check-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+            flex: 1;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9pt;
+            padding: 1px 2px;
+        }
+
+        .chip .box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1px solid #111;
+            text-align: center;
+            line-height: 10px;
+            font-weight: 700;
+            font-size: 10pt;
+        }
+
+        .chip .box.checked::before {
+            content: '✕';
+            color: #111;
+        }
+
+        /* ── Sub-table for sections 6/7/8 ───────────────────────────── */
+        .group { padding: 2px 0 2px 26px; }
+
+        .group .sub-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px 14px;
+            margin-top: 2px;
+        }
+
+        .group .sub-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 9pt;
+        }
+
+        .group .sub-row .num { min-width: 22px; font-weight: 500; }
+        .group .sub-row .label { min-width: 110px; font-weight: 500; }
+        .group .sub-row .colon { font-weight: 600; margin-right: 3px; }
+
+        /* Tickbox for boolean fields */
+        .tickbox {
+            display: inline-block;
+            width: 44px;
+            height: 14px;
+            border: 1px solid #111;
+            text-align: center;
+            line-height: 12px;
+            font-weight: 700;
+            font-size: 10pt;
+            vertical-align: middle;
+        }
+
+        .tickbox.checked::before {
+            content: '✕';
+            color: #111;
+        }
+
+        .row .tickbox { flex: none; margin-left: 4px; }
+
+        /* ── Photo notice (rendered on page 2) ──────────────────────── */
+        .photo-notice {
+            background: #f4f4f4;
+            border: 1.5px dashed #111;
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin: 14px 22px 0;
+            font-size: 11pt;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .photo-notice .icon {
+            font-size: 14pt;
+            font-weight: 700;
+        }
+
+        /* ── Footer / signature ─────────────────────────────────────── */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px 12px 8px;
+            border-top: 1.5px solid #111;
+            font-size: 10pt;
+            margin-top: auto;
+        }
+
+        .footer .right { text-align: right; }
+        .footer .right .name { font-weight: 700; font-size: 11pt; }
+        .footer .right .designation { font-size: 9pt; margin-top: 1px; color: #333; }
+
+        /* ============================================================ */
+        /* PAGE 2 — Other Notes (full page)                              */
+        /* ============================================================ */
+        .notes-page {
+            width: 210mm;
+            height: 297mm;
+            padding: 12mm;
+            background: #fff;
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notes-page:last-child { page-break-after: auto; }
+
+        .notes-sheet {
+            border: 1.5px solid #111;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notes-header {
+            border-bottom: 1.5px solid #111;
+            padding: 10px 16px;
+            text-align: center;
+        }
+
+        .notes-header h2 {
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 18pt;
+            font-weight: 700;
+            color: #111;
+            margin: 0;
+        }
+
+        .notes-header .sub {
+            font-size: 10pt;
+            color: #555;
+            margin-top: 2px;
+        }
+
+        .notes-meta {
+            padding: 8px 16px;
+            border-bottom: 1px solid #111;
+            font-size: 10pt;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .notes-meta .item .label {
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .notes-meta .item .value {
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        .notes-body {
+            padding: 18px 22px;
+            font-size: 12pt;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            color: #111;
+        }
+
+        .notes-empty {
+            color: #888;
+            font-style: italic;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .notes-footer {
+            border-top: 1.5px solid #111;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: 10pt;
+            margin-top: auto;
+        }
+
+        .notes-footer .right { text-align: right; }
+        .notes-footer .right .name { font-weight: 700; font-size: 11pt; }
+        .notes-footer .right .designation { font-size: 9pt; color: #333; }
+
+        /* ============================================================ */
+        /* Photo pages                                                    */
+        /* ============================================================ */
+        .img-page {
+            width: 210mm;
+            height: 297mm;
+            padding: 10mm;
+            display: flex;
+            flex-direction: column;
+            gap: 6mm;
+            page-break-after: always;
+            background: #fff;
+        }
+
+        .img-page:last-child { page-break-after: auto; }
+
+        .img-page .img-header {
+            text-align: center;
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 11pt;
+            color: #111;
+            font-weight: 700;
+            border-bottom: 1px solid #111;
+            padding-bottom: 6px;
+        }
+
+        .img-page .caption {
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 10pt;
+            color: #444;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .img-page .img-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            padding: 4px;
+            background: #fafafa;
+        }
+
+        .img-page img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================ -->
+    <!-- PAGE 1 — Main prescription slip                              -->
+    <!-- ============================================================ -->
+    <div class="page">
+        <div class="sheet">
+            <!-- HEADER -->
+            <div class="header">
+                <h1>શિવ એગ્રી કન્સલટન્સી એન્ડ લેબોરેટરી</h1>
+                <div class="addr">૩૦૬, નાઈન સ્કવેર, ગોલ્ડનસીટી-૧, ઝાંઝરડા ચોકડી પાસે, જૂનાગઢ - ૩૬૨ ૦૦૧.</div>
+                <div class="addr">મો. ૯૭૨૩૪ ૫૬૯૬૬, ૯૨૬૫૫ ૦૮૩૪૫</div>
+                <div class="contact">
+                    <span class="email">shivagriconsultancy@gmail.com</span>
+                    <span class="web">www.shivagriconsultancy.com</span>
+                </div>
+            </div>
+
+            <!-- META -->
+            <div class="meta-row">
+                <div class="cell cell-name">
+                    <span class="label">ખેડૂતનું / ફાર્મ નું નામ (Farmer / Farm Name)</span> :
+                    <span class="value">{{farmerName}}</span>
+                </div>
+                <div class="cell cell-date">
+                    <span class="label">વીઝીટ તારીખ (Visit Date)</span> :
+                    <span class="value">{{visitDate}}</span>
+                </div>
+            </div>
+
+            <div class="review-row">
+                <span class="label">છેલ્લી વિઝીટમાં નક્કી કરેલ કામની સમીક્ષા (Review of last visit)</span> :
+                <span class="value">{{lastVisitReview}}</span>
+            </div>
+
+            <!-- Sections 1-5 -->
+            <div class="section">
+                <div class="row">
+                    <span class="num">(૧)</span>
+                    <span class="label">જમીનની તૈયારી (Land Preparation)</span>
+                    <span class="colon">:</span>
+                    <span class="value">{{landPreparation}}</span>
+                </div>
+                <div class="row">
+                    <span class="num">(૨)</span>
+                    <span class="label">વાવેતર / રોપણી (Sowing / Planting)</span>
+                    <span class="colon">:</span>
+                    <span class="value">{{sowingPlanting}}</span>
+                </div>
+                <div class="row">
+                    <span class="num">(૩)</span>
+                    <span class="label">ખેતીકાર્યો (Farming Operations)</span>
+                    <span class="colon">:</span>
+                    <div class="check-grid">
+                        <span class="chip"><span class="box {{op_leveling}}"></span>લેવલીંગ</span>
+                        <span class="chip"><span class="box {{op_marking}}"></span>નિશાન</span>
+                        <span class="chip"><span class="box {{op_digging}}"></span>ખાડા ખોદવા</span>
+                        <span class="chip"><span class="box {{op_soilFilling}}"></span>માટી ભરવી</span>
+                        <span class="chip"><span class="box {{op_tractor}}"></span>ટ્રેક્ટર ચલાવવું</span>
+                        <span class="chip"><span class="box {{op_supports}}"></span>ટેકા સરખા કરવા</span>
+                        <span class="chip"><span class="box {{op_fillGaps}}"></span>ખાલા પુરવા</span>
+                        <span class="chip"><span class="box {{op_pruning}}"></span>પ્રુનીંગ</span>
+                        <span class="chip"><span class="box {{op_otherChecked}}"></span>અન્ય : <span style="border-bottom:1px dotted #555; padding:0 5px; min-width:70px; display:inline-block;">{{op_other}}</span></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="num">(૪)</span>
+                    <span class="label">પિયત (Irrigation)</span>
+                    <span class="colon">:</span>
+                    <span class="value">{{irrigation}}</span>
+                </div>
+                <div class="row">
+                    <span class="num">(૫)</span>
+                    <span class="label">નિંદામણ નિયંત્રણ (Weed Control)</span>
+                    <span class="colon">:</span>
+                    <span class="value">{{weedControl}}</span>
+                </div>
+            </div>
+
+            <!-- Section 6: Fertilizers -->
+            <div class="section">
+                <div class="row"><span class="num">(૬)</span><span style="font-weight:700;">ખાતરો (Fertilizers)</span></div>
+                <div class="group">
+                    <div class="sub-grid">
+                        <div class="sub-row"><span class="num">(૧)</span><span class="label">છાણીયું ખાતર અથવા અન્ય</span><span class="colon">:</span><span class="tickbox {{f_farmyardManure}}"></span></div>
+                        <div class="sub-row"><span class="num">(૨)</span><span class="label">રાસાયણીક ખાતર</span><span class="colon">:</span><span class="tickbox {{f_chemical}}"></span></div>
+                        <div class="sub-row"><span class="num">(૩)</span><span class="label">જૈવિક ખાતર</span><span class="colon">:</span><span class="tickbox {{f_organic}}"></span></div>
+                        <div class="sub-row"><span class="num">(૪)</span><span class="label">જીવામૃત</span><span class="colon">:</span><span class="tickbox {{f_jivamrut}}"></span></div>
+                        <div class="sub-row" style="grid-column:1 / -1;"><span class="num">(૫)</span><span class="label">છોડ/ઝાડ પર સ્પ્રેના ખાતરો</span><span class="colon">:</span><span class="tickbox {{f_spray}}"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: Pests -->
+            <div class="section">
+                <div class="row"><span class="num">(૭)</span><span style="font-weight:700;">જીવાતો (Pests)</span></div>
+                <div class="group">
+                    <div class="sub-grid">
+                        <div class="sub-row"><span class="num">(૧)</span><span class="label">જમીન જન્ય</span><span class="colon">:</span><span class="tickbox {{p_soilBorne}}"></span></div>
+                        <div class="sub-row"><span class="num">(૨)</span><span class="label">મુળની જીવાત</span><span class="colon">:</span><span class="tickbox {{p_root}}"></span></div>
+                        <div class="sub-row"><span class="num">(૩)</span><span class="label">થડની જીવાત</span><span class="colon">:</span><span class="tickbox {{p_stem}}"></span></div>
+                        <div class="sub-row"><span class="num">(૪)</span><span class="label">પાનની જીવાત</span><span class="colon">:</span><span class="tickbox {{p_leaf}}"></span></div>
+                        <div class="sub-row"><span class="num">(૫)</span><span class="label">ફુલની જીવાત</span><span class="colon">:</span><span class="tickbox {{p_flower}}"></span></div>
+                        <div class="sub-row"><span class="num">(૬)</span><span class="label">ફળની જીવાત</span><span class="colon">:</span><span class="tickbox {{p_fruit}}"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 8: Diseases -->
+            <div class="section">
+                <div class="row"><span class="num">(૮)</span><span style="font-weight:700;">રોગો (Diseases)</span></div>
+                <div class="group">
+                    <div class="sub-grid">
+                        <div class="sub-row"><span class="num">(૧)</span><span class="label">જમીન જન્ય રોગ</span><span class="colon">:</span><span class="tickbox {{d_soilBorne}}"></span></div>
+                        <div class="sub-row"><span class="num">(૨)</span><span class="label">થડનો રોગ</span><span class="colon">:</span><span class="tickbox {{d_stem}}"></span></div>
+                        <div class="sub-row"><span class="num">(૩)</span><span class="label">ડાળીનો રોગ</span><span class="colon">:</span><span class="tickbox {{d_branch}}"></span></div>
+                        <div class="sub-row"><span class="num">(૪)</span><span class="label">પાનનો રોગ</span><span class="colon">:</span><span class="tickbox {{d_leaf}}"></span></div>
+                        <div class="sub-row"><span class="num">(૫)</span><span class="label">ફુલનો રોગ</span><span class="colon">:</span><span class="tickbox {{d_flower}}"></span></div>
+                        <div class="sub-row"><span class="num">(૬)</span><span class="label">ફળનો રોગ</span><span class="colon">:</span><span class="tickbox {{d_fruit}}"></span></div>
+                        <div class="sub-row" style="grid-column:1 / -1;"><span class="num">(૭)</span><span class="label">અન્ય રોગ</span><span class="colon">:</span><span class="tickbox {{d_other}}"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sections 9-12 (no section 13 here — moved to page 2) -->
+            <div class="section">
+                <div class="row">
+                    <span class="num">(૯)</span>
+                    <span class="label">કલ્ટાર કે અન્ય હોર્મોન્સની ટ્રીટમેન્ટ</span>
+                    <span class="colon">:</span>
+                    <span class="tickbox {{hormoneTreatment}}"></span>
+                </div>
+                <div class="row">
+                    <span class="num">(૧૦)</span>
+                    <span class="label">ફળ ઉતારવા (Harvesting)</span>
+                    <span class="colon">:</span>
+                    <span class="tickbox {{fruitHarvesting}}"></span>
+                </div>
+                <div class="row">
+                    <span class="num">(૧૧)</span>
+                    <span class="label">ગ્રેડીંગ (Grading)</span>
+                    <span class="colon">:</span>
+                    <span class="tickbox {{grading}}"></span>
+                </div>
+                <div class="row">
+                    <span class="num">(૧૨)</span>
+                    <span class="label">પેકીંગ (Packing)</span>
+                    <span class="colon">:</span>
+                    <span class="tickbox {{packing}}"></span>
+                </div>
+            </div>
+
+            <!-- FOOTER / SIGNATURE -->
+            <div class="footer">
+                <div class="left">
+                    <div style="font-size:9pt; color:#555;">અન્ય નોંધ માટે પાનું ૨ જુઓ</div>
+                    <div style="font-size:8.5pt; color:#777;">See page 2 for "Other Notes"</div>
+                </div>
+                <div class="right">
+                    <div class="name">અનિલકુમાર હદવાણી</div>
+                    <div class="designation">M.Sc. (Agri.)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PAGE 2 — Other Notes (full page)                              -->
+    <!-- ============================================================ -->
+    <div class="notes-page">
+        <div class="notes-sheet">
+            <div class="notes-header">
+                <h2>અન્ય નોંધ</h2>
+                <div class="sub">Other Notes — Section (૧૩)</div>
+            </div>
+
+            <div class="notes-meta">
+                <div class="item">
+                    <span class="label">ખેડૂત / ફાર્મ:</span>
+                    <span class="value">{{farmerName}}</span>
+                </div>
+                <div class="item">
+                    <span class="label">વીઝીટ તારીખ:</span>
+                    <span class="value">{{visitDate}}</span>
+                </div>
+            </div>
+
+            <div class="notes-body">{{otherNotesBody}}</div>
+
+            {{photoNotice}}
+
+            <div class="notes-footer">
+                <div class="right" style="margin-left:auto;">
+                    <div class="name">અનિલકુમાર હદવાણી</div>
+                    <div class="designation">M.Sc. (Agri.)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Photo pages (only if attached)                                -->
+    <!-- ============================================================ -->
+    {{imagePages}}
+</body>
+</html>

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
@@ -77,6 +78,7 @@ class FarmPrescriptionService {
     const docType = classifyDocType(completed.mimeType || file.mimetype);
 
     const ref = {
+      _id: new mongoose.Types.ObjectId(),
       source: 'file',
       docType,
       title: meta.title?.trim() || file.originalname,
@@ -100,8 +102,120 @@ class FarmPrescriptionService {
     return ref;
   }
 
+  async uploadImageOnly(projectId, file) {
+    const initiateRes = await fetch(`${MEDIA_SERVICE_URL}/api/v1/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        altText: `Prescription image for project ${projectId}`,
+        tags: ['prescription-image', `project-${projectId}`]
+      })
+    });
+
+    if (!initiateRes.ok) {
+      const text = await initiateRes.text();
+      logger.error(`[FarmPrescription] Image initiate failed: status=${initiateRes.status}, body=${text}`);
+      throw { status: 502, message: 'Media service unavailable. Please try again.' };
+    }
+
+    const initiated = await initiateRes.json();
+    const formData = new FormData();
+    const blob = new Blob([file.buffer], { type: file.mimetype });
+    formData.append('file', blob, file.originalname);
+
+    const uploadRes = await fetch(`${MEDIA_SERVICE_URL}/api/v1/media/${initiated.id}/upload`, {
+      method: 'PUT',
+      body: formData
+    });
+
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text();
+      logger.error(`[FarmPrescription] Image upload failed: id=${initiated.id}, status=${uploadRes.status}, body=${text}`);
+      throw { status: 502, message: 'Image upload failed. Please try again.' };
+    }
+
+    const completed = await uploadRes.json();
+    const fullUrl = completed.contentUrl?.startsWith('http')
+      ? completed.contentUrl
+      : `${MEDIA_SERVICE_PUBLIC_URL}${completed.contentUrl}`;
+
+    return {
+      mediaId: completed.id,
+      url: fullUrl,
+      mimeType: completed.mimeType,
+      sizeBytes: completed.sizeBytes,
+      fileName: file.originalname
+    };
+  }
+
+  async addStructured(projectId, payload, files, user) {
+    const structured = payload?.structured || {};
+    if (!structured || typeof structured !== 'object') {
+      throw { status: 400, message: 'Structured prescription data is required.' };
+    }
+
+    const attachedImages = [];
+    for (const file of files || []) {
+      if (!file.mimetype?.startsWith('image/')) {
+        throw { status: 415, message: `Only images can be attached to a prescription (got ${file.mimetype}).` };
+      }
+      const ref = await this.uploadImageOnly(projectId, file);
+      attachedImages.push(ref);
+    }
+
+    const visitDate = structured.visitDate ? new Date(structured.visitDate) : new Date();
+    const farmerNameTrimmed = (structured.farmerName || '').trim();
+    const title = (payload.title || '').trim()
+      || (farmerNameTrimmed ? `Prescription — ${farmerNameTrimmed}` : 'Prescription');
+
+    // Pre-generate the subdoc _id so we can reliably return it to the client
+    // (avoids issues with $push + lean() not surfacing the auto-generated id).
+    const ref = {
+      _id: new mongoose.Types.ObjectId(),
+      source: 'structured',
+      docType: 'structured',
+      title,
+      notes: (payload.notes || '').trim() || '',
+      structured: { ...structured, visitDate },
+      attachedImages,
+      status: 'ACTIVE',
+      uploadedBy: user._id,
+      uploadedByName: user.name || user.email,
+      uploadedAt: new Date()
+    };
+
+    const result = await Project.updateOne(
+      { _id: projectId },
+      { $push: { prescriptions: ref }, $set: { updatedAt: new Date() } }
+    );
+
+    if (!result || result.matchedCount === 0) {
+      logger.error(`[FarmPrescription] Structured prescription save failed: project=${projectId} not found`);
+      throw { status: 404, message: 'Project not found' };
+    }
+
+    logger.info(`[FarmPrescription] Structured prescription added: project=${projectId}, rxId=${ref._id}, images=${attachedImages.length}, user=${user._id}`);
+    return ref;
+  }
+
+  async getPrescriptionById(projectId, prescriptionId) {
+    const project = await Project.findOne(
+      { _id: projectId, 'prescriptions._id': prescriptionId },
+      { 'prescriptions.$': 1, name: 1, clientPhone: 1, location: 1 }
+    ).lean();
+    if (!project) return null;
+    return {
+      project: { _id: project._id, name: project.name, clientPhone: project.clientPhone, location: project.location },
+      prescription: project.prescriptions?.[0] || null
+    };
+  }
+
   async addManual(projectId, payload, user) {
     const ref = {
+      _id: new mongoose.Types.ObjectId(),
       source: 'manual',
       docType: 'manual',
       title: payload.title?.trim() || 'Prescription',
@@ -129,6 +243,7 @@ class FarmPrescriptionService {
     }
 
     const ref = {
+      _id: new mongoose.Types.ObjectId(),
       source: 'file',
       docType: 'text',
       title: payload.title?.trim() || 'Text prescription',

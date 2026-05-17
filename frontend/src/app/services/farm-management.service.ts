@@ -3,7 +3,17 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export type FarmStatus = 'pending_approval' | 'approved' | 'rejected' | 'Upcoming' | 'Running' | 'Completed' | 'On Hold' | 'Cancelled';
+export type FarmStatus =
+  | 'pending_approval'
+  | 'pending_quotation'
+  | 'pending_acceptance'
+  | 'approved'
+  | 'rejected'
+  | 'Upcoming'
+  | 'Running'
+  | 'Completed'
+  | 'On Hold'
+  | 'Cancelled';
 
 export type AreaUnit = 'acres' | 'hectares' | 'sqmeters' | 'vigha-16' | 'vigha-24';
 
@@ -62,6 +72,8 @@ export interface FarmProject {
   visitFrequency?: number;
   isArchived?: boolean;
   archivedAt?: string;
+  activeQuotation?: string;
+  quotationAcceptedAt?: string;
 }
 
 export interface FarmRegistrationPayload {

@@ -1,5 +1,6 @@
 const Project = require('../models/Project');
 const farmPrescriptionService = require('../services/farmPrescriptionService');
+const pdfGenerator = require('../services/pdfGenerator');
 const logger = require('../utils/logger');
 
 const ALLOWED_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
@@ -132,6 +133,101 @@ exports.addManualPrescription = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to add prescription',
+      message: error.message
+    });
+  }
+};
+
+exports.addStructuredPrescription = async (req, res) => {
+  const projectId = req.params.id;
+  try {
+    logger.info(`[FarmPrescription] POST /projects/${projectId}/prescriptions/structured by user=${req.user._id}`);
+
+    const project = await Project.findById(projectId)
+      .select('_id name submittedBy clientId')
+      .lean();
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    let structuredPayload = {};
+    if (req.body?.structured) {
+      try {
+        structuredPayload = typeof req.body.structured === 'string'
+          ? JSON.parse(req.body.structured)
+          : req.body.structured;
+      } catch (err) {
+        return res.status(400).json({ success: false, error: 'Invalid structured prescription payload' });
+      }
+    }
+
+    const files = req.files || [];
+    const maxBatch = farmPrescriptionService.getMaxFilesPerUpload();
+    if (files.length > maxBatch) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot attach more than ${maxBatch} images per prescription`
+      });
+    }
+
+    const ref = await farmPrescriptionService.addStructured(
+      projectId,
+      {
+        title: req.body?.title,
+        notes: req.body?.notes,
+        structured: structuredPayload
+      },
+      files,
+      req.user
+    );
+
+    await farmPrescriptionService.notifyOwner(project, 1, req.user, 'prescription');
+
+    return res.status(201).json({ success: true, prescription: ref });
+  } catch (error) {
+    const status = error?.status || 500;
+    if (status !== 500) {
+      return res.status(status).json({ success: false, error: error.message });
+    }
+    logger.error(`[FarmPrescription] addStructuredPrescription error: ${error.message}`, { stack: error.stack });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to add prescription',
+      message: error.message
+    });
+  }
+};
+
+exports.downloadPrescriptionPdf = async (req, res) => {
+  const { id: projectId, prescriptionId } = req.params;
+  try {
+    logger.info(`[FarmPrescription] GET /projects/${projectId}/prescriptions/${prescriptionId}/pdf by user=${req.user._id}`);
+
+    const data = await farmPrescriptionService.getPrescriptionById(projectId, prescriptionId);
+    if (!data || !data.prescription) {
+      return res.status(404).json({ success: false, error: 'Prescription not found' });
+    }
+
+    if (data.prescription.docType !== 'structured') {
+      return res.status(400).json({ success: false, error: 'PDF is only available for structured prescriptions' });
+    }
+
+    const pdfBuffer = await pdfGenerator.generatePrescriptionPDF(data.prescription, data.project);
+
+    const safeName = (data.prescription.title || 'prescription')
+      .replace(/[^a-z0-9\-_ ]+/gi, '')
+      .replace(/\s+/g, '_')
+      .slice(0, 60) || 'prescription';
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    return res.send(pdfBuffer);
+  } catch (error) {
+    logger.error(`[FarmPrescription] downloadPrescriptionPdf error: ${error.message}`, { stack: error.stack });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate prescription PDF',
       message: error.message
     });
   }

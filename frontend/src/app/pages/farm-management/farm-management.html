@@ -106,6 +106,8 @@
       <i class="fas fa-circle-dot"></i>
       <select [(ngModel)]="selectedStatus" (change)="applyFilters()">
         <option value="">All status</option>
+        <option value="pending_quotation">Pending Quotation</option>
+        <option value="pending_acceptance">Pending Acceptance</option>
         <option value="pending_approval">Pending Approval</option>
         <option value="approved">Approved</option>
         <option value="Running">Running</option>
@@ -198,7 +200,7 @@
       <div class="card-top">
         <span
           class="status-pill"
-          [class.pending]="farm.status === 'pending_approval'"
+          [class.pending]="farm.status === 'pending_approval' || farm.status === 'pending_quotation' || farm.status === 'pending_acceptance'"
           [class.approved]="farm.status === 'approved'"
           [class.rejected]="farm.status === 'rejected'"
           [class.running]="farm.status === 'Running'"

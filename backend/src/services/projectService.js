@@ -313,7 +313,7 @@ class ProjectService {
         throw new Error('Mobile number is required. Please update your profile before registering a farm.');
       }
 
-      normalizedData.status = 'pending_approval';
+      normalizedData.status = 'pending_quotation';
       normalizedData.registrationSource = 'farmer_self';
       normalizedData.submittedBy = userId;
       normalizedData.submittedAt = new Date();
@@ -370,11 +370,14 @@ class ProjectService {
 
     await project.save();
 
-    if (project.status === 'pending_approval') {
+    if (project.status === 'pending_approval' || project.status === 'pending_quotation') {
+      const isQuotation = project.status === 'pending_quotation';
       await notificationService.createForUsersWithPermission('farm.projects.approve', {
-        type: 'farm_registration',
-        title: 'Farm registration pending',
-        message: `${project.clientName} submitted ${project.name}. Open request to review details.`,
+        type: isQuotation ? 'farm_quotation_required' : 'farm_registration',
+        title: isQuotation ? 'Quotation required' : 'Farm registration pending',
+        message: isQuotation
+          ? `${project.clientName} submitted ${project.name}. Please review the farm and send a quotation.`
+          : `${project.clientName} submitted ${project.name}. Open request to review details.`,
         project: project._id,
         submittingUser: userId,
         metadata: {
@@ -624,8 +627,16 @@ class ProjectService {
       await applyDerivedCoordinates(cleanedUpdates.location);
     }
 
+    const wasApproved = project.status === 'approved' ||
+      project.status === 'Running' ||
+      project.status === 'Completed' ||
+      project.status === 'On Hold';
+
     Object.assign(project, cleanedUpdates);
-    project.status = 'pending_approval';
+    // If the project was already approved, edit requests stay in the
+    // legacy pending_approval flow. Otherwise (newly-submitted farms),
+    // edits reset the flow to pending_quotation so the manager re-quotes.
+    project.status = wasApproved ? 'pending_approval' : 'pending_quotation';
     project.registrationSource = 'farmer_self';
     project.submittedBy = requesterId;
     project.submittedAt = new Date();
@@ -637,9 +648,11 @@ class ProjectService {
     await project.save();
 
     await notificationService.createForUsersWithPermission('farm.projects.approve', {
-      type: 'farm_registration',
-      title: 'Farm update request pending',
-      message: `${project.clientName} requested updates for ${project.name}. Open request to review.`,
+      type: wasApproved ? 'farm_registration' : 'farm_quotation_required',
+      title: wasApproved ? 'Farm update request pending' : 'Quotation required',
+      message: wasApproved
+        ? `${project.clientName} requested updates for ${project.name}. Open request to review.`
+        : `${project.clientName} updated ${project.name}. Please review and send a quotation.`,
       project: project._id,
       submittingUser: requesterId,
       metadata: {

@@ -16,6 +16,9 @@ const notificationSchema = new mongoose.Schema({
       'farm_media_upload',
       'farm_design_upload',
       'farm_prescription_upload',
+      'farm_quotation_required',
+      'farm_quotation_received',
+      'farm_quotation_accepted',
       'system'
     ],
     required: true,
@@ -48,7 +51,9 @@ const notificationSchema = new mongoose.Schema({
     mediaType: String,
     uploaderName: String,
     documentType: String,
-    itemCount: Number
+    itemCount: Number,
+    quotationId: String,
+    amountPerYear: Number
   },
   isRead: {
     type: Boolean,

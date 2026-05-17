@@ -3,10 +3,71 @@ import { Injectable } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export type PrescriptionDocType = 'image' | 'pdf' | 'docx' | 'text' | 'manual';
+export type PrescriptionDocType = 'image' | 'pdf' | 'docx' | 'text' | 'manual' | 'structured';
+
+export interface PrescriptionFarmingOperations {
+  leveling?: boolean;
+  marking?: boolean;
+  digging?: boolean;
+  soilFilling?: boolean;
+  tractor?: boolean;
+  supports?: boolean;
+  fillGaps?: boolean;
+  pruning?: boolean;
+  other?: string;
+}
+
+export interface StructuredPrescription {
+  farmerName?: string;
+  visitDate?: string;
+  lastVisitReview?: string;
+  landPreparation?: string;
+  sowingPlanting?: string;
+  farmingOperations?: PrescriptionFarmingOperations;
+  irrigation?: string;
+  weedControl?: string;
+  fertilizers?: {
+    farmyardManure?: boolean;
+    chemical?: boolean;
+    organic?: boolean;
+    jivamrut?: boolean;
+    spray?: boolean;
+  };
+  pests?: {
+    soilBorne?: boolean;
+    root?: boolean;
+    stem?: boolean;
+    leaf?: boolean;
+    flower?: boolean;
+    fruit?: boolean;
+  };
+  diseases?: {
+    soilBorne?: boolean;
+    stem?: boolean;
+    branch?: boolean;
+    leaf?: boolean;
+    flower?: boolean;
+    fruit?: boolean;
+    other?: boolean;
+  };
+  hormoneTreatment?: boolean;
+  fruitHarvesting?: boolean;
+  grading?: boolean;
+  packing?: boolean;
+  otherNotes?: string;
+}
+
+export interface PrescriptionAttachedImage {
+  mediaId?: string;
+  url?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  fileName?: string;
+}
 
 export interface PrescriptionRef {
-  source: 'file' | 'manual';
+  _id?: string;
+  source: 'file' | 'manual' | 'structured';
   docType: PrescriptionDocType;
   title?: string;
   notes?: string;
@@ -16,11 +77,17 @@ export interface PrescriptionRef {
   mimeType?: string;
   sizeBytes?: number;
   fileName?: string;
+  structured?: StructuredPrescription;
+  attachedImages?: PrescriptionAttachedImage[];
   status: string;
   uploadedBy?: string;
   uploadedByName?: string;
   uploadedAt: string;
 }
+
+export type StructuredPrescriptionEvent =
+  | { kind: 'progress'; loaded: number; total: number }
+  | { kind: 'done'; prescription: PrescriptionRef };
 
 export interface PrescriptionListResponse {
   items: PrescriptionRef[];
@@ -114,6 +181,50 @@ export class FarmPrescriptionService {
     return this.http.post<{ success: boolean; prescription: PrescriptionRef }>(
       `${this.apiUrl}/projects/${projectId}/prescriptions/manual`,
       payload
+    );
+  }
+
+  addStructuredPrescription(
+    projectId: string,
+    payload: { title?: string; notes?: string; structured: StructuredPrescription },
+    images: File[] = []
+  ): Observable<StructuredPrescriptionEvent> {
+    const formData = new FormData();
+    if (payload.title) formData.append('title', payload.title);
+    if (payload.notes) formData.append('notes', payload.notes);
+    formData.append('structured', JSON.stringify(payload.structured || {}));
+    images.forEach((file) => formData.append('images', file, file.name));
+
+    const request = new HttpRequest(
+      'POST',
+      `${this.apiUrl}/projects/${projectId}/prescriptions/structured`,
+      formData,
+      { reportProgress: true }
+    );
+
+    return this.http.request<any>(request).pipe(
+      map((event: HttpEvent<any>): StructuredPrescriptionEvent | null => {
+        if (event.type === HttpEventType.UploadProgress) {
+          return {
+            kind: 'progress',
+            loaded: event.loaded,
+            total: event.total || images.reduce((sum, f) => sum + f.size, 0) || 1
+          };
+        }
+        if (event.type === HttpEventType.Response) {
+          const body = event.body || {};
+          return { kind: 'done', prescription: body.prescription };
+        }
+        return null;
+      }),
+      filter((event): event is StructuredPrescriptionEvent => event !== null)
+    );
+  }
+
+  downloadPrescriptionPdf(projectId: string, prescriptionId: string): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/projects/${projectId}/prescriptions/${prescriptionId}/pdf`,
+      { responseType: 'blob' }
     );
   }
 }

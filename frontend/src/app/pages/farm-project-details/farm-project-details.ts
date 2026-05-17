@@ -23,6 +23,7 @@ import {
 } from '../../services/farm-design.service';
 import {
   PrescriptionRef,
+  StructuredPrescription,
   FarmPrescriptionService
 } from '../../services/farm-prescription.service';
 import {
@@ -36,7 +37,12 @@ import {
   FarmReportType,
   FarmReportService
 } from '../../services/farm-report.service';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
+import {
+  Quotation,
+  QuotationPayload,
+  QuotationService
+} from '../../services/quotation.service';
 
 interface UploadProgressItem {
   filename: string;
@@ -54,7 +60,7 @@ const PRESCRIPTION_ACCEPT = 'image/*,application/pdf,.doc,.docx,application/mswo
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
 const DESIGN_MIME_PATTERN = /^(image|video)\//i;
 
-type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'reports' | 'transactions';
+type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'reports' | 'transactions' | 'quotation';
 
 @Component({
   selector: 'app-farm-project-details',
@@ -116,13 +122,29 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   prescriptionUploadingBatch: UploadProgressItem[] = [];
   expandedPrescriptionId: string | null = null;
 
-  // Add prescription dummy modal toggles
+  // Prescription PDF overlay (mirrors reports overlay)
+  activePrescription: PrescriptionRef | null = null;
+  prescriptionPreviewUrl: SafeResourceUrl | null = null;
+  private prescriptionPreviewBlobUrl: string | null = null;
+  isLoadingPrescriptionPreview = false;
+
+  // Add prescription dummy modal toggles (legacy text builder — kept for backwards compat)
   showTextPrescriptionForm = false;
   textPrescriptionTitle = '';
   textPrescriptionBody = '';
   isSavingTextPrescription = false;
 
+  // Structured visit-prescription form (Shiv Agri standard slip)
+  showStructuredPrescriptionForm = false;
+  isSavingStructuredPrescription = false;
+  structuredSaveProgress = 0;
+  structuredPrescriptionImages: File[] = [];
+  structuredPrescriptionImagePreviews: string[] = [];
+  structuredPrescription: StructuredPrescription = this.emptyStructuredPrescription();
+  downloadingPrescriptionId: string | null = null;
+
   readonly prescriptionAccept = PRESCRIPTION_ACCEPT;
+  readonly structuredImageAccept = 'image/*';
 
   // Lab reports (auto-linked from soil/water/fertilizer testing PDFs)
   reports: FarmReport[] = [];
@@ -151,6 +173,28 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     notes: ''
   };
 
+  // Quotations
+  activeQuotation: Quotation | null = null;
+  quotationHistory: Quotation[] = [];
+  quotationLoading = false;
+  isSubmittingQuotation = false;
+  isAcceptingQuotation = false;
+  isRejectingQuotation = false;
+  showQuotationForm = false;
+  showQuotationRejectForm = false;
+  isDownloadingQuotationId: string | null = null;
+  quotationRejectReason = '';
+  quotationForm: { content: string; amountPerYear: number | null; startDate: string } = {
+    content: '',
+    amountPerYear: null,
+    startDate: ''
+  };
+  quotationContentSafe: SafeHtml | null = null;
+  selectedQuotationDetail: Quotation | null = null;
+  selectedQuotationDetailSafe: SafeHtml | null = null;
+
+  @ViewChild('quotationEditor') quotationEditor?: ElementRef<HTMLDivElement>;
+
   private knownMediaIds = new Set<string>();
   private pollSubscription?: Subscription;
 
@@ -175,7 +219,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private farmPrescriptionService: FarmPrescriptionService,
     private farmAdminTransactionService: FarmAdminTransactionService,
     private farmReportService: FarmReportService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private quotationService: QuotationService
   ) {}
 
   ngOnInit(): void {
@@ -190,12 +235,23 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       this.startFarmerPollingIfNeeded();
     });
 
-    // Auto-open Photos tab when arriving from a media-upload notification.
+    // Auto-open the right tab when arriving from a notification.
+    // The notification bell appends a `t=<timestamp>` nonce so this fires
+    // every click even when the user is already on this URL.
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((qp) => {
       if (qp['tab'] === 'media') {
-        this.activeTab = 'media';
+        this.switchTab('media');
       } else if (qp['tab'] === 'reports') {
         this.switchTab('reports');
+      } else if (qp['tab'] === 'quotation') {
+        this.switchTab('quotation');
+      }
+
+      // If we're being re-opened from a notification, refresh project + quotations
+      // so the user sees the latest server state (new quotation, status change,
+      // etc.) without a manual reload.
+      if (qp['from'] === 'notification' && this.projectId) {
+        this.loadProject();
       }
     });
   }
@@ -203,6 +259,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     document.body.style.overflow = '';
     this.revokeReportPreview();
+    this.revokePrescriptionPreview();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -312,7 +369,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   get canUploadMedia(): boolean {
     if (!this.project) return false;
     if (this.project.isArchived) return false;
-    if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
+    if (this.isPreApproval) return false;
     // Photos & Videos: ONLY the farm owner who registered the farm.
     return this.isFarmOwner;
   }
@@ -346,14 +403,14 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   get canUploadDesigns(): boolean {
     if (!this.project) return false;
     if (this.project.isArchived) return false;
-    if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
+    if (this.isPreApproval) return false;
     return this.isManagerOrAdmin;
   }
 
   get canUploadPrescriptions(): boolean {
     if (!this.project) return false;
     if (this.project.isArchived) return false;
-    if (['pending_approval', 'rejected'].includes(this.project.status)) return false;
+    if (this.isPreApproval) return false;
     return this.isManagerOrAdmin;
   }
 
@@ -373,6 +430,61 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   get showTransactionsTab(): boolean {
     // Admin-only — managers and other roles do not see this tab.
     return this.isAdmin;
+  }
+
+  // ========================
+  // Quotation workflow visibility
+  // ========================
+
+  /** True while the farm is in any pre-approval state (no BAU tabs yet). */
+  get isPreApproval(): boolean {
+    const status = this.project?.status;
+    return status === 'pending_quotation' ||
+           status === 'pending_acceptance' ||
+           status === 'pending_approval' ||
+           status === 'rejected';
+  }
+
+  /** Whether to show full BAU tabs (photos/designs/prescriptions/reports/transactions). */
+  get showFullTabs(): boolean {
+    if (!this.project) return false;
+    return !this.isPreApproval;
+  }
+
+  /** Manager/admin can submit a quotation when farm is in pending_quotation state. */
+  get canSubmitQuotation(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (!this.isManagerOrAdmin) return false;
+    return this.project.status === 'pending_quotation' ||
+           this.project.status === 'pending_acceptance';
+  }
+
+  /** Farmer can accept/reject when a quotation is currently submitted. */
+  get canRespondToQuotation(): boolean {
+    if (!this.project || !this.activeQuotation) return false;
+    if (this.project.isArchived) return false;
+    if (this.project.status !== 'pending_acceptance') return false;
+    if (this.activeQuotation.status !== 'submitted') return false;
+    return this.isFarmOwner;
+  }
+
+  /** Whether the Quotation tab in the tab bar should appear. */
+  get showQuotationTab(): boolean {
+    if (!this.project) return false;
+    // Always show for farm projects — the tab is the home for quotation history
+    // and (post-approval) future payments.
+    const isFarm = (this.project.category || '').toUpperCase() === 'FARM' ||
+                   (this.project.projectType || '').toLowerCase() === 'farm';
+    return isFarm;
+  }
+
+  /** Whether the inline quotation banner appears on Overview. */
+  get shouldShowQuotationCallout(): boolean {
+    if (!this.project) return false;
+    const status = this.project.status;
+    return status === 'pending_quotation' ||
+           status === 'pending_acceptance';
   }
 
   get quotaPercent(): number {
@@ -406,6 +518,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
         next: (project) => {
           this.project = project;
           this.isLoading = false;
+          // Auto-load quotations whenever the project loads so we can show
+          // banners on Overview without waiting for tab activation.
+          this.loadQuotations();
         },
         error: () => {
           this.isLoading = false;
@@ -413,6 +528,241 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           this.router.navigate(['/farm-management']);
         }
       });
+  }
+
+  // ========================
+  // Quotation methods
+  // ========================
+
+  loadQuotations(): void {
+    if (!this.projectId) return;
+    this.quotationLoading = true;
+    this.quotationService.list(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (quotations) => {
+          this.quotationHistory = quotations;
+          const active = quotations.find((q) => q.status === 'submitted' || q.status === 'accepted') || null;
+          this.activeQuotation = active;
+          this.quotationContentSafe = active
+            ? this.sanitizer.bypassSecurityTrustHtml(active.content)
+            : null;
+          this.quotationLoading = false;
+        },
+        error: () => {
+          this.quotationLoading = false;
+        }
+      });
+  }
+
+  openQuotationForm(): void {
+    if (!this.canSubmitQuotation) return;
+
+    // When revising an existing quotation, prefill with the previous quotation's
+    // content, amount, and first-instalment date. Falls back to today's date
+    // for a brand-new quotation.
+    const existing = this.activeQuotation;
+    const existingStart = existing?.startDate
+      ? new Date(existing.startDate).toISOString().slice(0, 10)
+      : this.todayIso();
+
+    this.showQuotationForm = true;
+    this.quotationForm = {
+      content: existing?.content || '',
+      amountPerYear: existing?.amountPerYear ?? null,
+      startDate: existingStart
+    };
+
+    setTimeout(() => {
+      if (this.quotationEditor?.nativeElement) {
+        this.quotationEditor.nativeElement.innerHTML = this.quotationForm.content || '';
+      }
+      // Scroll the form into view so the manager can see it right below the
+      // trigger button without hunting for it.
+      const formEl = document.querySelector('.quotation-form-card');
+      formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }
+
+  /**
+   * Download the quotation as a PDF on the company letterhead.
+   */
+  downloadQuotationPdf(quotation: Quotation | null): void {
+    if (!quotation || !this.projectId) return;
+    if (this.isDownloadingQuotationId) return;
+
+    this.isDownloadingQuotationId = quotation._id;
+    this.quotationService.downloadPdf(this.projectId, quotation._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
+          const dateStr = new Date(quotation.createdAt).toISOString().slice(0, 10);
+          const filename = `Quotation_${farm}_${dateStr}.pdf`;
+
+          const url = window.URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = filename;
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          window.URL.revokeObjectURL(url);
+          this.isDownloadingQuotationId = null;
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isDownloadingQuotationId = null;
+          this.toastService.error(err?.error?.message || 'Unable to download quotation PDF.');
+        }
+      });
+  }
+
+  cancelQuotationForm(): void {
+    this.showQuotationForm = false;
+    this.quotationForm = { content: '', amountPerYear: null, startDate: '' };
+  }
+
+  /** Toolbar handler: applies document.execCommand for the rich-text editor. */
+  applyFormat(command: string, value: string | undefined = undefined): void {
+    const editor = this.quotationEditor?.nativeElement;
+    if (!editor) return;
+    editor.focus();
+    document.execCommand(command, false, value);
+    this.syncEditorContent();
+  }
+
+  syncEditorContent(): void {
+    const editor = this.quotationEditor?.nativeElement;
+    if (!editor) return;
+    this.quotationForm.content = editor.innerHTML;
+  }
+
+  submitQuotation(): void {
+    if (!this.projectId || !this.canSubmitQuotation) return;
+
+    this.syncEditorContent();
+    const content = (this.quotationForm.content || '').trim();
+    const amount = Number(this.quotationForm.amountPerYear);
+
+    const plain = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    if (!plain) {
+      this.toastService.warning('Please enter the quotation details.');
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.toastService.warning('Please enter a valid annual amount.');
+      return;
+    }
+
+    const payload: QuotationPayload = {
+      content,
+      amountPerYear: amount,
+      startDate: this.quotationForm.startDate || undefined
+    };
+
+    this.isSubmittingQuotation = true;
+    this.quotationService.submit(this.projectId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toastService.success('Quotation sent to the farmer for review.');
+          this.isSubmittingQuotation = false;
+          this.showQuotationForm = false;
+          this.loadProject();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isSubmittingQuotation = false;
+          this.toastService.error(err?.error?.message || 'Unable to submit quotation.');
+        }
+      });
+  }
+
+  acceptQuotation(): void {
+    if (!this.projectId || !this.activeQuotation || !this.canRespondToQuotation) return;
+
+    this.isAcceptingQuotation = true;
+    this.quotationService.accept(this.projectId, this.activeQuotation._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toastService.success('Quotation accepted. Your farm is now approved.');
+          this.isAcceptingQuotation = false;
+          this.loadProject();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isAcceptingQuotation = false;
+          this.toastService.error(err?.error?.message || 'Unable to accept quotation.');
+        }
+      });
+  }
+
+  openQuotationRejectForm(): void {
+    if (!this.canRespondToQuotation) return;
+    this.showQuotationRejectForm = true;
+    this.quotationRejectReason = '';
+  }
+
+  cancelQuotationReject(): void {
+    this.showQuotationRejectForm = false;
+    this.quotationRejectReason = '';
+  }
+
+  rejectQuotation(): void {
+    if (!this.projectId || !this.activeQuotation || !this.canRespondToQuotation) return;
+
+    this.isRejectingQuotation = true;
+    this.quotationService.reject(this.projectId, this.activeQuotation._id, this.quotationRejectReason)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toastService.warning('Quotation rejected. The team has been notified.');
+          this.isRejectingQuotation = false;
+          this.showQuotationRejectForm = false;
+          this.quotationRejectReason = '';
+          this.loadProject();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isRejectingQuotation = false;
+          this.toastService.error(err?.error?.message || 'Unable to reject quotation.');
+        }
+      });
+  }
+
+  openQuotationDetail(quotation: Quotation): void {
+    this.selectedQuotationDetail = quotation;
+    this.selectedQuotationDetailSafe = this.sanitizer.bypassSecurityTrustHtml(quotation.content);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeQuotationDetail(): void {
+    this.selectedQuotationDetail = null;
+    this.selectedQuotationDetailSafe = null;
+    document.body.style.overflow = '';
+  }
+
+  trackQuotation(_: number, quotation: Quotation): string {
+    return quotation._id;
+  }
+
+  quotationStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      submitted: 'Awaiting acceptance',
+      accepted: 'Accepted',
+      rejected: 'Rejected',
+      superseded: 'Superseded'
+    };
+    return labels[status] || status;
+  }
+
+  installmentStatusLabel(installment: { status: string; dueDate: string }): string {
+    if (installment.status === 'paid') return 'Paid';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(installment.dueDate);
+    due.setHours(0, 0, 0, 0);
+    if (due.getTime() < today.getTime()) return 'Overdue';
+    if (due.getTime() === today.getTime()) return 'Due today';
+    return 'Upcoming';
   }
 
   switchTab(tab: TabKey): void {
@@ -426,8 +776,12 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       }
     } else if (tab === 'designs' && this.designItems.length === 0 && !this.designsLoading) {
       this.loadDesigns();
-    } else if (tab === 'prescriptions' && this.prescriptionItems.length === 0 && !this.prescriptionsLoading) {
-      this.loadPrescriptions();
+    } else if (tab === 'prescriptions') {
+      // Always reload on tab switch to surface any new prescriptions
+      // (e.g., created in another tab, by another manager, etc.).
+      if (!this.prescriptionsLoading) {
+        this.loadPrescriptions();
+      }
     } else if (tab === 'reports' && this.reports.length === 0 && !this.reportsLoading) {
       this.loadReports();
     } else if (tab === 'transactions' && this.showTransactionsTab) {
@@ -437,6 +791,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       if (!this.transactionsSummary) {
         this.refreshTransactionsSummary();
       }
+    } else if (tab === 'quotation') {
+      this.loadQuotations();
     }
   }
 
@@ -1035,19 +1391,263 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  // Dummy "Add Prescription" button — opens an inline form for now.
-  // Real prescription builder will be wired once the user provides spec.
+  // Opens the structured visit-prescription form (Shiv Agri standard slip).
   openAddPrescriptionForm(): void {
     if (!this.canUploadPrescriptions) return;
-    this.showTextPrescriptionForm = true;
-    this.textPrescriptionTitle = '';
-    this.textPrescriptionBody = '';
+    this.showStructuredPrescriptionForm = true;
+    this.structuredPrescription = this.emptyStructuredPrescription();
+    if (this.project?.name) {
+      this.structuredPrescription.farmerName = this.project.name;
+    }
+    this.clearStructuredImages();
+  }
+
+  cancelStructuredPrescription(): void {
+    this.showStructuredPrescriptionForm = false;
+    this.structuredPrescription = this.emptyStructuredPrescription();
+    this.clearStructuredImages();
   }
 
   cancelTextPrescription(): void {
     this.showTextPrescriptionForm = false;
     this.textPrescriptionTitle = '';
     this.textPrescriptionBody = '';
+  }
+
+  private emptyStructuredPrescription(): StructuredPrescription {
+    const today = new Date();
+    const iso = today.toISOString().slice(0, 10); // yyyy-mm-dd for <input type="date">
+    return {
+      farmerName: '',
+      visitDate: iso,
+      lastVisitReview: '',
+      landPreparation: '',
+      sowingPlanting: '',
+      farmingOperations: {
+        leveling: false,
+        marking: false,
+        digging: false,
+        soilFilling: false,
+        tractor: false,
+        supports: false,
+        fillGaps: false,
+        pruning: false,
+        other: ''
+      },
+      irrigation: '',
+      weedControl: '',
+      fertilizers: { farmyardManure: false, chemical: false, organic: false, jivamrut: false, spray: false },
+      pests: { soilBorne: false, root: false, stem: false, leaf: false, flower: false, fruit: false },
+      diseases: { soilBorne: false, stem: false, branch: false, leaf: false, flower: false, fruit: false, other: false },
+      hormoneTreatment: false,
+      fruitHarvesting: false,
+      grading: false,
+      packing: false,
+      otherNotes: ''
+    };
+  }
+
+  onStructuredImagesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const files = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
+    input.value = '';
+
+    if (this.structuredPrescriptionImages.length + files.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can attach up to ${MAX_FILES_PER_BATCH} images per prescription.`);
+      return;
+    }
+
+    const oversize = files.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+
+    files.forEach((file) => {
+      this.structuredPrescriptionImages.push(file);
+      const reader = new FileReader();
+      reader.onload = () => this.structuredPrescriptionImagePreviews.push(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  removeStructuredImage(index: number): void {
+    this.structuredPrescriptionImages.splice(index, 1);
+    this.structuredPrescriptionImagePreviews.splice(index, 1);
+  }
+
+  private clearStructuredImages(): void {
+    this.structuredPrescriptionImages = [];
+    this.structuredPrescriptionImagePreviews = [];
+    this.structuredSaveProgress = 0;
+  }
+
+  saveStructuredPrescription(): void {
+    if (!this.projectId || !this.canUploadPrescriptions) return;
+    if (this.isSavingStructuredPrescription) return;
+
+    // Coerce visitDate from yyyy-mm-dd input to ISO string for backend
+    const payload: StructuredPrescription = JSON.parse(JSON.stringify(this.structuredPrescription || {}));
+    if (payload.visitDate) {
+      const d = new Date(payload.visitDate);
+      if (!isNaN(d.getTime())) payload.visitDate = d.toISOString();
+    }
+
+    this.isSavingStructuredPrescription = true;
+    this.structuredSaveProgress = 0;
+
+    this.farmPrescriptionService.addStructuredPrescription(
+      this.projectId,
+      { structured: payload },
+      this.structuredPrescriptionImages
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (event) => {
+          if (event.kind === 'progress') {
+            this.structuredSaveProgress = Math.min(99, Math.round((event.loaded / event.total) * 100));
+          } else if (event.kind === 'done') {
+            this.structuredSaveProgress = 100;
+            const created = event.prescription;
+            if (created) {
+              // Prepend immediately for snappy UX
+              this.prescriptionItems = [created, ...this.prescriptionItems];
+            }
+            this.toastService.success('Prescription saved.');
+            this.showStructuredPrescriptionForm = false;
+            this.structuredPrescription = this.emptyStructuredPrescription();
+            this.clearStructuredImages();
+            this.isSavingStructuredPrescription = false;
+
+            // Safety net: always re-sync the list from the server so the new
+            // entry is guaranteed to appear (and gets the canonical _id/fields
+            // for View/Download PDF actions).
+            this.loadPrescriptions();
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isSavingStructuredPrescription = false;
+          this.structuredSaveProgress = 0;
+          this.toastService.error(err.error?.error || err.error?.message || 'Unable to save prescription.');
+        }
+      });
+  }
+
+  /**
+   * Open the prescription in a full-screen PDF overlay (same UX as reports).
+   * For structured prescriptions, fetches the generated PDF from the backend.
+   * For uploaded files, embeds the file URL directly.
+   */
+  openPrescriptionOverlay(item: PrescriptionRef): void {
+    if (!this.projectId) return;
+    this.activePrescription = item;
+    this.isLoadingPrescriptionPreview = true;
+    this.revokePrescriptionPreview();
+    document.body.style.overflow = 'hidden';
+
+    // For non-structured prescriptions, just embed the file URL.
+    if (item.docType !== 'structured') {
+      if (item.url) {
+        this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
+      }
+      this.isLoadingPrescriptionPreview = false;
+      return;
+    }
+
+    const rxId = item._id;
+    if (!rxId) {
+      this.isLoadingPrescriptionPreview = false;
+      this.toastService.error('This prescription cannot be previewed.');
+      this.closePrescriptionOverlay();
+      return;
+    }
+
+    this.farmPrescriptionService.downloadPrescriptionPdf(this.projectId, rxId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          this.prescriptionPreviewBlobUrl = url;
+          this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+          this.isLoadingPrescriptionPreview = false;
+        },
+        error: () => {
+          this.isLoadingPrescriptionPreview = false;
+          this.toastService.error('Unable to load the prescription PDF.');
+          this.closePrescriptionOverlay();
+        }
+      });
+  }
+
+  closePrescriptionOverlay(): void {
+    this.activePrescription = null;
+    this.revokePrescriptionPreview();
+    document.body.style.overflow = '';
+  }
+
+  private revokePrescriptionPreview(): void {
+    if (this.prescriptionPreviewBlobUrl) {
+      window.URL.revokeObjectURL(this.prescriptionPreviewBlobUrl);
+      this.prescriptionPreviewBlobUrl = null;
+    }
+    this.prescriptionPreviewUrl = null;
+  }
+
+  /**
+   * Trigger a browser download for any prescription. Structured prescriptions
+   * use the generated PDF endpoint; file uploads use their direct URL.
+   */
+  downloadPrescriptionFromRow(item: PrescriptionRef): void {
+    if (!this.projectId) return;
+    const rxKey = this.prescriptionId(item);
+
+    if (item.docType !== 'structured') {
+      if (!item.url) {
+        this.toastService.error('No file available to download.');
+        return;
+      }
+      // Direct file — open in new tab; the browser will offer to save.
+      const a = document.createElement('a');
+      a.href = item.url;
+      a.download = item.fileName || item.title || 'prescription';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    const rxId = item._id;
+    if (!rxId) {
+      this.toastService.error('This prescription cannot be downloaded yet.');
+      return;
+    }
+
+    this.downloadingPrescriptionId = rxKey;
+    this.farmPrescriptionService.downloadPrescriptionPdf(this.projectId, rxId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const safeName = (item.title || 'prescription').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'prescription';
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${safeName}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+          this.downloadingPrescriptionId = null;
+        },
+        error: () => {
+          this.downloadingPrescriptionId = null;
+          this.toastService.error('Unable to download prescription PDF.');
+        }
+      });
   }
 
   saveTextPrescription(): void {
@@ -1086,7 +1686,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   prescriptionId(item: PrescriptionRef): string {
-    return item.mediaId || `${item.uploadedAt}-${item.title || 'rx'}`;
+    if (!item) return '';
+    const raw = item._id || item.mediaId || `${item.uploadedAt}-${item.title || 'rx'}`;
+    return typeof raw === 'string' ? raw : String(raw ?? '');
   }
 
   trackPrescription(_: number, item: PrescriptionRef): string {
@@ -1100,8 +1702,65 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       case 'docx': return 'fa-file-word';
       case 'text': return 'fa-file-lines';
       case 'manual': return 'fa-prescription';
+      case 'structured': return 'fa-file-prescription';
       default: return 'fa-file';
     }
+  }
+
+  // Flat list of checked-item labels for the structured prescription expanded view.
+  prescriptionCheckedItems(item: PrescriptionRef): string[] {
+    const s = item.structured;
+    if (!s) return [];
+    const fo = s.farmingOperations || {};
+    const f = s.fertilizers || {};
+    const p = s.pests || {};
+    const d = s.diseases || {};
+    const tags: string[] = [];
+
+    const push = (cond: any, label: string) => { if (cond) tags.push(label); };
+
+    // Section 3 — Farming Operations
+    push(fo.leveling, 'લેવલીંગ / Leveling');
+    push(fo.marking, 'નિશાન / Marking');
+    push(fo.digging, 'ખાડા ખોદવા / Digging Holes');
+    push(fo.soilFilling, 'માટી ભરવી / Soil Filling');
+    push(fo.tractor, 'ટ્રેક્ટર ચલાવવું / Tractor');
+    push(fo.supports, 'ટેકા સરખા કરવા / Fix Supports');
+    push(fo.fillGaps, 'ખાલા પુરવા / Fill Gaps');
+    push(fo.pruning, 'પ્રુનીંગ / Pruning');
+    if (fo.other && fo.other.trim()) tags.push(`અન્ય / Other: ${fo.other.trim()}`);
+
+    // Section 6 — Fertilizers
+    push(f.farmyardManure, 'છાણીયું ખાતર / Farmyard Manure');
+    push(f.chemical, 'રાસાયણીક ખાતર / Chemical');
+    push(f.organic, 'જૈવિક ખાતર / Organic');
+    push(f.jivamrut, 'જીવામૃત / Jivamrut');
+    push(f.spray, 'સ્પ્રે ખાતરો / Spray');
+
+    // Section 7 — Pests
+    push(p.soilBorne, 'જમીન જન્ય જીવાત / Soil-borne Pest');
+    push(p.root, 'મુળની જીવાત / Root Pest');
+    push(p.stem, 'થડની જીવાત / Stem Pest');
+    push(p.leaf, 'પાનની જીવાત / Leaf Pest');
+    push(p.flower, 'ફુલની જીવાત / Flower Pest');
+    push(p.fruit, 'ફળની જીવાત / Fruit Pest');
+
+    // Section 8 — Diseases
+    push(d.soilBorne, 'જમીન જન્ય રોગ / Soil-borne Disease');
+    push(d.stem, 'થડનો રોગ / Stem Disease');
+    push(d.branch, 'ડાળીનો રોગ / Branch Disease');
+    push(d.leaf, 'પાનનો રોગ / Leaf Disease');
+    push(d.flower, 'ફુલનો રોગ / Flower Disease');
+    push(d.fruit, 'ફળનો રોગ / Fruit Disease');
+    push(d.other, 'અન્ય રોગ / Other Disease');
+
+    // Sections 9-12
+    push(s.hormoneTreatment, 'કલ્ટાર / Hormone Treatment');
+    push(s.fruitHarvesting, 'ફળ ઉતારવા / Harvesting');
+    push(s.grading, 'ગ્રેડીંગ / Grading');
+    push(s.packing, 'પેકીંગ / Packing');
+
+    return tags;
   }
 
   prescriptionTypeLabel(item: PrescriptionRef): string {
@@ -1111,6 +1770,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       case 'docx': return 'Word doc';
       case 'text': return 'Text';
       case 'manual': return 'Prescription';
+      case 'structured': return 'Visit Prescription';
       default: return 'Document';
     }
   }
@@ -1196,6 +1856,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     if (!status) return 'Unknown';
     const labels: Record<string, string> = {
       pending_approval: 'Pending Approval',
+      pending_quotation: 'Pending Quotation',
+      pending_acceptance: 'Pending Acceptance',
       approved: 'Approved',
       rejected: 'Rejected',
       Running: 'Running',

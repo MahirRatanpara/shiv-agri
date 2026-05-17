@@ -18,7 +18,7 @@
     <div class="hero-meta">
       <span
         class="status-pill"
-        [class.pending]="project.status === 'pending_approval'"
+        [class.pending]="project.status === 'pending_approval' || project.status === 'pending_quotation' || project.status === 'pending_acceptance'"
         [class.approved]="project.status === 'approved'"
         [class.rejected]="project.status === 'rejected'"
         [class.running]="project.status === 'Running'"
@@ -80,66 +80,115 @@
       <i class="fas fa-clipboard-list" aria-hidden="true"></i>
       Overview
     </button>
+    <ng-container *ngIf="showFullTabs">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'media'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'media'"
+        (click)="switchTab('media')"
+      >
+        <i class="fas fa-images" aria-hidden="true"></i>
+        Photos &amp; Videos
+        <span class="tab-count" *ngIf="mediaItems.length">{{ mediaItems.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        *ngIf="showDesignsTab"
+        [class.active]="activeTab === 'designs'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'designs'"
+        (click)="switchTab('designs')"
+      >
+        <i class="fas fa-drafting-compass" aria-hidden="true"></i>
+        Designs
+        <span class="tab-count" *ngIf="designItems.length">{{ designItems.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'prescriptions'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'prescriptions'"
+        (click)="switchTab('prescriptions')"
+      >
+        <i class="fas fa-file-prescription" aria-hidden="true"></i>
+        Prescriptions
+        <span class="tab-count" *ngIf="prescriptionItems.length">{{ prescriptionItems.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'reports'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'reports'"
+        (click)="switchTab('reports')"
+      >
+        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+        Reports
+        <span class="tab-count" *ngIf="reports.length">{{ reports.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        *ngIf="showTransactionsTab"
+        [class.active]="activeTab === 'transactions'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'transactions'"
+        (click)="switchTab('transactions')"
+      >
+        <i class="fas fa-coins" aria-hidden="true"></i>
+        Transactions
+        <span class="tab-count" *ngIf="transactions.length">{{ transactions.length }}</span>
+      </button>
+    </ng-container>
     <button
       class="tab-btn"
-      [class.active]="activeTab === 'media'"
+      *ngIf="showQuotationTab"
+      [class.active]="activeTab === 'quotation'"
       role="tab"
-      [attr.aria-selected]="activeTab === 'media'"
-      (click)="switchTab('media')"
+      [attr.aria-selected]="activeTab === 'quotation'"
+      (click)="switchTab('quotation')"
     >
-      <i class="fas fa-images" aria-hidden="true"></i>
-      Photos &amp; Videos
-      <span class="tab-count" *ngIf="mediaItems.length">{{ mediaItems.length }}</span>
-    </button>
-    <button
-      class="tab-btn"
-      *ngIf="showDesignsTab"
-      [class.active]="activeTab === 'designs'"
-      role="tab"
-      [attr.aria-selected]="activeTab === 'designs'"
-      (click)="switchTab('designs')"
-    >
-      <i class="fas fa-drafting-compass" aria-hidden="true"></i>
-      Designs
-      <span class="tab-count" *ngIf="designItems.length">{{ designItems.length }}</span>
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'prescriptions'"
-      role="tab"
-      [attr.aria-selected]="activeTab === 'prescriptions'"
-      (click)="switchTab('prescriptions')"
-    >
-      <i class="fas fa-file-prescription" aria-hidden="true"></i>
-      Prescriptions
-      <span class="tab-count" *ngIf="prescriptionItems.length">{{ prescriptionItems.length }}</span>
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'reports'"
-      role="tab"
-      [attr.aria-selected]="activeTab === 'reports'"
-      (click)="switchTab('reports')"
-    >
-      <i class="fas fa-file-pdf" aria-hidden="true"></i>
-      Reports
-      <span class="tab-count" *ngIf="reports.length">{{ reports.length }}</span>
-    </button>
-    <button
-      class="tab-btn"
-      *ngIf="showTransactionsTab"
-      [class.active]="activeTab === 'transactions'"
-      role="tab"
-      [attr.aria-selected]="activeTab === 'transactions'"
-      (click)="switchTab('transactions')"
-    >
-      <i class="fas fa-coins" aria-hidden="true"></i>
-      Transactions
-      <span class="tab-count" *ngIf="transactions.length">{{ transactions.length }}</span>
+      <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>
+      Quotation &amp; Payments
+      <span class="tab-count" *ngIf="quotationHistory.length">{{ quotationHistory.length }}</span>
     </button>
   </nav>
 
   <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
+
+    <!-- Quotation callout banner shown on overview during pre-approval flow -->
+    <section
+      class="quotation-callout"
+      *ngIf="shouldShowQuotationCallout"
+      [attr.data-state]="project.status"
+    >
+      <div class="callout-icon" aria-hidden="true">
+        <i class="fas" [class.fa-file-invoice-dollar]="project.status === 'pending_quotation'" [class.fa-file-invoice]="project.status === 'pending_acceptance'"></i>
+      </div>
+      <div class="callout-body">
+        <h3 *ngIf="project.status === 'pending_quotation' && isManagerOrAdmin">Send a quotation to the farmer</h3>
+        <h3 *ngIf="project.status === 'pending_quotation' && !isManagerOrAdmin">Quotation under preparation</h3>
+        <h3 *ngIf="project.status === 'pending_acceptance' && !isFarmOwner">Awaiting farmer acceptance</h3>
+        <h3 *ngIf="project.status === 'pending_acceptance' && isFarmOwner">Your quotation is ready</h3>
+
+        <p *ngIf="project.status === 'pending_quotation' && isManagerOrAdmin">
+          The farmer has submitted this farm. Review the details and send a quotation to unlock the rest of the workflow.
+        </p>
+        <p *ngIf="project.status === 'pending_quotation' && !isManagerOrAdmin">
+          Our team is reviewing the farm. You'll receive the quotation shortly.
+        </p>
+        <p *ngIf="project.status === 'pending_acceptance' && !isFarmOwner">
+          The farmer is reviewing the proposal. Once accepted, the farm moves to approved.
+        </p>
+        <p *ngIf="project.status === 'pending_acceptance' && isFarmOwner">
+          Open the Quotation & Payments tab to review the proposal and decide.
+        </p>
+      </div>
+      <button type="button" class="callout-cta" (click)="switchTab('quotation')">
+        <i class="fas fa-arrow-right"></i>
+        <span>Open Quotation</span>
+      </button>
+    </section>
+
     <section class="details-layout">
       <article class="profile-card">
         <header class="card-section-head">
@@ -765,31 +814,165 @@
         </div>
       </header>
 
-      <div class="text-prescription-form" *ngIf="showTextPrescriptionForm && canUploadPrescriptions">
-        <label class="rx-field">
-          <span><i class="fas fa-heading"></i> Title (optional)</span>
-          <input
-            type="text"
-            [(ngModel)]="textPrescriptionTitle"
-            placeholder="e.g. Foliar spray schedule"
-            maxlength="120"
-          />
+      <div class="structured-rx-form" *ngIf="showStructuredPrescriptionForm && canUploadPrescriptions">
+        <div class="srx-head">
+          <div>
+            <h3>નવી પ્રિસ્ક્રિપ્શન <span class="srx-en">New Visit Prescription</span></h3>
+            <p>ફાર્મ વિઝીટ ની વિગતો ભરો. <span class="srx-en">Fill in the field visit details below.</span></p>
+          </div>
+          <button type="button" class="srx-close" (click)="cancelStructuredPrescription()" [disabled]="isSavingStructuredPrescription" aria-label="Close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- META row -->
+        <div class="srx-grid srx-meta">
+          <label class="srx-field">
+            <span class="srx-label"><span class="gu">ખેડૂતનું / ફાર્મ નું નામ</span><span class="en">Farmer / Farm Name</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.farmerName" maxlength="120" placeholder="Farm name" />
+          </label>
+          <label class="srx-field">
+            <span class="srx-label"><span class="gu">વીઝીટ તારીખ</span><span class="en">Visit Date</span></span>
+            <input type="date" [(ngModel)]="structuredPrescription.visitDate" />
+          </label>
+        </div>
+
+        <label class="srx-field">
+          <span class="srx-label"><span class="gu">છેલ્લી વિઝીટમાં નક્કી કરેલ કામની સમીક્ષા</span><span class="en">Review of last visit's planned work</span></span>
+          <textarea rows="2" [(ngModel)]="structuredPrescription.lastVisitReview" placeholder="e.g. ok / done / pending"></textarea>
         </label>
-        <label class="rx-field">
-          <span><i class="fas fa-align-left"></i> Prescription</span>
-          <textarea
-            [(ngModel)]="textPrescriptionBody"
-            rows="6"
-            placeholder="Type the prescription details. The full prescription builder will be wired up next."
-          ></textarea>
+
+        <!-- Sections 1-5 -->
+        <div class="srx-section">
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૧)</span><span class="gu">જમીનની તૈયારી</span><span class="en">Land Preparation</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.landPreparation" />
+          </label>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૨)</span><span class="gu">વાવેતર / રોપણી</span><span class="en">Sowing / Planting</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.sowingPlanting" />
+          </label>
+
+          <div class="srx-field">
+            <span class="srx-label"><span class="num">(૩)</span><span class="gu">ખેતીકાર્યો</span><span class="en">Farming Operations</span></span>
+            <div class="srx-check-grid">
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.leveling" /><span><span class="gu">લેવલીંગ</span><span class="en">Leveling</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.marking" /><span><span class="gu">નિશાન</span><span class="en">Marking</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.digging" /><span><span class="gu">ખાડા ખોદવા</span><span class="en">Digging Holes</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.soilFilling" /><span><span class="gu">માટી ભરવી</span><span class="en">Soil Filling</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.tractor" /><span><span class="gu">ટ્રેક્ટર ચલાવવું</span><span class="en">Tractor Run</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.supports" /><span><span class="gu">ટેકા સરખા કરવા</span><span class="en">Fix Supports</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.fillGaps" /><span><span class="gu">ખાલા પુરવા</span><span class="en">Fill Gaps</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.pruning" /><span><span class="gu">પ્રુનીંગ</span><span class="en">Pruning</span></span></label>
+            </div>
+            <label class="srx-field srx-other">
+              <span class="srx-label-inline"><span class="gu">અન્ય</span><span class="en">Other</span></span>
+              <input type="text" [(ngModel)]="structuredPrescription.farmingOperations!.other" placeholder="Specify if any" />
+            </label>
+          </div>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૪)</span><span class="gu">પિયત</span><span class="en">Irrigation</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.irrigation" />
+          </label>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૫)</span><span class="gu">નિંદામણ નિયંત્રણ</span><span class="en">Weed Control</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.weedControl" />
+          </label>
+        </div>
+
+        <!-- Section 6: Fertilizers -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૬)</span><span class="gu">ખાતરો</span><span class="en">Fertilizers</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.farmyardManure" /><span><span class="gu">છાણીયું ખાતર અથવા અન્ય</span><span class="en">Farmyard Manure / Other</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.chemical" /><span><span class="gu">રાસાયણીક ખાતર</span><span class="en">Chemical Fertilizer</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.organic" /><span><span class="gu">જૈવિક ખાતર</span><span class="en">Organic Fertilizer</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.jivamrut" /><span><span class="gu">જીવામૃત</span><span class="en">Jivamrut</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.spray" /><span><span class="gu">છોડ/ઝાડ પર સ્પ્રેના ખાતરો</span><span class="en">Spray Fertilizers</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 7: Pests -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૭)</span><span class="gu">જીવાતો</span><span class="en">Pests</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.soilBorne" /><span><span class="gu">જમીન જન્ય</span><span class="en">Soil-borne</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.root" /><span><span class="gu">મુળની જીવાત</span><span class="en">Root Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.stem" /><span><span class="gu">થડની જીવાત</span><span class="en">Stem Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.leaf" /><span><span class="gu">પાનની જીવાત</span><span class="en">Leaf Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.flower" /><span><span class="gu">ફુલની જીવાત</span><span class="en">Flower Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.fruit" /><span><span class="gu">ફળની જીવાત</span><span class="en">Fruit Pest</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 8: Diseases -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૮)</span><span class="gu">રોગો</span><span class="en">Diseases</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.soilBorne" /><span><span class="gu">જમીન જન્ય રોગ</span><span class="en">Soil-borne Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.stem" /><span><span class="gu">થડનો રોગ</span><span class="en">Stem Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.branch" /><span><span class="gu">ડાળીનો રોગ</span><span class="en">Branch Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.leaf" /><span><span class="gu">પાનનો રોગ</span><span class="en">Leaf Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.flower" /><span><span class="gu">ફુલનો રોગ</span><span class="en">Flower Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.fruit" /><span><span class="gu">ફળનો રોગ</span><span class="en">Fruit Disease</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.other" /><span><span class="gu">અન્ય રોગ</span><span class="en">Other Disease</span></span></label>
+          </div>
+        </div>
+
+        <!-- Sections 9-12 -->
+        <div class="srx-section">
+          <div class="srx-tick-grid">
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.hormoneTreatment" /><span><span class="num">(૯)</span><span class="gu">કલ્ટાર કે અન્ય હોર્મોન્સની ટ્રીટમેન્ટ</span><span class="en">Cultar / Hormone Treatment</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fruitHarvesting" /><span><span class="num">(૧૦)</span><span class="gu">ફળ ઉતારવા</span><span class="en">Fruit Harvesting</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.grading" /><span><span class="num">(૧૧)</span><span class="gu">ગ્રેડીંગ</span><span class="en">Grading</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.packing" /><span><span class="num">(૧૨)</span><span class="gu">પેકીંગ</span><span class="en">Packing</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 13: Other Notes -->
+        <label class="srx-field">
+          <span class="srx-label"><span class="num">(૧૩)</span><span class="gu">અન્ય નોંધ</span><span class="en">Other Notes</span></span>
+          <textarea rows="4" [(ngModel)]="structuredPrescription.otherNotes" placeholder="Any additional observations or instructions"></textarea>
         </label>
+
+        <!-- Image attachments -->
+        <div class="srx-field">
+          <span class="srx-label"><span class="gu">ફોટા જોડો</span><span class="en">Attach Photos (optional)</span></span>
+          <div class="srx-attach-row">
+            <label class="srx-attach-btn" [class.disabled]="isSavingStructuredPrescription">
+              <i class="fas fa-image"></i>
+              <span>Add Images</span>
+              <input type="file" [attr.accept]="structuredImageAccept" multiple (change)="onStructuredImagesSelected($event)" [disabled]="isSavingStructuredPrescription" hidden />
+            </label>
+            <span class="srx-attach-hint">{{ structuredPrescriptionImages.length }} / {{ maxFilesPerBatch }} selected</span>
+          </div>
+
+          <div class="srx-thumb-grid" *ngIf="structuredPrescriptionImagePreviews.length">
+            <div class="srx-thumb" *ngFor="let preview of structuredPrescriptionImagePreviews; let i = index">
+              <img [src]="preview" alt="Attachment preview" />
+              <button type="button" class="srx-thumb-remove" (click)="removeStructuredImage(i)" [disabled]="isSavingStructuredPrescription" aria-label="Remove image">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="srx-progress" *ngIf="isSavingStructuredPrescription">
+          <div class="srx-progress-bar" [style.width.%]="structuredSaveProgress"></div>
+          <span class="srx-progress-label">{{ structuredSaveProgress >= 100 ? 'Finalizing…' : 'Uploading…' }} {{ structuredSaveProgress }}%</span>
+        </div>
+
         <div class="rx-actions">
-          <button type="button" class="rx-cancel" (click)="cancelTextPrescription()" [disabled]="isSavingTextPrescription">
+          <button type="button" class="rx-cancel" (click)="cancelStructuredPrescription()" [disabled]="isSavingStructuredPrescription">
             Cancel
           </button>
-          <button type="button" class="rx-save" (click)="saveTextPrescription()" [disabled]="isSavingTextPrescription || !textPrescriptionBody.trim()">
-            <i class="fas" [class.fa-check]="!isSavingTextPrescription" [class.fa-circle-notch]="isSavingTextPrescription" [class.fa-spin]="isSavingTextPrescription"></i>
-            {{ isSavingTextPrescription ? 'Saving...' : 'Save Prescription' }}
+          <button type="button" class="rx-save" (click)="saveStructuredPrescription()" [disabled]="isSavingStructuredPrescription">
+            <i class="fas" [class.fa-check]="!isSavingStructuredPrescription" [class.fa-circle-notch]="isSavingStructuredPrescription" [class.fa-spin]="isSavingStructuredPrescription"></i>
+            {{ isSavingStructuredPrescription ? 'Saving…' : 'Save Prescription' }}
           </button>
         </div>
       </div>
@@ -824,7 +1007,7 @@
         <p>Loading prescriptions...</p>
       </div>
 
-      <div class="media-empty" *ngIf="!prescriptionsLoading && prescriptionItems.length === 0 && prescriptionUploadingBatch.length === 0 && !showTextPrescriptionForm">
+      <div class="media-empty" *ngIf="!prescriptionsLoading && prescriptionItems.length === 0 && prescriptionUploadingBatch.length === 0 && !showTextPrescriptionForm && !showStructuredPrescriptionForm">
         <div class="empty-illustration" aria-hidden="true">
           <i class="fas fa-file-prescription"></i>
         </div>
@@ -833,13 +1016,9 @@
         <p *ngIf="!canUploadPrescriptions">Once your manager shares prescriptions or related documents, they'll appear here.</p>
       </div>
 
-      <ul class="rx-list" *ngIf="prescriptionItems.length">
-        <li
-          class="rx-item"
-          *ngFor="let item of prescriptionItems; trackBy: trackPrescription"
-          [class.expanded]="expandedPrescriptionId === prescriptionId(item)"
-        >
-          <div class="rx-row" (click)="togglePrescription(item)" role="button" tabindex="0" (keyup.enter)="togglePrescription(item)">
+      <ul class="rx-list" *ngIf="prescriptionItems.length > 0">
+        <li class="rx-item" *ngFor="let item of prescriptionItems">
+          <div class="rx-row rx-row-flat">
             <span class="rx-icon" [attr.aria-hidden]="true">
               <i class="fas" [ngClass]="prescriptionIcon(item)"></i>
             </span>
@@ -850,47 +1029,31 @@
                 <span>·</span>
                 <span>{{ item.uploadedAt | date:'MMM d, y, h:mm a' }}</span>
                 <span *ngIf="item.uploadedByName">· by {{ item.uploadedByName }}</span>
+                <span *ngIf="item.attachedImages?.length">· <i class="fas fa-paperclip"></i> {{ item.attachedImages?.length }} photo<span *ngIf="(item.attachedImages?.length || 0) > 1">s</span></span>
                 <span *ngIf="item.sizeBytes">· {{ formatSize(item.sizeBytes) }}</span>
               </div>
             </div>
-            <span class="rx-toggle" [attr.aria-hidden]="true">
-              <i class="fas" [class.fa-chevron-down]="expandedPrescriptionId !== prescriptionId(item)" [class.fa-chevron-up]="expandedPrescriptionId === prescriptionId(item)"></i>
-            </span>
-          </div>
-
-          <div class="rx-body" *ngIf="expandedPrescriptionId === prescriptionId(item)">
-            <ng-container *ngIf="item.docType === 'image' && item.url">
-              <img class="rx-image" [src]="item.url" [alt]="item.title || 'Prescription image'" loading="lazy" />
-            </ng-container>
-
-            <ng-container *ngIf="item.docType === 'pdf' && item.url">
-              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
-                <i class="fas fa-up-right-from-square"></i>
-                Open PDF in new tab
-              </a>
-            </ng-container>
-
-            <ng-container *ngIf="item.docType === 'docx' && item.url">
-              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
-                <i class="fas fa-download"></i>
-                Download Word document
-              </a>
-            </ng-container>
-
-            <ng-container *ngIf="(item.docType === 'text' || item.docType === 'manual') && item.textContent">
-              <pre class="rx-text">{{ item.textContent }}</pre>
-            </ng-container>
-
-            <ng-container *ngIf="item.docType === 'text' && !item.textContent && item.url">
-              <a class="rx-link" [href]="item.url" target="_blank" rel="noopener">
-                <i class="fas fa-up-right-from-square"></i>
-                Open text file
-              </a>
-            </ng-container>
-
-            <p class="rx-notes" *ngIf="item.notes">
-              <i class="fas fa-note-sticky"></i> {{ item.notes }}
-            </p>
+            <div class="rx-row-actions">
+              <button
+                type="button"
+                class="report-btn primary"
+                (click)="openPrescriptionOverlay(item)"
+                [disabled]="isLoadingPrescriptionPreview && activePrescription?._id === item._id"
+              >
+                <i class="fas fa-eye"></i>
+                <span>View</span>
+              </button>
+              <button
+                type="button"
+                class="report-btn ghost"
+                (click)="downloadPrescriptionFromRow(item)"
+                [disabled]="downloadingPrescriptionId === prescriptionId(item)"
+                [attr.aria-label]="'Download ' + (item.title || 'prescription')"
+              >
+                <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(item)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(item)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(item)"></i>
+                <span>Download</span>
+              </button>
+            </div>
           </div>
         </li>
       </ul>
@@ -1205,6 +1368,444 @@
       </ul>
     </section>
   </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'quotation' && showQuotationTab">
+    <section class="quotation-section">
+
+      <!-- ============== EMPTY STATE (pending_quotation, no quotation yet) ============== -->
+      <div class="quotation-empty-block" *ngIf="!quotationLoading && !activeQuotation && project.status === 'pending_quotation'">
+        <div class="quotation-empty-state">
+          <div class="empty-illustration" aria-hidden="true">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <h3 *ngIf="isManagerOrAdmin">Awaiting your quotation</h3>
+          <h3 *ngIf="!isManagerOrAdmin">Quotation under preparation</h3>
+          <p *ngIf="isManagerOrAdmin">The farmer has submitted this farm. Review the details and send across a quotation to move forward.</p>
+          <p *ngIf="!isManagerOrAdmin">Our team is reviewing your farm. You'll receive the quotation shortly — we'll notify you here as soon as it's ready.</p>
+          <button
+            type="button"
+            class="upload-btn"
+            *ngIf="canSubmitQuotation && !showQuotationForm"
+            (click)="openQuotationForm()"
+          >
+            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <span>Compose Quotation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ============== ACTIVE QUOTATION (rich view) ============== -->
+      <article class="quotation-detail-card" *ngIf="activeQuotation">
+        <header class="quotation-detail-head">
+          <div class="quotation-detail-title">
+            <span class="quotation-status-pill" [attr.data-status]="activeQuotation.status">
+              <span class="quotation-status-dot" aria-hidden="true"></span>
+              {{ quotationStatusLabel(activeQuotation.status) }}
+            </span>
+            <h2><i class="fas fa-file-invoice-dollar"></i> Annual Quotation</h2>
+            <p class="quotation-meta-line">
+              <span *ngIf="activeQuotation.submittedByName"><i class="fas fa-user-tie"></i> {{ activeQuotation.submittedByName }}</span>
+              <span><i class="fas fa-clock"></i> {{ activeQuotation.createdAt | date:'mediumDate' }}</span>
+              <span *ngIf="activeQuotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ activeQuotation.acceptedAt | date:'mediumDate' }}</span>
+            </p>
+          </div>
+
+          <div class="quotation-amount-card">
+            <span class="amount-label">Annual Fee</span>
+            <strong class="amount-value">{{ formatCurrency(activeQuotation.amountPerYear) }}</strong>
+            <span class="amount-sub">per year</span>
+            <button
+              type="button"
+              class="quotation-download-btn"
+              (click)="downloadQuotationPdf(activeQuotation)"
+              [disabled]="isDownloadingQuotationId === activeQuotation._id"
+              title="Download as PDF (letterhead)"
+            >
+              <i
+                class="fas"
+                [class.fa-file-pdf]="isDownloadingQuotationId !== activeQuotation._id"
+                [class.fa-circle-notch]="isDownloadingQuotationId === activeQuotation._id"
+                [class.fa-spin]="isDownloadingQuotationId === activeQuotation._id"
+              ></i>
+              <span>{{ isDownloadingQuotationId === activeQuotation._id ? 'Preparing...' : 'Download PDF' }}</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="quotation-content-block">
+          <h3 class="block-title"><i class="fas fa-align-left"></i> Quotation Details</h3>
+          <div class="quotation-content-rendered" [innerHTML]="quotationContentSafe"></div>
+        </section>
+
+        <section class="quotation-installments-block">
+          <header class="block-head">
+            <div>
+              <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+              <p>Bifurcated into 4 equal instalments, due every 3 months.</p>
+            </div>
+            <div class="instalment-each-chip">
+              <span>Each instalment</span>
+              <strong>{{ formatCurrency(activeQuotation.amountPerYear / 4) }}</strong>
+            </div>
+          </header>
+
+          <div class="installments-grid">
+            <div
+              class="installment-card"
+              *ngFor="let installment of activeQuotation.installments"
+              [attr.data-status]="installment.status"
+            >
+              <div class="installment-num">
+                <span class="num-circle">{{ installment.installmentNumber }}</span>
+                <span class="num-label">of 4</span>
+              </div>
+              <div class="installment-body">
+                <strong class="installment-amount">{{ formatCurrency(installment.amount) }}</strong>
+                <span class="installment-date">
+                  <i class="fas fa-calendar"></i>
+                  Due {{ installment.dueDate | date:'mediumDate' }}
+                </span>
+                <span class="installment-status-pill" [attr.data-status]="installment.status">
+                  <i
+                    class="fas"
+                    [class.fa-circle-check]="installment.status === 'paid'"
+                    [class.fa-circle-exclamation]="installmentStatusLabel(installment) === 'Overdue'"
+                    [class.fa-clock]="installment.status === 'pending' && installmentStatusLabel(installment) !== 'Overdue'"
+                  ></i>
+                  {{ installmentStatusLabel(installment) }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="installment-pay-btn"
+                *ngIf="installment.status === 'pending' && (project.status === 'approved' || project.status === 'Running')"
+                disabled
+                title="Payment gateway coming soon"
+              >
+                <i class="fas fa-credit-card"></i>
+                Pay Now
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Farmer Accept / Reject row -->
+        <section class="quotation-decision" *ngIf="canRespondToQuotation && !showQuotationRejectForm">
+          <div class="decision-copy">
+            <h4><i class="fas fa-handshake"></i> Ready to accept this quotation?</h4>
+            <p>Once accepted, your farm will be approved and all features will become available.</p>
+          </div>
+          <div class="decision-actions">
+            <button type="button" class="quotation-reject-btn" (click)="openQuotationRejectForm()" [disabled]="isAcceptingQuotation || isRejectingQuotation">
+              <i class="fas fa-times"></i>
+              Reject
+            </button>
+            <button type="button" class="quotation-accept-btn" (click)="acceptQuotation()" [disabled]="isAcceptingQuotation || isRejectingQuotation">
+              <i class="fas" [class.fa-check]="!isAcceptingQuotation" [class.fa-circle-notch]="isAcceptingQuotation" [class.fa-spin]="isAcceptingQuotation"></i>
+              {{ isAcceptingQuotation ? 'Accepting...' : 'Accept Quotation' }}
+            </button>
+          </div>
+        </section>
+
+        <section class="quotation-reject-panel" *ngIf="showQuotationRejectForm">
+          <h4><i class="fas fa-comment-dots"></i> Why are you rejecting this quotation?</h4>
+          <textarea
+            [(ngModel)]="quotationRejectReason"
+            rows="3"
+            placeholder="Share what needs to change (optional). The team will revise the quotation."
+            maxlength="500"
+          ></textarea>
+          <div class="quotation-form-actions">
+            <button type="button" class="rx-cancel" (click)="cancelQuotationReject()" [disabled]="isRejectingQuotation">Cancel</button>
+            <button type="button" class="rx-save" (click)="rejectQuotation()" [disabled]="isRejectingQuotation">
+              <i class="fas" [class.fa-paper-plane]="!isRejectingQuotation" [class.fa-circle-notch]="isRejectingQuotation" [class.fa-spin]="isRejectingQuotation"></i>
+              {{ isRejectingQuotation ? 'Sending...' : 'Send Rejection' }}
+            </button>
+          </div>
+        </section>
+
+        <!-- Edit (manager/admin can revise even after sending) -->
+        <section class="quotation-revise-row" *ngIf="canSubmitQuotation && activeQuotation.status === 'submitted' && !showQuotationForm">
+          <button type="button" class="quotation-revise-btn" (click)="openQuotationForm()">
+            <i class="fas fa-pen-to-square"></i>
+            Revise Quotation
+          </button>
+          <span class="revise-hint">The farmer will be notified about the revised quotation.</span>
+        </section>
+      </article>
+
+      <!-- ============== QUOTATION FORM (admin/manager) — placed AFTER both empty
+            state and active card so it slides in directly below the trigger button ============== -->
+      <article class="quotation-form-card" *ngIf="showQuotationForm && canSubmitQuotation">
+        <header class="card-section-head">
+          <h2><i class="fas fa-pen-to-square"></i> {{ activeQuotation ? 'Revise Quotation' : 'Compose Quotation' }}</h2>
+          <p>Compose the proposal details and set the annual amount. The farmer will see a clean view with quarterly installments.</p>
+        </header>
+
+        <label class="quotation-field">
+          <span><i class="fas fa-align-left"></i> Quotation Details</span>
+          <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
+            <button type="button" class="rt-btn" (click)="applyFormat('bold')" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('italic')" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('underline')" title="Underline (Ctrl+U)"><i class="fas fa-underline"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('insertUnorderedList')" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('insertOrderedList')" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('formatBlock', 'H3')" title="Heading"><i class="fas fa-heading"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('formatBlock', 'P')" title="Paragraph"><i class="fas fa-paragraph"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('removeFormat')" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+          </div>
+          <div
+            #quotationEditor
+            class="rich-editor"
+            contenteditable="true"
+            (input)="syncEditorContent()"
+            (blur)="syncEditorContent()"
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Quotation details"
+          ></div>
+        </label>
+
+        <div class="quotation-field-row">
+          <label class="quotation-field">
+            <span><i class="fas fa-indian-rupee-sign"></i> Annual Amount</span>
+            <input
+              type="number"
+              min="0"
+              step="100"
+              [(ngModel)]="quotationForm.amountPerYear"
+              name="quotationAmount"
+              placeholder="e.g. 120000"
+            />
+          </label>
+          <label class="quotation-field">
+            <span><i class="fas fa-calendar-day"></i> First Installment Date</span>
+            <input
+              type="date"
+              [(ngModel)]="quotationForm.startDate"
+              name="quotationStart"
+            />
+          </label>
+        </div>
+
+        <div class="quotation-installments-preview" *ngIf="quotationForm.amountPerYear && quotationForm.amountPerYear > 0">
+          <header>
+            <i class="fas fa-money-bill-trend-up"></i>
+            <span>Installment preview · 4 equal payments, 3 months apart</span>
+          </header>
+          <div class="install-preview-row">
+            <div class="install-preview-chip">
+              <span>Each instalment</span>
+              <strong>{{ formatCurrency((quotationForm.amountPerYear || 0) / 4) }}</strong>
+            </div>
+            <div class="install-preview-chip">
+              <span>Annual total</span>
+              <strong>{{ formatCurrency(quotationForm.amountPerYear || 0) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="quotation-form-actions">
+          <button type="button" class="rx-cancel" (click)="cancelQuotationForm()" [disabled]="isSubmittingQuotation">
+            Cancel
+          </button>
+          <button type="button" class="rx-save quotation-save" (click)="submitQuotation()" [disabled]="isSubmittingQuotation">
+            <i class="fas" [class.fa-paper-plane]="!isSubmittingQuotation" [class.fa-circle-notch]="isSubmittingQuotation" [class.fa-spin]="isSubmittingQuotation"></i>
+            {{ isSubmittingQuotation ? 'Sending...' : (activeQuotation ? 'Send Revised Quotation' : 'Send to Farmer') }}
+          </button>
+        </div>
+      </article>
+
+      <!-- ============== Quotation History ============== -->
+      <article class="quotation-history-card" *ngIf="quotationHistory.length">
+        <header class="card-section-head">
+          <h2><i class="fas fa-clock-rotate-left"></i> Quotation History</h2>
+          <p>All quotations sent for this farm. Click any to view in detail.</p>
+        </header>
+
+        <ul class="quotation-history-list">
+          <li
+            class="quotation-history-row"
+            *ngFor="let quotation of quotationHistory; trackBy: trackQuotation"
+            [attr.data-status]="quotation.status"
+            (click)="openQuotationDetail(quotation)"
+            tabindex="0"
+            (keyup.enter)="openQuotationDetail(quotation)"
+            role="button"
+          >
+            <div class="history-icon" aria-hidden="true">
+              <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div class="history-body">
+              <div class="history-top">
+                <strong>{{ formatCurrency(quotation.amountPerYear) }}/year</strong>
+                <span class="quotation-status-pill" [attr.data-status]="quotation.status">
+                  <span class="quotation-status-dot" aria-hidden="true"></span>
+                  {{ quotationStatusLabel(quotation.status) }}
+                </span>
+              </div>
+              <div class="history-meta">
+                <span><i class="fas fa-calendar"></i> {{ quotation.createdAt | date:'mediumDate' }} · {{ quotation.createdAt | date:'y' }}</span>
+                <span *ngIf="quotation.submittedByName"><i class="fas fa-user-tie"></i> {{ quotation.submittedByName }}</span>
+                <span *ngIf="quotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ quotation.acceptedAt | date:'mediumDate' }}</span>
+                <span *ngIf="quotation.rejectedAt"><i class="fas fa-circle-xmark"></i> Rejected {{ quotation.rejectedAt | date:'mediumDate' }}</span>
+              </div>
+            </div>
+            <span class="history-chevron" aria-hidden="true">
+              <i class="fas fa-chevron-right"></i>
+            </span>
+          </li>
+        </ul>
+      </article>
+    </section>
+  </ng-container>
+
+  <!-- Quotation detail popup -->
+  <div
+    class="quotation-overlay"
+    *ngIf="selectedQuotationDetail"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeQuotationDetail()"
+  >
+    <div class="quotation-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="quotation-overlay-head">
+        <div>
+          <span class="quotation-status-pill" [attr.data-status]="selectedQuotationDetail.status">
+            <span class="quotation-status-dot" aria-hidden="true"></span>
+            {{ quotationStatusLabel(selectedQuotationDetail.status) }}
+          </span>
+          <h3><i class="fas fa-file-invoice-dollar"></i> Quotation</h3>
+          <p class="quotation-meta-line">
+            <span><i class="fas fa-clock"></i> {{ selectedQuotationDetail.createdAt | date:'medium' }}</span>
+            <span *ngIf="selectedQuotationDetail.submittedByName"><i class="fas fa-user-tie"></i> {{ selectedQuotationDetail.submittedByName }}</span>
+          </p>
+        </div>
+        <div class="quotation-overlay-actions">
+          <button
+            type="button"
+            class="quotation-overlay-download"
+            (click)="downloadQuotationPdf(selectedQuotationDetail)"
+            [disabled]="isDownloadingQuotationId === selectedQuotationDetail._id"
+          >
+            <i
+              class="fas"
+              [class.fa-file-pdf]="isDownloadingQuotationId !== selectedQuotationDetail._id"
+              [class.fa-circle-notch]="isDownloadingQuotationId === selectedQuotationDetail._id"
+              [class.fa-spin]="isDownloadingQuotationId === selectedQuotationDetail._id"
+            ></i>
+            <span>{{ isDownloadingQuotationId === selectedQuotationDetail._id ? 'Preparing...' : 'Download PDF' }}</span>
+          </button>
+          <button type="button" class="quotation-overlay-close" (click)="closeQuotationDetail()" aria-label="Close quotation">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="quotation-overlay-body">
+        <div class="quotation-amount-card large">
+          <span class="amount-label">Annual Fee</span>
+          <strong class="amount-value">{{ formatCurrency(selectedQuotationDetail.amountPerYear) }}</strong>
+          <span class="amount-sub">{{ formatCurrency(selectedQuotationDetail.amountPerYear / 4) }} every 3 months</span>
+        </div>
+
+        <section class="quotation-content-block">
+          <h3 class="block-title"><i class="fas fa-align-left"></i> Quotation Details</h3>
+          <div class="quotation-content-rendered" [innerHTML]="selectedQuotationDetailSafe"></div>
+        </section>
+
+        <section class="quotation-installments-block">
+          <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+          <div class="installments-grid">
+            <div
+              class="installment-card"
+              *ngFor="let installment of selectedQuotationDetail.installments"
+              [attr.data-status]="installment.status"
+            >
+              <div class="installment-num">
+                <span class="num-circle">{{ installment.installmentNumber }}</span>
+                <span class="num-label">of 4</span>
+              </div>
+              <div class="installment-body">
+                <strong class="installment-amount">{{ formatCurrency(installment.amount) }}</strong>
+                <span class="installment-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ installment.dueDate | date:'mediumDate' }}
+                </span>
+                <span class="installment-status-pill" [attr.data-status]="installment.status">
+                  {{ installmentStatusLabel(installment) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <p class="quotation-rejected-reason" *ngIf="selectedQuotationDetail.status === 'rejected' && selectedQuotationDetail.rejectedReason">
+          <i class="fas fa-circle-exclamation"></i>
+          <strong>Rejection reason:</strong> {{ selectedQuotationDetail.rejectedReason }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prescription PDF overlay (mirrors report overlay) -->
+  <div
+    class="report-overlay"
+    *ngIf="activePrescription"
+    role="dialog"
+    aria-modal="true"
+    (click)="closePrescriptionOverlay()"
+  >
+    <div class="report-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="report-overlay-head">
+        <div class="report-overlay-title">
+          <span class="report-overlay-tag" data-type="prescription">
+            <i class="fas" [ngClass]="prescriptionIcon(activePrescription)"></i>
+            {{ prescriptionTypeLabel(activePrescription) }}
+          </span>
+          <h3>
+            {{ activePrescription.title || activePrescription.fileName || 'Prescription' }}
+            <span class="report-overlay-sub" *ngIf="activePrescription.uploadedAt">· {{ activePrescription.uploadedAt | date:'mediumDate' }}</span>
+          </h3>
+        </div>
+        <div class="report-overlay-actions">
+          <button
+            type="button"
+            class="report-btn primary"
+            (click)="downloadPrescriptionFromRow(activePrescription)"
+            [disabled]="downloadingPrescriptionId === prescriptionId(activePrescription)"
+          >
+            <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(activePrescription)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(activePrescription)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(activePrescription)"></i>
+            <span>Download PDF</span>
+          </button>
+          <button
+            type="button"
+            class="report-overlay-close"
+            (click)="closePrescriptionOverlay()"
+            aria-label="Close prescription viewer"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-overlay-body">
+        <div class="report-overlay-loading" *ngIf="isLoadingPrescriptionPreview">
+          <div class="spinner"></div>
+          <p>Generating PDF preview...</p>
+        </div>
+        <iframe
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview"
+          class="report-overlay-frame"
+          [src]="prescriptionPreviewUrl"
+          title="Prescription PDF preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
 
   <div
     class="report-overlay"

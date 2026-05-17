@@ -82,7 +82,9 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const statusFilter = this.isFarmer
       ? this.selectedStatus
-      : (this.activeTab === 'pending' ? 'pending_approval' : this.selectedStatus);
+      : (this.activeTab === 'pending'
+          ? 'pending_approval,pending_quotation,pending_acceptance'
+          : this.selectedStatus);
     const submittedFilter = (this.isFarmer || this.activeTab === 'mine') ? 'me' as const : undefined;
 
     const options = {
@@ -99,7 +101,11 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.farms = result.farms;
-          this.pendingCount = result.farms.filter((farm) => farm.status === 'pending_approval').length;
+          this.pendingCount = result.farms.filter((farm) =>
+            farm.status === 'pending_approval' ||
+            farm.status === 'pending_quotation' ||
+            farm.status === 'pending_acceptance'
+          ).length;
           this.districtOptions = [...new Set(this.farms.map((farm) => farm.location?.district?.trim()).filter(Boolean) as string[])];
           this.applyClientFilters();
           this.isLoading = false;
@@ -204,6 +210,8 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
       pending_approval: 'Pending Approval',
+      pending_quotation: 'Pending Quotation',
+      pending_acceptance: 'Pending Acceptance',
       approved: 'Approved',
       rejected: 'Rejected',
       Running: 'Running',

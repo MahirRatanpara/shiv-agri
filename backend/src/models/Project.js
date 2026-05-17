@@ -26,11 +26,29 @@ const projectSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled', 'pending_approval', 'approved', 'rejected'],
+    enum: [
+      'Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled',
+      'pending_approval', 'approved', 'rejected',
+      // Quotation workflow (farmer-submitted farms)
+      'pending_quotation',   // Farmer submitted, awaiting quotation from manager
+      'pending_acceptance'   // Manager submitted quotation, awaiting farmer acceptance
+    ],
     default: 'Upcoming',
     required: true,
     index: true // For filtering
   },
+
+  // Currently-active quotation for this project (the one shown to the farmer).
+  // Updated whenever a manager submits a new quotation. Older quotations
+  // remain in the Quotation collection with status 'superseded'.
+  activeQuotation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quotation',
+    index: true
+  },
+
+  // First-time approval timestamp via the quotation flow
+  quotationAcceptedAt: { type: Date },
 
   submittedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -323,11 +341,12 @@ const projectSchema = new mongoose.Schema({
 
   // Prescriptions and ad-hoc documents (uploaded by managers/admins; farm user reads only)
   prescriptions: [{
-    // 'file' for uploaded media or 'manual' for prescriptions composed via the in-app builder
-    source: { type: String, enum: ['file', 'manual'], default: 'file' },
+    // 'file' for uploaded media, 'manual' for free-text prescriptions composed in-app,
+    // 'structured' for the Shiv Agri standard visit-prescription form (matches printed slip)
+    source: { type: String, enum: ['file', 'manual', 'structured'], default: 'file' },
     docType: {
       type: String,
-      enum: ['image', 'pdf', 'docx', 'text', 'manual'],
+      enum: ['image', 'pdf', 'docx', 'text', 'manual', 'structured'],
       required: true
     },
     title: { type: String, trim: true },
@@ -340,6 +359,68 @@ const projectSchema = new mongoose.Schema({
     mimeType: { type: String },
     sizeBytes: { type: Number },
     fileName: { type: String, trim: true },
+
+    // Structured prescription payload (used when docType === 'structured').
+    // Mirrors the printed visit slip used by field consultants.
+    structured: {
+      farmerName: { type: String, trim: true },
+      visitDate: { type: Date },
+      lastVisitReview: { type: String, trim: true },
+      landPreparation: { type: String, trim: true },
+      sowingPlanting: { type: String, trim: true },
+      farmingOperations: {
+        leveling: { type: Boolean, default: false },
+        marking: { type: Boolean, default: false },
+        digging: { type: Boolean, default: false },
+        soilFilling: { type: Boolean, default: false },
+        tractor: { type: Boolean, default: false },
+        supports: { type: Boolean, default: false },
+        fillGaps: { type: Boolean, default: false },
+        pruning: { type: Boolean, default: false },
+        other: { type: String, trim: true }
+      },
+      irrigation: { type: String, trim: true },
+      weedControl: { type: String, trim: true },
+      fertilizers: {
+        farmyardManure: { type: Boolean, default: false },
+        chemical: { type: Boolean, default: false },
+        organic: { type: Boolean, default: false },
+        jivamrut: { type: Boolean, default: false },
+        spray: { type: Boolean, default: false }
+      },
+      pests: {
+        soilBorne: { type: Boolean, default: false },
+        root: { type: Boolean, default: false },
+        stem: { type: Boolean, default: false },
+        leaf: { type: Boolean, default: false },
+        flower: { type: Boolean, default: false },
+        fruit: { type: Boolean, default: false }
+      },
+      diseases: {
+        soilBorne: { type: Boolean, default: false },
+        stem: { type: Boolean, default: false },
+        branch: { type: Boolean, default: false },
+        leaf: { type: Boolean, default: false },
+        flower: { type: Boolean, default: false },
+        fruit: { type: Boolean, default: false },
+        other: { type: Boolean, default: false }
+      },
+      hormoneTreatment: { type: Boolean, default: false },
+      fruitHarvesting: { type: Boolean, default: false },
+      grading: { type: Boolean, default: false },
+      packing: { type: Boolean, default: false },
+      otherNotes: { type: String, trim: true }
+    },
+
+    // Photos appended to a structured prescription (rendered at the end of the PDF)
+    attachedImages: [{
+      mediaId: { type: String },
+      url: { type: String },
+      mimeType: { type: String },
+      sizeBytes: { type: Number },
+      fileName: { type: String, trim: true }
+    }],
+
     status: { type: String, default: 'ACTIVE' },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedByName: { type: String },

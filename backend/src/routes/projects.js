@@ -7,6 +7,7 @@ const farmDesignController = require('../controllers/farmDesignController');
 const farmPrescriptionController = require('../controllers/farmPrescriptionController');
 const farmTransactionController = require('../controllers/farmTransactionController');
 const farmReportController = require('../controllers/farmReportController');
+const quotationController = require('../controllers/quotationController');
 const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
 
 const farmMediaUpload = multer({
@@ -49,6 +50,22 @@ const farmPrescriptionUpload = multer({
   },
   fileFilter: (_req, file, cb) => {
     if (PRESCRIPTION_MIME_PATTERN.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+// Structured prescriptions only accept image attachments (rendered into the PDF)
+const structuredPrescriptionUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\//i.test(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error(`Unsupported file type: ${file.mimetype}`));
@@ -719,6 +736,33 @@ router.post('/:id/prescriptions/manual',
   farmPrescriptionController.addManualPrescription
 );
 
+// Structured visit prescription (Shiv Agri standard form). Accepts JSON payload + optional images.
+router.post('/:id/prescriptions/structured',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    structuredPrescriptionUpload.array('images', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmPrescriptionController.addStructuredPrescription
+);
+
+// PDF rendering for a structured prescription (inline view + download).
+router.get('/:id/prescriptions/:prescriptionId/pdf',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmPrescriptionController.downloadPrescriptionPdf
+);
+
 // ========================
 // Lab Reports (auto-linked from soil/water/fertilizer testing PDFs)
 // ========================
@@ -757,6 +801,85 @@ router.get('/:id/reports/:reportId/pdf/download',
   authenticate,
   requireProjectAccess(['farm.projects.view', 'farms.view']),
   farmReportController.downloadReportPdf
+);
+
+// ========================
+// Quotations (manager/admin create; farmer accept/reject)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/quotations
+ * @desc    List all quotations for a project (history)
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.listQuotations
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/active
+ * @desc    Get the currently-active quotation (submitted or accepted)
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/active',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.getActiveQuotation
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/:quotationId
+ * @desc    Get a specific quotation
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/:quotationId',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.getQuotation
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations
+ * @desc    Create / submit a quotation (manager / admin)
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.createQuotation
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/accept
+ * @desc    Farmer accepts a quotation — moves project to approved.
+ * @access  Private (farm owner only — enforced in service)
+ */
+router.patch('/:id/quotations/:quotationId/accept',
+  authenticate,
+  quotationController.acceptQuotation
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/reject
+ * @desc    Farmer rejects a quotation — moves project back to pending_quotation.
+ * @access  Private (farm owner only — enforced in service)
+ */
+router.patch('/:id/quotations/:quotationId/reject',
+  authenticate,
+  quotationController.rejectQuotation
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/:quotationId/pdf
+ * @desc    Download the quotation rendered on the company letterhead.
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/:quotationId/pdf',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.downloadQuotationPdf
 );
 
 // ========================
