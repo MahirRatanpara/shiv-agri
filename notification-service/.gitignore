@@ -1,6 +1,8 @@
 target/
 *.class
 *.jar
+# Keep the Maven wrapper jar — required by ./mvnw in CI / Docker builds.
+!.mvn/wrapper/maven-wrapper.jar
 *.war
 *.log
 dev-uploads/
@@ -9,4 +11,3 @@ src/main/resources/application-dev.yml
 *.iml
 .vscode/
 .DS_Store
-.mvn
