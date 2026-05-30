@@ -1,10 +1,53 @@
 const Project = require('../models/Project');
 const User = require('../models/User');
+const Role = require('../models/Role');
 const ExcelJS = require('exceljs'); // You'll need to npm install exceljs
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
 
 const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
+const DEFAULT_COUNTRY_DIGITS = normalizePhoneNumber(process.env.DEFAULT_PHONE_COUNTRY_CODE || '+91') || '91';
+
+/**
+ * Parse a free-form client phone ("+91 9876543210", "9876543210", "+919876543210")
+ * into the canonical shape stored at signup, so a manager-provisioned account and a
+ * later phone-OTP login resolve to the SAME normalized key (`<cc><national>`).
+ */
+const parseClientPhone = (raw) => {
+  const trimmed = String(raw || '').trim();
+  let ccDigits = DEFAULT_COUNTRY_DIGITS;
+  let nationalDigits = '';
+
+  if (trimmed.startsWith('+')) {
+    const [ccPart, ...rest] = trimmed.slice(1).split(/\s+/);
+    if (rest.length) {
+      ccDigits = normalizePhoneNumber(ccPart) || DEFAULT_COUNTRY_DIGITS;
+      nationalDigits = normalizePhoneNumber(rest.join(''));
+    } else {
+      const all = normalizePhoneNumber(trimmed);
+      if (all.startsWith(DEFAULT_COUNTRY_DIGITS) && all.length > 10) {
+        nationalDigits = all.slice(DEFAULT_COUNTRY_DIGITS.length);
+      } else {
+        nationalDigits = all;
+      }
+    }
+  } else {
+    const all = normalizePhoneNumber(trimmed);
+    if (all.startsWith(DEFAULT_COUNTRY_DIGITS) && all.length > 10) {
+      nationalDigits = all.slice(DEFAULT_COUNTRY_DIGITS.length);
+    } else {
+      nationalDigits = all;
+    }
+  }
+
+  return {
+    ccDigits,
+    nationalDigits,
+    normalizedKey: nationalDigits ? `${ccDigits}${nationalDigits}` : '',
+    formattedCountryCode: `+${ccDigits}`,
+    formattedPhone: nationalDigits ? `+${ccDigits} ${nationalDigits}` : ''
+  };
+};
 
 /**
  * Project Service - Business Logic Layer
@@ -265,6 +308,97 @@ class ProjectService {
   }
 
   /**
+   * Resolve the farmer a manager-created farm belongs to, by mobile number.
+   *
+   * Order of precedence (enforces the 1-1 phone/email identity):
+   *   1. An existing user already owning this phone → reuse.
+   *   2. An existing user with the supplied email but no phone yet → attach phone (pre-provision).
+   *      (If that email-user already has a *different* phone → block.)
+   *   3. Nobody matches → create a brand-new pre-provisioned farmer (phone + optional email),
+   *      role 'user', phoneVerified=false. They claim it on first phone-OTP / Google login.
+   *
+   * The created user carries the same normalized phone key signup uses, so the farmer's
+   * first login lands on this exact account and inherits every farm created for them.
+   */
+  async resolveOrCreateFarmer({ rawPhone, email, name }) {
+    const parsed = parseClientPhone(rawPhone);
+    if (!parsed.nationalDigits) {
+      throw new Error('Client mobile number is required to create a farm project.');
+    }
+
+    const allDigits = normalizePhoneNumber(rawPhone);
+    const localDigits = allDigits.startsWith(parsed.ccDigits)
+      ? allDigits.slice(parsed.ccDigits.length)
+      : allDigits;
+    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+
+    // 1. Existing user by phone (loose match across stored variants).
+    let user = await User.findOne({
+      $or: [
+        { 'metadata.phoneNumberNormalized': parsed.normalizedKey },
+        { 'metadata.phoneNumberNormalized': allDigits },
+        { 'metadata.phoneNumberNormalized': localDigits },
+        { 'metadata.phoneNumber': String(rawPhone).trim() },
+        { 'metadata.phoneNumber': parsed.formattedPhone }
+      ]
+    });
+    if (user) return user;
+
+    const applyPhone = (target) => {
+      const meta = target.metadata?.toObject ? target.metadata.toObject() : (target.metadata || {});
+      target.metadata = {
+        ...meta,
+        phoneCountryCode: parsed.formattedCountryCode,
+        phoneNumber: parsed.formattedPhone,
+        phoneNumberNormalized: parsed.normalizedKey
+      };
+    };
+
+    const saveWithDupGuard = async (doc, label) => {
+      try {
+        await doc.save();
+      } catch (err) {
+        if (err.code === 11000) {
+          throw new Error('This mobile number or email is already linked to another account.');
+        }
+        throw err;
+      }
+      logger.info(`${label} farmer ${doc._id} for phone ${parsed.formattedPhone}`);
+    };
+
+    // 2. Existing user by email — pre-provision their phone if they have none.
+    if (cleanEmail) {
+      user = await User.findOne({ email: cleanEmail });
+      if (user) {
+        if (user.metadata?.phoneNumberNormalized &&
+            user.metadata.phoneNumberNormalized !== parsed.normalizedKey) {
+          throw new Error('This email is already linked to a different mobile number.');
+        }
+        applyPhone(user);
+        await saveWithDupGuard(user, 'Linked phone to existing');
+        return user;
+      }
+    }
+
+    // 3. Create a fresh pre-provisioned farmer.
+    user = new User({
+      name: (name && name.trim()) || 'New User',
+      email: cleanEmail || undefined,
+      role: 'user',
+      phoneVerified: false,
+      metadata: {
+        phoneCountryCode: parsed.formattedCountryCode,
+        phoneNumber: parsed.formattedPhone,
+        phoneNumberNormalized: parsed.normalizedKey
+      }
+    });
+    const roleDoc = await Role.findOne({ name: user.role });
+    if (roleDoc) user.roleRef = roleDoc._id;
+    await saveWithDupGuard(user, 'Created');
+    return user;
+  }
+
+  /**
    * Create new project
    */
   async createProject(projectData, userContext) {
@@ -296,35 +430,24 @@ class ProjectService {
     } else {
       const isFarm = normalizedData.category === 'FARM' || normalizedData.projectType === 'farm';
       const phone = String(normalizedData.clientPhone || '').trim();
-      const normalizedPhone = normalizePhoneNumber(phone);
-      const localPhone = normalizedPhone.startsWith('91') ? normalizedPhone.slice(2) : normalizedPhone;
 
       if (isFarm && !phone) {
         throw new Error('Client mobile number is required to create a farm project.');
       }
 
       if (isFarm) {
-        const mappedUser = await User.findOne({
-          $or: [
-            { 'metadata.phoneNumberNormalized': normalizedPhone },
-            { 'metadata.phoneNumberNormalized': localPhone },
-            { 'metadata.phoneNumber': phone },
-            { 'metadata.phoneNumber': phone.replace(/\s+/g, '') },
-            { 'metadata.phoneNumber': localPhone }
-          ]
+        // Reuse an existing farmer or auto-provision one — the farm is linked by userId.
+        const mappedUser = await this.resolveOrCreateFarmer({
+          rawPhone: phone,
+          email: normalizedData.clientEmail,
+          name: normalizedData.clientName
         });
-
-        if (!mappedUser) {
-          throw new Error('No user found for this mobile number. Ask farmer to add mobile number in their profile first.');
-        }
 
         normalizedData.clientId = mappedUser._id;
         normalizedData.clientName = mappedUser.name;
         normalizedData.clientEmail = mappedUser.email;
         normalizedData.clientPhone = mappedUser.metadata?.phoneNumber || phone;
-      }
 
-      if (isFarm) {
         normalizedData.status = 'approved';
         normalizedData.registrationSource = 'manager_direct';
         normalizedData.approvedBy = userId;
@@ -563,27 +686,17 @@ class ProjectService {
       const isFarm = (cleanedUpdates.category || project.category) === 'FARM' ||
         (cleanedUpdates.projectType || project.projectType) === 'farm';
       const phone = String(cleanedUpdates.clientPhone || project.clientPhone || '').trim();
-      const normalizedPhone = normalizePhoneNumber(phone);
-      const localPhone = normalizedPhone.startsWith('91') ? normalizedPhone.slice(2) : normalizedPhone;
 
       if (isFarm && !phone) {
         throw new Error('Client mobile number is required to edit a farm project.');
       }
 
       if (isFarm) {
-        const mappedUser = await User.findOne({
-          $or: [
-            { 'metadata.phoneNumberNormalized': normalizedPhone },
-            { 'metadata.phoneNumberNormalized': localPhone },
-            { 'metadata.phoneNumber': phone },
-            { 'metadata.phoneNumber': phone.replace(/\s+/g, '') },
-            { 'metadata.phoneNumber': localPhone }
-          ]
+        const mappedUser = await this.resolveOrCreateFarmer({
+          rawPhone: phone,
+          email: cleanedUpdates.clientEmail || project.clientEmail,
+          name: cleanedUpdates.clientName || project.clientName
         });
-
-        if (!mappedUser) {
-          throw new Error('No user found for this mobile number. Ask farmer to add mobile number in their profile first.');
-        }
 
         cleanedUpdates.clientId = mappedUser._id;
         cleanedUpdates.clientName = mappedUser.name;

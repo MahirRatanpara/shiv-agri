@@ -1,0 +1,12 @@
+target/
+*.class
+*.jar
+*.war
+*.log
+dev-uploads/
+src/main/resources/application-dev.yml
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.mvn

@@ -28,16 +28,30 @@
         >
       </div>
       <small *ngIf="errors['clientPhone']">{{ errors['clientPhone'] }}</small>
+      <small class="field-hint" *ngIf="mode === 'manager' && userResolved">Existing farmer loaded from this number.</small>
+      <small class="field-hint" *ngIf="mode === 'manager' && newFarmer">No account for this number — a new farmer will be created.</small>
     </label>
 
     <label class="field">
       <span>Farmer name</span>
-      <input name="clientName" [(ngModel)]="clientName" type="text" [readonly]="true">
+      <input
+        name="clientName"
+        [(ngModel)]="clientName"
+        type="text"
+        placeholder="Farmer's full name"
+        [readonly]="mode === 'manager' ? userResolved : true"
+        [class.invalid]="!!errors['clientName']">
+      <small *ngIf="errors['clientName']">{{ errors['clientName'] }}</small>
     </label>
 
     <label class="field">
-      <span>Farmer email</span>
-      <input name="clientEmail" [(ngModel)]="clientEmail" type="email" [readonly]="true">
+      <span>Farmer email <em *ngIf="mode === 'manager' && newFarmer">(optional)</em></span>
+      <input
+        name="clientEmail"
+        [(ngModel)]="clientEmail"
+        type="email"
+        placeholder="farmer@example.com"
+        [readonly]="mode === 'manager' ? userResolved : true">
     </label>
 
     <label class="field">
