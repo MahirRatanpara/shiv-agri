@@ -29,7 +29,7 @@ media:
       - webp
       - gif
     filesystem:
-      root-dir: ${MEDIA_STORAGE_FILESYSTEM_ROOT_DIR:/var/media/uploads}
+      root-dir: ${MEDIA_STORAGE_FILESYSTEM_ROOT_DIR:/Users/mahirratanpara/uploads}
 
 management:
   endpoints:

@@ -1,0 +1,63 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: notification-service
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 30MB
+
+notification:
+  security:
+    api-key: ${NOTIFICATION_API_KEY:dev-api-key-change-me}
+  async:
+    core-pool-size: 4
+    max-pool-size: 16
+    queue-capacity: 200
+    thread-name-prefix: notif-async-
+  whatsapp:
+    api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
+    api-version: ${WHATSAPP_API_VERSION:v21.0}
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+    access-token: ${WHATSAPP_ACCESS_TOKEN:}
+    default-country-code: ${WHATSAPP_DEFAULT_COUNTRY_CODE:91}
+  # OTP delivery — flip `channel` between "whatsapp" and "sms" to switch providers.
+  otp:
+    channel: ${OTP_CHANNEL:whatsapp}
+    whatsapp:
+      template-name: ${WHATSAPP_OTP_TEMPLATE_NAME:shiv_agri_login}
+      language-code: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:en}
+      has-button: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:false}
+  # MSG91 SMS (India) — used when otp.channel = sms. Requires a DLT-approved flow template.
+  msg91:
+    auth-key: ${MSG91_AUTH_KEY:}
+    base-url: ${MSG91_BASE_URL:https://control.msg91.com/api/v5}
+    template-id: ${MSG91_TEMPLATE_ID:}
+    sender-id: ${MSG91_SENDER_ID:}
+    otp-variable: ${MSG91_OTP_VARIABLE:OTP}
+    default-country-code: ${MSG91_DEFAULT_COUNTRY_CODE:91}
+  email:
+    from-address: ${GMAIL_FROM_ADDRESS:}
+    from-name: ${GMAIL_FROM_NAME:Shiv-Agri}
+    smtp-host: ${GMAIL_SMTP_HOST:smtp.gmail.com}
+    smtp-port: ${GMAIL_SMTP_PORT:587}
+    oauth:
+      client-id: ${GMAIL_OAUTH_CLIENT_ID:}
+      client-secret: ${GMAIL_OAUTH_CLIENT_SECRET:}
+      refresh-token: ${GMAIL_OAUTH_REFRESH_TOKEN:}
+      token-endpoint: ${GMAIL_OAUTH_TOKEN_ENDPOINT:https://oauth2.googleapis.com/token}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.shivagri.notification: INFO

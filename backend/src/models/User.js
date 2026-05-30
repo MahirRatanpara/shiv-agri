@@ -4,15 +4,25 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    default: 'New User'
   },
   email: {
+    // Optional — phone-only signups won't have one. Sparse unique allows multiple docs without email.
     type: String,
-    required: true,
+    required: false,
     unique: true,
+    sparse: true,
     lowercase: true,
     trim: true,
     index: true
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneVerifiedAt: {
+    type: Date
   },
   googleId: {
     type: String,
@@ -34,7 +44,11 @@ const userSchema = new mongoose.Schema({
     ref: 'Role'
   },
   refreshToken: {
+    // SHA-256 hash of the active opaque refresh token (see utils/session.js)
     type: String
+  },
+  refreshTokenExpiresAt: {
+    type: Date
   },
   googleRefreshToken: {
     type: String
@@ -68,7 +82,11 @@ userSchema.pre('save', function(next) {
 
 // Indexes for performance
 userSchema.index({ role: 1 });
-userSchema.index({ 'metadata.phoneNumberNormalized': 1 });
+// Phone is a unique identity just like email — one phone maps to exactly one user.
+// Sparse so phone-less (Google-only) accounts don't collide on a missing value.
+// NOTE: requires the migration in scripts/migrate-phone-email-unique.js to drop the
+// legacy non-unique index and unset empty-string values before this can build.
+userSchema.index({ 'metadata.phoneNumberNormalized': 1 }, { unique: true, sparse: true });
 
 // Instance Methods
 userSchema.methods.toClientJSON = function() {

@@ -14,6 +14,16 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
+      OTP_DELIVERY_MODE: ${OTP_DELIVERY_MODE:-template}
+      OTP_BRAND_NAME: ${OTP_BRAND_NAME:-Shiv-Agri}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:8082}
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-otp_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-true}
+      DEFAULT_PHONE_COUNTRY_CODE: ${DEFAULT_PHONE_COUNTRY_CODE:-+91}
+      DEFAULT_PHONE_SIGNUP_ROLE: ${DEFAULT_PHONE_SIGNUP_ROLE:-user}
     volumes:
       - api_uploads:/app/uploads
     extra_hosts:
@@ -31,6 +41,38 @@ services:
       MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
     volumes:
       - /var/media/uploads:/var/media/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+  notification-service:
+    image: ${DOCKERHUB_USERNAME}/shiv-agri-notification:latest
+    container_name: shivagri-notification
+    restart: unless-stopped
+    environment:
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v21.0}
+      WHATSAPP_DEFAULT_COUNTRY_CODE: ${WHATSAPP_DEFAULT_COUNTRY_CODE:-91}
+      # OTP routing: "whatsapp" or "sms"
+      OTP_CHANNEL: ${OTP_CHANNEL:-whatsapp}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-shiv_agri_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-false}
+      # MSG91 SMS (used when OTP_CHANNEL=sms)
+      MSG91_AUTH_KEY: ${MSG91_AUTH_KEY:-}
+      MSG91_BASE_URL: ${MSG91_BASE_URL:-https://control.msg91.com/api/v5}
+      MSG91_TEMPLATE_ID: ${MSG91_TEMPLATE_ID:-}
+      MSG91_SENDER_ID: ${MSG91_SENDER_ID:-}
+      MSG91_OTP_VARIABLE: ${MSG91_OTP_VARIABLE:-OTP}
+      MSG91_DEFAULT_COUNTRY_CODE: ${MSG91_DEFAULT_COUNTRY_CODE:91}
+      GMAIL_FROM_ADDRESS: ${GMAIL_FROM_ADDRESS}
+      GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:Shiv-Agri}
+      GMAIL_OAUTH_CLIENT_ID: ${GMAIL_OAUTH_CLIENT_ID}
+      GMAIL_OAUTH_CLIENT_SECRET: ${GMAIL_OAUTH_CLIENT_SECRET}
+      GMAIL_OAUTH_REFRESH_TOKEN: ${GMAIL_OAUTH_REFRESH_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
