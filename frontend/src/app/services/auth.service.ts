@@ -10,6 +10,7 @@ export interface User {
   role: string;
   phoneCountryCode?: string;
   phoneNumber?: string;
+  phoneVerified?: boolean;
   department?: string;
   designation?: string;
   profilePhoto?: string;
@@ -33,6 +34,25 @@ export interface AuthResponse {
   error?: string;
 }
 
+export interface OtpRequestResponse {
+  message: string;
+  requestId: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+  otpLength: number;
+  expiresInSeconds: number;
+  expiresAt: number;
+  resendAfterSeconds: number;
+  maxAttempts: number;
+}
+
+export interface OtpVerifyResponse extends AuthResponse {}
+
+export interface AuthConfig {
+  googleLoginEnabled: boolean;
+  otpLoginEnabled: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -43,6 +63,10 @@ export class AuthService {
 
   // Signal for reactive state
   public isAuthenticated = signal(false);
+
+  // Auth feature flags (loaded from GET /auth/config). Optimistic default: OTP on.
+  public otpLoginEnabled = signal(true);
+  private authConfig$: Observable<AuthConfig> | null = null;
 
   // Token refresh scheduling
   private refreshTimeout: any = null;
@@ -165,6 +189,31 @@ export class AuthService {
   }
 
   /**
+   * Request an OTP code over WhatsApp for the supplied phone number.
+   */
+  requestPhoneOtp(phoneCountryCode: string, phoneNumber: string): Observable<OtpRequestResponse> {
+    return this.http.post<OtpRequestResponse>(`${this.apiUrl}/auth/otp/request`,
+      { phoneCountryCode, phoneNumber },
+      { withCredentials: true });
+  }
+
+  /**
+   * Verify a phone+OTP combination and start a session on success.
+   */
+  verifyPhoneOtp(phoneCountryCode: string, phoneNumber: string, otp: string): Observable<OtpVerifyResponse> {
+    return this.http.post<OtpVerifyResponse>(`${this.apiUrl}/auth/otp/verify`,
+      { phoneCountryCode, phoneNumber, otp },
+      { withCredentials: true }
+    ).pipe(
+      tap(response => {
+        if (response.accessToken && response.user) {
+          this.setSession(response);
+        }
+      })
+    );
+  }
+
+  /**
    * Legacy Google OAuth login (ID token flow)
    */
   googleLogin(credential: string): Observable<AuthResponse> {
@@ -243,24 +292,84 @@ export class AuthService {
   }
 
   /**
-   * Update editable profile fields for the current user
+   * Request an OTP to ATTACH a phone number to the signed-in account.
+   * Only succeeds when the account has no phone yet (numbers are immutable once set).
    */
-  updateProfile(profile: { phoneCountryCode: string; phoneNumber: string }): Observable<{ message: string; user: User }> {
-    const currentUser = this.currentUserSubject.value;
-    const payload = {
-      ...profile,
-      userId: currentUser?.id,
-      email: currentUser?.email
-    };
+  requestProfilePhoneOtp(phoneCountryCode: string, phoneNumber: string): Observable<OtpRequestResponse> {
+    return this.http.post<OtpRequestResponse>(`${this.apiUrl}/auth/profile/phone/request-otp`,
+      { phoneCountryCode, phoneNumber },
+      { withCredentials: true });
+  }
 
-    return this.http.patch<{ message: string; user: User }>(`${this.apiUrl}/auth/profile`, payload, {
-      withCredentials: true
-    }).pipe(
+  /**
+   * Verify the OTP and attach the phone to the current user.
+   */
+  verifyProfilePhoneOtp(phoneCountryCode: string, phoneNumber: string, otp: string): Observable<{ message: string; user: User }> {
+    return this.http.post<{ message: string; user: User }>(`${this.apiUrl}/auth/profile/phone/verify-otp`,
+      { phoneCountryCode, phoneNumber, otp },
+      { withCredentials: true }
+    ).pipe(
       tap(response => {
         this.currentUserSubject.next(response.user);
         localStorage.setItem('currentUser', JSON.stringify(response.user));
       })
     );
+  }
+
+  /**
+   * Load auth feature flags (which login methods are enabled). Cached after first load.
+   */
+  loadAuthConfig(): Observable<AuthConfig> {
+    if (!this.authConfig$) {
+      this.authConfig$ = this.http.get<AuthConfig>(`${this.apiUrl}/auth/config`).pipe(
+        tap(cfg => this.otpLoginEnabled.set(cfg.otpLoginEnabled)),
+        shareReplay(1)
+      );
+    }
+    return this.authConfig$;
+  }
+
+  /**
+   * Attach a phone number MANUALLY (no OTP) — only valid in Google-only mode
+   * (OTP login disabled). Add-only; the number can't be changed once set.
+   */
+  setProfilePhone(phoneCountryCode: string, phoneNumber: string): Observable<{ message: string; user: User }> {
+    return this.http.post<{ message: string; user: User }>(`${this.apiUrl}/auth/profile/phone`,
+      { phoneCountryCode, phoneNumber },
+      { withCredentials: true }
+    ).pipe(
+      tap(response => {
+        this.currentUserSubject.next(response.user);
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
+      })
+    );
+  }
+
+  /**
+   * Attach an email to the current account when none exists yet.
+   */
+  setProfileEmail(email: string, name?: string): Observable<{ message: string; user: User }> {
+    return this.http.post<{ message: string; user: User }>(`${this.apiUrl}/auth/profile/email`,
+      { email, name },
+      { withCredentials: true }
+    ).pipe(
+      tap(response => {
+        this.currentUserSubject.next(response.user);
+        localStorage.setItem('currentUser', JSON.stringify(response.user));
+      })
+    );
+  }
+
+  /**
+   * Whether the given user must complete their profile before proceeding.
+   * Farmers (role 'user'/'end_user') need BOTH an email and a verified phone — after a
+   * first-time login via one method they're prompted to add the other.
+   */
+  isProfileIncomplete(user: User | null = this.currentUserSubject.value): boolean {
+    if (!user) return false;
+    const isFarmer = user.role === 'user' || user.role === 'end_user';
+    if (!isFarmer) return false;
+    return !user.email || !user.phoneNumber;
   }
 
   /**

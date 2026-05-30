@@ -81,6 +81,20 @@
       "spray2_hormoneDose": 10.0
     }
   },
+  "Soyabean": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
   "Teti": {
     "normal": {
       "organicManure": 1.0,

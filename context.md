@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for LLM context. Each section is self-contained so an LLM can read only the relevant section for a given task. Organized by feature domain for efficient chunking.
 
-> **Last Updated:** 2026-05-02
+> **Last Updated:** 2026-05-30
 
 ---
 
@@ -38,6 +38,7 @@
 28. [DevOps: Infrastructure & Deployment](#28-devops-infrastructure--deployment)
 29. [DevOps: Monitoring & Maintenance](#29-devops-monitoring--maintenance)
 30. [Environment Variables](#30-environment-variables)
+31. [Feature: Notification Service](#31-feature-notification-service)
 
 ---
 
@@ -51,7 +52,8 @@ Internet (HTTPS)
 Nginx Reverse Proxy (Port 443/80)
     ├── Frontend (Angular 20 SPA, port 80)
     ├── Backend API (Node.js/Express, port 3000)
-    └── Media Service (Spring Boot, port 8081)
+    ├── Media Service (Spring Boot, port 8081)
+    └── Notification Service (Spring Boot, port 8082)
             ↓
     MongoDB Database (Port 27017)
 ```
@@ -61,9 +63,10 @@ Nginx Reverse Proxy (Port 443/80)
 - **Frontend:** Angular 20.3.0 standalone components SPA served via Nginx
 - **Backend API:** Node.js/Express RESTful API with Puppeteer for PDF generation
 - **Media Service:** Spring Boot 3.2.5 (Java 17) microservice for file uploads/storage
+- **Notification Service:** Spring Boot 3.2.5 (Java 17) stateless microservice for WhatsApp + Gmail (OAuth2) delivery, including OTP routing (WhatsApp/SMS via MSG91)
 - **Database:** MongoDB 7.0 with Mongoose ODM
 - **Reverse Proxy:** Nginx with SSL termination, rate limiting, gzip compression
-- **Auth:** Google OAuth 2.0 + JWT tokens (24h expiry)
+- **Auth:** Google OAuth 2.0 + Phone+WhatsApp OTP login (feature-flagged) — backend-issued JWT access token (24h) paired with opaque httpOnly refresh-token cookie (60d, hashed in DB)
 - **Hosting:** Hostinger VPS with Docker Compose orchestration
 - **CI/CD:** GitHub Actions with automated Docker builds and SSH deployments
 - **SSL:** Let's Encrypt via Certbot with auto-renewal
@@ -143,10 +146,12 @@ shiv-agri/
 │   └── src/
 │       ├── config/
 │       │   ├── database.js
+│       │   ├── features.js               (env-driven feature flags, e.g. OTP_LOGIN_ENABLED)
 │       │   ├── fertilizerCropConfig.js   (in-memory crop defaults loader)
 │       │   └── fertilizerCropDefaults.json (per-crop fertilizer defaults)
 │       ├── controllers/
 │       │   ├── authController.js
+│       │   ├── otpAuthController.js      (phone OTP login flow)
 │       │   ├── projectController.js
 │       │   ├── userController.js
 │       │   ├── roleController.js
@@ -154,7 +159,7 @@ shiv-agri/
 │       │   ├── receiptController.js
 │       │   ├── invoiceController.js
 │       │   └── letterController.js
-│       ├── middleware/auth.js
+│       ├── middleware/auth.js, featureFlags.js
 │       ├── models/
 │       │   ├── User.js, Role.js, Permission.js
 │       │   ├── Project.js, Transaction.js
@@ -172,10 +177,14 @@ shiv-agri/
 │       ├── services/
 │       │   ├── projectService.js, transactionService.js
 │       │   ├── pdfGenerator.js, draftService.js, activityLogService.js, notificationService.js
+│       │   ├── otpService.js               (in-memory OTP issue/verify + rate limits)
+│       │   ├── otpDelivery.js              (template / hello_world / console modes)
+│       │   └── notificationClient.js       (HTTP client for notification-service)
 │       ├── utils/
 │       │   ├── jwt.js, logger.js
+│       │   ├── session.js                  (backend refresh-token + httpOnly cookie helper)
 │       │   ├── soilClassification.js, waterClassification.js
-│       ├── scripts/migrate-permissions.js, create-sample-excel-templates.js
+│       ├── scripts/migrate-permissions.js, migrate-phone-email-unique.js, create-sample-excel-templates.js
 │       └── server.js
 ├── frontend/src/app/
 │   ├── app.ts, app.routes.ts, app.config.ts
@@ -185,7 +194,7 @@ shiv-agri/
 │   │   ├── project-list/, project-detail-popup/, role-selection-modal/
 │   │   ├── ag-grid-editors/datalist-cell-editor.ts
 │   ├── pages/
-│   │   ├── home/, login/, not-found/, my-account/, contact/
+│   │   ├── home/, login/, not-found/, my-account/, contact/, complete-profile/
 │   │   ├── lab-testing/, soil-testing/, water-testing/, fertilizer-testing/
 │   │   ├── farm-dashboard/, project-details/, project-wizard/
 │   │   ├── managerial-work/ (receipts/, invoices/, letters/)
@@ -198,7 +207,7 @@ shiv-agri/
 │   │   ├── managerial-work.service.ts, pdf.service.ts
 │   │   ├── dashboard.service.ts, toast.service.ts
 │   │   ├── confirmation-modal.service.ts, download-progress.service.ts
-│   ├── guards/auth.guard.ts
+│   ├── guards/auth.guard.ts, profile-complete.guard.ts
 │   ├── interceptors/auth.interceptor.ts, error.interceptor.ts
 │   ├── directives/has-permission.directive.ts, has-role.directive.ts
 │   ├── models/session-state.model.ts, fertilizer-session-state.model.ts
@@ -208,6 +217,15 @@ shiv-agri/
 │   ├── controller/MediaController.java
 │   ├── service/MediaService.java
 │   └── model/MediaDocument.java
+├── notification-service/                       (Spring Boot WhatsApp + Gmail microservice)
+│   ├── Dockerfile, pom.xml, mvnw, README.md
+│   └── src/main/java/com/shivagri/notification/
+│       ├── NotificationServiceApplication.java
+│       ├── config/ (Async/Email/Msg91/Otp/Security/WhatsApp Properties, RestTemplateConfig)
+│       ├── controller/ (EmailController, OtpController, WhatsAppController, dto/*)
+│       ├── exception/ (GlobalExceptionHandler, NotificationException, ProviderException)
+│       ├── security/ApiKeyAuthFilter.java     (X-API-Key authentication)
+│       └── service/ (EmailService, GmailOAuthTokenService, OtpDispatchService, SmsService, WhatsAppService)
 ├── nginx/nginx.conf, Dockerfile
 ├── mongodb/init-mongo.js
 ├── infra/ (Kubernetes YAMLs)
@@ -217,6 +235,7 @@ shiv-agri/
 ├── scripts/ (vps-setup.sh, backup-mongodb.sh, init-letsencrypt.sh)
 ├── .github/workflows/ (8 CI/CD workflows)
 ├── docker-compose.yml, docker-compose.prod.yml
+├── docs/PHONE_OTP_LOGIN_GUIDE.md (operator runbook for phone-OTP login)
 ├── context.md (LLM context — single source of truth)
 └── .env.example
 ```
@@ -225,14 +244,53 @@ shiv-agri/
 
 ## 4. AUTHENTICATION & AUTHORIZATION
 
-### Auth Flow
+### Auth Methods
 
-1. **Login:** Frontend sends Google OAuth authorization code to `POST /api/auth/google-code`
-2. **Backend:** Verifies with Google, creates/updates User in DB, generates JWT (24h expiry), stores Google refresh token
-3. **Token Storage:** JWT stored in localStorage on frontend
-4. **Request Auth:** `authInterceptor` adds `Authorization: Bearer <token>` to all non-auth requests
-5. **Token Refresh:** Proactive refresh 5 minutes before expiry via `POST /api/auth/refresh` using stored Google refresh token
-6. **Tab Visibility:** Token refreshed when user returns to tab after being away
+Two login methods feed a unified session layer (`backend/src/utils/session.js`):
+
+1. **Google OAuth** — `POST /api/auth/google-code` (auth code) or `POST /api/auth/google` (ID token). Matches existing identity by `googleId` OR `email` so a manager-provisioned account is reused, not duplicated.
+2. **Phone + WhatsApp OTP** (gated by `OTP_LOGIN_ENABLED`) — `POST /api/auth/otp/request` → `POST /api/auth/otp/verify`. Auto-creates a `role: user` farmer on first successful verify when the phone isn't already linked; otherwise reuses the existing user (single identity across Google + phone). Implemented in `controllers/otpAuthController.js` + `services/otpService.js` + `services/otpDelivery.js`.
+
+### Session / Token Model
+
+Every successful login (Google or OTP) goes through `issueSession(res, user)`:
+- **Access token:** signed JWT (24h, `JWT_EXPIRES_IN`) returned in JSON response body, kept in localStorage by the frontend.
+- **Refresh token:** opaque random 96-hex-char value, SHA-256-hashed before being stored on the user document. Raw value delivered as an httpOnly cookie (`refreshToken`, 60 days default via `REFRESH_TOKEN_TTL_DAYS`, `Secure`+`SameSite=None` in production). Rotated on every refresh.
+- **Refresh:** `POST /api/auth/refresh` reads the cookie, looks up the user by hash, enforces `refreshTokenExpiresAt`, rotates the refresh token, and mints a new access token. Legacy fallback path validates pre-existing Google sessions via the stored Google refresh token and upgrades them onto the new scheme on first refresh.
+- **Logout:** clears the refresh-token hash + cookie and revokes the Google refresh token if present.
+
+### OTP Service (in-memory)
+
+`backend/src/services/otpService.js` — Map keyed by normalized phone (`<cc><national>` digits).
+- 4-digit numeric code, SHA-256-hashed; 3-minute expiry; 3 verify attempts per code; 60-second resend cooldown; 3 codes per phone per rolling hour.
+- `crypto.timingSafeEqual` for code comparison.
+- Single-instance only (state is lost on restart).
+- `revokeOtp()` rolls back issuance when downstream delivery fails so the user is not penalized.
+
+### OTP Delivery Modes (`OTP_DELIVERY_MODE`)
+
+`backend/src/services/otpDelivery.js`:
+- `template` (production) — calls notification-service `/api/notifications/otp` (channel chosen there: WhatsApp template or MSG91 SMS).
+- `hello_world` (dev) — sends the no-approval WhatsApp `hello_world` sample template AND prints the actual code to the backend console.
+- `console` (pure dev) — prints the code only, no provider call. Auto-upgraded to `template` when `NODE_ENV=production`.
+
+### Profile Phone Attach (Self-service, OTP-verified)
+
+Once an account exists, normal users may ATTACH a phone (never change it) via:
+- `POST /api/auth/profile/phone/request-otp` and `POST /api/auth/profile/phone/verify-otp` — only succeeds when `metadata.phoneNumberNormalized` is empty; sets `phoneVerified=true`.
+- `POST /api/auth/profile/phone` (no OTP) — used ONLY in Google-only mode (`OTP_LOGIN_ENABLED=false`) for manual phone entry on the complete-profile step.
+- `POST /api/auth/profile/email` — attaches an email when none exists (no verification).
+- `PATCH /api/auth/profile` is now **admin-only** — non-admins receive 403 with guidance to use OTP. Numbers are immutable once set; admins must fix mistakes.
+
+### Profile-Complete Gate
+
+`GET /api/auth/config` returns `{ googleLoginEnabled, otpLoginEnabled }`. The frontend `profileCompleteGuard` redirects authenticated users with a missing identity (email/phone) to `/complete-profile` before they can use protected app routes.
+
+### Feature Flags (`backend/src/config/features.js`)
+
+`OTP_LOGIN_ENABLED` (default `true`):
+- `true` — phone OTP tab is shown; new Google users OTP-verify their phone in complete-profile.
+- `false` — Google-only mode: phone OTP endpoints return 403 via the `requireOtpEnabled` middleware, frontend hides the phone tab, and new Google users enter their phone MANUALLY (no OTP) in complete-profile. Use this while WhatsApp Business / template approval is pending.
 
 ### Backend Auth Middleware (`backend/src/middleware/auth.js`)
 
@@ -271,9 +329,10 @@ shiv-agri/
 
 ### Frontend Auth Components
 
-- **AuthService** (`services/auth.service.ts`) — Google login, token management, `currentUser$` BehaviorSubject, `isAuthenticated` Signal
+- **AuthService** (`services/auth.service.ts`) — Google login, phone OTP login (`requestPhoneOtp`, `verifyPhoneOtp`), profile-attach OTP (`requestProfilePhoneOtp`, `verifyProfilePhoneOtp`, `setProfilePhone`, `setProfileEmail`), `loadAuthConfig()` (cached), `otpLoginEnabled` Signal, `currentUser$` BehaviorSubject, `isAuthenticated` Signal, `isProfileIncomplete()`
 - **authGuard** (`guards/auth.guard.ts`) — Route protection, stores attempted URL for redirect after login
-- **authInterceptor** (`interceptors/auth.interceptor.ts`) — Adds JWT, auto-refresh on 401, skips auth endpoints
+- **profileCompleteGuard** (`guards/profile-complete.guard.ts`) — Pairs with authGuard on protected routes; redirects to `/complete-profile` when the signed-in user is missing email/phone
+- **authInterceptor** (`interceptors/auth.interceptor.ts`) — Adds JWT to all requests with `withCredentials: true`. Only skips token attachment for public auth endpoints (`/auth/google`, `/auth/google-code`, `/auth/refresh`, `/auth/otp/`); authenticated `/auth/me`, `/auth/logout`, `/auth/profile/...` still receive the Bearer token.
 - **errorInterceptor** (`interceptors/error.interceptor.ts`) — User-friendly error toasts for HTTP status codes
 - **HasPermissionDirective** (`directives/has-permission.directive.ts`) — Structural directive for template permission checks
 - **HasRoleDirective** (`directives/has-role.directive.ts`) — Structural directive for template role checks
@@ -572,7 +631,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 ### Farm Registration & Approval Workflow
 
 - **Farmer self-registration:** End-users (`end_user`/`user` role) submit via `POST /api/projects` → status `pending_quotation` (was `pending_approval`), `registrationSource=farmer_self`, clientId/clientPhone auto-populated from the user's profile. Notifies users with `farm.projects.approve` (type `farm_quotation_required`).
-- **Manager-direct registration:** Managers/admins POST a farm → resolves `clientPhone` to existing user via phone lookup (rejects if no match), status `approved` immediately, `registrationSource=manager_direct`.
+- **Manager-direct registration:** Managers/admins POST a farm → `ProjectService.resolveOrCreateFarmer({ rawPhone, email, name })` resolves the client by normalized phone first, then by email (attaching the phone if the email-user has no phone), and finally **auto-provisions a brand-new `role: user` farmer** (`phoneVerified=false`) with the canonical `<cc><national>` normalized key so the farmer's first phone-OTP or Google login claims this same account. Conflicts (different phone on same email, or duplicate phone/email) are rejected. Status becomes `approved` immediately with `registrationSource=manager_direct`.
 - **Approval/Rejection (legacy):** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`). Used only for the legacy `pending_approval` path (e.g. edit requests on already-approved farms).
 - **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update a farm. If the farm was already approved (`approved`/`Running`/`Completed`/`On Hold`), it resets to `pending_approval` (legacy flow). Otherwise it resets to `pending_quotation` so the manager re-quotes.
 
@@ -602,7 +661,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route). Toolbar exposes a "Landscaping" filter toggle (`showLandscapingOnly`) that client-side filters to farms with `needsLandscapingConsultancy === true`; matching cards render a "Landscaping" project tag next to the status pill.
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
 - **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions / Reports / Transactions (admin-only)). The Reports tab lists auto-linked soil/water/fertilizer lab reports (filter chips by type, inline PDF overlay via iframe + blob URL, attachment download). Auto-opens on `?tab=reports`. The Transactions tab lists, creates, edits, and deletes admin-only manual debit/credit entries with an income/expense/net summary card. Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
-- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required.
+- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required. In **manager mode**, phone lookup either resolves an existing farmer (name/email become read-only) OR — on a 404 — switches into "new farmer" mode where name (required) and email (optional) become editable so backend `resolveOrCreateFarmer` can auto-provision the account on submit.
 - **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
 - **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `archiveFarm()`, `unarchiveFarm()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks plus `isArchived`/`archivedAt`, and now also `category` / `projectType` (so the UI can gate Designs visibility to landscaping projects).
 - **Service:** `services/farm-media.service.ts` — `listMedia()` (unattended + `attendedTotal`), `listAttendedMedia(page, limit)`, `markAttended(mediaId)`, `markAllAttended()`, `deleteMedia(mediaId)`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType`).
@@ -781,10 +840,11 @@ Admin can manage users, create custom roles with granular permissions, and assig
 ### Database Models
 
 **User** (`backend/src/models/User.js`)
-- `name`, `email` (unique, indexed), `googleId` (unique, sparse)
+- `name` (default `'New User'`), `email` (optional — sparse unique, lowercase), `googleId` (unique, sparse)
+- `phoneVerified` (boolean, set true after successful OTP verify), `phoneVerifiedAt` (Date)
 - `profilePhoto`, `role` (enum: admin, user, end_user, assistant, lab_technician, manager)
-- `roleRef` (ObjectId → Role — RBAC), `refreshToken`, `googleRefreshToken`
-- `lastLogin`, `metadata` (department, designation, phoneCountryCode, phoneNumber, phoneNumberNormalized — normalized digits-only for lookup, indexed)
+- `roleRef` (ObjectId → Role — RBAC), `refreshToken` (SHA-256 hash of opaque backend refresh token), `refreshTokenExpiresAt` (Date), `googleRefreshToken`
+- `lastLogin`, `metadata` (department, designation, phoneCountryCode, phoneNumber, phoneNumberNormalized — normalized digits-only key `<cc><national>`; sparse-unique-indexed so phone is a 1-1 identity)
 - Methods: `toClientJSON()`, `hasPermission(name)`
 - Static: `findByRole(role)`
 
@@ -983,27 +1043,28 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 |------|-----------|-------|-------|
 | `` | → `/home` | — | Root redirect |
 | `home` | HomeComponent | — | Landing page |
-| `login` | LoginComponent | — | Google OAuth |
-| `lab-testing` | LabTestingComponent | authGuard | Parent container |
+| `login` | LoginComponent | — | Google OAuth + (when enabled) phone+WhatsApp OTP tab |
+| `complete-profile` | CompleteProfileComponent | authGuard | Forces signed-in users with no email/phone to add one before app routes unlock |
+| `lab-testing` | LabTestingComponent | authGuard + profileCompleteGuard | Parent container |
 | `lab-testing/soil-testing` | SoilTestingComponent | — | Child route |
 | `lab-testing/soil-testing/session/:sessionId` | SoilTestingComponent | — | Session view |
 | `lab-testing/water-testing` | WaterTestingComponent | — | Child route |
 | `lab-testing/water-testing/session/:sessionId` | WaterTestingComponent | — | Session view |
 | `lab-testing/fertilizer-testing` | FertilizerTestingComponent | — | Child route |
 | `lab-testing/fertilizer-testing/session/:sessionId` | FertilizerTestingComponent | — | Session view |
-| `managerial-work` | ManagerialWorkComponent | authGuard | Parent container |
+| `managerial-work` | ManagerialWorkComponent | authGuard + profileCompleteGuard | Parent container |
 | `managerial-work/receipts` | ReceiptsComponent | — | Child route |
 | `managerial-work/invoices` | InvoicesComponent | — | Child route |
 | `managerial-work/letters` | LettersComponent | — | Child route |
-| `farm-dashboard` | FarmDashboardComponent | authGuard | Project management |
-| `farm-management` | FarmManagementComponent | authGuard | Farms list with approval workflow |
-| `farm-management/new` | FarmRegistrationPageComponent | authGuard | Farmer self-registration |
-| `farm-management/project/:id` | FarmProjectDetailsComponent | authGuard | Farm detail with approve/reject/start/complete |
-| `projects/new` | ProjectWizardComponent | authGuard | Create project |
-| `projects/edit/:id` | ProjectWizardComponent | authGuard | Edit project |
+| `farm-dashboard` | FarmDashboardComponent | authGuard + profileCompleteGuard | Project management |
+| `farm-management` | FarmManagementComponent | authGuard + profileCompleteGuard | Farms list with approval workflow |
+| `farm-management/new` | FarmRegistrationPageComponent | authGuard + profileCompleteGuard | Farmer self-registration |
+| `farm-management/project/:id` | FarmProjectDetailsComponent | authGuard + profileCompleteGuard | Farm detail with approve/reject/start/complete |
+| `projects/new` | ProjectWizardComponent | authGuard + profileCompleteGuard | Create project |
+| `projects/edit/:id` | ProjectWizardComponent | authGuard + profileCompleteGuard | Edit project |
 | `project-details/:id` | ProjectDetailsComponent | — | View project |
-| `admin/users` | UserManagementComponent | authGuard | User management |
-| `my-account` | MyAccountComponent | authGuard | Account settings |
+| `admin/users` | UserManagementComponent | authGuard + profileCompleteGuard | User management |
+| `my-account` | MyAccountComponent | authGuard + profileCompleteGuard | Account settings (phone-attach via OTP) |
 | `contact` | ContactComponent | — | Contact page |
 | `404` | NotFoundComponent | — | Error page |
 | `**` | → `/404` | — | Catch-all |
@@ -1036,7 +1097,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Service | File | Key Methods |
 |---------|------|-------------|
-| AuthService | `auth.service.ts` | googleLoginWithCode(), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), currentUser$ BehaviorSubject |
+| AuthService | `auth.service.ts` | googleLoginWithCode(), requestPhoneOtp(), verifyPhoneOtp(), requestProfilePhoneOtp(), verifyProfilePhoneOtp(), setProfilePhone(), setProfileEmail(), loadAuthConfig() (cached), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), isProfileIncomplete(), currentUser$ BehaviorSubject, otpLoginEnabled Signal |
 | FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), archiveFarm(), unarchiveFarm(), getFarmById(), lookupUserByPhone(); FarmProject exposes category / projectType / activeQuotation / quotationAcceptedAt; FarmStatus union extended with `pending_quotation` and `pending_acceptance` |
 | FarmMediaService | `farm-media.service.ts` | listMedia(projectId) → unattended + attendedTotal, listAttendedMedia(projectId, page, limit), markAttended(projectId, mediaId), markAllAttended(projectId), deleteMedia(projectId, mediaId), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
 | FarmDesignService | `farm-design.service.ts` | listDesigns(projectId), uploadDesigns(projectId, files) → progress/done events |
@@ -1066,8 +1127,14 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 - Stores attempted URL for redirect after login
 - Redirects to `/login` if not authenticated
 
+### Profile Complete Guard (`guards/profile-complete.guard.ts`)
+- `CanActivateFn` — runs after authGuard on all gated app routes
+- Redirects authenticated users with `isProfileIncomplete()` to `/complete-profile` and saves the attempted URL in `localStorage.redirectUrl`
+- Must NOT be applied to `/complete-profile` itself (would loop)
+
 ### Auth Interceptor (`interceptors/auth.interceptor.ts`)
-- Adds `Authorization: Bearer <token>` to non-auth requests
+- Adds `Authorization: Bearer <token>` and `withCredentials: true` to non-public-auth requests so the refresh-token cookie travels with them
+- Skips token attachment ONLY for public auth endpoints: `/auth/google`, `/auth/google-code`, `/auth/refresh`, `/auth/otp/`. Authenticated `/auth/me`, `/auth/logout`, `/auth/profile/...` still receive the Bearer token.
 - Proactive token refresh if expiring within 5 minutes
 - Retries failed requests with new token on 401
 - Skips third-party requests (e.g. Open-Meteo) — only attaches auth headers/credentials to relative URLs, the configured `environment.apiUrl` origin, or the current window origin
@@ -1150,7 +1217,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Collection | Model File | Key Indexes |
 |-----------|------------|-------------|
-| users | User.js | email (unique), role, createdAt, metadata.phoneNumberNormalized |
+| users | User.js | email (unique+sparse), role, createdAt, metadata.phoneNumberNormalized (unique+sparse) |
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
 | projects | Project.js | category+status, city, state, taluka, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status, needsLandscapingConsultancy, activeQuotation |
@@ -1206,12 +1273,19 @@ Invoice ── linkedReceipts[] ──→ Receipt
 ### Auth Endpoints (`/api/auth`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/google` | No | Google OAuth ID token login |
-| POST | `/google-code` | No | Google OAuth auth code login |
-| POST | `/refresh` | No | Refresh JWT using Google refresh token |
-| PATCH | `/profile` | (self-identified) | Update phoneCountryCode/phoneNumber for current user; rejects duplicates against existing normalized phones |
-| POST | `/logout` | Yes | Logout & revoke tokens |
+| GET | `/config` | No | Returns `{ googleLoginEnabled, otpLoginEnabled }` so the login UI knows which methods to show |
+| POST | `/google` | No | Google OAuth ID token login (matches by googleId OR email; issues backend refresh-token cookie) |
+| POST | `/google-code` | No | Google OAuth auth code login (matches by googleId OR email; issues backend refresh-token cookie) |
+| POST | `/refresh` | No (uses cookie) | Reads opaque refresh-token cookie, rotates it, mints new access token. Legacy fallback validates via Google refresh token and upgrades to new scheme. |
+| POST | `/otp/request` | No (requireOtpEnabled) | Send a 4-digit WhatsApp OTP to `{ phoneCountryCode, phoneNumber }` (rate-limited: 60s cooldown, 3/hour) |
+| POST | `/otp/verify` | No (requireOtpEnabled) | Verify `{ phoneCountryCode, phoneNumber, otp }`; auto-creates a `role: user` farmer when phone is unknown; issues session |
+| POST | `/logout` | Yes | Logout & revoke refresh + Google tokens, clear cookie |
 | GET | `/me` | Yes | Get current user |
+| PATCH | `/profile` | Yes (admin only) | Direct phone change — non-admins receive 403 |
+| POST | `/profile/phone/request-otp` | Yes (requireOtpEnabled) | Send OTP to ATTACH a phone to the signed-in account (only when no phone set) |
+| POST | `/profile/phone/verify-otp` | Yes (requireOtpEnabled) | Verify OTP and attach phone; sets `phoneVerified=true` |
+| POST | `/profile/phone` | Yes | Manual phone attach (no OTP) — used only when OTP login is disabled |
+| POST | `/profile/email` | Yes | Attach an email when none exists |
 
 ### Notification Endpoints (`/api/notifications`)
 | Method | Path | Auth | Description |
@@ -1245,6 +1319,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 | mongodb | mongo:7.0 | 27017 (internal) | Health check, volume persistence |
 | api | ./backend | 3000 (internal) | Hot-reload via volume mount, depends on mongodb |
 | media-service | ./media-service | 8081 (internal) | Filesystem storage, depends on mongodb |
+| notification-service | ./notification-service | 8082 (also published as 8082 in dev) | Stateless WhatsApp + Gmail sender; API-key auth |
 | frontend | ./frontend | 80 (internal) | Angular SPA via Nginx |
 | nginx | ./nginx | 80 (public) | Reverse proxy, depends on api+frontend |
 
@@ -1254,6 +1329,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 |---------|-------|------|------------|
 | api | ${DOCKERHUB_USERNAME}/shiv-agri-api:latest | 3000 | Production env vars from .env |
 | media-service | ${DOCKERHUB_USERNAME}/shiv-agri-media:latest | 8081 | Filesystem at /var/media/uploads |
+| notification-service | ${DOCKERHUB_USERNAME}/shiv-agri-notification:latest | 8082 | WhatsApp + Gmail; OTP channel routing (`OTP_CHANNEL=whatsapp\|sms`); MSG91 SMS fallback |
 | frontend | ${DOCKERHUB_USERNAME}/shiv-agri-frontend:latest | 80 | Pre-built Angular assets |
 | nginx | ${DOCKERHUB_USERNAME}/shiv-agri-nginx:latest | 80, 443 | SSL via Certbot, auto-reload every 6h |
 | certbot | certbot/certbot | — | Auto-renewal every 12h |
@@ -1273,7 +1349,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 - **Rate limiting:** 10 req/s per IP, burst 20
 - **Gzip:** Enabled for text, CSS, JSON, JS
 - **SSL:** TLSv1.2/1.3, Let's Encrypt certs
-- **Routing:** `/api/v1/media` → media-service:8081, `/api` → api:3000, `/` → frontend:80
+- **Routing:** `/api/v1/media` → media-service:8081, `/api/notifications` → notification-service:8082 (30m body for email attachments), `/api` → api:3000, `/` → frontend:80
 - **Media:** X-Accel-Redirect for internal file serving, 25MB max body
 - **HTTP → HTTPS** redirect (301)
 
@@ -1289,6 +1365,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 | `deploy-frontend.yml` | Push to main (frontend/**) | Build & deploy frontend |
 | `deploy-nginx.yml` | Push to main (nginx/**) | Build & deploy nginx |
 | `deploy-media.yml` | Push to main (media-service/**) | Build & deploy media service |
+| `deploy-notification.yml` | Push to main (notification-service/**) | Build & deploy notification service (calls reusable `deploy-service.yml`) |
 | `deploy-service.yml` | Reusable | Generic build→push→deploy workflow |
 | `deploy-permissions.yml` | Reusable / manual | Sync permissions.yml to DB |
 | `sync-docker-compose.yml` | Push to main (docker-compose.prod.yml) | Upload compose file to VPS |
@@ -1398,10 +1475,19 @@ docker system prune -a -f                               # Cleanup
 | MONGODB_URI | mongodb://localhost:27017/shiv-agri | Database connection |
 | NODE_ENV | development | Environment mode |
 | JWT_SECRET | — | JWT signing secret (32+ chars) |
-| JWT_EXPIRES_IN | 24h | Token expiry |
+| JWT_EXPIRES_IN | 24h | Access token expiry |
+| REFRESH_TOKEN_TTL_DAYS | 60 | Lifetime of the opaque backend refresh token (Google + OTP) |
 | GOOGLE_CLIENT_ID | — | Google OAuth client ID |
 | GOOGLE_CLIENT_SECRET | — | Google OAuth client secret |
 | ALLOWED_ORIGINS | http://localhost:4200 | CORS origins (comma-separated) |
+| OTP_LOGIN_ENABLED | true | Master switch — when false, phone OTP routes return 403 and the login UI hides the phone tab |
+| OTP_DELIVERY_MODE | template | `template` / `hello_world` / `console` (forced to `template` when NODE_ENV=production) |
+| OTP_BRAND_NAME | Shiv-Agri | Brand string used in free-text OTP fallback |
+| NOTIFICATION_SERVICE_URL | http://notification-service:8082 | Where backend reaches the notification microservice |
+| NOTIFICATION_API_KEY | — | Must match the value set on notification-service (`X-API-Key`) |
+| WHATSAPP_OTP_TEMPLATE_NAME / _LANGUAGE / _HAS_BUTTON | otp_login / en / true | WhatsApp template wiring for OTP |
+| DEFAULT_PHONE_COUNTRY_CODE | +91 | Default country code for phone parsing/lookup |
+| DEFAULT_PHONE_SIGNUP_ROLE | user | Role granted to phone-OTP first-time signups |
 
 ### Production (.env — on VPS)
 | Variable | Purpose |
@@ -1417,6 +1503,11 @@ docker system prune -a -f                               # Cleanup
 | DOMAIN | Primary domain |
 | SMTP_HOST/PORT/USER/PASSWORD | Email (optional) |
 | WHATSAPP_API_KEY/PHONE_ID | WhatsApp (optional) |
+| NOTIFICATION_API_KEY | Shared secret between backend and notification-service |
+| WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN / WHATSAPP_API_VERSION | WhatsApp Cloud API credentials on notification-service |
+| OTP_CHANNEL | `whatsapp` or `sms` (MSG91) — notification-service routing |
+| MSG91_AUTH_KEY / MSG91_TEMPLATE_ID / MSG91_SENDER_ID / MSG91_OTP_VARIABLE | MSG91 SMS configuration (used when OTP_CHANNEL=sms) |
+| GMAIL_FROM_ADDRESS / GMAIL_FROM_NAME / GMAIL_OAUTH_CLIENT_ID / GMAIL_OAUTH_CLIENT_SECRET / GMAIL_OAUTH_REFRESH_TOKEN | Gmail OAuth2 sender on notification-service |
 | AWS_ACCESS_KEY_ID/SECRET/REGION/BUCKET | S3 storage (optional) |
 | BACKUP_ENABLED/RETENTION_DAYS/TIME | Backup config |
 | RATE_LIMIT_WINDOW_MS/MAX_REQUESTS | Rate limiting |
@@ -1431,3 +1522,59 @@ docker system prune -a -f                               # Cleanup
 ```typescript
 { production: true, apiUrl: 'https://shivagri.com/api', googleClientId: '965745303258-...' }
 ```
+
+---
+
+## 31. FEATURE: NOTIFICATION SERVICE
+
+### Overview
+Stateless Spring Boot 3.2.5 / Java 17 microservice that sends WhatsApp messages (WhatsApp Cloud API) and Gmail emails (OAuth2 + SMTP) on behalf of the platform. Also fronts OTP delivery so the backend doesn't talk to provider APIs directly.
+
+- **Port:** 8082
+- **Storage:** none (purely stateless — no database)
+- **Auth:** static `X-API-Key` header (see `security/ApiKeyAuthFilter.java`), value `NOTIFICATION_API_KEY`
+- **Container:** `shivagri-notification` (dev: `shivagri-notification-dev`)
+- **Image:** `${DOCKERHUB_USERNAME}/shiv-agri-notification`
+- **CI:** `.github/workflows/deploy-notification.yml`
+
+### Architecture
+
+```
+backend (Node)  →  notificationClient.js  →  notification-service (Spring Boot, 8082)
+                                              ├── WhatsAppService → Meta Graph API
+                                              ├── SmsService      → MSG91 (when OTP_CHANNEL=sms)
+                                              ├── EmailService    → Gmail SMTP (OAuth2 token via GmailOAuthTokenService)
+                                              └── OtpDispatchService routes /otp to either WhatsApp or SMS based on OTP_CHANNEL
+```
+
+All endpoints accept `?async=true` to return `202 Accepted` and process on the `notification-async` executor (see `config/AsyncConfig.java`).
+
+### API Endpoints (`/api/notifications`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/whatsapp/text` | Send WhatsApp text (≤ 4096 chars) |
+| POST | `/whatsapp/media` | Send WhatsApp image/video/audio/document by public URL |
+| POST | `/whatsapp/template` | Send approved WhatsApp template (required for OTPs / unsolicited messages) |
+| POST | `/email` | Send plain or HTML email (JSON, no attachments) |
+| POST | `/email/with-attachments` | Send email with attachments (multipart/form-data) |
+| POST | `/otp` | Channel-agnostic OTP send — routes WhatsApp template vs MSG91 SMS via `OTP_CHANNEL` |
+| GET | `/actuator/health` | Health probe (unauthenticated) |
+
+Nginx exposes the prefix at `/api/notifications` (30MB body for attachments); the backend uses `services/notificationClient.js` for all internal calls.
+
+### Config (env-only, 12-factor)
+
+- **Required:** `NOTIFICATION_API_KEY`
+- **WhatsApp:** `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_API_VERSION` (default `v21.0`), `WHATSAPP_DEFAULT_COUNTRY_CODE` (default `91`)
+- **OTP routing:** `OTP_CHANNEL` (`whatsapp` | `sms`), `WHATSAPP_OTP_TEMPLATE_NAME/_LANGUAGE/_HAS_BUTTON`
+- **MSG91 SMS:** `MSG91_AUTH_KEY`, `MSG91_BASE_URL`, `MSG91_TEMPLATE_ID`, `MSG91_SENDER_ID`, `MSG91_OTP_VARIABLE`, `MSG91_DEFAULT_COUNTRY_CODE`
+- **Gmail OAuth:** `GMAIL_FROM_ADDRESS`, `GMAIL_FROM_NAME`, `GMAIL_OAUTH_CLIENT_ID`, `GMAIL_OAUTH_CLIENT_SECRET`, `GMAIL_OAUTH_REFRESH_TOKEN`
+
+### Source Layout
+- `controller/` — `EmailController`, `WhatsAppController`, `OtpController` + DTOs in `controller/dto/`
+- `service/` — `EmailService`, `WhatsAppService`, `SmsService`, `OtpDispatchService`, `GmailOAuthTokenService`
+- `config/` — typed `*Properties` classes (Async/Email/Msg91/Otp/Security/WhatsApp), `RestTemplateConfig`
+- `security/ApiKeyAuthFilter.java` — rejects unauthenticated requests at the filter chain
+- `exception/` — `GlobalExceptionHandler`, `NotificationException`, `ProviderException`
+- See `notification-service/README.md` for the full operator guide.

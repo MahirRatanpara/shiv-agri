@@ -28,6 +28,9 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   clientPhone = '';
   lookupInProgress = false;
   userResolved = false;
+  // True when the entered phone matches no existing farmer — a new account will be
+  // created on submit, so the manager fills in name (required) and email (optional).
+  newFarmer = false;
   address = '';
   taluka = '';
   district = '';
@@ -204,6 +207,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
 
   onClientPhoneChange(): void {
     this.userResolved = false;
+    this.newFarmer = false;
     this.lastResolvedPhone = '';
     delete this.errors['clientPhone'];
     delete this.errors['userResolved'];
@@ -221,6 +225,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
         this.clientName = user.name;
         this.clientEmail = user.email;
         this.userResolved = true;
+        this.newFarmer = false;
         this.lastResolvedPhone = phone;
         this.lookupInProgress = false;
         delete this.errors['clientPhone'];
@@ -232,9 +237,15 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
       error: (error) => {
         this.lookupInProgress = false;
         this.userResolved = false;
-        this.clientName = '';
-        this.clientEmail = '';
-        this.errors['clientPhone'] = error?.error?.error || 'No user found for this mobile number.';
+        this.lastResolvedPhone = phone;
+        if (error?.status === 404) {
+          // No existing farmer — let the manager create one. Name/email become editable.
+          this.newFarmer = true;
+          delete this.errors['clientPhone'];
+        } else {
+          this.newFarmer = false;
+          this.errors['clientPhone'] = error?.error?.error || 'Could not look up this mobile number.';
+        }
       }
     });
   }
@@ -308,6 +319,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
 
     if (!this.farmName.trim()) errors['farmName'] = 'Farm name is required.';
     if (this.mode === 'manager' && !this.clientPhone.trim()) errors['clientPhone'] = 'Farmer mobile number is required.';
+    if (this.mode === 'manager' && this.newFarmer && !this.clientName.trim()) errors['clientName'] = 'Farmer name is required to create a new account.';
     if (this.mode === 'farmer' && !(this.currentUser?.phoneNumber || '').trim()) errors['clientPhone'] = 'Your profile needs a mobile number before registration.';
     if (!this.address.trim()) errors['address'] = 'Address is required.';
     if (!this.district.trim()) errors['district'] = 'District is required.';

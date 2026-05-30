@@ -22,13 +22,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const accessToken = authService.getAccessToken();
 
-  // Don't attach auth headers or credentials to third-party APIs (e.g. Open-Meteo)
+  // Don't attach auth headers or credentials to third-party APIs (e.g. Open-Meteo).
   if (!isInternalRequest(req.url)) {
     return next(req);
   }
 
-  // Skip auth logic for auth endpoints
-  if (req.url.includes('/auth/')) {
+  // Skip token attachment ONLY for public auth endpoints (no session yet).
+  // Authenticated auth routes (/auth/me, /auth/logout, /auth/profile…) still need the Bearer token.
+  const publicAuthEndpoints = ['/auth/google', '/auth/google-code', '/auth/refresh', '/auth/otp/'];
+  if (publicAuthEndpoints.some((url) => req.url.includes(url))) {
     return next(req.clone({ withCredentials: true }));
   }
 
