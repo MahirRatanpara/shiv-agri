@@ -165,6 +165,19 @@ const sampleSchema = new mongoose.Schema({
   finalDeductionEn: {
     type: String,
     default: ''
+  },
+
+  // Link to farm project (auto-set on PDF generation when farmsName + mobileNo
+  // match a Project's name + clientPhone).
+  linkedProjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    default: null,
+    index: true
+  },
+  linkedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

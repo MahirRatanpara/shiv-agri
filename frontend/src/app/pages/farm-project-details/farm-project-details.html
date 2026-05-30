@@ -18,7 +18,7 @@
     <div class="hero-meta">
       <span
         class="status-pill"
-        [class.pending]="project.status === 'pending_approval'"
+        [class.pending]="project.status === 'pending_approval' || project.status === 'pending_quotation' || project.status === 'pending_acceptance'"
         [class.approved]="project.status === 'approved'"
         [class.rejected]="project.status === 'rejected'"
         [class.running]="project.status === 'Running'"
@@ -32,6 +32,18 @@
       <span class="source-tag">
         <i class="fas" [class.fa-user]="project.registrationSource === 'farmer_self'" [class.fa-user-tie]="project.registrationSource !== 'farmer_self'"></i>
         {{ project.registrationSource === 'farmer_self' ? 'Farmer submitted' : 'Manager created' }}
+      </span>
+      <span class="source-tag landscaping-tag" *ngIf="project.needsLandscapingConsultancy">
+        <i class="fas fa-leaf"></i>
+        Landscaping consultancy
+      </span>
+      <span class="source-tag online-tag" *ngIf="project.isOnlineVisit">
+        <i class="fas fa-laptop"></i>
+        Online visit
+      </span>
+      <span class="source-tag archived-tag" *ngIf="project.isArchived">
+        <i class="fas fa-box-archive"></i>
+        Archived
       </span>
     </div>
 
@@ -57,134 +69,1824 @@
     </div>
   </section>
 
-  <section *ngIf="!isLoading && project" class="details-layout">
-    <article class="profile-card">
-      <header class="card-section-head">
-        <h2><i class="fas fa-circle-check"></i> Approval & Lifecycle</h2>
-      </header>
-
-      <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
-        <button class="approve-btn" (click)="approve()" [disabled]="isSubmitting">
-          <i class="fas fa-check"></i>
-          Approve
-        </button>
-        <button class="reject-btn" (click)="reject()" [disabled]="isSubmitting">
-          <i class="fas fa-times"></i>
-          Reject
-        </button>
-      </div>
-      <label class="reason-box" *ngIf="canApprove && project.status === 'pending_approval'">
-        <span><i class="fas fa-comment-dots"></i> Optional rejection reason</span>
-        <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Add context for the farmer..."></textarea>
-      </label>
-
-      <label class="state-control" *ngIf="canChangeLifecycleStatus">
-        <span><i class="fas fa-shuffle"></i> Project state</span>
-        <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
-          <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
-        </select>
-      </label>
-
-      <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
-        <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
-        {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
+  <nav class="tab-bar" *ngIf="!isLoading && project" role="tablist">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'overview'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'overview'"
+      (click)="switchTab('overview')"
+    >
+      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+      Overview
+    </button>
+    <ng-container *ngIf="showFullTabs">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'media'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'media'"
+        (click)="switchTab('media')"
+      >
+        <i class="fas fa-images" aria-hidden="true"></i>
+        Photos &amp; Videos
+        <span class="tab-count" *ngIf="mediaItems.length">{{ mediaItems.length }}</span>
       </button>
+      <button
+        class="tab-btn"
+        *ngIf="showDesignsTab"
+        [class.active]="activeTab === 'designs'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'designs'"
+        (click)="switchTab('designs')"
+      >
+        <i class="fas fa-drafting-compass" aria-hidden="true"></i>
+        Designs
+        <span class="tab-count" *ngIf="designItems.length">{{ designItems.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'prescriptions'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'prescriptions'"
+        (click)="switchTab('prescriptions')"
+      >
+        <i class="fas fa-file-prescription" aria-hidden="true"></i>
+        Prescriptions
+        <span class="tab-count" *ngIf="prescriptionItems.length">{{ prescriptionItems.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab === 'reports'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'reports'"
+        (click)="switchTab('reports')"
+      >
+        <i class="fas fa-file-pdf" aria-hidden="true"></i>
+        Reports
+        <span class="tab-count" *ngIf="reports.length">{{ reports.length }}</span>
+      </button>
+      <button
+        class="tab-btn"
+        *ngIf="showTransactionsTab"
+        [class.active]="activeTab === 'transactions'"
+        role="tab"
+        [attr.aria-selected]="activeTab === 'transactions'"
+        (click)="switchTab('transactions')"
+      >
+        <i class="fas fa-coins" aria-hidden="true"></i>
+        Transactions
+        <span class="tab-count" *ngIf="transactions.length">{{ transactions.length }}</span>
+      </button>
+    </ng-container>
+    <button
+      class="tab-btn"
+      *ngIf="showQuotationTab"
+      [class.active]="activeTab === 'quotation'"
+      role="tab"
+      [attr.aria-selected]="activeTab === 'quotation'"
+      (click)="switchTab('quotation')"
+    >
+      <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>
+      Quotation &amp; Payments
+      <span class="tab-count" *ngIf="quotationHistory.length">{{ quotationHistory.length }}</span>
+    </button>
+  </nav>
 
-      <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
-        <div class="info-row">
-          <span><i class="fas fa-clock"></i> Submitted</span>
-          <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.approvedAt">
-          <span><i class="fas fa-circle-check"></i> Approved</span>
-          <strong>{{ project.approvedAt | date:'medium' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.startDate">
-          <span><i class="fas fa-play"></i> Started</span>
-          <strong>{{ project.startDate | date:'mediumDate' }}</strong>
-        </div>
-        <div class="info-row" *ngIf="project.completionDate">
-          <span><i class="fas fa-flag-checkered"></i> Completed</span>
-          <strong>{{ project.completionDate | date:'mediumDate' }}</strong>
-        </div>
+  <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
+
+    <!-- Quotation callout banner shown on overview during pre-approval flow -->
+    <section
+      class="quotation-callout"
+      *ngIf="shouldShowQuotationCallout"
+      [attr.data-state]="project.status"
+    >
+      <div class="callout-icon" aria-hidden="true">
+        <i class="fas" [class.fa-file-invoice-dollar]="project.status === 'pending_quotation'" [class.fa-file-invoice]="project.status === 'pending_acceptance'"></i>
       </div>
-    </article>
+      <div class="callout-body">
+        <h3 *ngIf="project.status === 'pending_quotation' && isManagerOrAdmin">Send a quotation to the farmer</h3>
+        <h3 *ngIf="project.status === 'pending_quotation' && !isManagerOrAdmin">Quotation under preparation</h3>
+        <h3 *ngIf="project.status === 'pending_acceptance' && !isFarmOwner">Awaiting farmer acceptance</h3>
+        <h3 *ngIf="project.status === 'pending_acceptance' && isFarmOwner">Your quotation is ready</h3>
 
-    <article class="facts-section">
+        <p *ngIf="project.status === 'pending_quotation' && isManagerOrAdmin">
+          The farmer has submitted this farm. Review the details and send a quotation to unlock the rest of the workflow.
+        </p>
+        <p *ngIf="project.status === 'pending_quotation' && !isManagerOrAdmin">
+          Our team is reviewing the farm. You'll receive the quotation shortly.
+        </p>
+        <p *ngIf="project.status === 'pending_acceptance' && !isFarmOwner">
+          The farmer is reviewing the proposal. Once accepted, the farm moves to approved.
+        </p>
+        <p *ngIf="project.status === 'pending_acceptance' && isFarmOwner">
+          Open the Quotation & Payments tab to review the proposal and decide.
+        </p>
+      </div>
+      <button type="button" class="callout-cta" (click)="switchTab('quotation')">
+        <i class="fas fa-arrow-right"></i>
+        <span>Open Quotation</span>
+      </button>
+    </section>
+
+    <section class="details-layout">
+      <article class="profile-card">
+        <header class="card-section-head">
+          <h2><i class="fas fa-circle-check"></i> Approval &amp; Lifecycle</h2>
+        </header>
+
+        <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
+          <button class="approve-btn" (click)="approve()" [disabled]="isSubmitting">
+            <i class="fas fa-check"></i>
+            Approve
+          </button>
+          <button class="reject-btn" (click)="reject()" [disabled]="isSubmitting">
+            <i class="fas fa-times"></i>
+            Reject
+          </button>
+        </div>
+        <label class="reason-box" *ngIf="canApprove && project.status === 'pending_approval'">
+          <span><i class="fas fa-comment-dots"></i> Optional rejection reason</span>
+          <textarea [(ngModel)]="rejectionReason" rows="3" placeholder="Add context for the farmer..."></textarea>
+        </label>
+
+        <label class="state-control" *ngIf="canChangeLifecycleStatus">
+          <span><i class="fas fa-shuffle"></i> Project state</span>
+          <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
+            <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
+          </select>
+        </label>
+
+        <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
+          <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
+          {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
+        </button>
+
+        <button
+          class="archive-btn"
+          *ngIf="canArchiveProject"
+          [class.is-archived]="project.isArchived"
+          [disabled]="isArchiving"
+          (click)="confirmArchiveProject()"
+        >
+          <i class="fas" [class.fa-box-archive]="!project.isArchived" [class.fa-rotate-left]="project.isArchived"></i>
+          {{ project.isArchived ? 'Restore Project' : 'Archive Project' }}
+        </button>
+
+        <div class="profile-info-block" *ngIf="!canApprove || project.status !== 'pending_approval'">
+          <div class="info-row">
+            <span><i class="fas fa-clock"></i> Submitted</span>
+            <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.approvedAt">
+            <span><i class="fas fa-circle-check"></i> Approved</span>
+            <strong>{{ project.approvedAt | date:'medium' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.startDate">
+            <span><i class="fas fa-play"></i> Started</span>
+            <strong>{{ project.startDate | date:'mediumDate' }}</strong>
+          </div>
+          <div class="info-row" *ngIf="project.completionDate">
+            <span><i class="fas fa-flag-checkered"></i> Completed</span>
+            <strong>{{ project.completionDate | date:'mediumDate' }}</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="facts-section">
+        <header class="card-section-head">
+          <h2><i class="fas fa-leaf"></i> Farm Profile</h2>
+        </header>
+
+        <div class="facts-grid">
+          <div class="fact-card">
+            <span><i class="fas fa-map-marker-alt"></i> District</span>
+            <strong>{{ project.location?.district || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-signs-post"></i> Taluka</span>
+            <strong>{{ project.location?.taluka || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-city"></i> City</span>
+            <strong>{{ project.location?.city || 'Not set' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-ruler-combined"></i> Total Area</span>
+            <strong>{{ project.landDetails?.totalArea || '-' }} {{ areaUnitLabel(project.landDetails?.areaUnit) }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
+            <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-mountain"></i> Soil Type</span>
+            <strong>{{ project.landDetails?.soilType || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-droplet"></i> Irrigation Source</span>
+            <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-layer-group"></i> Terrain</span>
+            <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-bolt"></i> Transformer (TC) HP</span>
+            <strong>{{ project.electricity?.transformerHp ?? '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-plug"></i> Electric Motors</span>
+            <strong>{{ project.electricity?.motorCount ?? '-' }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-gauge-high"></i> Total Motor HP</span>
+            <strong>{{ project.electricity?.totalMotorHp ?? '-' }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="!project.isOnlineVisit">
+            <span><i class="fas fa-route"></i> Visits / year</span>
+            <strong>{{ project.visitFrequency || '-' }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="project.isOnlineVisit">
+            <span><i class="fas fa-laptop"></i> Visit Mode</span>
+            <strong>Online (no on-site visit count)</strong>
+          </div>
+          <div class="fact-card wide">
+            <span><i class="fas fa-location-dot"></i> Address</span>
+            <strong>{{ project.location?.address || '-' }}</strong>
+          </div>
+          <div class="fact-card wide map-card" *ngIf="project.location?.mapUrl">
+            <span><i class="fas fa-map-location-dot"></i> Location on Map</span>
+            <a class="map-link" [href]="project.location?.mapUrl" target="_blank" rel="noopener">
+              <i class="fas fa-diamond-turn-right"></i>
+              Navigate / Open in Maps
+            </a>
+          </div>
+          <div class="fact-card wide">
+            <span><i class="fas fa-seedling"></i> Crops</span>
+            <strong>{{ cropSummary() }}</strong>
+          </div>
+          <div class="fact-card wide" *ngIf="project.description">
+            <span><i class="fas fa-align-left"></i> Description</span>
+            <strong>{{ project.description }}</strong>
+          </div>
+          <div class="fact-card wide" *ngIf="project.notes">
+            <span><i class="fas fa-note-sticky"></i> Notes</span>
+            <strong>{{ project.notes }}</strong>
+          </div>
+          <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
+            <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
+            <strong>{{ project.rejectedReason }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <app-farm-weather
+      [latitude]="farmLatitude"
+      [longitude]="farmLongitude"
+      [locationLabel]="weatherLocationLabel"
+    ></app-farm-weather>
+
+    <section class="edit-panel" *ngIf="showEditForm && project">
       <header class="card-section-head">
-        <h2><i class="fas fa-leaf"></i> Farm Profile</h2>
+        <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
+        <p>Changes are sent for approval before going live.</p>
+      </header>
+      <app-farm-registration-form
+        [mode]="isFarmer ? 'farmer' : 'manager'"
+        action="edit"
+        [currentUser]="currentUser"
+        [initialData]="project"
+        [isSubmitting]="isSubmitting"
+        (formSubmit)="submitEditRequest($event)"
+        (cancel)="showEditForm = false"
+      ></app-farm-registration-form>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'media'">
+    <section class="media-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-images"></i> Photos &amp; Videos</h2>
+          <p *ngIf="canUploadMedia">Upload up to {{ maxFilesPerBatch }} files at a time, max {{ maxFileSizeMb }}MB each. Newest first.</p>
+          <p *ngIf="!canUploadMedia">Photos and videos shared by the project team.</p>
+        </div>
+
+        <div class="media-head-actions">
+          <div
+            class="quota-chip"
+            *ngIf="quota"
+            [class.warning]="quotaStatus === 'warning'"
+            [class.critical]="quotaStatus === 'critical'"
+            [attr.aria-label]="'Used ' + quota.used + ' of ' + quota.limit + ' uploads this week'"
+          >
+            <i class="fas fa-camera-retro" aria-hidden="true"></i>
+            <div class="quota-text">
+              <strong>{{ quota.used }} / {{ quota.limit }}</strong>
+              <span>this week · resets {{ quotaResetsLabel }}</span>
+            </div>
+            <div class="quota-bar" aria-hidden="true">
+              <div class="quota-bar-fill" [style.width.%]="quotaPercent"></div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="upload-btn"
+            *ngIf="canUploadMedia"
+            [disabled]="isUploading"
+            [class.at-limit]="quota && quota.used >= quota.limit"
+            (click)="triggerFilePicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploading"
+              [class.fa-circle-notch]="isUploading"
+              [class.fa-spin]="isUploading"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploading ? 'Uploading...' : 'Upload Photos & Videos' }}</span>
+          </button>
+        </div>
       </header>
 
-      <div class="facts-grid">
-        <div class="fact-card">
-          <span><i class="fas fa-map-marker-alt"></i> District</span>
-          <strong>{{ project.location?.district || 'Not set' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-city"></i> City</span>
-          <strong>{{ project.location?.city || 'Not set' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-ruler-combined"></i> Total Area</span>
-          <strong>{{ project.landDetails?.totalArea || '-' }} {{ project.landDetails?.areaUnit || '' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-vector-square"></i> Cultivable Area</span>
-          <strong>{{ project.landDetails?.cultivableArea || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-mountain"></i> Soil Type</span>
-          <strong>{{ project.landDetails?.soilType || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-droplet"></i> Irrigation</span>
-          <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-layer-group"></i> Terrain</span>
-          <strong>{{ project.landDetails?.terrainType || '-' }}</strong>
-        </div>
-        <div class="fact-card">
-          <span><i class="fas fa-water"></i> Water Sources</span>
-          <strong>{{ project.landDetails?.waterSource?.join(', ') || '-' }}</strong>
-        </div>
-        <div class="fact-card wide">
-          <span><i class="fas fa-location-dot"></i> Address</span>
-          <strong>{{ project.location?.address || '-' }}</strong>
-        </div>
-        <div class="fact-card wide">
-          <span><i class="fas fa-seedling"></i> Crops</span>
-          <strong>{{ cropSummary() }}</strong>
-        </div>
-        <div class="fact-card wide" *ngIf="project.description">
-          <span><i class="fas fa-align-left"></i> Description</span>
-          <strong>{{ project.description }}</strong>
-        </div>
-        <div class="fact-card wide" *ngIf="project.notes">
-          <span><i class="fas fa-note-sticky"></i> Notes</span>
-          <strong>{{ project.notes }}</strong>
-        </div>
-        <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
-          <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
-          <strong>{{ project.rejectedReason }}</strong>
+      <div class="upload-strip" *ngIf="uploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of uploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
         </div>
       </div>
-    </article>
-  </section>
 
-  <section class="edit-panel" *ngIf="showEditForm && project">
-    <header class="card-section-head">
-      <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
-      <p>Changes are sent for approval before going live.</p>
-    </header>
-    <app-farm-registration-form
-      [mode]="isFarmer ? 'farmer' : 'manager'"
-      action="edit"
-      [currentUser]="currentUser"
-      [initialData]="project"
-      [isSubmitting]="isSubmitting"
-      (formSubmit)="submitEditRequest($event)"
-      (cancel)="showEditForm = false"
-    ></app-farm-registration-form>
-  </section>
+      <div class="media-loading" *ngIf="mediaLoading && !mediaItems.length">
+        <div class="spinner"></div>
+        <p>Loading media...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!mediaLoading && mediaItems.length === 0 && attendedMediaTotal === 0 && uploadingBatch.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-camera"></i>
+        </div>
+        <h3>No photos or videos yet</h3>
+        <p *ngIf="canUploadMedia">Share what's happening at the farm — pick a few photos or videos to get started.</p>
+        <p *ngIf="!canUploadMedia">Once the team shares media, it will appear here.</p>
+        <button
+          type="button"
+          class="upload-btn empty-state-btn"
+          *ngIf="canUploadMedia"
+          [disabled]="isUploading"
+          (click)="triggerFilePicker()"
+        >
+          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <span>Upload Photos &amp; Videos</span>
+        </button>
+      </div>
+
+      <div class="recent-media-block" *ngIf="mediaItems.length || attendedMediaTotal > 0">
+        <header class="recent-media-head" *ngIf="mediaItems.length">
+          <div class="recent-media-head-text">
+            <h3><i class="fas fa-bolt"></i> Unattended</h3>
+            <span class="recent-meta">{{ mediaItems.length }} new item{{ mediaItems.length === 1 ? '' : 's' }} awaiting review</span>
+          </div>
+          <button
+            type="button"
+            class="attend-all-btn"
+            *ngIf="canAttendMedia"
+            [disabled]="isAttendingAll"
+            (click)="markAllAsAttended()"
+          >
+            <i
+              class="fas"
+              [class.fa-check-double]="!isAttendingAll"
+              [class.fa-circle-notch]="isAttendingAll"
+              [class.fa-spin]="isAttendingAll"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isAttendingAll ? 'Attending...' : 'Mark all as attended' }}</span>
+          </button>
+        </header>
+
+        <div class="media-empty-soft" *ngIf="!mediaItems.length && attendedMediaTotal > 0">
+          <i class="fas fa-circle-check"></i>
+          <p>You're all caught up — no unattended photos.</p>
+        </div>
+
+        <div class="media-grid" *ngIf="mediaItems.length">
+          <div
+            class="media-tile-wrap"
+            *ngFor="let item of mediaItems; trackBy: trackMedia"
+          >
+            <button
+              type="button"
+              class="media-tile"
+              (click)="openLightbox(item)"
+              [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+            >
+              <ng-container *ngIf="item.type === 'image'">
+                <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+              </ng-container>
+              <ng-container *ngIf="item.type === 'video'">
+                <video [src]="item.url" preload="metadata" muted playsinline></video>
+                <span class="play-icon" aria-hidden="true">
+                  <i class="fas fa-play"></i>
+                </span>
+              </ng-container>
+              <span class="recent-badge" aria-hidden="true">New</span>
+              <div class="media-overlay">
+                <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+                <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="media-attend"
+              *ngIf="canAttendMedia"
+              [disabled]="attendingMediaIds.has(item.mediaId)"
+              (click)="markAsAttended(item, $event)"
+              aria-label="Mark as attended"
+              title="Mark as attended"
+            >
+              <i
+                class="fas"
+                [class.fa-check]="!attendingMediaIds.has(item.mediaId)"
+                [class.fa-circle-notch]="attendingMediaIds.has(item.mediaId)"
+                [class.fa-spin]="attendingMediaIds.has(item.mediaId)"
+              ></i>
+              <span>Mark attended</span>
+            </button>
+
+            <button
+              type="button"
+              class="media-delete"
+              *ngIf="canDeleteMedia"
+              [disabled]="deletingMediaIds.has(item.mediaId)"
+              (click)="confirmDeleteMedia(item, $event)"
+              aria-label="Delete photo"
+              title="Delete photo (admin)"
+            >
+              <i
+                class="fas"
+                [class.fa-trash-alt]="!deletingMediaIds.has(item.mediaId)"
+                [class.fa-circle-notch]="deletingMediaIds.has(item.mediaId)"
+                [class.fa-spin]="deletingMediaIds.has(item.mediaId)"
+              ></i>
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="older-toggle"
+          *ngIf="attendedMediaTotal > 0"
+          (click)="toggleAttendedMedia()"
+          [attr.aria-expanded]="showAttendedMedia"
+        >
+          <i class="fas" [class.fa-chevron-down]="!showAttendedMedia" [class.fa-chevron-up]="showAttendedMedia"></i>
+          <span>{{ showAttendedMedia ? 'Hide attended photos' : 'View attended photos' }}</span>
+          <span class="older-count">{{ attendedMediaTotal }}</span>
+        </button>
+
+        <section class="older-media" *ngIf="showAttendedMedia">
+          <header class="older-head">
+            <h3><i class="fas fa-circle-check"></i> Attended photos</h3>
+            <span class="older-sub">{{ attendedMediaTotal }} reviewed item{{ attendedMediaTotal === 1 ? '' : 's' }}</span>
+          </header>
+
+          <div class="media-loading older-loading" *ngIf="attendedMediaLoading && attendedMediaItems.length === 0">
+            <div class="spinner"></div>
+            <p>Loading attended photos...</p>
+          </div>
+
+          <div class="media-grid older-grid" *ngIf="attendedMediaItems.length">
+            <div
+              class="media-tile-wrap"
+              *ngFor="let item of attendedMediaItems; trackBy: trackMedia"
+            >
+              <button
+                type="button"
+                class="media-tile"
+                (click)="openLightbox(item)"
+                [attr.aria-label]="(item.type === 'video' ? 'Play video uploaded ' : 'View photo uploaded ') + (item.uploadedAt | date:'medium')"
+              >
+                <ng-container *ngIf="item.type === 'image'">
+                  <img [src]="item.url" [alt]="'Farm photo uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+                </ng-container>
+                <ng-container *ngIf="item.type === 'video'">
+                  <video [src]="item.url" preload="metadata" muted playsinline></video>
+                  <span class="play-icon" aria-hidden="true">
+                    <i class="fas fa-play"></i>
+                  </span>
+                </ng-container>
+                <div class="media-overlay">
+                  <span class="media-date">{{ item.uploadedAt | date:'MMM d, y' }}</span>
+                  <span class="media-author" *ngIf="item.attendedByName">attended by {{ item.attendedByName }}</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                class="media-delete"
+                *ngIf="canDeleteMedia"
+                [disabled]="deletingMediaIds.has(item.mediaId)"
+                (click)="confirmDeleteMedia(item, $event)"
+                aria-label="Delete photo"
+                title="Delete photo (admin)"
+              >
+                <i
+                  class="fas"
+                  [class.fa-trash-alt]="!deletingMediaIds.has(item.mediaId)"
+                  [class.fa-circle-notch]="deletingMediaIds.has(item.mediaId)"
+                  [class.fa-spin]="deletingMediaIds.has(item.mediaId)"
+                ></i>
+              </button>
+            </div>
+          </div>
+
+          <nav class="older-pagination" *ngIf="attendedMediaTotalPages > 1" aria-label="Attended photos pagination">
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="attendedMediaPage === 1 || attendedMediaLoading"
+              (click)="goToAttendedPage(attendedMediaPage - 1)"
+              aria-label="Previous page"
+            >
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button
+              type="button"
+              class="page-btn"
+              *ngFor="let page of attendedPageNumbers"
+              [class.active]="page === attendedMediaPage"
+              [disabled]="attendedMediaLoading"
+              (click)="goToAttendedPage(page)"
+            >
+              {{ page }}
+            </button>
+            <button
+              type="button"
+              class="page-btn"
+              [disabled]="attendedMediaPage === attendedMediaTotalPages || attendedMediaLoading"
+              (click)="goToAttendedPage(attendedMediaPage + 1)"
+              aria-label="Next page"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </nav>
+        </section>
+      </div>
+    </section>
+
+    <input
+      #mediaInput
+      type="file"
+      class="media-input"
+      accept="image/*,video/*"
+      multiple
+      (change)="onFilesSelected($event)"
+    />
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'designs' && showDesignsTab">
+    <section class="media-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-drafting-compass"></i> Landscaping Designs</h2>
+          <p *ngIf="canUploadDesigns">Upload landscape design images or videos for the farm owner to review.</p>
+          <p *ngIf="!canUploadDesigns">Designs shared by the design team for this landscaping project.</p>
+        </div>
+
+        <div class="media-head-actions" *ngIf="canUploadDesigns">
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isUploadingDesigns"
+            (click)="triggerDesignPicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploadingDesigns"
+              [class.fa-circle-notch]="isUploadingDesigns"
+              [class.fa-spin]="isUploadingDesigns"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploadingDesigns ? 'Uploading...' : 'Upload Designs' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="upload-strip" *ngIf="designUploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of designUploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="designsLoading && !designItems.length">
+        <div class="spinner"></div>
+        <p>Loading designs...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!designsLoading && designItems.length === 0 && designUploadingBatch.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-drafting-compass"></i>
+        </div>
+        <h3>No designs yet</h3>
+        <p *ngIf="canUploadDesigns">Share concept boards, plan drawings, or rendered visuals for this landscaping project.</p>
+        <p *ngIf="!canUploadDesigns">The design team hasn't shared any designs yet. You'll see them here as they upload.</p>
+        <button
+          type="button"
+          class="upload-btn empty-state-btn"
+          *ngIf="canUploadDesigns"
+          [disabled]="isUploadingDesigns"
+          (click)="triggerDesignPicker()"
+        >
+          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <span>Upload Designs</span>
+        </button>
+      </div>
+
+      <div class="media-grid" *ngIf="designItems.length">
+        <button
+          type="button"
+          class="media-tile"
+          *ngFor="let item of designItems; trackBy: trackDesign"
+          (click)="openDesignLightbox(item)"
+          [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : 'View design uploaded ') + (item.uploadedAt | date:'medium')"
+        >
+          <ng-container *ngIf="item.type === 'image'">
+            <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+          </ng-container>
+          <ng-container *ngIf="item.type === 'video'">
+            <video [src]="item.url" preload="metadata" muted playsinline></video>
+            <span class="play-icon" aria-hidden="true">
+              <i class="fas fa-play"></i>
+            </span>
+          </ng-container>
+          <div class="media-overlay">
+            <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+            <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <input
+      #designInput
+      type="file"
+      class="media-input"
+      accept="image/*,video/*"
+      multiple
+      (change)="onDesignFilesSelected($event)"
+    />
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'prescriptions'">
+    <section class="media-section prescriptions-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-file-prescription"></i> Prescriptions &amp; Documents</h2>
+          <p *ngIf="canUploadPrescriptions">Add prescriptions or upload supporting documents (images, PDF, Word, text).</p>
+          <p *ngIf="!canUploadPrescriptions">Prescriptions and reference documents shared by your manager.</p>
+        </div>
+
+        <div class="media-head-actions" *ngIf="canUploadPrescriptions">
+          <button
+            type="button"
+            class="upload-btn ghost"
+            [disabled]="isSavingTextPrescription"
+            (click)="openAddPrescriptionForm()"
+          >
+            <i class="fas fa-prescription" aria-hidden="true"></i>
+            <span>Add Prescription</span>
+          </button>
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isUploadingPrescriptions"
+            (click)="triggerPrescriptionPicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploadingPrescriptions"
+              [class.fa-circle-notch]="isUploadingPrescriptions"
+              [class.fa-spin]="isUploadingPrescriptions"
+              aria-hidden="true"
+            ></i>
+            <span>{{ isUploadingPrescriptions ? 'Uploading...' : 'Upload Document' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="structured-rx-form" *ngIf="showStructuredPrescriptionForm && canUploadPrescriptions">
+        <div class="srx-head">
+          <div>
+            <h3>નવી પ્રિસ્ક્રિપ્શન <span class="srx-en">New Visit Prescription</span></h3>
+            <p>ફાર્મ વિઝીટ ની વિગતો ભરો. <span class="srx-en">Fill in the field visit details below.</span></p>
+          </div>
+          <button type="button" class="srx-close" (click)="cancelStructuredPrescription()" [disabled]="isSavingStructuredPrescription" aria-label="Close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- META row -->
+        <div class="srx-grid srx-meta">
+          <label class="srx-field">
+            <span class="srx-label"><span class="gu">ખેડૂતનું / ફાર્મ નું નામ</span><span class="en">Farmer / Farm Name</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.farmerName" maxlength="120" placeholder="Farm name" />
+          </label>
+          <label class="srx-field">
+            <span class="srx-label"><span class="gu">વીઝીટ તારીખ</span><span class="en">Visit Date</span></span>
+            <input type="date" [(ngModel)]="structuredPrescription.visitDate" />
+          </label>
+        </div>
+
+        <label class="srx-field">
+          <span class="srx-label"><span class="gu">છેલ્લી વિઝીટમાં નક્કી કરેલ કામની સમીક્ષા</span><span class="en">Review of last visit's planned work</span></span>
+          <textarea rows="2" [(ngModel)]="structuredPrescription.lastVisitReview" placeholder="e.g. ok / done / pending"></textarea>
+        </label>
+
+        <!-- Sections 1-5 -->
+        <div class="srx-section">
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૧)</span><span class="gu">જમીનની તૈયારી</span><span class="en">Land Preparation</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.landPreparation" />
+          </label>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૨)</span><span class="gu">વાવેતર / રોપણી</span><span class="en">Sowing / Planting</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.sowingPlanting" />
+          </label>
+
+          <div class="srx-field">
+            <span class="srx-label"><span class="num">(૩)</span><span class="gu">ખેતીકાર્યો</span><span class="en">Farming Operations</span></span>
+            <div class="srx-check-grid">
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.leveling" /><span><span class="gu">લેવલીંગ</span><span class="en">Leveling</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.marking" /><span><span class="gu">નિશાન</span><span class="en">Marking</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.digging" /><span><span class="gu">ખાડા ખોદવા</span><span class="en">Digging Holes</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.soilFilling" /><span><span class="gu">માટી ભરવી</span><span class="en">Soil Filling</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.tractor" /><span><span class="gu">ટ્રેક્ટર ચલાવવું</span><span class="en">Tractor Run</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.supports" /><span><span class="gu">ટેકા સરખા કરવા</span><span class="en">Fix Supports</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.fillGaps" /><span><span class="gu">ખાલા પુરવા</span><span class="en">Fill Gaps</span></span></label>
+              <label class="srx-check"><input type="checkbox" [(ngModel)]="structuredPrescription.farmingOperations!.pruning" /><span><span class="gu">પ્રુનીંગ</span><span class="en">Pruning</span></span></label>
+            </div>
+            <label class="srx-field srx-other">
+              <span class="srx-label-inline"><span class="gu">અન્ય</span><span class="en">Other</span></span>
+              <input type="text" [(ngModel)]="structuredPrescription.farmingOperations!.other" placeholder="Specify if any" />
+            </label>
+          </div>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૪)</span><span class="gu">પિયત</span><span class="en">Irrigation</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.irrigation" />
+          </label>
+
+          <label class="srx-field">
+            <span class="srx-label"><span class="num">(૫)</span><span class="gu">નિંદામણ નિયંત્રણ</span><span class="en">Weed Control</span></span>
+            <input type="text" [(ngModel)]="structuredPrescription.weedControl" />
+          </label>
+        </div>
+
+        <!-- Section 6: Fertilizers -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૬)</span><span class="gu">ખાતરો</span><span class="en">Fertilizers</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.farmyardManure" /><span><span class="gu">છાણીયું ખાતર અથવા અન્ય</span><span class="en">Farmyard Manure / Other</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.chemical" /><span><span class="gu">રાસાયણીક ખાતર</span><span class="en">Chemical Fertilizer</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.organic" /><span><span class="gu">જૈવિક ખાતર</span><span class="en">Organic Fertilizer</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.jivamrut" /><span><span class="gu">જીવામૃત</span><span class="en">Jivamrut</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.fertilizers!.spray" /><span><span class="gu">છોડ/ઝાડ પર સ્પ્રેના ખાતરો</span><span class="en">Spray Fertilizers</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 7: Pests -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૭)</span><span class="gu">જીવાતો</span><span class="en">Pests</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.soilBorne" /><span><span class="gu">જમીન જન્ય</span><span class="en">Soil-borne</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.root" /><span><span class="gu">મુળની જીવાત</span><span class="en">Root Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.stem" /><span><span class="gu">થડની જીવાત</span><span class="en">Stem Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.leaf" /><span><span class="gu">પાનની જીવાત</span><span class="en">Leaf Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.flower" /><span><span class="gu">ફુલની જીવાત</span><span class="en">Flower Pest</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.pests!.fruit" /><span><span class="gu">ફળની જીવાત</span><span class="en">Fruit Pest</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 8: Diseases -->
+        <div class="srx-section">
+          <h4 class="srx-section-head"><span class="num">(૮)</span><span class="gu">રોગો</span><span class="en">Diseases</span></h4>
+          <div class="srx-tick-grid">
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.soilBorne" /><span><span class="gu">જમીન જન્ય રોગ</span><span class="en">Soil-borne Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.stem" /><span><span class="gu">થડનો રોગ</span><span class="en">Stem Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.branch" /><span><span class="gu">ડાળીનો રોગ</span><span class="en">Branch Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.leaf" /><span><span class="gu">પાનનો રોગ</span><span class="en">Leaf Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.flower" /><span><span class="gu">ફુલનો રોગ</span><span class="en">Flower Disease</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.fruit" /><span><span class="gu">ફળનો રોગ</span><span class="en">Fruit Disease</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.diseases!.other" /><span><span class="gu">અન્ય રોગ</span><span class="en">Other Disease</span></span></label>
+          </div>
+        </div>
+
+        <!-- Sections 9-12 -->
+        <div class="srx-section">
+          <div class="srx-tick-grid">
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.hormoneTreatment" /><span><span class="num">(૯)</span><span class="gu">કલ્ટાર કે અન્ય હોર્મોન્સની ટ્રીટમેન્ટ</span><span class="en">Cultar / Hormone Treatment</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.fruitHarvesting" /><span><span class="num">(૧૦)</span><span class="gu">ફળ ઉતારવા</span><span class="en">Fruit Harvesting</span></span></label>
+            <label class="srx-tick"><input type="checkbox" [(ngModel)]="structuredPrescription.grading" /><span><span class="num">(૧૧)</span><span class="gu">ગ્રેડીંગ</span><span class="en">Grading</span></span></label>
+            <label class="srx-tick srx-span-2"><input type="checkbox" [(ngModel)]="structuredPrescription.packing" /><span><span class="num">(૧૨)</span><span class="gu">પેકીંગ</span><span class="en">Packing</span></span></label>
+          </div>
+        </div>
+
+        <!-- Section 13: Other Notes -->
+        <label class="srx-field">
+          <span class="srx-label"><span class="num">(૧૩)</span><span class="gu">અન્ય નોંધ</span><span class="en">Other Notes</span></span>
+          <textarea rows="4" [(ngModel)]="structuredPrescription.otherNotes" placeholder="Any additional observations or instructions"></textarea>
+        </label>
+
+        <!-- Image attachments -->
+        <div class="srx-field">
+          <span class="srx-label"><span class="gu">ફોટા જોડો</span><span class="en">Attach Photos (optional)</span></span>
+          <div class="srx-attach-row">
+            <label class="srx-attach-btn" [class.disabled]="isSavingStructuredPrescription">
+              <i class="fas fa-image"></i>
+              <span>Add Images</span>
+              <input type="file" [attr.accept]="structuredImageAccept" multiple (change)="onStructuredImagesSelected($event)" [disabled]="isSavingStructuredPrescription" hidden />
+            </label>
+            <span class="srx-attach-hint">{{ structuredPrescriptionImages.length }} / {{ maxFilesPerBatch }} selected</span>
+          </div>
+
+          <div class="srx-thumb-grid" *ngIf="structuredPrescriptionImagePreviews.length">
+            <div class="srx-thumb" *ngFor="let preview of structuredPrescriptionImagePreviews; let i = index">
+              <img [src]="preview" alt="Attachment preview" />
+              <button type="button" class="srx-thumb-remove" (click)="removeStructuredImage(i)" [disabled]="isSavingStructuredPrescription" aria-label="Remove image">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="srx-progress" *ngIf="isSavingStructuredPrescription">
+          <div class="srx-progress-bar" [style.width.%]="structuredSaveProgress"></div>
+          <span class="srx-progress-label">{{ structuredSaveProgress >= 100 ? 'Finalizing…' : 'Uploading…' }} {{ structuredSaveProgress }}%</span>
+        </div>
+
+        <div class="rx-actions">
+          <button type="button" class="rx-cancel" (click)="cancelStructuredPrescription()" [disabled]="isSavingStructuredPrescription">
+            Cancel
+          </button>
+          <button type="button" class="rx-save" (click)="saveStructuredPrescription()" [disabled]="isSavingStructuredPrescription">
+            <i class="fas" [class.fa-check]="!isSavingStructuredPrescription" [class.fa-circle-notch]="isSavingStructuredPrescription" [class.fa-spin]="isSavingStructuredPrescription"></i>
+            {{ isSavingStructuredPrescription ? 'Saving…' : 'Save Prescription' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="upload-strip" *ngIf="prescriptionUploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of prescriptionUploadingBatch; trackBy: trackUpload"
+          [class.success]="item.status === 'success'"
+          [class.error]="item.status === 'error'"
+        >
+          <div class="upload-item-row">
+            <i
+              class="fas"
+              [class.fa-circle-notch]="item.status === 'uploading'"
+              [class.fa-spin]="item.status === 'uploading'"
+              [class.fa-circle-check]="item.status === 'success'"
+              [class.fa-circle-exclamation]="item.status === 'error'"
+              aria-hidden="true"
+            ></i>
+            <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
+            <span class="upload-meta">{{ item.message || formatSize(item.size) }}</span>
+          </div>
+          <div class="upload-track">
+            <div class="upload-fill" [style.width.%]="item.progress"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="prescriptionsLoading && !prescriptionItems.length">
+        <div class="spinner"></div>
+        <p>Loading prescriptions...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!prescriptionsLoading && prescriptionItems.length === 0 && prescriptionUploadingBatch.length === 0 && !showTextPrescriptionForm && !showStructuredPrescriptionForm">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-file-prescription"></i>
+        </div>
+        <h3>No prescriptions yet</h3>
+        <p *ngIf="canUploadPrescriptions">Add a prescription or upload a supporting document for the farm owner to review.</p>
+        <p *ngIf="!canUploadPrescriptions">Once your manager shares prescriptions or related documents, they'll appear here.</p>
+      </div>
+
+      <ul class="rx-list" *ngIf="prescriptionItems.length > 0">
+        <li class="rx-item" *ngFor="let item of prescriptionItems">
+          <div class="rx-row rx-row-flat">
+            <span class="rx-icon" [attr.aria-hidden]="true">
+              <i class="fas" [ngClass]="prescriptionIcon(item)"></i>
+            </span>
+            <div class="rx-meta">
+              <strong class="rx-title">{{ item.title || item.fileName || 'Prescription' }}</strong>
+              <div class="rx-sub">
+                <span class="rx-type">{{ prescriptionTypeLabel(item) }}</span>
+                <span>·</span>
+                <span>{{ item.uploadedAt | date:'MMM d, y, h:mm a' }}</span>
+                <span *ngIf="item.uploadedByName">· by {{ item.uploadedByName }}</span>
+                <span *ngIf="item.attachedImages?.length">· <i class="fas fa-paperclip"></i> {{ item.attachedImages?.length }} photo<span *ngIf="(item.attachedImages?.length || 0) > 1">s</span></span>
+                <span *ngIf="item.sizeBytes">· {{ formatSize(item.sizeBytes) }}</span>
+              </div>
+            </div>
+            <div class="rx-row-actions">
+              <button
+                type="button"
+                class="report-btn primary"
+                (click)="openPrescriptionOverlay(item)"
+                [disabled]="isLoadingPrescriptionPreview && activePrescription?._id === item._id"
+              >
+                <i class="fas fa-eye"></i>
+                <span>View</span>
+              </button>
+              <button
+                type="button"
+                class="report-btn ghost"
+                (click)="downloadPrescriptionFromRow(item)"
+                [disabled]="downloadingPrescriptionId === prescriptionId(item)"
+                [attr.aria-label]="'Download ' + (item.title || 'prescription')"
+              >
+                <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(item)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(item)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(item)"></i>
+                <span>Download</span>
+              </button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <input
+      #prescriptionInput
+      type="file"
+      class="media-input"
+      [attr.accept]="prescriptionAccept"
+      multiple
+      (change)="onPrescriptionFilesSelected($event)"
+    />
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'transactions' && showTransactionsTab">
+    <section class="media-section transactions-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-coins"></i> Manual Transactions</h2>
+          <p>Record incoming payments and expenses for this farm. Admin only.</p>
+        </div>
+
+        <div class="media-head-actions">
+          <button
+            type="button"
+            class="upload-btn"
+            [disabled]="isSavingTransaction"
+            (click)="startNewTransaction()"
+          >
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            <span>Record Transaction</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="tx-summary" *ngIf="transactionsSummary">
+        <div class="tx-stat tx-credit">
+          <span class="tx-stat-label"><i class="fas fa-arrow-down"></i> Income</span>
+          <strong>{{ formatCurrency(transactionsSummary.totalCredits) }}</strong>
+        </div>
+        <div class="tx-stat tx-debit">
+          <span class="tx-stat-label"><i class="fas fa-arrow-up"></i> Expense</span>
+          <strong>{{ formatCurrency(transactionsSummary.totalDebits) }}</strong>
+        </div>
+        <div class="tx-stat" [class.tx-net-positive]="transactionsSummary.netExpense < 0" [class.tx-net-negative]="transactionsSummary.netExpense > 0">
+          <span class="tx-stat-label"><i class="fas fa-scale-balanced"></i> Net</span>
+          <strong>{{ formatCurrency(-transactionsSummary.netExpense) }}</strong>
+        </div>
+        <div class="tx-stat tx-count">
+          <span class="tx-stat-label"><i class="fas fa-list"></i> Entries</span>
+          <strong>{{ transactionsSummary.transactionCount }}</strong>
+        </div>
+      </div>
+
+      <div class="text-prescription-form tx-form" *ngIf="showTransactionForm">
+        <div class="rx-field-row">
+          <label class="rx-field">
+            <span><i class="fas fa-tag"></i> Type</span>
+            <select [(ngModel)]="transactionForm.type" name="txType">
+              <option value="credit">Credit (income)</option>
+              <option value="debit">Debit (expense)</option>
+            </select>
+          </label>
+          <label class="rx-field">
+            <span><i class="fas fa-rupee-sign"></i> Amount</span>
+            <input type="number" min="0" step="1" [(ngModel)]="transactionForm.amount" name="txAmount" placeholder="0" />
+          </label>
+          <label class="rx-field">
+            <span><i class="fas fa-calendar"></i> Date</span>
+            <input type="date" [(ngModel)]="transactionForm.date" name="txDate" />
+          </label>
+        </div>
+
+        <label class="rx-field">
+          <span><i class="fas fa-align-left"></i> Description</span>
+          <input
+            type="text"
+            [(ngModel)]="transactionForm.description"
+            name="txDescription"
+            placeholder="e.g. Payment received via UPI"
+            maxlength="500"
+          />
+        </label>
+
+        <label class="rx-field">
+          <span><i class="fas fa-folder-open"></i> Category (optional)</span>
+          <input
+            type="text"
+            [(ngModel)]="transactionForm.category"
+            name="txCategory"
+            placeholder="e.g. Materials, Labor, Visit fee"
+            maxlength="100"
+          />
+        </label>
+
+        <label class="rx-field">
+          <span><i class="fas fa-note-sticky"></i> Notes (optional)</span>
+          <textarea
+            [(ngModel)]="transactionForm.notes"
+            name="txNotes"
+            rows="3"
+            placeholder="Any additional context..."
+            maxlength="1000"
+          ></textarea>
+        </label>
+
+        <div class="rx-actions">
+          <button type="button" class="rx-cancel" (click)="cancelTransactionForm()" [disabled]="isSavingTransaction">
+            Cancel
+          </button>
+          <button type="button" class="rx-save" (click)="saveTransaction()" [disabled]="isSavingTransaction">
+            <i class="fas" [class.fa-check]="!isSavingTransaction" [class.fa-circle-notch]="isSavingTransaction" [class.fa-spin]="isSavingTransaction"></i>
+            {{ isSavingTransaction ? 'Saving...' : (editingTransactionId ? 'Save Changes' : 'Record Transaction') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="media-loading" *ngIf="transactionsLoading && !transactions.length">
+        <div class="spinner"></div>
+        <p>Loading transactions...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!transactionsLoading && transactions.length === 0 && !showTransactionForm">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-coins"></i>
+        </div>
+        <h3>No transactions recorded</h3>
+        <p>Use the form to record any payment received or paid for this farm.</p>
+        <button type="button" class="upload-btn empty-state-btn" (click)="startNewTransaction()">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>Record Transaction</span>
+        </button>
+      </div>
+
+      <ul class="tx-list" *ngIf="transactions.length">
+        <li
+          class="tx-item"
+          *ngFor="let tx of transactions; trackBy: trackTransaction"
+          [class.tx-item-credit]="tx.type === 'credit'"
+          [class.tx-item-debit]="tx.type === 'debit'"
+          [class.editing]="editingTransactionId === tx._id"
+        >
+          <div class="tx-icon" [attr.aria-hidden]="true">
+            <i class="fas" [class.fa-arrow-down]="tx.type === 'credit'" [class.fa-arrow-up]="tx.type === 'debit'"></i>
+          </div>
+          <div class="tx-meta">
+            <strong class="tx-title">{{ tx.description }}</strong>
+            <div class="tx-sub">
+              <span class="tx-type-pill">{{ tx.type === 'credit' ? 'Income' : 'Expense' }}</span>
+              <span *ngIf="tx.category">· {{ tx.category }}</span>
+              <span>· {{ tx.date | date:'mediumDate' }}</span>
+            </div>
+            <p class="rx-notes" *ngIf="tx.notes">
+              <i class="fas fa-note-sticky"></i> {{ tx.notes }}
+            </p>
+          </div>
+          <div class="tx-amount" [class.credit]="tx.type === 'credit'" [class.debit]="tx.type === 'debit'">
+            {{ tx.type === 'credit' ? '+' : '−' }}{{ formatCurrency(tx.amount) }}
+          </div>
+          <div class="tx-actions">
+            <button
+              type="button"
+              class="tx-icon-btn"
+              (click)="startEditTransaction(tx)"
+              [disabled]="isSavingTransaction || isDeletingTransactionId === tx._id"
+              [attr.aria-label]="'Edit ' + tx.description"
+            >
+              <i class="fas fa-pen"></i>
+            </button>
+            <button
+              type="button"
+              class="tx-icon-btn danger"
+              (click)="deleteTransaction(tx)"
+              [disabled]="isSavingTransaction || isDeletingTransactionId === tx._id"
+              [attr.aria-label]="'Delete ' + tx.description"
+            >
+              <i class="fas" [class.fa-trash]="isDeletingTransactionId !== tx._id" [class.fa-circle-notch]="isDeletingTransactionId === tx._id" [class.fa-spin]="isDeletingTransactionId === tx._id"></i>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'reports'">
+    <section class="media-section reports-section">
+      <header class="media-head">
+        <div class="media-head-text">
+          <h2><i class="fas fa-file-pdf"></i> Lab Reports</h2>
+          <p>
+            Soil, water, and fertilizer testing reports linked to this farm. Reports appear here automatically when a
+            generated PDF's farm name and mobile number match this farm.
+          </p>
+        </div>
+        <div class="media-head-actions">
+          <button
+            type="button"
+            class="upload-btn ghost"
+            [disabled]="reportsLoading"
+            (click)="refreshReports()"
+            aria-label="Refresh reports"
+          >
+            <i class="fas" [class.fa-rotate-right]="!reportsLoading" [class.fa-circle-notch]="reportsLoading" [class.fa-spin]="reportsLoading"></i>
+            <span>{{ reportsLoading ? 'Refreshing...' : 'Refresh' }}</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-filter-bar" *ngIf="reports.length">
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'all'"
+          (click)="setReportFilter('all')"
+        >
+          All <span class="chip-count">{{ reportCounts.all }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'soil'"
+          (click)="setReportFilter('soil')"
+        >
+          <i class="fas fa-mound"></i> Soil <span class="chip-count">{{ reportCounts.soil }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'water'"
+          (click)="setReportFilter('water')"
+        >
+          <i class="fas fa-droplet"></i> Water <span class="chip-count">{{ reportCounts.water }}</span>
+        </button>
+        <button
+          type="button"
+          class="filter-chip"
+          [class.active]="reportFilter === 'fertilizer'"
+          (click)="setReportFilter('fertilizer')"
+        >
+          <i class="fas fa-flask"></i> Fertilizer <span class="chip-count">{{ reportCounts.fertilizer }}</span>
+        </button>
+      </div>
+
+      <div class="media-loading" *ngIf="reportsLoading && !reports.length">
+        <div class="spinner"></div>
+        <p>Loading reports...</p>
+      </div>
+
+      <div class="media-empty" *ngIf="!reportsLoading && reports.length === 0">
+        <div class="empty-illustration" aria-hidden="true">
+          <i class="fas fa-file-pdf"></i>
+        </div>
+        <h3>No reports linked yet</h3>
+        <p>Once a soil, water, or fertilizer report is generated for a sample with this farm's name and mobile number, it will appear here.</p>
+      </div>
+
+      <div class="media-empty muted" *ngIf="!reportsLoading && reports.length > 0 && filteredReports.length === 0">
+        <p>No {{ reportTypeLabel(reportFilter === 'all' ? 'soil' : reportFilter) }} reports under this filter.</p>
+      </div>
+
+      <ul class="report-list" *ngIf="filteredReports.length">
+        <li
+          class="report-item"
+          *ngFor="let report of filteredReports; trackBy: trackReport"
+          [attr.data-type]="report.sampleType"
+        >
+          <div class="report-icon" [attr.data-type]="report.sampleType" aria-hidden="true">
+            <i class="fas" [ngClass]="reportTypeIcon(report.sampleType)"></i>
+          </div>
+          <div class="report-body">
+            <div class="report-title-row">
+              <h3 class="report-title">
+                {{ reportTypeLabel(report.sampleType) }} Report
+                <span class="report-sample-num" *ngIf="report.sampleNumber">· #{{ report.sampleNumber }}</span>
+              </h3>
+              <span class="report-type-tag" [attr.data-type]="report.sampleType">
+                {{ reportTypeLabel(report.sampleType) }}
+                <span *ngIf="report.fertilizerType"> · {{ report.fertilizerType }}</span>
+              </span>
+            </div>
+            <div class="report-meta">
+              <span *ngIf="report.farmerName"><i class="fas fa-user"></i> {{ report.farmerName }}</span>
+              <span *ngIf="report.cropName"><i class="fas fa-seedling"></i> {{ report.cropName }}</span>
+              <span *ngIf="report.sessionDate"><i class="fas fa-calendar"></i> {{ report.sessionDate }}</span>
+              <span><i class="fas fa-clock"></i> Generated {{ report.generatedAt | date:'medium' }}</span>
+              <span *ngIf="report.generatedByName"><i class="fas fa-pen"></i> {{ report.generatedByName }}</span>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button
+              type="button"
+              class="report-btn primary"
+              (click)="openReportOverlay(report)"
+              [disabled]="isLoadingReportPreview && activeReport?.reportId === report.reportId"
+            >
+              <i class="fas fa-eye"></i>
+              <span>View Report</span>
+            </button>
+            <button
+              type="button"
+              class="report-btn ghost"
+              (click)="downloadReport(report)"
+              [disabled]="isDownloadingReportId === report.reportId"
+              [attr.aria-label]="'Download ' + reportTypeLabel(report.sampleType) + ' report'"
+            >
+              <i class="fas" [class.fa-download]="isDownloadingReportId !== report.reportId" [class.fa-circle-notch]="isDownloadingReportId === report.reportId" [class.fa-spin]="isDownloadingReportId === report.reportId"></i>
+              <span>Download</span>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="!isLoading && project && activeTab === 'quotation' && showQuotationTab">
+    <section class="quotation-section">
+
+      <!-- ============== EMPTY STATE (pending_quotation, no quotation yet) ============== -->
+      <div class="quotation-empty-block" *ngIf="!quotationLoading && !activeQuotation && project.status === 'pending_quotation'">
+        <div class="quotation-empty-state">
+          <div class="empty-illustration" aria-hidden="true">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <h3 *ngIf="isManagerOrAdmin">Awaiting your quotation</h3>
+          <h3 *ngIf="!isManagerOrAdmin">Quotation under preparation</h3>
+          <p *ngIf="isManagerOrAdmin">The farmer has submitted this farm. Review the details and send across a quotation to move forward.</p>
+          <p *ngIf="!isManagerOrAdmin">Our team is reviewing your farm. You'll receive the quotation shortly — we'll notify you here as soon as it's ready.</p>
+          <button
+            type="button"
+            class="upload-btn"
+            *ngIf="canSubmitQuotation && !showQuotationForm"
+            (click)="openQuotationForm()"
+          >
+            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <span>Compose Quotation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ============== ACTIVE QUOTATION (rich view) ============== -->
+      <article class="quotation-detail-card" *ngIf="activeQuotation">
+        <header class="quotation-detail-head">
+          <div class="quotation-detail-title">
+            <span class="quotation-status-pill" [attr.data-status]="activeQuotation.status">
+              <span class="quotation-status-dot" aria-hidden="true"></span>
+              {{ quotationStatusLabel(activeQuotation.status) }}
+            </span>
+            <h2><i class="fas fa-file-invoice-dollar"></i> Annual Quotation</h2>
+            <p class="quotation-meta-line">
+              <span *ngIf="activeQuotation.submittedByName"><i class="fas fa-user-tie"></i> {{ activeQuotation.submittedByName }}</span>
+              <span><i class="fas fa-clock"></i> {{ activeQuotation.createdAt | date:'mediumDate' }}</span>
+              <span *ngIf="activeQuotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ activeQuotation.acceptedAt | date:'mediumDate' }}</span>
+            </p>
+          </div>
+
+          <div class="quotation-amount-card">
+            <span class="amount-label">Annual Fee</span>
+            <strong class="amount-value">{{ formatCurrency(activeQuotation.amountPerYear) }}</strong>
+            <span class="amount-sub">per year</span>
+            <button
+              type="button"
+              class="quotation-download-btn"
+              (click)="downloadQuotationPdf(activeQuotation)"
+              [disabled]="isDownloadingQuotationId === activeQuotation._id"
+              title="Download as PDF (letterhead)"
+            >
+              <i
+                class="fas"
+                [class.fa-file-pdf]="isDownloadingQuotationId !== activeQuotation._id"
+                [class.fa-circle-notch]="isDownloadingQuotationId === activeQuotation._id"
+                [class.fa-spin]="isDownloadingQuotationId === activeQuotation._id"
+              ></i>
+              <span>{{ isDownloadingQuotationId === activeQuotation._id ? 'Preparing...' : 'Download PDF' }}</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="quotation-content-block">
+          <h3 class="block-title"><i class="fas fa-align-left"></i> Quotation Details</h3>
+          <div class="quotation-content-rendered" [innerHTML]="quotationContentSafe"></div>
+        </section>
+
+        <section class="quotation-installments-block">
+          <header class="block-head">
+            <div>
+              <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+              <p>Bifurcated into 4 equal instalments, due every 3 months.</p>
+            </div>
+            <div class="instalment-each-chip">
+              <span>Each instalment</span>
+              <strong>{{ formatCurrency(activeQuotation.amountPerYear / 4) }}</strong>
+            </div>
+          </header>
+
+          <div class="installments-grid">
+            <div
+              class="installment-card"
+              *ngFor="let installment of activeQuotation.installments"
+              [attr.data-status]="installment.status"
+            >
+              <div class="installment-num">
+                <span class="num-circle">{{ installment.installmentNumber }}</span>
+                <span class="num-label">of 4</span>
+              </div>
+              <div class="installment-body">
+                <strong class="installment-amount">{{ formatCurrency(installment.amount) }}</strong>
+                <span class="installment-date">
+                  <i class="fas fa-calendar"></i>
+                  Due {{ installment.dueDate | date:'mediumDate' }}
+                </span>
+                <span class="installment-status-pill" [attr.data-status]="installment.status">
+                  <i
+                    class="fas"
+                    [class.fa-circle-check]="installment.status === 'paid'"
+                    [class.fa-circle-exclamation]="installmentStatusLabel(installment) === 'Overdue'"
+                    [class.fa-clock]="installment.status === 'pending' && installmentStatusLabel(installment) !== 'Overdue'"
+                  ></i>
+                  {{ installmentStatusLabel(installment) }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="installment-pay-btn"
+                *ngIf="installment.status === 'pending' && (project.status === 'approved' || project.status === 'Running')"
+                disabled
+                title="Payment gateway coming soon"
+              >
+                <i class="fas fa-credit-card"></i>
+                Pay Now
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Farmer Accept / Reject row -->
+        <section class="quotation-decision" *ngIf="canRespondToQuotation && !showQuotationRejectForm">
+          <div class="decision-copy">
+            <h4><i class="fas fa-handshake"></i> Ready to accept this quotation?</h4>
+            <p>Once accepted, your farm will be approved and all features will become available.</p>
+          </div>
+          <div class="decision-actions">
+            <button type="button" class="quotation-reject-btn" (click)="openQuotationRejectForm()" [disabled]="isAcceptingQuotation || isRejectingQuotation">
+              <i class="fas fa-times"></i>
+              Reject
+            </button>
+            <button type="button" class="quotation-accept-btn" (click)="acceptQuotation()" [disabled]="isAcceptingQuotation || isRejectingQuotation">
+              <i class="fas" [class.fa-check]="!isAcceptingQuotation" [class.fa-circle-notch]="isAcceptingQuotation" [class.fa-spin]="isAcceptingQuotation"></i>
+              {{ isAcceptingQuotation ? 'Accepting...' : 'Accept Quotation' }}
+            </button>
+          </div>
+        </section>
+
+        <section class="quotation-reject-panel" *ngIf="showQuotationRejectForm">
+          <h4><i class="fas fa-comment-dots"></i> Why are you rejecting this quotation?</h4>
+          <textarea
+            [(ngModel)]="quotationRejectReason"
+            rows="3"
+            placeholder="Share what needs to change (optional). The team will revise the quotation."
+            maxlength="500"
+          ></textarea>
+          <div class="quotation-form-actions">
+            <button type="button" class="rx-cancel" (click)="cancelQuotationReject()" [disabled]="isRejectingQuotation">Cancel</button>
+            <button type="button" class="rx-save" (click)="rejectQuotation()" [disabled]="isRejectingQuotation">
+              <i class="fas" [class.fa-paper-plane]="!isRejectingQuotation" [class.fa-circle-notch]="isRejectingQuotation" [class.fa-spin]="isRejectingQuotation"></i>
+              {{ isRejectingQuotation ? 'Sending...' : 'Send Rejection' }}
+            </button>
+          </div>
+        </section>
+
+        <!-- Edit (manager/admin can revise even after sending) -->
+        <section class="quotation-revise-row" *ngIf="canSubmitQuotation && activeQuotation.status === 'submitted' && !showQuotationForm">
+          <button type="button" class="quotation-revise-btn" (click)="openQuotationForm()">
+            <i class="fas fa-pen-to-square"></i>
+            Revise Quotation
+          </button>
+          <span class="revise-hint">The farmer will be notified about the revised quotation.</span>
+        </section>
+      </article>
+
+      <!-- ============== QUOTATION FORM (admin/manager) — placed AFTER both empty
+            state and active card so it slides in directly below the trigger button ============== -->
+      <article class="quotation-form-card" *ngIf="showQuotationForm && canSubmitQuotation">
+        <header class="card-section-head">
+          <h2><i class="fas fa-pen-to-square"></i> {{ activeQuotation ? 'Revise Quotation' : 'Compose Quotation' }}</h2>
+          <p>Compose the proposal details and set the annual amount. The farmer will see a clean view with quarterly installments.</p>
+        </header>
+
+        <label class="quotation-field">
+          <span><i class="fas fa-align-left"></i> Quotation Details</span>
+          <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
+            <button type="button" class="rt-btn" (click)="applyFormat('bold')" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('italic')" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('underline')" title="Underline (Ctrl+U)"><i class="fas fa-underline"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('insertUnorderedList')" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('insertOrderedList')" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('formatBlock', 'H3')" title="Heading"><i class="fas fa-heading"></i></button>
+            <button type="button" class="rt-btn" (click)="applyFormat('formatBlock', 'P')" title="Paragraph"><i class="fas fa-paragraph"></i></button>
+            <span class="rt-sep" aria-hidden="true"></span>
+            <button type="button" class="rt-btn" (click)="applyFormat('removeFormat')" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+          </div>
+          <div
+            #quotationEditor
+            class="rich-editor"
+            contenteditable="true"
+            (input)="syncEditorContent()"
+            (blur)="syncEditorContent()"
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Quotation details"
+          ></div>
+        </label>
+
+        <div class="quotation-field-row">
+          <label class="quotation-field">
+            <span><i class="fas fa-indian-rupee-sign"></i> Annual Amount</span>
+            <input
+              type="number"
+              min="0"
+              step="100"
+              [(ngModel)]="quotationForm.amountPerYear"
+              name="quotationAmount"
+              placeholder="e.g. 120000"
+            />
+          </label>
+          <label class="quotation-field">
+            <span><i class="fas fa-calendar-day"></i> First Installment Date</span>
+            <input
+              type="date"
+              [(ngModel)]="quotationForm.startDate"
+              name="quotationStart"
+            />
+          </label>
+        </div>
+
+        <div class="quotation-installments-preview" *ngIf="quotationForm.amountPerYear && quotationForm.amountPerYear > 0">
+          <header>
+            <i class="fas fa-money-bill-trend-up"></i>
+            <span>Installment preview · 4 equal payments, 3 months apart</span>
+          </header>
+          <div class="install-preview-row">
+            <div class="install-preview-chip">
+              <span>Each instalment</span>
+              <strong>{{ formatCurrency((quotationForm.amountPerYear || 0) / 4) }}</strong>
+            </div>
+            <div class="install-preview-chip">
+              <span>Annual total</span>
+              <strong>{{ formatCurrency(quotationForm.amountPerYear || 0) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="quotation-form-actions">
+          <button type="button" class="rx-cancel" (click)="cancelQuotationForm()" [disabled]="isSubmittingQuotation">
+            Cancel
+          </button>
+          <button type="button" class="rx-save quotation-save" (click)="submitQuotation()" [disabled]="isSubmittingQuotation">
+            <i class="fas" [class.fa-paper-plane]="!isSubmittingQuotation" [class.fa-circle-notch]="isSubmittingQuotation" [class.fa-spin]="isSubmittingQuotation"></i>
+            {{ isSubmittingQuotation ? 'Sending...' : (activeQuotation ? 'Send Revised Quotation' : 'Send to Farmer') }}
+          </button>
+        </div>
+      </article>
+
+      <!-- ============== Quotation History ============== -->
+      <article class="quotation-history-card" *ngIf="quotationHistory.length">
+        <header class="card-section-head">
+          <h2><i class="fas fa-clock-rotate-left"></i> Quotation History</h2>
+          <p>All quotations sent for this farm. Click any to view in detail.</p>
+        </header>
+
+        <ul class="quotation-history-list">
+          <li
+            class="quotation-history-row"
+            *ngFor="let quotation of quotationHistory; trackBy: trackQuotation"
+            [attr.data-status]="quotation.status"
+            (click)="openQuotationDetail(quotation)"
+            tabindex="0"
+            (keyup.enter)="openQuotationDetail(quotation)"
+            role="button"
+          >
+            <div class="history-icon" aria-hidden="true">
+              <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div class="history-body">
+              <div class="history-top">
+                <strong>{{ formatCurrency(quotation.amountPerYear) }}/year</strong>
+                <span class="quotation-status-pill" [attr.data-status]="quotation.status">
+                  <span class="quotation-status-dot" aria-hidden="true"></span>
+                  {{ quotationStatusLabel(quotation.status) }}
+                </span>
+              </div>
+              <div class="history-meta">
+                <span><i class="fas fa-calendar"></i> {{ quotation.createdAt | date:'mediumDate' }} · {{ quotation.createdAt | date:'y' }}</span>
+                <span *ngIf="quotation.submittedByName"><i class="fas fa-user-tie"></i> {{ quotation.submittedByName }}</span>
+                <span *ngIf="quotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ quotation.acceptedAt | date:'mediumDate' }}</span>
+                <span *ngIf="quotation.rejectedAt"><i class="fas fa-circle-xmark"></i> Rejected {{ quotation.rejectedAt | date:'mediumDate' }}</span>
+              </div>
+            </div>
+            <span class="history-chevron" aria-hidden="true">
+              <i class="fas fa-chevron-right"></i>
+            </span>
+          </li>
+        </ul>
+      </article>
+    </section>
+  </ng-container>
+
+  <!-- Quotation detail popup -->
+  <div
+    class="quotation-overlay"
+    *ngIf="selectedQuotationDetail"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeQuotationDetail()"
+  >
+    <div class="quotation-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="quotation-overlay-head">
+        <div>
+          <span class="quotation-status-pill" [attr.data-status]="selectedQuotationDetail.status">
+            <span class="quotation-status-dot" aria-hidden="true"></span>
+            {{ quotationStatusLabel(selectedQuotationDetail.status) }}
+          </span>
+          <h3><i class="fas fa-file-invoice-dollar"></i> Quotation</h3>
+          <p class="quotation-meta-line">
+            <span><i class="fas fa-clock"></i> {{ selectedQuotationDetail.createdAt | date:'medium' }}</span>
+            <span *ngIf="selectedQuotationDetail.submittedByName"><i class="fas fa-user-tie"></i> {{ selectedQuotationDetail.submittedByName }}</span>
+          </p>
+        </div>
+        <div class="quotation-overlay-actions">
+          <button
+            type="button"
+            class="quotation-overlay-download"
+            (click)="downloadQuotationPdf(selectedQuotationDetail)"
+            [disabled]="isDownloadingQuotationId === selectedQuotationDetail._id"
+          >
+            <i
+              class="fas"
+              [class.fa-file-pdf]="isDownloadingQuotationId !== selectedQuotationDetail._id"
+              [class.fa-circle-notch]="isDownloadingQuotationId === selectedQuotationDetail._id"
+              [class.fa-spin]="isDownloadingQuotationId === selectedQuotationDetail._id"
+            ></i>
+            <span>{{ isDownloadingQuotationId === selectedQuotationDetail._id ? 'Preparing...' : 'Download PDF' }}</span>
+          </button>
+          <button type="button" class="quotation-overlay-close" (click)="closeQuotationDetail()" aria-label="Close quotation">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="quotation-overlay-body">
+        <div class="quotation-amount-card large">
+          <span class="amount-label">Annual Fee</span>
+          <strong class="amount-value">{{ formatCurrency(selectedQuotationDetail.amountPerYear) }}</strong>
+          <span class="amount-sub">{{ formatCurrency(selectedQuotationDetail.amountPerYear / 4) }} every 3 months</span>
+        </div>
+
+        <section class="quotation-content-block">
+          <h3 class="block-title"><i class="fas fa-align-left"></i> Quotation Details</h3>
+          <div class="quotation-content-rendered" [innerHTML]="selectedQuotationDetailSafe"></div>
+        </section>
+
+        <section class="quotation-installments-block">
+          <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+          <div class="installments-grid">
+            <div
+              class="installment-card"
+              *ngFor="let installment of selectedQuotationDetail.installments"
+              [attr.data-status]="installment.status"
+            >
+              <div class="installment-num">
+                <span class="num-circle">{{ installment.installmentNumber }}</span>
+                <span class="num-label">of 4</span>
+              </div>
+              <div class="installment-body">
+                <strong class="installment-amount">{{ formatCurrency(installment.amount) }}</strong>
+                <span class="installment-date">
+                  <i class="fas fa-calendar"></i>
+                  {{ installment.dueDate | date:'mediumDate' }}
+                </span>
+                <span class="installment-status-pill" [attr.data-status]="installment.status">
+                  {{ installmentStatusLabel(installment) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <p class="quotation-rejected-reason" *ngIf="selectedQuotationDetail.status === 'rejected' && selectedQuotationDetail.rejectedReason">
+          <i class="fas fa-circle-exclamation"></i>
+          <strong>Rejection reason:</strong> {{ selectedQuotationDetail.rejectedReason }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prescription PDF overlay (mirrors report overlay) -->
+  <div
+    class="report-overlay"
+    *ngIf="activePrescription"
+    role="dialog"
+    aria-modal="true"
+    (click)="closePrescriptionOverlay()"
+  >
+    <div class="report-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="report-overlay-head">
+        <div class="report-overlay-title">
+          <span class="report-overlay-tag" data-type="prescription">
+            <i class="fas" [ngClass]="prescriptionIcon(activePrescription)"></i>
+            {{ prescriptionTypeLabel(activePrescription) }}
+          </span>
+          <h3>
+            {{ activePrescription.title || activePrescription.fileName || 'Prescription' }}
+            <span class="report-overlay-sub" *ngIf="activePrescription.uploadedAt">· {{ activePrescription.uploadedAt | date:'mediumDate' }}</span>
+          </h3>
+        </div>
+        <div class="report-overlay-actions">
+          <button
+            type="button"
+            class="report-btn primary"
+            (click)="downloadPrescriptionFromRow(activePrescription)"
+            [disabled]="downloadingPrescriptionId === prescriptionId(activePrescription)"
+          >
+            <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(activePrescription)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(activePrescription)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(activePrescription)"></i>
+            <span>Download PDF</span>
+          </button>
+          <button
+            type="button"
+            class="report-overlay-close"
+            (click)="closePrescriptionOverlay()"
+            aria-label="Close prescription viewer"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-overlay-body">
+        <div class="report-overlay-loading" *ngIf="isLoadingPrescriptionPreview">
+          <div class="spinner"></div>
+          <p>Generating PDF preview...</p>
+        </div>
+        <iframe
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview"
+          class="report-overlay-frame"
+          [src]="prescriptionPreviewUrl"
+          title="Prescription PDF preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="report-overlay"
+    *ngIf="activeReport"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeReportOverlay()"
+  >
+    <div class="report-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="report-overlay-head">
+        <div class="report-overlay-title">
+          <span class="report-overlay-tag" [attr.data-type]="activeReport.sampleType">
+            <i class="fas" [ngClass]="reportTypeIcon(activeReport.sampleType)"></i>
+            {{ reportTypeLabel(activeReport.sampleType) }} Report
+          </span>
+          <h3>
+            {{ activeReport.farmerName || 'Unknown farmer' }}
+            <span *ngIf="activeReport.sampleNumber" class="report-overlay-sub">· Sample #{{ activeReport.sampleNumber }}</span>
+          </h3>
+        </div>
+        <div class="report-overlay-actions">
+          <button
+            type="button"
+            class="report-btn primary"
+            (click)="downloadReport(activeReport)"
+            [disabled]="isDownloadingReportId === activeReport.reportId"
+          >
+            <i class="fas" [class.fa-download]="isDownloadingReportId !== activeReport.reportId" [class.fa-circle-notch]="isDownloadingReportId === activeReport.reportId" [class.fa-spin]="isDownloadingReportId === activeReport.reportId"></i>
+            <span>Download PDF</span>
+          </button>
+          <button
+            type="button"
+            class="report-overlay-close"
+            (click)="closeReportOverlay()"
+            aria-label="Close report viewer"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="report-overlay-body">
+        <div class="report-overlay-loading" *ngIf="isLoadingReportPreview">
+          <div class="spinner"></div>
+          <p>Generating PDF preview...</p>
+        </div>
+        <iframe
+          *ngIf="reportPreviewUrl && !isLoadingReportPreview"
+          class="report-overlay-frame"
+          [src]="reportPreviewUrl"
+          title="Report PDF preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox" *ngIf="designLightboxItem" (click)="closeDesignLightbox()" role="dialog" aria-modal="true">
+    <button type="button" class="lightbox-close" (click)="closeDesignLightbox(); $event.stopPropagation()" aria-label="Close design viewer">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <img *ngIf="designLightboxItem.type === 'image'" [src]="designLightboxItem.url" [alt]="'Landscaping design'" />
+      <video *ngIf="designLightboxItem.type === 'video'" [src]="designLightboxItem.url" controls autoplay playsinline></video>
+      <div class="lightbox-meta">
+        <span>{{ designLightboxItem.uploadedAt | date:'medium' }}</span>
+        <span *ngIf="designLightboxItem.uploadedByName">· {{ designLightboxItem.uploadedByName }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox" *ngIf="lightboxItem" (click)="closeLightbox()" role="dialog" aria-modal="true">
+    <button type="button" class="lightbox-close" (click)="closeLightbox(); $event.stopPropagation()" aria-label="Close media viewer">
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+    <div class="lightbox-content" (click)="$event.stopPropagation()">
+      <img *ngIf="lightboxItem.type === 'image'" [src]="lightboxItem.url" [alt]="'Farm photo'" />
+      <video *ngIf="lightboxItem.type === 'video'" [src]="lightboxItem.url" controls autoplay playsinline></video>
+      <div class="lightbox-meta">
+        <span>{{ lightboxItem.uploadedAt | date:'medium' }}</span>
+        <span *ngIf="lightboxItem.uploadedByName">· {{ lightboxItem.uploadedByName }}</span>
+      </div>
+    </div>
+  </div>
 </main>

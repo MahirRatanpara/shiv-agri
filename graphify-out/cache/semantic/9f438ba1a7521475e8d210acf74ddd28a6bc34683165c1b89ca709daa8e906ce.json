@@ -1,0 +1,1 @@
+{"nodes": [{"id": "settings_local_claude_permissions", "label": "Claude Local Tool Permissions", "file_type": "document", "source_file": ".claude/settings.local.json", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

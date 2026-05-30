@@ -21,17 +21,27 @@ public class StorageProperties {
     private Filesystem filesystem = new Filesystem();
 
     @Positive
-    private long maxFileSizeBytes = 20 * 1024 * 1024; // 20MB
+    private long maxFileSizeBytes = 25 * 1024 * 1024; // 25MB
 
     private List<String> allowedMimeTypes = List.of(
             "image/jpeg",
             "image/png",
             "image/webp",
-            "image/gif"
+            "image/gif",
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "text/plain",
+            "text/markdown"
     );
 
     private List<String> allowedExtensions = List.of(
-            "jpg", "jpeg", "png", "webp", "gif"
+            "jpg", "jpeg", "png", "webp", "gif",
+            "mp4", "mov", "webm",
+            "pdf", "doc", "docx", "txt", "md"
     );
 
     @Getter

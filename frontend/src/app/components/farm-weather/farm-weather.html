@@ -1,0 +1,98 @@
+<section class="weather-card" *ngIf="hasCoords; else noCoords">
+  <header class="weather-head">
+    <div class="weather-head-text">
+      <h2><i class="fas fa-cloud-sun"></i> Weather &amp; Rainfall</h2>
+      <p *ngIf="locationLabel">{{ locationLabel }}</p>
+      <p class="coord-line">
+        {{ latitude | number:'1.4-4' }}, {{ longitude | number:'1.4-4' }}
+        <span class="dot" *ngIf="fetchedAt">·</span>
+        <span *ngIf="fetchedAt">Updated {{ fetchedAt | date:'shortTime' }}</span>
+      </p>
+    </div>
+    <button type="button" class="weather-refresh" (click)="retry()" [disabled]="loading" aria-label="Refresh weather">
+      <i class="fas" [class.fa-rotate]="!loading" [class.fa-spinner]="loading" [class.fa-spin]="loading"></i>
+    </button>
+  </header>
+
+  <div class="weather-loading" *ngIf="loading && !current">
+    <div class="spinner"></div>
+    <p>Loading weather...</p>
+  </div>
+
+  <div class="weather-error" *ngIf="error && !loading">
+    <i class="fas fa-triangle-exclamation"></i>
+    <span>{{ error }}</span>
+    <button type="button" class="link-btn" (click)="retry()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="current && !error">
+    <div class="weather-now">
+      <div class="now-icon">
+        <i class="fas" [ngClass]="weatherIcon(current.weather_code)"></i>
+      </div>
+      <div class="now-main">
+        <div class="now-temp">{{ current.temperature_2m | number:'1.0-0' }}{{ tempUnit }}</div>
+        <div class="now-label">{{ weatherLabel(current.weather_code) }}</div>
+      </div>
+      <div class="now-meta">
+        <div class="meta-row">
+          <i class="fas fa-droplet"></i>
+          <span>Humidity</span>
+          <strong>{{ current.relative_humidity_2m }}%</strong>
+        </div>
+        <div class="meta-row">
+          <i class="fas fa-wind"></i>
+          <span>Wind</span>
+          <strong>{{ current.wind_speed_10m | number:'1.0-1' }} km/h</strong>
+        </div>
+        <div class="meta-row">
+          <i class="fas fa-cloud-rain"></i>
+          <span>Now</span>
+          <strong>{{ current.precipitation | number:'1.0-1' }} {{ rainfallUnit }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="rainfall-summary">
+      <div class="rainfall-tile">
+        <span><i class="fas fa-cloud-showers-heavy"></i> Last 30 days</span>
+        <strong>{{ rainfallTotal30d | number:'1.0-1' }} {{ rainfallUnit }}</strong>
+      </div>
+      <div class="rainfall-tile">
+        <span><i class="fas fa-calendar-day"></i> Rainy days</span>
+        <strong>{{ rainyDays30d }} <small>/ 30</small></strong>
+      </div>
+    </div>
+
+    <div class="forecast-strip">
+      <div
+        class="forecast-day"
+        *ngFor="let day of forecast"
+        [class.today]="day.isToday"
+        [title]="weatherLabel(day.weatherCode)"
+      >
+        <div class="forecast-day-name">{{ day.isToday ? 'Today' : shortDay(day.date) }}</div>
+        <div class="forecast-icon"><i class="fas" [ngClass]="weatherIcon(day.weatherCode)"></i></div>
+        <div class="forecast-temps">
+          <strong>{{ day.tempMax | number:'1.0-0' }}°</strong>
+          <span>{{ day.tempMin | number:'1.0-0' }}°</span>
+        </div>
+        <div class="forecast-rain" *ngIf="day.precipitation > 0">
+          <i class="fas fa-droplet"></i> {{ day.precipitation | number:'1.0-1' }}
+        </div>
+      </div>
+    </div>
+
+    <p class="weather-attribution">
+      Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+    </p>
+  </ng-container>
+</section>
+
+<ng-template #noCoords>
+  <section class="weather-card weather-card--empty">
+    <i class="fas fa-location-crosshairs"></i>
+    <h3>Add a map location to see weather</h3>
+    <p>Capture coordinates for this farm by editing the project and either pasting a Google Maps URL or using "Use current location".</p>
+  </section>
+</ng-template>

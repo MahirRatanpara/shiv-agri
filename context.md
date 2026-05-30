@@ -300,6 +300,8 @@ Once an account exists, normal users may ATTACH a phone (never change it) via:
 
 **`requireOwnership(userIdField, resourceGetter)`** — Checks resource ownership. Admins can access all.
 
+**`requireProjectAccess(permissions)`** — Project-scoped read gate. Allows admins, holders of any of the supplied permissions (plus an implicit set including `farm.projects.view`, `farms.view`, `farm.projects.approve`, `farm.projects.update`, `project.update`, `project.delete`), and **stakeholders** of the target project (`submittedBy`, `clientId`, `createdBy`, `assignedTo`, `projectManager`, `fieldWorkers`, `consultants`, `assignedTeam`). Used to grant farmers and assigned workers access to their own farm without granting the broad `farm.projects.view` permission.
+
 ### Permission Format
 
 `resource.action` — e.g., `soil.sessions.view`, `project.create`, `managerial.receipts.delete`
@@ -367,6 +369,7 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 - Link: `fertilizerSampleId` (→ FertilizerSample)
 - Classification (Gujarati): `phResult`, `ecResult`, `nitrogenResult`, `phosphorusResult`, `potashResult`
 - Classification (English): `phResultEn`, `ecResultEn`, `nitrogenResultEn`, `phosphorusResultEn`, `potashResultEn`
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation by `farmReportLinker` when `farmsName` + `mobileNo` match a Project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone).
 
 ### Classification Logic (`backend/src/utils/soilClassification.js`)
 
@@ -430,6 +433,7 @@ Same state machine as soil testing: `started` → `details` → `ready` → `com
 - Classification (English): `phResultEn`, `ecResultEn`, `sarResultEn`, `rscResultEn`
 - Water class codes: `ecClass`, `sarClass`, `rscClass`, `waterClass` (combined like "C3S1")
 - `classification`, `finalDeduction`
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation via `farmReportLinker`.
 
 ### Classification Logic (`backend/src/utils/waterClassification.js`)
 - pH, EC, SAR, RSC classification ranges
@@ -470,6 +474,7 @@ Managed by `FertilizerSessionStateManager` (`models/fertilizer-session-state.mod
 - Dose schedule: includes `day45` (Urea) and `day45As` (Ammonium Sulphate) as alternative options for day 45; similarly `day75` (Urea) and `day75As` (Ammonium Sulphate) for day 75
 - Spray schedules: `spray1Npk`, `spray2Npk`, `spray3Npk` and related fields; hormone dose unit is conditional on hormone name (Projib → grams, others → ml)
 - Fruit tree sections: `m1`-`m5` with sub-parameters
+- Farm linkage: `linkedProjectId` (ObjectId → Project, indexed), `linkedAt` — auto-set on PDF generation via `farmReportLinker`. Fertilizer samples don't carry `mobileNo` themselves; the linker resolves it via the linked `SoilSample`.
 
 ### Fertilizer Crop Config (`backend/src/config/fertilizerCropConfig.js`)
 - Loaded once at server startup from `fertilizerCropDefaults.json`
@@ -500,7 +505,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 **Core Fields:**
 - `name` (String, required, text-indexed)
 - `category` (enum: FARM, LANDSCAPING, GARDENING, required, indexed)
-- `status` (enum: Upcoming, Running, Completed, On Hold, Cancelled, pending_approval, approved, rejected)
+- `status` (enum: Upcoming, Running, Completed, On Hold, Cancelled, pending_approval, approved, rejected, **pending_quotation**, **pending_acceptance**)
 - `budget` (Number, required, min: 0), `expenses` (Number, auto-updated)
 
 **Farm Approval Workflow:**
@@ -508,17 +513,27 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - `approvedBy` (User ref), `approvedAt` (Date) — set on approval
 - `rejectedReason` (String, max 500) — set on rejection
 - `registrationSource` (enum: farmer_self, manager_direct, indexed)
+- `activeQuotation` (Quotation ref, indexed) — currently-active quotation surfaced to the farmer; older quotations remain in the Quotation collection with `status='superseded'`
+- `quotationAcceptedAt` (Date) — first-time approval timestamp via the quotation flow
 
 **Client Info:**
 - `clientId`, `clientName`, `clientEmail`, `clientPhone`, `clientAvatar`, `alternativeContact`
 
 **Location:**
-- `address`, `city`, `district`, `state`, `postalCode`
+- `address`, `taluka` (indexed), `city`, `district`, `state`, `postalCode`
 - `coordinates` (GeoJSON for geospatial queries), `mapUrl`
+- Coordinates auto-derived from `mapUrl` on create/update via `backend/src/utils/mapUrlParser.js` when not explicitly set (parses `?q=lat,lng`, `?ll=`, `@lat,lng`, raw "lat,lng"; follows redirects for `maps.app.goo.gl` / `goo.gl` / `g.co` shortlinks via `resolveAndParseLatLng`).
 
 **Land Details:**
-- `totalArea`, `areaUnit`, `cultivableArea`, `soilType`
-- `waterSource[]`, `irrigationSystem`, `terrainType`
+- `totalArea`, `areaUnit` (enum: acres, hectares, sqmeters, vigha-16, vigha-24), `cultivableArea`, `soilType`
+- `waterSource[]` (legacy), `irrigationSystem` (Bore, Well, Mixed, Canal, River), `terrainType`
+
+**Electricity / Power Supply:**
+- `electricity.transformerHp`, `electricity.motorCount`, `electricity.totalMotorHp`
+
+**Project Tags:**
+- `needsLandscapingConsultancy` (Boolean, indexed) — orthogonal to category, marks farms also needing landscaping consultancy
+- `isOnlineVisit` (Boolean) — when true, on-site visit count tracking is skipped (`visitFrequency` not collected)
 
 **Team:**
 - `assignedTo`, `projectManager`, `fieldWorkers[]`, `consultants[]`, `assignedTeam[]` (User refs)
@@ -531,11 +546,21 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
 
+**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed), attended (Boolean, default false), attendedAt, attendedBy, attendedByName } — photos/videos uploaded via Media Service, embedded as references. **Owner-only uploads:** only the farm owner (submittedBy / clientId / createdBy) may upload here; managers/admins use the separate Designs and Prescriptions sections. New uploads land in the unattended bucket (shown as thumbnails); admins/farm managers acknowledge them via mark-attended, which moves them into the paginated drawer.
+
+**Landscaping Designs:** `landscapingDesigns[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, title, notes, status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin-only uploads for landscaping projects, stored via Media Service.
+
+**Prescriptions:** `prescriptions[]` of { _id, source (file|manual|structured), docType (image|pdf|docx|text|manual|structured), title, notes, textContent, mediaId, url, mimeType, sizeBytes, fileName, structured, attachedImages[], status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin upload only, owner read-only. Supports uploaded files (image/pdf/doc/docx/text), inline text snippets, prescriptions composed via the in-app manual builder, and the **structured** Shiv Agri standard visit prescription (mirrors the printed slip — farmer name, visit date, lastVisitReview, landPreparation, sowingPlanting, farmingOperations (leveling/marking/digging/soilFilling/tractor/supports/fillGaps/pruning/other), irrigation, weedControl, fertilizers (farmyardManure/chemical/organic/jivamrut/spray), pests (soilBorne/root/stem/leaf/flower/fruit), diseases (soilBorne/stem/branch/leaf/flower/fruit/other), hormoneTreatment, fruitHarvesting, grading, packing, otherNotes — plus `attachedImages[]` of {mediaId,url,mimeType,sizeBytes,fileName} rendered into the PDF).
+
+**Lab Reports:** `reports[]` of { sampleType (soil|water|fertilizer, indexed), sampleId (ObjectId, refPath sampleModel, indexed), sampleModel (SoilSample|WaterSample|FertilizerSample), sessionId, sampleNumber, farmerName, farmsName, mobileNo, cropName, fertilizerType, sessionDate, generatedAt (indexed), generatedBy (User ref), generatedByName } — auto-populated on PDF generation by `backend/src/services/farmReportLinker.js` when the sample's `farmsName` + `mobileNo` match this project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone). One entry per (sampleType + sampleId); re-runs update the existing entry rather than duplicating.
+
 **Soft Delete:** `isDeleted`, `deletedAt`, `deletedBy`
+
+**Archive:** `isArchived` (Boolean, indexed, default false), `archivedAt`, `archivedBy` — admin-controlled. Archived projects remain visible but are read-only: uploads are rejected (409) and lifecycle status changes are blocked client-side.
 
 **Virtuals:** `fullLocation`, `budgetRemaining`, `isOverBudget`, `daysToCompletion`, `isOverdue`
 
-**Indexes:** category+status, city, state, createdBy, budget, text search (name), geospatial (coordinates), date ranges, status+submittedBy, registrationSource+status
+**Indexes:** category+status, city, state, taluka, createdBy, budget, text search (name), geospatial (coordinates), date ranges, status+submittedBy, registrationSource+status, needsLandscapingConsultancy
 
 ### API Endpoints (`backend/src/routes/projects.js`)
 
@@ -544,7 +569,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects` | farm.projects.view OR farms.view | Filtered/paginated list. Filters incl. `district`, `submittedBy=me`. End-users auto-filtered to own FARM submissions. |
 | GET | `/api/projects/stats` | farm.projects.view | Statistics |
 | GET | `/api/projects/export` | project.export | Export to Excel/CSV |
-| GET | `/api/projects/:id` | farm.projects.view OR farms.view | Get single project (end-users restricted to their own/client) |
+| GET | `/api/projects/:id` | requireProjectAccess(farm.projects.view, farms.view) | Get single project — gate also lets stakeholders (submitter/client/assigned workers/PM/consultants/team) read |
 | POST | `/api/projects` | (role-based) | Create project. End/standard users → `pending_approval` farmer self-registration; managers/admins → `approved` direct registration with phone-based client lookup |
 | PATCH | `/api/projects/:id/approve` | farm.projects.approve | Approve a pending farm registration |
 | PATCH | `/api/projects/:id/reject` | farm.projects.approve | Reject a pending farm registration (body: `reason`) |
@@ -555,6 +580,8 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/:id` | project.update | Update project |
 | DELETE | `/api/projects/:id` | project.delete | Soft delete |
 | DELETE | `/api/projects/:id/hard` | — | Hard delete (admin) |
+| PATCH | `/api/projects/:id/archive` | admin | Archive project (sets `isArchived=true`); blocks uploads and lifecycle changes |
+| PATCH | `/api/projects/:id/unarchive` | admin | Restore an archived project |
 | PATCH | `/api/projects/:id/favorite` | — | Toggle favorite |
 | POST | `/api/projects/:id/contacts` | project.update | Add contact |
 | PUT | `/api/projects/:id/contacts/:contactId` | project.update | Update contact |
@@ -566,6 +593,36 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | PATCH | `/api/projects/:id/transactions/:txId` | project.update | Update transaction |
 | DELETE | `/api/projects/:id/transactions/:txId` | project.update | Remove transaction |
 | GET | `/api/projects/:id/activity` | farm.projects.view | Activity log |
+| GET | `/api/projects/:id/media` | requireProjectAccess(farm.projects.view, farms.view) | List **unattended** media (no pagination) plus `attendedTotal` count for the drawer |
+| GET | `/api/projects/:id/media/older` | requireProjectAccess(farm.projects.view, farms.view) | Paginated list of **attended** media (page/limit query params; route preserved for back-compat — semantically "attended", not "older") |
+| GET | `/api/projects/:id/media/quota` | requireProjectAccess(farm.projects.view, farms.view) | Current week's upload quota snapshot |
+| POST | `/api/projects/:id/media` | farm owner only (submittedBy/clientId/createdBy) | Upload up to 5 photos/videos (≤25MB each); enforces weekly quota; rejects 409 if project is archived. Managers/admins are excluded — they use `/designs` or `/prescriptions` |
+| GET | `/api/projects/:id/designs` | farm.projects.view OR farms.view | List landscaping designs |
+| POST | `/api/projects/:id/designs` | manager or admin (farm.projects.update) | Upload up to 5 design images/videos (≤25MB each) |
+| GET | `/api/projects/:id/prescriptions` | farm.projects.view OR farms.view | List prescriptions (owner read-only) |
+| POST | `/api/projects/:id/prescriptions` | manager or admin | Upload up to 5 prescription files (image/pdf/doc/docx/text, ≤25MB each) |
+| POST | `/api/projects/:id/prescriptions/text` | manager or admin | Add an inline text-only prescription |
+| POST | `/api/projects/:id/prescriptions/manual` | manager or admin | Add a prescription composed via the in-app manual builder |
+| POST | `/api/projects/:id/prescriptions/structured` | manager or admin | Submit the Shiv Agri standard visit-prescription form (JSON `structured` payload + up to 5 image attachments, ≤25MB each) |
+| GET | `/api/projects/:id/prescriptions/:prescriptionId/pdf` | farm.projects.view OR farms.view | Inline-rendered PDF of a structured prescription (404 for other docTypes) |
+| GET | `/api/projects/:id/quotations` | requireProjectAccess(farm.projects.view, farms.view) | List all quotations for a project (history) |
+| GET | `/api/projects/:id/quotations/active` | requireProjectAccess(farm.projects.view, farms.view) | Currently-active quotation (status submitted or accepted) |
+| GET | `/api/projects/:id/quotations/:quotationId` | requireProjectAccess(farm.projects.view, farms.view) | Get a specific quotation |
+| POST | `/api/projects/:id/quotations` | manager or admin | Submit a quotation (rich-text `content` + `amountPerYear`; supersedes prior submitted quotations and moves project → `pending_acceptance`) |
+| PATCH | `/api/projects/:id/quotations/:quotationId/accept` | farm owner only (enforced in service) | Farmer accepts → project moves to `approved` |
+| PATCH | `/api/projects/:id/quotations/:quotationId/reject` | farm owner only (enforced in service) | Farmer rejects (optional `reason`) → project reverts to `pending_quotation` |
+| GET | `/api/projects/:id/quotations/:quotationId/pdf` | requireProjectAccess(farm.projects.view, farms.view) | Quotation rendered on the company letterhead (uses the letter template + installment table) |
+| GET | `/api/projects/:id/admin-transactions` | admin only | List manual transactions for the farm (page/limit/sortBy/sortOrder/type/category/startDate/endDate) |
+| GET | `/api/projects/:id/admin-transactions/summary` | admin only | Totals + count summary |
+| POST | `/api/projects/:id/admin-transactions` | admin only | Record a manual debit/credit (description + amount required) |
+| PATCH | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Update a manual transaction |
+| DELETE | `/api/projects/:id/admin-transactions/:transactionId` | admin only | Soft-delete a manual transaction |
+| GET | `/api/projects/:id/reports` | requireProjectAccess(farm.projects.view, farms.view) | List soil/water/fertilizer reports auto-linked to this farm (newest first) |
+| GET | `/api/projects/:id/reports/:reportId/pdf` | requireProjectAccess(farm.projects.view, farms.view) | Inline PDF for the in-app overlay viewer |
+| GET | `/api/projects/:id/reports/:reportId/pdf/download` | requireProjectAccess(farm.projects.view, farms.view) | Attachment-disposition PDF for explicit download |
+| PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
+| PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
+| DELETE | `/api/projects/:id/media/:mediaId` | admin | Soft-delete a media item (sets `farmMedia.$.status='DELETED'`) |
 | PATCH | `/api/projects/bulk` | project.update | Bulk update |
 | POST | `/api/projects/bulk-delete` | project.delete | Bulk soft delete |
 
@@ -573,19 +630,46 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 ### Farm Registration & Approval Workflow
 
-- **Farmer self-registration:** End-users (`end_user`/`user` role) submit via `POST /api/projects` → status `pending_approval`, `registrationSource=farmer_self`, clientId/clientPhone auto-populated from the user's profile. Notifications dispatched to all users with `farm.projects.approve`.
-- **Manager-direct registration:** Managers/admins POST a farm → resolves `clientPhone` to existing user via phone lookup (rejects if no match), status `approved` immediately, `registrationSource=manager_direct`.
-- **Approval/Rejection:** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`).
-- **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update an approved farm; resets it to `pending_approval` and re-notifies approvers.
+- **Farmer self-registration:** End-users (`end_user`/`user` role) submit via `POST /api/projects` → status `pending_quotation` (was `pending_approval`), `registrationSource=farmer_self`, clientId/clientPhone auto-populated from the user's profile. Notifies users with `farm.projects.approve` (type `farm_quotation_required`).
+- **Manager-direct registration:** Managers/admins POST a farm → `ProjectService.resolveOrCreateFarmer({ rawPhone, email, name })` resolves the client by normalized phone first, then by email (attaching the phone if the email-user has no phone), and finally **auto-provisions a brand-new `role: user` farmer** (`phoneVerified=false`) with the canonical `<cc><national>` normalized key so the farmer's first phone-OTP or Google login claims this same account. Conflicts (different phone on same email, or duplicate phone/email) are rejected. Status becomes `approved` immediately with `registrationSource=manager_direct`.
+- **Approval/Rejection (legacy):** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`). Used only for the legacy `pending_approval` path (e.g. edit requests on already-approved farms).
+- **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update a farm. If the farm was already approved (`approved`/`Running`/`Completed`/`On Hold`), it resets to `pending_approval` (legacy flow). Otherwise it resets to `pending_quotation` so the manager re-quotes.
+
+### Quotations Workflow (`backend/src/models/Quotation.js`, `controllers/quotationController.js`, `services/quotationService.js`)
+
+- **Model:** `Quotation` = { project (ref, indexed), content (rich-text HTML, required), contentText (plain-text fallback ≤1000 chars), amountPerYear (≥0), installments[] (4 quarterly installments auto-derived in a `pre('validate')` hook: equal split of amountPerYear, due dates at start, +3mo, +6mo, +9mo from `startDate`; each has installmentNumber 1-4, amount, dueDate, status (pending/paid/overdue), paidAt, paidAmount), startDate (Date, default now), status (submitted/accepted/rejected/superseded, indexed), submittedBy/submittedByName, acceptedBy/acceptedAt, rejectedBy/rejectedAt/rejectedReason (≤500), timestamps }. Compound index: `project+status+createdAt`.
+- **Submit:** `createQuotation` — farm-only; rejects if the project is already approved. Marks any prior `submitted` quotation as `superseded`, creates the new doc, sets `project.status='pending_acceptance'` + `project.activeQuotation=quotation._id`, archives pending farm_registration / farm_quotation_required notifications, and notifies the farmer (`farm_quotation_received`, metadata: farmName, quotationId).
+- **Accept:** `acceptQuotation` — only the farm owner (matched against `submittedBy` or `clientId`) may accept. Moves project to `approved` (sets `approvedBy/approvedAt/quotationAcceptedAt`) and notifies approvers with `farm_quotation_accepted`.
+- **Reject:** `rejectQuotation` — owner-only. Records optional `rejectedReason` (≤500), reverts project to `pending_quotation`, clears `activeQuotation`, and notifies approvers with `farm_quotation_required` ("Quotation revision requested") including the rejection reason.
+- **PDF:** `pdfGenerator.generateQuotationPDF(quotation, project)` composes a letter-body (greeting, scope HTML, INR-formatted annual fee, installment table) inside the existing letterhead template (`templates/letter.html`). Filename: `Quotation_<farmName>_<date>.pdf`.
+
+### Farm Media Upload (`backend/src/controllers/farmMediaController.js`, `services/farmMediaService.js`)
+
+- **Flow:** Controller checks the project is not archived → calls `reserveQuota(projectId, files.length)` to atomically debit the weekly counter → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds reference on `Project.farmMedia[]` (with `attended:false`) → on partial failure, calls `releaseQuota(projectId, failures.length)` to refund the unused reservation → notifies all project **stakeholders** (owner + assigned workers/PM/consultants/team, excluding the uploader) via `notifyOnUpload` with type `farm_media_upload`.
+- **Designs (`farmDesignController.js` / `farmDesignService.js`):** Manager/admin-only flow. Validates image/video MIME, uploads to Media Service, embeds on `Project.landscapingDesigns[]`, and notifies stakeholders with type `farm_design_upload` (carries `documentType` + `itemCount` in metadata).
+- **Prescriptions (`farmPrescriptionController.js` / `farmPrescriptionService.js`):** Manager/admin-only flow with four entry points: file upload (image/pdf/doc/docx/text via Media Service), inline text (`/text`), manual builder (`/manual`), and the **structured visit form** (`/structured` — JSON `structured` payload + optional image attachments uploaded via Media Service into `attachedImages[]`; pre-generates the subdoc `_id` so the response reliably surfaces it). Embeds on `Project.prescriptions[]` and notifies stakeholders with type `farm_prescription_upload`. Structured prescriptions can additionally be rendered to PDF via `GET /:id/prescriptions/:prescriptionId/pdf` (uses `pdfGenerator.generatePrescriptionPDF` against `templates/prescription.html`).
+- **Attended workflow:** New uploads start unattended. `markAttended` (single, via `$elemMatch` + positional `$`) and `markAllAttended` (bulk, via `arrayFilters`) flip `attended=true` and stamp `attendedAt/attendedBy/attendedByName`. The default `GET /:id/media` returns only unattended items plus an `attendedTotal` count; the attended drawer is loaded on demand via `GET /:id/media/older`. `deleteMedia` soft-deletes by setting `status='DELETED'`.
+- **Limits:** ≤5 files/request, ≤25MB/file (multer memory storage), `image/*` or `video/*` only. Quota: `FARM_MEDIA_WEEKLY_LIMIT` (default 10) uploads per project per ISO week.
+- **Quota model (`backend/src/models/FarmMediaQuota.js`):** `{ projectId, isoWeek ("YYYY-Www"), uploadCount, lastUploadAt }`. The service treats the row as project-scoped: `getCurrentQuotaRecord` rolls a stale row forward when the ISO week changes (resets `uploadCount` to 0 in-place via aggregation pipeline). `reserveQuota` is the atomic debit (conditional `findOneAndUpdate` requiring `uploadCount ≤ WEEKLY_LIMIT - count`); `releaseQuota` refunds for failed uploads (clamped at 0). Resets at start of next ISO week (Monday 00:00 UTC).
+- **Response headers:** `X-Media-Quota-Used`, `X-Media-Quota-Limit`, `X-Media-Quota-Resets-At` set on every media response.
+- **Status codes:** 201 all uploaded, 207 partial, 429 quota exceeded, 415 unsupported type, 502 media-service failure.
+- **Env:** `MEDIA_SERVICE_URL` (internal, default `http://localhost:8081`), `MEDIA_SERVICE_PUBLIC_URL` (browser-facing prefix for `contentUrl`).
 
 ### Frontend
 - **Component:** `pages/farm-dashboard/farm-dashboard.ts` — Project listing, activity tracking, budget/expense dashboard
 - **Component:** `pages/project-details/project-details.ts` — Full project view
-- **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route)
+- **Component:** `pages/farm-management/farm-management.ts` — Farm list with approval/management actions (replaces farm-dashboard for /farm-management route). Toolbar exposes a "Landscaping" filter toggle (`showLandscapingOnly`) that client-side filters to farms with `needsLandscapingConsultancy === true`; matching cards render a "Landscaping" project tag next to the status pill.
 - **Component:** `pages/farm-registration/farm-registration.ts` — Farmer self-registration page wrapper
-- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions
-- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows)
-- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `getFarmById()`, `lookupUserByPhone()`
+- **Component:** `pages/farm-project-details/farm-project-details.ts` — Detail view with approve/reject/start/complete actions; tabbed UI (Details / Media / Designs (landscaping only) / Prescriptions / Reports / Transactions (admin-only)). The Reports tab lists auto-linked soil/water/fertilizer lab reports (filter chips by type, inline PDF overlay via iframe + blob URL, attachment download). Auto-opens on `?tab=reports`. The Transactions tab lists, creates, edits, and deletes admin-only manual debit/credit entries with an income/expense/net summary card. Media tab splits into an **Unattended** grid (with per-tile "Mark attended" + admin-only delete, plus a "Mark all as attended" header action) and a collapsible **Attended photos** drawer (lazily fetched via `listAttendedMedia`, paginated, page size 12). The Media upload UI is hidden from non-owners; managers/admins instead see Designs (landscaping projects) and Prescriptions upload panels (file upload + inline text + manual builder). Admins also see an Archive/Restore button on the project (uses `confirmationModalService`); archived projects render an "Archived" tag and disable upload/lifecycle controls. Auto-opens the Media tab when navigated with `?tab=media` (e.g. from a `farm_media_upload`, `farm_design_upload`, or `farm_prescription_upload` notification). Embeds `<app-farm-weather>` (Open-Meteo) when farm coordinates are present.
+- **Component:** `components/farm-registration-form/farm-registration-form.ts` — Reusable farm registration form (used by registration page and edit flows). Captures taluka, electricity (transformer HP, motor count, total motor HP), `needsLandscapingConsultancy` and `isOnlineVisit` flags, and offers a "Use current location" button that captures browser geolocation into `mapUrl` + `coordinates`. Replaces the old water-source pill picker; irrigation source is now required. In **manager mode**, phone lookup either resolves an existing farmer (name/email become read-only) OR — on a 404 — switches into "new farmer" mode where name (required) and email (optional) become editable so backend `resolveOrCreateFarmer` can auto-provision the account on submit.
+- **Component:** `components/farm-weather/farm-weather.ts` — Standalone weather card driven by `[latitude]`/`[longitude]`/`[locationLabel]` inputs. Calls Open-Meteo (`api.open-meteo.com/v1/forecast`) directly with `past_days=30`, `forecast_days=7`; shows current conditions, 30-day rainfall total + rainy-day count, and a 7-day forecast strip. WMO code → label/icon maps inline.
+- **Service:** `services/farm-management.service.ts` — `getFarms()`, `registerFarm()`, `approveFarm()`, `rejectFarm()`, `startFarm()`, `completeFarm()`, `updateFarmStatus()`, `requestFarmEdit()`, `archiveFarm()`, `unarchiveFarm()`, `getFarmById()`, `lookupUserByPhone()`. `FarmProject` exposes `submittedBy`/`clientId`/`createdBy` for client-side ownership checks plus `isArchived`/`archivedAt`, and now also `category` / `projectType` (so the UI can gate Designs visibility to landscaping projects).
+- **Service:** `services/farm-media.service.ts` — `listMedia()` (unattended + `attendedTotal`), `listAttendedMedia(page, limit)`, `markAttended(mediaId)`, `markAllAttended()`, `deleteMedia(mediaId)`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType`).
+- **Service:** `services/farm-design.service.ts` — `listDesigns(projectId)`, `uploadDesigns(projectId, files)` (progress/done events) for landscaping design uploads.
+- **Service:** `services/farm-prescription.service.ts` — `listPrescriptions(projectId)`, `uploadPrescriptions(projectId, files)`, `addTextPrescription(projectId, payload)`, `addManualPrescription(projectId, payload)`, `addStructuredPrescription(projectId, payload, images)` (returns progress/done events for the structured visit form), `downloadPrescriptionPdf(projectId, prescriptionId)` → Blob.
+- **Service:** `services/quotation.service.ts` — `list(projectId)`, `getActive(projectId)`, `getById(projectId, quotationId)`, `submit(projectId, payload)`, `accept(projectId, quotationId)`, `reject(projectId, quotationId, reason?)`, `downloadPdf(projectId, quotationId)` → Blob. Exposes `Quotation`, `QuotationInstallment`, `QuotationPayload`, `QuotationStatus` types.
+- **Service:** `services/farm-admin-transaction.service.ts` — `list(projectId, page, limit)`, `getSummary(projectId)`, `create(projectId, payload)`, `update(projectId, txId, payload)`, `delete(projectId, txId)` for admin-only farm transactions.
+- **Service:** `services/farm-report.service.ts` — `listReports(projectId)`, `viewReportPdf(projectId, reportId)` (inline blob), `downloadReportPdf(projectId, reportId)` (attachment blob), `triggerBrowserDownload(blob, filename)` for the auto-linked lab reports tab.
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
 
 ---
@@ -624,6 +708,12 @@ Track debits and credits against projects. Auto-updates project expenses. Suppor
 | GET | `/api/transactions/:id` | farm.projects.view | Get single |
 | PATCH | `/api/transactions/:id` | project.update | Update |
 | DELETE | `/api/transactions/:id` | project.update | Soft delete |
+
+### Admin-Only Manual Farm Transactions (`backend/src/controllers/farmTransactionController.js`)
+
+- Per-farm admin-recorded debits/credits exposed under `/api/projects/:id/admin-transactions` (mounted in `routes/projects.js`). Wraps `TransactionService` with the project id taken from the URL path so each route is naturally scoped to one farm.
+- Gated by a strict `requireAdmin` middleware in `routes/projects.js` (admins only — even managers are excluded). Reuses the same `Transaction` model as section 9, so entries flow through the same `expenses` auto-update hooks.
+- Validates `type ∈ {debit, credit}` and non-negative numeric `amount`; returns 404 if the project does not exist.
 
 ---
 
@@ -817,6 +907,8 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 - `generateReceiptPDF(receipt)` — Receipt document
 - `generateInvoicePDF(invoice)` — Invoice document
 - `generateLetterPDF(letter)` — Letter document
+- `generatePrescriptionPDF(prescription, project)` — Structured visit prescription (renders `templates/prescription.html` with the checkbox-grid form + attached images)
+- `generateQuotationPDF(quotation, project)` — Quotation rendered into the company letterhead (`templates/letter.html`) with INR-formatted annual fee + 4-row installment table
 - `generateBulkPDFs(samples)` — Multiple PDFs as array
 - `generateBulkPDFsStream(samples, type)` — Async generator for streaming
 - `generateCombinedPDF(samples)` — Single PDF with all samples
@@ -842,6 +934,8 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 
 Water and fertilizer testing have equivalent PDF endpoints under their respective route files.
 
+**Farm linkage on PDF generation:** Soil, water, and fertilizer single-sample PDF endpoints (`POST /api/pdf/sample/:sampleId`, the water/fertilizer equivalents) invoke `backend/src/services/farmReportLinker.js` (`linkSampleToFarm`) before sending the PDF. The linker is best-effort (errors are swallowed): it matches `farmsName` + `mobileNo` against `Project.name` + `Project.clientPhone` (case-insensitive name, last-10-digits phone with implicit +91), stamps `linkedProjectId`/`linkedAt` on the sample, and idempotently upserts an entry into `Project.reports[]`. Soil PDF route now requires `authenticate` middleware so `req.user` can be recorded as `generatedBy`/`generatedByName`.
+
 ### Frontend Service (`services/pdf.service.ts`)
 
 Handles download, preview, streaming with progress tracking. Key features:
@@ -860,9 +954,9 @@ Dedicated Spring Boot microservice for media upload, storage, and retrieval. Use
 ### Technology
 - Spring Boot 3.2.5, Java 17, MongoDB, Maven
 - Port: 8081
-- Storage: Filesystem (`/var/media/uploads`)
-- Max file: 20MB
-- Allowed types: image/jpeg, image/png, image/webp, image/gif
+- Storage: `FileSystemStorageService` is the default (no Spring profile required); root dir from `MEDIA_STORAGE_FILESYSTEM_ROOT_DIR` (prod default `/var/media/uploads`, local dev default `/Users/mahirratanpara/uploads`)
+- Max file: 25MB (multipart max-request-size 30MB)
+- Allowed types: images (jpeg, png, webp, gif), videos (mp4, quicktime/mov, webm), documents (pdf, doc, docx), text (plain, markdown)
 
 ### Data Model: MediaDocument
 
@@ -985,7 +1079,8 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 |-----------|----------|---------|
 | HeaderComponent | `components/header/` | Navigation, auth display, permission-based menu items, logout. Embeds NotificationBell when authenticated; Farms link routes to `/farm-management`. |
 | NotificationBellComponent | `components/header/notification-bell/` | Header bell with unread count, dropdown list, mark-read & archive actions |
-| FarmRegistrationFormComponent | `components/farm-registration-form/` | Reusable farm registration form (location, land details, crops, contact) |
+| FarmRegistrationFormComponent | `components/farm-registration-form/` | Reusable farm registration form (location incl. taluka + map URL with "Use current location", land details, electricity, project tags, crops, contact) |
+| FarmWeatherComponent | `components/farm-weather/` | Open-Meteo weather card: current conditions + 7-day forecast + 30-day rainfall summary, driven by lat/lng inputs |
 | FooterComponent | `components/footer/` | Company info, links, social media |
 | ToastComponent | `components/toast/` | Notification display, auto-dismiss |
 | ConfirmationModalComponent | `components/confirmation-modal/` | Reusable confirm/cancel dialog |
@@ -1002,8 +1097,14 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Service | File | Key Methods |
 |---------|------|-------------|
-| AuthService | `auth.service.ts` | googleLoginWithCode(), requestPhoneOtp(), verifyPhoneOtp(), requestProfilePhoneOtp(), verifyProfilePhoneOtp(), setProfilePhone(), setProfileEmail(), loadAuthConfig() (cached), getCurrentUser(), refreshToken(), logout(), isProfileIncomplete(), currentUser$ BehaviorSubject, otpLoginEnabled Signal |
-| FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), getFarmById(), lookupUserByPhone() |
+| AuthService | `auth.service.ts` | googleLoginWithCode(), requestPhoneOtp(), verifyPhoneOtp(), requestProfilePhoneOtp(), verifyProfilePhoneOtp(), setProfilePhone(), setProfileEmail(), loadAuthConfig() (cached), getCurrentUser(), refreshToken(), logout(), updateProfile({phoneCountryCode, phoneNumber}), isProfileIncomplete(), currentUser$ BehaviorSubject, otpLoginEnabled Signal |
+| FarmManagementService | `farm-management.service.ts` | getFarms(), registerFarm(), approveFarm(), rejectFarm(), startFarm(), completeFarm(), updateFarmStatus(), requestFarmEdit(), archiveFarm(), unarchiveFarm(), getFarmById(), lookupUserByPhone(); FarmProject exposes category / projectType / activeQuotation / quotationAcceptedAt; FarmStatus union extended with `pending_quotation` and `pending_acceptance` |
+| FarmMediaService | `farm-media.service.ts` | listMedia(projectId) → unattended + attendedTotal, listAttendedMedia(projectId, page, limit), markAttended(projectId, mediaId), markAllAttended(projectId), deleteMedia(projectId, mediaId), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
+| FarmDesignService | `farm-design.service.ts` | listDesigns(projectId), uploadDesigns(projectId, files) → progress/done events |
+| FarmPrescriptionService | `farm-prescription.service.ts` | listPrescriptions(projectId), uploadPrescriptions(projectId, files), addTextPrescription(projectId, payload), addManualPrescription(projectId, payload), addStructuredPrescription(projectId, payload, images) → progress/done events, downloadPrescriptionPdf(projectId, prescriptionId) → Blob |
+| QuotationService | `quotation.service.ts` | list(projectId), getActive(projectId), getById(projectId, quotationId), submit(projectId, payload), accept(projectId, quotationId), reject(projectId, quotationId, reason?), downloadPdf(projectId, quotationId) → Blob |
+| FarmAdminTransactionService | `farm-admin-transaction.service.ts` | list(projectId, page, limit), getSummary(projectId), create(projectId, payload), update(projectId, txId, payload), delete(projectId, txId) — admin-only manual farm transactions |
+| FarmReportService | `farm-report.service.ts` | listReports(projectId), viewReportPdf(projectId, reportId) → Blob (inline), downloadReportPdf(projectId, reportId) → Blob (attachment), triggerBrowserDownload(blob, filename) — auto-linked lab reports |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
 | UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
@@ -1036,6 +1137,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 - Skips token attachment ONLY for public auth endpoints: `/auth/google`, `/auth/google-code`, `/auth/refresh`, `/auth/otp/`. Authenticated `/auth/me`, `/auth/logout`, `/auth/profile/...` still receive the Bearer token.
 - Proactive token refresh if expiring within 5 minutes
 - Retries failed requests with new token on 401
+- Skips third-party requests (e.g. Open-Meteo) — only attaches auth headers/credentials to relative URLs, the configured `environment.apiUrl` origin, or the current window origin
 
 ### Error Interceptor (`interceptors/error.interceptor.ts`)
 - Maps HTTP status codes (400-504) to user-friendly toast messages
@@ -1118,7 +1220,8 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | users | User.js | email (unique+sparse), role, createdAt, metadata.phoneNumberNormalized (unique+sparse) |
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
-| projects | Project.js | category+status, city, state, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status |
+| projects | Project.js | category+status, city, state, taluka, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status, needsLandscapingConsultancy, activeQuotation |
+| quotations | Quotation.js | project, status, project+status+createdAt — farm consultancy quotations with 4 auto-derived quarterly installments |
 | transactions | Transaction.js | projectId+date, projectId+type, projectId+category |
 | soilsessions | SoilSession.js | date, (date+version unique) |
 | soilsamples | SoilSample.js | sessionId, sessionDate |
@@ -1130,9 +1233,10 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | invoices | Invoice.js | invoiceNumber (unique), date |
 | letters | Letter.js | letterNumber (unique sparse), date |
 | activitylogs | ActivityLog.js | projectId+timestamp, userId+timestamp |
-| notifications | Notification.js | user, type, project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt |
+| notifications | Notification.js | user, type (incl. `farm_media_upload`, `farm_design_upload`, `farm_prescription_upload`, `farm_quotation_required`, `farm_quotation_received`, `farm_quotation_accepted`), project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt; metadata adds `documentType`/`itemCount` (design/prescription uploads) and `quotationId`/`amountPerYear` (quotation events) |
 | drafts | Draft.js | projectId, createdBy |
 | media | MediaDocument.java | status+createdAt |
+| farmmediaquotas | FarmMediaQuota.js | projectId, (projectId+isoWeek unique) — per-week upload counters for farm media |
 
 ### Cross-Collection Relationships
 
@@ -1140,6 +1244,8 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 User ─── roleRef ──→ Role ──── permissions[] ──→ Permission
 User ←── user ── Notification
 Project ←── project ── Notification
+Project ←── project ── Quotation
+Project ── activeQuotation ──→ Quotation
 User ←── submittedBy/approvedBy ── Project
 User ←── createdBy ── Project
 User ←── createdBy ── Transaction
@@ -1151,6 +1257,8 @@ WaterSession ←── sessionId ── WaterSample
 FertilizerSession ←── sessionId ── FertilizerSample
 SoilSample ←── soilSampleId ── FertilizerSample
 SoilSample ── fertilizerSampleId ──→ FertilizerSample
+Project ←── linkedProjectId ── SoilSample / WaterSample / FertilizerSample
+Project ── reports[].sampleId ──→ SoilSample / WaterSample / FertilizerSample (refPath sampleModel)
 Invoice ── linkedReceipts[] ──→ Receipt
 ```
 
@@ -1290,7 +1398,7 @@ Invoice ── linkedReceipts[] ──→ Receipt
 
 ### Git Hooks (`.githooks/`)
 
-- **pre-commit:** Automatically updates `context.md` via Claude CLI, then runs `/graphify --update` to regenerate knowledge graph. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
+- **pre-commit:** Automatically updates `context.md` via Claude CLI to reflect staged changes. Skip with `SKIP_CONTEXT_UPDATE=1 git commit` or `git commit --no-verify`.
 - **setup.sh:** Run once after cloning to activate hooks: `./githooks/setup.sh` (sets `core.hooksPath` to `.githooks/`)
 
 ### VPS Setup (`scripts/vps-setup.sh`)

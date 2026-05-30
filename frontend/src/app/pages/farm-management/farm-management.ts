@@ -32,6 +32,7 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   selectedStatus = '';
   selectedDistrict = '';
   selectedSource = '';
+  showLandscapingOnly = false;
   sortBy: 'updatedAt' | 'name' | 'submittedAt' = 'updatedAt';
   formMode: 'create' | 'edit' = 'create';
   editingFarm: FarmProject | null = null;
@@ -81,7 +82,9 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const statusFilter = this.isFarmer
       ? this.selectedStatus
-      : (this.activeTab === 'pending' ? 'pending_approval' : this.selectedStatus);
+      : (this.activeTab === 'pending'
+          ? 'pending_approval,pending_quotation,pending_acceptance'
+          : this.selectedStatus);
     const submittedFilter = (this.isFarmer || this.activeTab === 'mine') ? 'me' as const : undefined;
 
     const options = {
@@ -98,7 +101,11 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.farms = result.farms;
-          this.pendingCount = result.farms.filter((farm) => farm.status === 'pending_approval').length;
+          this.pendingCount = result.farms.filter((farm) =>
+            farm.status === 'pending_approval' ||
+            farm.status === 'pending_quotation' ||
+            farm.status === 'pending_acceptance'
+          ).length;
           this.districtOptions = [...new Set(this.farms.map((farm) => farm.location?.district?.trim()).filter(Boolean) as string[])];
           this.applyClientFilters();
           this.isLoading = false;
@@ -126,9 +133,10 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
 
       const matchesStatus = !status || farm.status === status;
       const matchesSource = !source || farm.registrationSource === source;
+      const matchesLandscaping = !this.showLandscapingOnly || farm.needsLandscapingConsultancy === true;
       const matchesDistrict = !district || (farm.location?.district || '').toLowerCase() === district;
 
-      return matchesText && matchesStatus && matchesSource && matchesDistrict;
+      return matchesText && matchesStatus && matchesSource && matchesLandscaping && matchesDistrict;
     });
   }
 
@@ -148,6 +156,7 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     this.selectedStatus = '';
     this.selectedDistrict = '';
     this.selectedSource = '';
+    this.showLandscapingOnly = false;
     this.sortBy = 'updatedAt';
     this.loadFarms();
   }
@@ -201,6 +210,8 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
       pending_approval: 'Pending Approval',
+      pending_quotation: 'Pending Quotation',
+      pending_acceptance: 'Pending Acceptance',
       approved: 'Approved',
       rejected: 'Rejected',
       Running: 'Running',
@@ -218,11 +229,30 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
     return crops.map((crop) => crop.name).filter(Boolean).join(', ');
   }
 
+  isLandscapingProject(farm: FarmProject): boolean {
+    return farm.needsLandscapingConsultancy === true;
+  }
+
+  landscapingLabel(farm: FarmProject): string {
+    return 'Landscaping';
+  }
+
   trackFarm(_: number, farm: FarmProject): string {
     return farm.id || farm._id || farm.name;
   }
 
   openProject(farm: FarmProject): void {
     this.router.navigate(['/farm-management/project', farm.id || farm._id]);
+  }
+
+  areaUnitLabel(unit?: string): string {
+    const labels: Record<string, string> = {
+      acres: 'Acres',
+      hectares: 'Hectares',
+      sqmeters: 'Sq. meters',
+      'vigha-16': 'Vigha (16 gutha)',
+      'vigha-24': 'Vigha (24 gutha)'
+    };
+    return unit ? labels[unit] || unit : '';
   }
 }

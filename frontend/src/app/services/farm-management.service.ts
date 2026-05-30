@@ -3,35 +3,61 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export type FarmStatus = 'pending_approval' | 'approved' | 'rejected' | 'Upcoming' | 'Running' | 'Completed' | 'On Hold' | 'Cancelled';
+export type FarmStatus =
+  | 'pending_approval'
+  | 'pending_quotation'
+  | 'pending_acceptance'
+  | 'approved'
+  | 'rejected'
+  | 'Upcoming'
+  | 'Running'
+  | 'Completed'
+  | 'On Hold'
+  | 'Cancelled';
+
+export type AreaUnit = 'acres' | 'hectares' | 'sqmeters' | 'vigha-16' | 'vigha-24';
 
 export interface FarmProject {
   id: string;
   _id?: string;
   name: string;
+  category?: 'FARM' | 'LANDSCAPING' | 'GARDENING';
+  projectType?: 'farm' | 'landscaping' | 'gardening';
   status: FarmStatus;
   clientName?: string;
   clientEmail?: string;
   clientPhone?: string;
   location?: {
     address: string;
+    taluka?: string;
     city?: string;
     district: string;
     state?: string;
     postalCode?: string;
     mapUrl?: string;
+    coordinates?: { type: 'Point'; coordinates: [number, number] };
   };
   landDetails?: {
     totalArea: number;
-    areaUnit: 'acres' | 'hectares' | 'sqmeters';
+    areaUnit: AreaUnit;
     soilType: string;
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
     terrainType?: string;
   };
+  electricity?: {
+    transformerHp?: number;
+    motorCount?: number;
+    totalMotorHp?: number;
+  };
+  needsLandscapingConsultancy?: boolean;
+  isOnlineVisit?: boolean;
   crops?: Array<{ name: string; variety?: string; season?: string; area?: number }>;
   registrationSource?: 'farmer_self' | 'manager_direct';
+  submittedBy?: string | { _id?: string; id?: string };
+  clientId?: string | { _id?: string; id?: string };
+  createdBy?: string | { _id?: string; id?: string };
   submittedAt?: string;
   approvedAt?: string;
   rejectedReason?: string;
@@ -44,6 +70,10 @@ export interface FarmProject {
   completionDate?: string;
   expectedCompletionDate?: string;
   visitFrequency?: number;
+  isArchived?: boolean;
+  archivedAt?: string;
+  activeQuotation?: string;
+  quotationAcceptedAt?: string;
 }
 
 export interface FarmRegistrationPayload {
@@ -56,21 +86,30 @@ export interface FarmRegistrationPayload {
   budget: number;
   location: {
     address: string;
+    taluka?: string;
     city?: string;
     district: string;
     state?: string;
     postalCode?: string;
     mapUrl?: string;
+    coordinates?: { type: 'Point'; coordinates: [number, number] };
   };
   landDetails: {
     totalArea: number;
-    areaUnit: 'acres' | 'hectares' | 'sqmeters';
+    areaUnit: AreaUnit;
     soilType: string;
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
     terrainType?: string;
   };
+  electricity?: {
+    transformerHp?: number;
+    motorCount?: number;
+    totalMotorHp?: number;
+  };
+  needsLandscapingConsultancy?: boolean;
+  isOnlineVisit?: boolean;
   crops: Array<{ name: string; variety?: string; season?: string; area?: number }>;
   alternativeContact?: string;
   description?: string;
@@ -186,6 +225,24 @@ export class FarmManagementService {
 
   requestFarmEdit(projectId: string, payload: Partial<FarmRegistrationPayload>): Observable<FarmProject> {
     return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/request-edit`, payload).pipe(
+      map((response) => ({
+        ...response.data,
+        id: response.data?.id || response.data?._id
+      }))
+    );
+  }
+
+  archiveFarm(projectId: string): Observable<FarmProject> {
+    return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/archive`, {}).pipe(
+      map((response) => ({
+        ...response.data,
+        id: response.data?.id || response.data?._id
+      }))
+    );
+  }
+
+  unarchiveFarm(projectId: string): Observable<FarmProject> {
+    return this.http.patch<any>(`${this.apiUrl}/projects/${projectId}/unarchive`, {}).pipe(
       map((response) => ({
         ...response.data,
         id: response.data?.id || response.data?._id

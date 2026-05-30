@@ -4,6 +4,7 @@ const Role = require('../models/Role');
 const ExcelJS = require('exceljs'); // You'll need to npm install exceljs
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
+const { resolveAndParseLatLng, isValidLatLng } = require('../utils/mapUrlParser');
 
 const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
 const DEFAULT_COUNTRY_DIGITS = normalizePhoneNumber(process.env.DEFAULT_PHONE_COUNTRY_CODE || '+91') || '91';
@@ -48,6 +49,31 @@ const parseClientPhone = (raw) => {
     formattedPhone: nationalDigits ? `+${ccDigits} ${nationalDigits}` : ''
   };
 };
+
+/**
+ * If a map URL is present and coordinates haven't been set explicitly,
+ * try to derive { type: 'Point', coordinates: [lng, lat] } from the URL.
+ * For shortened Google Maps share links, this follows the redirect.
+ */
+async function applyDerivedCoordinates(location) {
+  if (!location || typeof location !== 'object') return;
+
+  const existing = location.coordinates;
+  const hasExistingCoords = existing
+    && Array.isArray(existing.coordinates)
+    && existing.coordinates.length === 2
+    && isValidLatLng(existing.coordinates[1], existing.coordinates[0]);
+
+  if (hasExistingCoords) return;
+
+  const parsed = await resolveAndParseLatLng(location.mapUrl);
+  if (!parsed) return;
+
+  location.coordinates = {
+    type: 'Point',
+    coordinates: [parsed.longitude, parsed.latitude]
+  };
+}
 
 /**
  * Project Service - Business Logic Layer
@@ -413,13 +439,15 @@ class ProjectService {
       budget: projectData.budget ?? 0
     };
 
+    await applyDerivedCoordinates(normalizedData.location);
+
     if (isFarmerRegistration) {
       const farmerPhone = userContext?.metadata?.phoneNumber?.trim();
       if (!farmerPhone) {
         throw new Error('Mobile number is required. Please update your profile before registering a farm.');
       }
 
-      normalizedData.status = 'pending_approval';
+      normalizedData.status = 'pending_quotation';
       normalizedData.registrationSource = 'farmer_self';
       normalizedData.submittedBy = userId;
       normalizedData.submittedAt = new Date();
@@ -465,11 +493,14 @@ class ProjectService {
 
     await project.save();
 
-    if (project.status === 'pending_approval') {
+    if (project.status === 'pending_approval' || project.status === 'pending_quotation') {
+      const isQuotation = project.status === 'pending_quotation';
       await notificationService.createForUsersWithPermission('farm.projects.approve', {
-        type: 'farm_registration',
-        title: 'Farm registration pending',
-        message: `${project.clientName} submitted ${project.name}. Open request to review details.`,
+        type: isQuotation ? 'farm_quotation_required' : 'farm_registration',
+        title: isQuotation ? 'Quotation required' : 'Farm registration pending',
+        message: isQuotation
+          ? `${project.clientName} submitted ${project.name}. Please review the farm and send a quotation.`
+          : `${project.clientName} submitted ${project.name}. Open request to review details.`,
         project: project._id,
         submittingUser: userId,
         metadata: {
@@ -705,8 +736,20 @@ class ProjectService {
       }
     }
 
+    if (cleanedUpdates.location) {
+      await applyDerivedCoordinates(cleanedUpdates.location);
+    }
+
+    const wasApproved = project.status === 'approved' ||
+      project.status === 'Running' ||
+      project.status === 'Completed' ||
+      project.status === 'On Hold';
+
     Object.assign(project, cleanedUpdates);
-    project.status = 'pending_approval';
+    // If the project was already approved, edit requests stay in the
+    // legacy pending_approval flow. Otherwise (newly-submitted farms),
+    // edits reset the flow to pending_quotation so the manager re-quotes.
+    project.status = wasApproved ? 'pending_approval' : 'pending_quotation';
     project.registrationSource = 'farmer_self';
     project.submittedBy = requesterId;
     project.submittedAt = new Date();
@@ -718,9 +761,11 @@ class ProjectService {
     await project.save();
 
     await notificationService.createForUsersWithPermission('farm.projects.approve', {
-      type: 'farm_registration',
-      title: 'Farm update request pending',
-      message: `${project.clientName} requested updates for ${project.name}. Open request to review.`,
+      type: wasApproved ? 'farm_registration' : 'farm_quotation_required',
+      title: wasApproved ? 'Farm update request pending' : 'Quotation required',
+      message: wasApproved
+        ? `${project.clientName} requested updates for ${project.name}. Open request to review.`
+        : `${project.clientName} updated ${project.name}. Please review and send a quotation.`,
       project: project._id,
       submittingUser: requesterId,
       metadata: {
@@ -743,6 +788,10 @@ class ProjectService {
       throw new Error('Project not found');
     }
 
+    if (updateData?.location) {
+      await applyDerivedCoordinates(updateData.location);
+    }
+
     // Update fields
     Object.assign(project, updateData);
     project.lastUpdatedBy = userId;
@@ -763,6 +812,36 @@ class ProjectService {
 
     await project.softDelete(userId);
     return { success: true, message: 'Project deleted successfully' };
+  }
+
+  /**
+   * Archive a project — admin only. Archived projects remain visible
+   * but reject uploads and lifecycle changes downstream.
+   */
+  async archiveProject(projectId, userId) {
+    const project = await Project.findById(projectId);
+    if (!project) throw new Error('Project not found');
+
+    project.isArchived = true;
+    project.archivedAt = new Date();
+    project.archivedBy = userId;
+    project.lastUpdatedBy = userId;
+    await project.save();
+    return project;
+  }
+
+  /**
+   * Restore a previously archived project — admin only.
+   */
+  async unarchiveProject(projectId) {
+    const project = await Project.findById(projectId);
+    if (!project) throw new Error('Project not found');
+
+    project.isArchived = false;
+    project.archivedAt = undefined;
+    project.archivedBy = undefined;
+    await project.save();
+    return project;
   }
 
   /**

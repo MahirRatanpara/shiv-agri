@@ -1,0 +1,117 @@
+const mongoose = require('mongoose');
+
+const installmentSchema = new mongoose.Schema({
+  installmentNumber: { type: Number, required: true, min: 1, max: 4 },
+  amount: { type: Number, required: true, min: 0 },
+  dueDate: { type: Date, required: true },
+  status: {
+    type: String,
+    enum: ['pending', 'paid', 'overdue'],
+    default: 'pending'
+  },
+  paidAt: { type: Date },
+  paidAmount: { type: Number, default: 0 }
+}, { _id: false });
+
+const quotationSchema = new mongoose.Schema({
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    required: true,
+    index: true
+  },
+
+  // Rich text HTML content composed by the admin/manager in the quotation editor
+  content: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
+  // Plain-text fallback derived from content (for previews / search)
+  contentText: {
+    type: String,
+    trim: true
+  },
+
+  // Annual fee for the farm/consultancy
+  amountPerYear: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+
+  // Pre-computed 4 quarterly installments (auto-derived from amountPerYear)
+  installments: {
+    type: [installmentSchema],
+    default: []
+  },
+
+  // Anchor date used when computing the 4 installment due-dates.
+  // Defaults to the date the quotation is submitted.
+  startDate: {
+    type: Date,
+    required: true,
+    default: Date.now
+  },
+
+  status: {
+    type: String,
+    enum: ['submitted', 'accepted', 'rejected', 'superseded'],
+    default: 'submitted',
+    index: true
+  },
+
+  submittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+
+  submittedByName: {
+    type: String,
+    trim: true
+  },
+
+  acceptedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  acceptedAt: { type: Date },
+
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  rejectedAt: { type: Date },
+  rejectedReason: { type: String, trim: true, maxlength: 500 }
+}, {
+  timestamps: true
+});
+
+quotationSchema.index({ project: 1, status: 1, createdAt: -1 });
+
+quotationSchema.pre('validate', function(next) {
+  // Auto-build the 4 quarterly installments from amountPerYear when missing
+  if ((!this.installments || this.installments.length !== 4) && this.amountPerYear > 0) {
+    const start = this.startDate ? new Date(this.startDate) : new Date();
+    const installmentAmount = Math.round((this.amountPerYear / 4) * 100) / 100;
+    const installments = [];
+    for (let i = 0; i < 4; i++) {
+      const dueDate = new Date(start);
+      dueDate.setMonth(dueDate.getMonth() + i * 3);
+      installments.push({
+        installmentNumber: i + 1,
+        amount: installmentAmount,
+        dueDate,
+        status: 'pending'
+      });
+    }
+    this.installments = installments;
+  }
+  next();
+});
+
+module.exports = mongoose.model('Quotation', quotationSchema);

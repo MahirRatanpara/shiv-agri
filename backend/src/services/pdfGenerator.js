@@ -17,6 +17,7 @@ class PDFGeneratorService {
         this.receiptTemplatePath = path.join(__dirname, '../../templates/receipt.html');
         this.invoiceTemplatePath = path.join(__dirname, '../../templates/invoice.html');
         this.letterTemplatePath = path.join(__dirname, '../../templates/letter.html');
+        this.prescriptionTemplatePath = path.join(__dirname, '../../templates/prescription.html');
         this.browser = null;
 
         // Template cache for faster access
@@ -104,6 +105,9 @@ class PDFGeneratorService {
             } catch (e) { /* optional */ }
             try {
                 this.templateCache.letter = await fs.readFile(this.letterTemplatePath, 'utf-8');
+            } catch (e) { /* optional */ }
+            try {
+                this.templateCache.prescription = await fs.readFile(this.prescriptionTemplatePath, 'utf-8');
             } catch (e) { /* optional */ }
 
             logger.info('Templates pre-loaded successfully');
@@ -1316,6 +1320,120 @@ class PDFGeneratorService {
     }
 
     /**
+     * Generate Quotation PDF using the company letterhead template.
+     * Composes a letter-style body from the quotation content + installment table.
+     */
+    async generateQuotationPDF(quotation, project) {
+        const browser = await this.initBrowser();
+        const page = await browser.newPage();
+
+        try {
+            logger.info(`Generating quotation PDF for: ${quotation?._id}`);
+
+            const template = this.templateCache.letter || await fs.readFile(this.letterTemplatePath, 'utf-8');
+
+            const formatINR = (value) => {
+                const num = Number(value || 0);
+                return new Intl.NumberFormat('en-IN', {
+                    style: 'currency',
+                    currency: 'INR',
+                    maximumFractionDigits: 0
+                }).format(num);
+            };
+
+            const formatDate = (date) => {
+                if (!date) return '';
+                const d = new Date(date);
+                return d.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+            };
+
+            const installments = Array.isArray(quotation.installments) ? quotation.installments : [];
+            const installmentRows = installments.map((installment) => `
+                <tr>
+                    <td style="padding:10px 12px;border:1px solid #d1d5db;text-align:center;font-weight:700;">${installment.installmentNumber}</td>
+                    <td style="padding:10px 12px;border:1px solid #d1d5db;">${formatDate(installment.dueDate)}</td>
+                    <td style="padding:10px 12px;border:1px solid #d1d5db;text-align:right;font-weight:700;">${formatINR(installment.amount)}</td>
+                </tr>
+            `).join('');
+
+            const greetingName = project?.clientName || 'Esteemed Farmer';
+            const farmName = project?.name || '';
+            const farmLocation = [
+                project?.location?.taluka,
+                project?.location?.district,
+                project?.location?.state
+            ].filter(Boolean).join(', ');
+
+            const composedBody = `
+                <p>Dear ${greetingName},</p>
+                <p>
+                    Thank you for engaging Shiv Agri Consultancy for your farm${farmName ? ` <strong>"${farmName}"</strong>` : ''}${farmLocation ? `, located at ${farmLocation}` : ''}.
+                    Based on our review, please find below the proposed annual consultancy quotation.
+                </p>
+
+                <h3 style="font-size:15px;margin:20px 0 8px;font-weight:700;text-decoration:underline;">Scope &amp; Details</h3>
+                <div style="font-size:14px;line-height:1.8;">${quotation.content || ''}</div>
+
+                <h3 style="font-size:15px;margin:24px 0 8px;font-weight:700;text-decoration:underline;">Annual Fee</h3>
+                <p style="font-size:18px;font-weight:700;color:#15803D;">${formatINR(quotation.amountPerYear)} per year</p>
+
+                <h3 style="font-size:15px;margin:24px 0 8px;font-weight:700;text-decoration:underline;">Payment Schedule</h3>
+                <p>The annual fee is divided into 4 equal quarterly installments as follows:</p>
+                <table style="width:100%;border-collapse:collapse;margin:10px 0 18px;font-size:14px;">
+                    <thead>
+                        <tr style="background:#F0FDF4;">
+                            <th style="padding:10px 12px;border:1px solid #d1d5db;text-align:center;">Installment</th>
+                            <th style="padding:10px 12px;border:1px solid #d1d5db;text-align:left;">Due Date</th>
+                            <th style="padding:10px 12px;border:1px solid #d1d5db;text-align:right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>${installmentRows}</tbody>
+                    <tfoot>
+                        <tr style="background:#FEFCE8;font-weight:700;">
+                            <td colspan="2" style="padding:10px 12px;border:1px solid #d1d5db;text-align:right;">Total (Annual)</td>
+                            <td style="padding:10px 12px;border:1px solid #d1d5db;text-align:right;">${formatINR(quotation.amountPerYear)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <p>Please review and confirm your acceptance through the Shiv Agri app to proceed with the engagement. Feel free to reach out for any clarification.</p>
+                <p>We look forward to a long and successful partnership.</p>
+            `;
+
+            const letterData = {
+                date: quotation.createdAt || new Date(),
+                content: composedBody
+            };
+
+            const html = this.fillLetterTemplate(template, letterData);
+
+            await page.setContent(html, { waitUntil: 'domcontentloaded' });
+            await page.addStyleTag({
+                content: `@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');`
+            });
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' }
+            });
+
+            logger.info(`Quotation PDF generated for ${quotation._id}`);
+            return pdfBuffer;
+        } catch (error) {
+            logger.error(`Error generating quotation PDF: ${error.message}`, { stack: error.stack });
+            throw error;
+        } finally {
+            await page.close();
+        }
+    }
+
+    /**
      * Fill Letter Template
      */
     fillLetterTemplate(template, data) {
@@ -1516,6 +1634,228 @@ class PDFGeneratorService {
             logger.error(`Error generating combined fertilizer PDF: ${error.message}`);
             await page.close();
             throw error;
+        }
+    }
+    /**
+     * Convert a digit string (or number) to Gujarati numerals.
+     */
+    _toGujaratiDigits(input) {
+        if (input === null || input === undefined) return '';
+        const map = ['૦','૧','૨','૩','૪','૫','૬','૭','૮','૯'];
+        return String(input).replace(/\d/g, (d) => map[Number(d)]);
+    }
+
+    /**
+     * Format a Date as DD/MM/YY in Gujarati numerals.
+     */
+    _formatGujaratiDate(date) {
+        if (!date) return '';
+        const d = date instanceof Date ? date : new Date(date);
+        if (isNaN(d.getTime())) return '';
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return this._toGujaratiDigits(`${dd}/${mm}/${yy}`);
+    }
+
+    /**
+     * Fetch a remote image and return a data URI (base64). Used so Puppeteer
+     * doesn't have to make network requests during PDF render.
+     */
+    async _fetchImageAsDataUri(url) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                logger.warn(`[Prescription PDF] Image fetch failed: ${url} (${res.status})`);
+                return null;
+            }
+            const mime = res.headers.get('content-type') || 'image/jpeg';
+            const buf = Buffer.from(await res.arrayBuffer());
+            return `data:${mime};base64,${buf.toString('base64')}`;
+        } catch (err) {
+            logger.warn(`[Prescription PDF] Image fetch error for ${url}: ${err.message}`);
+            return null;
+        }
+    }
+
+    /**
+     * Build the image-pages HTML appended after the prescription sheet.
+     * Each page gets a header indicating it's an attached photo plus a
+     * numbered caption.
+     */
+    async _buildImagePagesHtml(attachedImages) {
+        if (!Array.isArray(attachedImages) || attachedImages.length === 0) return '';
+        const pages = [];
+        const total = attachedImages.length;
+        let index = 1;
+        for (const img of attachedImages) {
+            if (!img?.url) continue;
+            const dataUri = await this._fetchImageAsDataUri(img.url);
+            const src = dataUri || img.url;
+            const totalGu = this._toGujaratiDigits(total);
+            const idxGu = this._toGujaratiDigits(index);
+            pages.push(`
+                <div class="img-page">
+                    <div class="img-header">જોડેલા ફોટા (Attached Photos) — ${idxGu} / ${totalGu}</div>
+                    <div class="img-wrap"><img src="${src}" alt="Prescription attachment ${index}" /></div>
+                </div>
+            `);
+            index += 1;
+        }
+        return pages.join('\n');
+    }
+
+    /**
+     * Escape user text for safe HTML interpolation.
+     */
+    _escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/[<>&"']/g, (c) => ({
+            '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    /**
+     * Replace placeholders in the prescription template.
+     */
+    _fillPrescriptionTemplate(template, prescription, project, imagePagesHtml) {
+        const s = prescription.structured || {};
+        const fo = s.farmingOperations || {};
+        const f = s.fertilizers || {};
+        const p = s.pests || {};
+        const d = s.diseases || {};
+        const photoCount = Array.isArray(prescription.attachedImages) ? prescription.attachedImages.length : 0;
+
+        const checkClass = (v) => (v ? 'checked' : '');
+        const text = (v) => this._escapeHtml(v);
+
+        // Photo indication shown ONLY when photos are attached.
+        // Long banner on page 1; short hint at the bottom of page 2.
+        const photoNotice = photoCount > 0
+            ? `<div class="photo-notice">
+                <span class="icon">📎</span>
+                <span>
+                  <strong>${this._toGujaratiDigits(photoCount)} ${photoCount === 1 ? 'ફોટો' : 'ફોટા'} જોડેલા છે</strong>
+                  &nbsp;·&nbsp; ${photoCount} photo${photoCount === 1 ? '' : 's'} attached — see ${photoCount === 1 ? 'final page' : 'final pages'}.
+                </span>
+               </div>`
+            : '';
+
+        const photoNoticeShort = photoCount > 0
+            ? `<div style="font-size:9pt; color:#555;">📎 ${this._toGujaratiDigits(photoCount)} ${photoCount === 1 ? 'ફોટો' : 'ફોટા'} જોડેલા છે</div>
+               <div style="font-size:8.5pt; color:#777;">${photoCount} photo${photoCount === 1 ? '' : 's'} appended after this page</div>`
+            : '';
+
+        const otherNotesRaw = (s.otherNotes || '').trim();
+        const otherNotesBody = otherNotesRaw
+            ? this._escapeHtml(otherNotesRaw)
+            : '<div class="notes-empty">— કોઈ વધારાની નોંધ નથી / No additional notes —</div>';
+
+        const replacements = {
+            '{{farmerName}}': text(s.farmerName || project?.name || ''),
+            '{{visitDate}}': this._formatGujaratiDate(s.visitDate),
+            '{{lastVisitReview}}': text(s.lastVisitReview),
+
+            '{{landPreparation}}': text(s.landPreparation),
+            '{{sowingPlanting}}': text(s.sowingPlanting),
+
+            '{{op_leveling}}': checkClass(fo.leveling),
+            '{{op_marking}}': checkClass(fo.marking),
+            '{{op_digging}}': checkClass(fo.digging),
+            '{{op_soilFilling}}': checkClass(fo.soilFilling),
+            '{{op_tractor}}': checkClass(fo.tractor),
+            '{{op_supports}}': checkClass(fo.supports),
+            '{{op_fillGaps}}': checkClass(fo.fillGaps),
+            '{{op_pruning}}': checkClass(fo.pruning),
+            '{{op_otherChecked}}': checkClass(fo.other && fo.other.trim()),
+            '{{op_other}}': text(fo.other),
+
+            '{{irrigation}}': text(s.irrigation),
+            '{{weedControl}}': text(s.weedControl),
+
+            '{{f_farmyardManure}}': checkClass(f.farmyardManure),
+            '{{f_chemical}}': checkClass(f.chemical),
+            '{{f_organic}}': checkClass(f.organic),
+            '{{f_jivamrut}}': checkClass(f.jivamrut),
+            '{{f_spray}}': checkClass(f.spray),
+
+            '{{p_soilBorne}}': checkClass(p.soilBorne),
+            '{{p_root}}': checkClass(p.root),
+            '{{p_stem}}': checkClass(p.stem),
+            '{{p_leaf}}': checkClass(p.leaf),
+            '{{p_flower}}': checkClass(p.flower),
+            '{{p_fruit}}': checkClass(p.fruit),
+
+            '{{d_soilBorne}}': checkClass(d.soilBorne),
+            '{{d_stem}}': checkClass(d.stem),
+            '{{d_branch}}': checkClass(d.branch),
+            '{{d_leaf}}': checkClass(d.leaf),
+            '{{d_flower}}': checkClass(d.flower),
+            '{{d_fruit}}': checkClass(d.fruit),
+            '{{d_other}}': checkClass(d.other),
+
+            '{{hormoneTreatment}}': checkClass(s.hormoneTreatment),
+            '{{fruitHarvesting}}': checkClass(s.fruitHarvesting),
+            '{{grading}}': checkClass(s.grading),
+            '{{packing}}': checkClass(s.packing),
+
+            // Other notes — full page 2 of the PDF
+            '{{otherNotesBody}}': otherNotesBody,
+
+            // Photo indications (only rendered when photos are attached)
+            '{{photoNotice}}': photoNotice,
+            '{{photoNoticeShort}}': photoNoticeShort,
+
+            '{{imagePages}}': imagePagesHtml || ''
+        };
+
+        let html = template;
+        Object.entries(replacements).forEach(([key, value]) => {
+            html = html.split(key).join(value);
+        });
+        return html;
+    }
+
+    /**
+     * Generate the prescription PDF (matches the Shiv Agri printed visit slip)
+     * and append any attached photos as full-page images at the end.
+     */
+    async generatePrescriptionPDF(prescription, project = {}) {
+        const browser = await this.initBrowser();
+        const page = await browser.newPage();
+
+        try {
+            logger.info(`[Prescription PDF] Generating for project=${project?._id}, images=${prescription?.attachedImages?.length || 0}`);
+
+            // Always read the prescription template fresh from disk — this is a
+            // low-traffic path and reading on every request lets template tweaks
+            // land without a backend restart. (Lab-report templates remain cached
+            // because they're hot and rarely changed.)
+            const template = await fs.readFile(this.prescriptionTemplatePath, 'utf-8');
+
+            const imagePagesHtml = await this._buildImagePagesHtml(prescription.attachedImages || []);
+            let html = this._fillPrescriptionTemplate(template, prescription, project, imagePagesHtml);
+
+            // Inject Gujarati font
+            html = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+
+            await page.setContent(html, { waitUntil: 'domcontentloaded' });
+            await new Promise((resolve) => setTimeout(resolve, 120));
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+                preferCSSPageSize: true
+            });
+
+            logger.info(`[Prescription PDF] Generated successfully`);
+            return pdfBuffer;
+        } catch (error) {
+            logger.error(`[Prescription PDF] Error: ${error.message}`, { stack: error.stack });
+            throw error;
+        } finally {
+            await page.close();
         }
     }
 }
