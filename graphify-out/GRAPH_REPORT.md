@@ -1,1059 +1,871 @@
-# Graph Report - .  (2026-05-07)
+# Graph Report - .  (2026-05-31)
 
 ## Corpus Check
-- Large corpus: 263 files · ~363,980 words. Semantic extraction will be expensive (many Claude tokens). Consider running on a subfolder, or use --no-semantic to run AST-only.
+- 154 files · ~113,533 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2181 nodes · 2827 edges · 153 communities detected
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 233 edges (avg confidence: 0.8)
+- 3511 nodes · 5036 edges · 369 communities (226 shown, 143 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 318 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_min jquery isotope|min jquery isotope]]
-- [[_COMMUNITY_interface routes html|interface routes html]]
-- [[_COMMUNITY_Deployment FileSystemStorageService MongoDB|Deployment FileSystemStorageService MongoDB]]
-- [[_COMMUNITY_FarmDashboardComponent allSelected applyFilters|FarmDashboardComponent allSelected applyFilters]]
-- [[_COMMUNITY_FertilizerTestingComponent applyCropDefaults canMoveToNextState|FertilizerTestingComponent applyCropDefaults canMoveToNextState]]
-- [[_COMMUNITY_soil testing SoilTestingComponent|soil testing SoilTestingComponent]]
-- [[_COMMUNITY_dev Model HTML|dev Model HTML]]
-- [[_COMMUNITY_water testing WaterTestingComponent|water testing WaterTestingComponent]]
-- [[_COMMUNITY_deleteProject deleteSelectedRows bulkArchive|deleteProject deleteSelectedRows bulkArchive]]
-- [[_COMMUNITY_dashboard DashboardService addContact|dashboard DashboardService addContact]]
-- [[_COMMUNITY_DatalistCellEditor afterGuiAttached destroy|DatalistCellEditor afterGuiAttached destroy]]
-- [[_COMMUNITY_project list ProjectListComponent|project list ProjectListComponent]]
-- [[_COMMUNITY_projectService mapUrlParser applyDerivedCoordinates|projectService mapUrlParser applyDerivedCoordinates]]
-- [[_COMMUNITY_storage application yml|storage application yml]]
-- [[_COMMUNITY_project wizard ProjectWizardComponent|project wizard ProjectWizardComponent]]
-- [[_COMMUNITY_auth getCurrentUser googleLogin|auth getCurrentUser googleLogin]]
-- [[_COMMUNITY_FarmProjectDetailsComponent approve areaUnitLabel|FarmProjectDetailsComponent approve areaUnitLabel]]
-- [[_COMMUNITY_pdf PdfService checkHealth|pdf PdfService checkHealth]]
-- [[_COMMUNITY_invoices InvoicesComponent addLineItem|invoices InvoicesComponent addLineItem]]
-- [[_COMMUNITY_managerial work ManagerialWorkService|managerial work ManagerialWorkService]]
-- [[_COMMUNITY_updateTransaction addContact addMilestone|updateTransaction addContact addMilestone]]
-- [[_COMMUNITY_Permissions Model RBAC|Permissions Model RBAC]]
-- [[_COMMUNITY_Confirmation Modal Download|Confirmation Modal Download]]
-- [[_COMMUNITY_letters LettersComponent applyFilters|letters LettersComponent applyFilters]]
-- [[_COMMUNITY_DashboardOverviewComponent constructor formatCurrency|DashboardOverviewComponent constructor formatCurrency]]
-- [[_COMMUNITY_DTO MediaController batchResolve|DTO MediaController batchResolve]]
-- [[_COMMUNITY_Notification Routes Farm|Notification Routes Farm]]
-- [[_COMMUNITY_Farm Notification Project|Farm Notification Project]]
-- [[_COMMUNITY_role management RoleManagementComponent|role management RoleManagementComponent]]
-- [[_COMMUNITY_receipts ReceiptsComponent applyFilters|receipts ReceiptsComponent applyFilters]]
-- [[_COMMUNITY_FarmManagementComponent applyClientFilters applyFilters|FarmManagementComponent applyClientFilters applyFilters]]
-- [[_COMMUNITY_soil testing SoilTestingService|soil testing SoilTestingService]]
-- [[_COMMUNITY_Router Model Project|Router Model Project]]
-- [[_COMMUNITY_water testing WaterTestingService|water testing WaterTestingService]]
-- [[_COMMUNITY_permission PermissionService assignRoleToUser|permission PermissionService assignRoleToUser]]
-- [[_COMMUNITY_FarmRegistrationFormComponent addCrop combinedClientPhone|FarmRegistrationFormComponent addCrop combinedClientPhone]]
-- [[_COMMUNITY_notification bell NotificationBellComponent|notification bell NotificationBellComponent]]
-- [[_COMMUNITY_fertilizer testing FertilizerTestingService|fertilizer testing FertilizerTestingService]]
-- [[_COMMUNITY_Schema Invoice hasPermission|Schema Invoice hasPermission]]
-- [[_COMMUNITY_home HomeComponent closePopup|home HomeComponent closePopup]]
-- [[_COMMUNITY_html details blog|html details blog]]
-- [[_COMMUNITY_user management UserManagementComponent|user management UserManagementComponent]]
-- [[_COMMUNITY_farm management FarmManagementService|farm management FarmManagementService]]
-- [[_COMMUNITY_font asset assets|font asset assets]]
-- [[_COMMUNITY_session state model|session state model]]
-- [[_COMMUNITY_fertilizer session state|fertilizer session state]]
-- [[_COMMUNITY_account MyAccountComponent cancelProfileEdit|account MyAccountComponent cancelProfileEdit]]
-- [[_COMMUNITY_activityLogService transactionService logActivity|activityLogService transactionService logActivity]]
-- [[_COMMUNITY_FarmWeatherComponent applyResponse constructor|FarmWeatherComponent applyResponse constructor]]
-- [[_COMMUNITY_DownloadProgressComponent close constructor|DownloadProgressComponent close constructor]]
-- [[_COMMUNITY_Schema Testing Router|Schema Testing Router]]
-- [[_COMMUNITY_farmMediaService FarmMediaService getIsoWeek|farmMediaService FarmMediaService getIsoWeek]]
-- [[_COMMUNITY_FileValidationException MediaNotFoundException StorageException|FileValidationException MediaNotFoundException StorageException]]
-- [[_COMMUNITY_HasPermissionDirective checkPermissions constructor|HasPermissionDirective checkPermissions constructor]]
-- [[_COMMUNITY_bootstrap min|bootstrap min]]
-- [[_COMMUNITY_Template Project Testing|Template Project Testing]]
-- [[_COMMUNITY_FarmRegistrationPageComponent cancel constructor|FarmRegistrationPageComponent cancel constructor]]
-- [[_COMMUNITY_lab testing LabTestingComponent|lab testing LabTestingComponent]]
-- [[_COMMUNITY_isotope pkgd min|isotope pkgd min]]
-- [[_COMMUNITY_migrate permissions connectDB|migrate permissions connectDB]]
-- [[_COMMUNITY_transactionController TransactionController createTransaction|transactionController TransactionController createTransaction]]
-- [[_COMMUNITY_draftService DraftService completeDraft|draftService DraftService completeDraft]]
-- [[_COMMUNITY_Guide docker compose|Guide docker compose]]
-- [[_COMMUNITY_HasRoleDirective checkRoles constructor|HasRoleDirective checkRoles constructor]]
-- [[_COMMUNITY_header HeaderComponent constructor|header HeaderComponent constructor]]
-- [[_COMMUNITY_notificationService NotificationService archive|notificationService NotificationService archive]]
-- [[_COMMUNITY_role selection modal|role selection modal]]
-- [[_COMMUNITY_login LoginComponent constructor|login LoginComponent constructor]]
-- [[_COMMUNITY_user UserService constructor|user UserService constructor]]
-- [[_COMMUNITY_Report Template Gujarati|Report Template Gujarati]]
-- [[_COMMUNITY_vendor jQuery custom|vendor jQuery custom]]
-- [[_COMMUNITY_userController deleteUser getAllUsers|userController deleteUser getAllUsers]]
-- [[_COMMUNITY_ConfirmationModalComponent cancel closeModal|ConfirmationModalComponent cancel closeModal]]
-- [[_COMMUNITY_managerial work ManagerialWorkComponent|managerial work ManagerialWorkComponent]]
-- [[_COMMUNITY_fertilizerCropConfig getConfig getCropNames|fertilizerCropConfig getConfig getCropNames]]
-- [[_COMMUNITY_waterClassification addClassifications classifyParameter|waterClassification addClassifications classifyParameter]]
+- [[_COMMUNITY_Java String Providerexception|Java String Providerexception]]
+- [[_COMMUNITY_Acceptquotation Approve Areaunitlabel|Acceptquotation Approve Areaunitlabel]]
+- [[_COMMUNITY_Normal Spray1 Spray2|Normal Spray1 Spray2]]
+- [[_COMMUNITY_Search Design System|Search Design System]]
+- [[_COMMUNITY_Jquery Min|Jquery Min]]
+- [[_COMMUNITY_Java Sendresponse String|Java Sendresponse String]]
+- [[_COMMUNITY_Formatcurrency Afterguiattached Buildday45row|Formatcurrency Afterguiattached Buildday45row]]
+- [[_COMMUNITY_Farm Notification Routes|Farm Notification Routes]]
+- [[_COMMUNITY_Builder Buildtarget Configurations|Builder Buildtarget Configurations]]
+- [[_COMMUNITY_Addcontact Addmilestone Addtransaction|Addcontact Addmilestone Addtransaction]]
+- [[_COMMUNITY_Constructor Farm List|Constructor Farm List]]
+- [[_COMMUNITY_Applyfilters Calculatefiltercount Calculatesummarystats|Applyfilters Calculatefiltercount Calculatesummarystats]]
+- [[_COMMUNITY_Media Mongodb Storage|Media Mongodb Storage]]
+- [[_COMMUNITY_Angular Karma Jasmine|Angular Karma Jasmine]]
+- [[_COMMUNITY_Addcontact Addcrop Cancel|Addcontact Addcrop Cancel]]
+- [[_COMMUNITY_Farm Otp Media|Farm Otp Media]]
+- [[_COMMUNITY_Checkhealth Constructor Delay|Checkhealth Constructor Delay]]
+- [[_COMMUNITY_Allselected Calculateprojectsummarystats Clearselection|Allselected Calculateprojectsummarystats Clearselection]]
+- [[_COMMUNITY_Addlineitem Applyfilters Applysearch|Addlineitem Applyfilters Applysearch]]
+- [[_COMMUNITY_Applycropdefaults Canmovetonextstate Canmovetopreviousstate|Applycropdefaults Canmovetonextstate Canmovetopreviousstate]]
+- [[_COMMUNITY_Constructor Createinvoice Createletter|Constructor Createinvoice Createletter]]
+- [[_COMMUNITY_Addcontact Addmilestone Addtransaction|Addcontact Addmilestone Addtransaction]]
+- [[_COMMUNITY_Archive Constructor Markread|Archive Constructor Markread]]
+- [[_COMMUNITY_Module Updatetransaction Addcontact|Module Updatetransaction Addcontact]]
+- [[_COMMUNITY_Addnewrow Canmovetonextstate Canmovetopreviousstate|Addnewrow Canmovetonextstate Canmovetopreviousstate]]
+- [[_COMMUNITY_Permissions Rbac Action|Permissions Rbac Action]]
+- [[_COMMUNITY_Min Popper|Min Popper]]
+- [[_COMMUNITY_Closetransactionmodal Constructor Details|Closetransactionmodal Constructor Details]]
+- [[_COMMUNITY_Access Based Confirmation|Access Based Confirmation]]
+- [[_COMMUNITY_Addnewrow Canmovetonextstate Canmovetopreviousstate|Addnewrow Canmovetonextstate Canmovetopreviousstate]]
+- [[_COMMUNITY_Whatsapp Channel Email|Whatsapp Channel Email]]
+- [[_COMMUNITY_Html Interface Management|Html Interface Management]]
+- [[_COMMUNITY_Changephonenumber Cleartimers Constructor|Changephonenumber Cleartimers Constructor]]
+- [[_COMMUNITY_Authservice Clearsession Constructor|Authservice Clearsession Constructor]]
+- [[_COMMUNITY_Applyfilters Applysearch Cancelform|Applyfilters Applysearch Cancelform]]
+- [[_COMMUNITY_Fruit Month Large|Fruit Month Large]]
+- [[_COMMUNITY_Properties Whatsapp Email|Properties Whatsapp Email]]
+- [[_COMMUNITY_Farm Adapter Login|Farm Adapter Login]]
+- [[_COMMUNITY_Farm Constructor Management|Farm Constructor Management]]
+- [[_COMMUNITY_Farm Notification Profile|Farm Notification Profile]]
+- [[_COMMUNITY_Constructor Dashboard Dashboardoverviewcomponent|Constructor Dashboard Dashboardoverviewcomponent]]
+- [[_COMMUNITY_Changephonenumber Clearresendtimer Completeprofilecomponent|Changephonenumber Clearresendtimer Completeprofilecomponent]]
+- [[_COMMUNITY_Applyclientfilters Applyfilters Areaunitlabel|Applyclientfilters Applyfilters Areaunitlabel]]
+- [[_COMMUNITY_Canaddphone Canceladdphone Cancelprofileedit|Canaddphone Canceladdphone Cancelprofileedit]]
+- [[_COMMUNITY_Workflow Deploy Deployment|Workflow Deploy Deployment]]
+- [[_COMMUNITY_Mediacontroller Dto Batchresolve|Mediacontroller Dto Batchresolve]]
+- [[_COMMUNITY_Applyfilters Applysearch Cancelform|Applyfilters Applysearch Cancelform]]
+- [[_COMMUNITY_Closemodal Constructor Createrole|Closemodal Constructor Createrole]]
+- [[_COMMUNITY_Authenticate Express Farmdesigncontroller|Authenticate Express Farmdesigncontroller]]
+- [[_COMMUNITY_Auth Codes Complete|Auth Codes Complete]]
+- [[_COMMUNITY_Collectprojectstakeholders Deletemedia Farmmediaservice|Collectprojectstakeholders Deletemedia Farmmediaservice]]
+- [[_COMMUNITY_Bulkupdatesamples Constructor Createsample|Bulkupdatesamples Constructor Createsample]]
+- [[_COMMUNITY_Quotationservice Logger Quotation|Quotationservice Logger Quotation]]
+- [[_COMMUNITY_Bulkupdatesamples Constructor Createsample|Bulkupdatesamples Constructor Createsample]]
+- [[_COMMUNITY_Java Mediadocument Mediarepository|Java Mediadocument Mediarepository]]
+- [[_COMMUNITY_Migrate Permissions Archiver|Migrate Permissions Archiver]]
+- [[_COMMUNITY_Classifydoctype Farmprescriptionservice Mimes|Classifydoctype Farmprescriptionservice Mimes]]
+- [[_COMMUNITY_Deliverotp Delivery Mode|Deliverotp Delivery Mode]]
+- [[_COMMUNITY_Testing Json Firebase|Testing Json Firebase]]
+- [[_COMMUNITY_Jquery Prettyphoto|Jquery Prettyphoto]]
+- [[_COMMUNITY_Assignroletouser Clearpermissions Constructor|Assignroletouser Clearpermissions Constructor]]
+- [[_COMMUNITY_Addcrop Combinedclientphone Constructor|Addcrop Combinedclientphone Constructor]]
+- [[_COMMUNITY_Interface Routes Testing|Interface Routes Testing]]
+- [[_COMMUNITY_Bulkupdatesamples Constructor Createsession|Bulkupdatesamples Constructor Createsession]]
+- [[_COMMUNITY_Farmmediaquota Farmmediaservice Logger|Farmmediaquota Farmmediaservice Logger]]
+- [[_COMMUNITY_Watersample Addclassifications Authenticate|Watersample Addclassifications Authenticate]]
+- [[_COMMUNITY_Dashboard Html Interface|Dashboard Html Interface]]
+- [[_COMMUNITY_Schema Haspermission Invoice|Schema Haspermission Invoice]]
+- [[_COMMUNITY_Clearrefreshcookie User Authcontroller|Clearrefreshcookie User Authcontroller]]
+- [[_COMMUNITY_Constructor Deletemedia Farm|Constructor Deletemedia Farm]]
+- [[_COMMUNITY_Addmanualprescription Addstructuredprescription Addtextprescription|Addmanualprescription Addstructuredprescription Addtextprescription]]
+- [[_COMMUNITY_Weather Applyresponse Constructor|Weather Applyresponse Constructor]]
+- [[_COMMUNITY_Closepopup Constructor Home|Closepopup Constructor Home]]
+- [[_COMMUNITY_Filesystemstorageservice Delete Exists|Filesystemstorageservice Delete Exists]]
+- [[_COMMUNITY_Haspermission Auth Authorize|Haspermission Auth Authorize]]
+- [[_COMMUNITY_Getauthconfig Getcurrentuser Setprofileemail|Getauthconfig Getcurrentuser Setprofileemail]]
+- [[_COMMUNITY_Generateaccesstoken Crypto Days|Generateaccesstoken Crypto Days]]
+- [[_COMMUNITY_Java Filevalidationexception Medianotfoundexception|Java Filevalidationexception Medianotfoundexception]]
+- [[_COMMUNITY_Fertilizersample Addclassifications Farmreportcontroller|Fertilizersample Addclassifications Farmreportcontroller]]
+- [[_COMMUNITY_Buildreportentry Escaperegex Farmreportlinker|Buildreportentry Escaperegex Farmreportlinker]]
+- [[_COMMUNITY_Authenticate Exceljs Express|Authenticate Exceljs Express]]
+- [[_COMMUNITY_Authenticate Soilsample Express|Authenticate Soilsample Express]]
+- [[_COMMUNITY_Farmdesignservice Logger Farmdesigncontroller|Farmdesignservice Logger Farmdesigncontroller]]
+- [[_COMMUNITY_Html Details Blog|Html Details Blog]]
+- [[_COMMUNITY_Tool Event Name|Tool Event Name]]
+- [[_COMMUNITY_Storageservice Completeupload Delete|Storageservice Completeupload Delete]]
+- [[_COMMUNITY_Font Asset Assets|Font Asset Assets]]
+- [[_COMMUNITY_Activeotps Canissueotp Constanttimeequals|Activeotps Canissueotp Constanttimeequals]]
+- [[_COMMUNITY_Min Carousel Isotope|Min Carousel Isotope]]
+- [[_COMMUNITY_Changeuserrole Constructor Deleteuser|Changeuserrole Constructor Deleteuser]]
+- [[_COMMUNITY_Interface Pdf Routes|Interface Pdf Routes]]
+- [[_COMMUNITY_Canperformaction Cantransitionto Constructor|Canperformaction Cantransitionto Constructor]]
+- [[_COMMUNITY_Canperformaction Cantransitionto Constructor|Canperformaction Cantransitionto Constructor]]
+- [[_COMMUNITY_Transactionservice Activitylogservice Createtransaction|Transactionservice Activitylogservice Createtransaction]]
+- [[_COMMUNITY_Phone Profile Complete|Phone Profile Complete]]
+- [[_COMMUNITY_Followredirects Hosts Http|Followredirects Hosts Http]]
+- [[_COMMUNITY_Close Constructor Download|Close Constructor Download]]
+- [[_COMMUNITY_Downloadreport Farm Farmreport|Downloadreport Farm Farmreport]]
+- [[_COMMUNITY_Router Aggregator Auth|Router Aggregator Auth]]
+- [[_COMMUNITY_Search Design Domain|Search Design Domain]]
+- [[_COMMUNITY_Schema Router Testing|Schema Router Testing]]
+- [[_COMMUNITY_Logger Pdfgenerator Farmprescriptioncontroller|Logger Pdfgenerator Farmprescriptioncontroller]]
+- [[_COMMUNITY_Checkpermissions Constructor Directive|Checkpermissions Constructor Directive]]
+- [[_COMMUNITY_Cancel Constructor Farm|Cancel Constructor Farm]]
+- [[_COMMUNITY_Isotope Min Pkgd|Isotope Min Pkgd]]
+- [[_COMMUNITY_Backup Mongodb Bootstrap|Backup Mongodb Bootstrap]]
+- [[_COMMUNITY_Bootstrap Min|Bootstrap Min]]
+- [[_COMMUNITY_Draft Transaction Activity|Draft Transaction Activity]]
+- [[_COMMUNITY_Invoice Createinvoice Deleteinvoice|Invoice Createinvoice Deleteinvoice]]
+- [[_COMMUNITY_Letter Createletter Deleteletter|Letter Createletter Deleteletter]]
+- [[_COMMUNITY_Html Template Pdf|Html Template Pdf]]
+- [[_COMMUNITY_Angular Context Asset|Angular Context Asset]]
+- [[_COMMUNITY_Template Testing Details|Template Testing Details]]
+- [[_COMMUNITY_Deployment Mongodb Agri|Deployment Mongodb Agri]]
+- [[_COMMUNITY_Transactioncontroller Createtransaction Deletetransaction|Transactioncontroller Createtransaction Deletetransaction]]
+- [[_COMMUNITY_Docker Certbot Compose|Docker Certbot Compose]]
+- [[_COMMUNITY_Auth Interface Access|Auth Interface Access]]
+- [[_COMMUNITY_Soil Water Name|Soil Water Name]]
+- [[_COMMUNITY_Checkpermissions Constructor Isactive|Checkpermissions Constructor Isactive]]
+- [[_COMMUNITY_Prod Routes Auth|Prod Routes Auth]]
+- [[_COMMUNITY_Receipt Createreceipt Deletereceipt|Receipt Createreceipt Deletereceipt]]
+- [[_COMMUNITY_Migrate Connectdb Determinecategory|Migrate Connectdb Determinecategory]]
+- [[_COMMUNITY_Draftservice Completedraft Createfinalproject|Draftservice Completedraft Createfinalproject]]
+- [[_COMMUNITY_Arraycontainsat Arraystartswith Filevalidationservice|Arraycontainsat Arraystartswith Filevalidationservice]]
+- [[_COMMUNITY_Buildheaders Notificationclient Post|Buildheaders Notificationclient Post]]
+- [[_COMMUNITY_Exceljs Isvalidlatlng Logger|Exceljs Isvalidlatlng Logger]]
+- [[_COMMUNITY_Checkroles Constructor Directive|Checkroles Constructor Directive]]
+- [[_COMMUNITY_Downloadprescriptionfromrow Prescriptioncheckeditems Prescriptionicon|Downloadprescriptionfromrow Prescriptioncheckeditems Prescriptionicon]]
+- [[_COMMUNITY_Storage Media Capture|Storage Media Capture]]
+- [[_COMMUNITY_Constructor Header Headercomponent|Constructor Header Headercomponent]]
+- [[_COMMUNITY_Media Architecture Angular|Media Architecture Angular]]
+- [[_COMMUNITY_Notificationservice Archive Archivefarmregistration|Notificationservice Archive Archivefarmregistration]]
+- [[_COMMUNITY_Farm Registration Prescription|Farm Registration Prescription]]
+- [[_COMMUNITY_Dry Email Ensureindex|Dry Email Ensureindex]]
+- [[_COMMUNITY_Clear Error Remove|Clear Error Remove]]
+- [[_COMMUNITY_Java Storageconfig Filesystemstorageservice|Java Storageconfig Filesystemstorageservice]]
+- [[_COMMUNITY_Deleteuser Getallusers Getuser|Deleteuser Getallusers Getuser]]
+- [[_COMMUNITY_Applyderivedcoordinates Createproject Normalizephonenumber|Applyderivedcoordinates Createproject Normalizephonenumber]]
+- [[_COMMUNITY_Deletetransaction Farmtransaction Openquotationform|Deletetransaction Farmtransaction Openquotationform]]
+- [[_COMMUNITY_Cancel Close Confirm|Cancel Close Confirm]]
+- [[_COMMUNITY_Log Setup Vps|Log Setup Vps]]
+- [[_COMMUNITY_Constructor Deleteuser Getallusers|Constructor Deleteuser Getallusers]]
+- [[_COMMUNITY_Report Template Fruit|Report Template Fruit]]
+- [[_COMMUNITY_Complete Download Downloadprogressservice|Complete Download Downloadprogressservice]]
+- [[_COMMUNITY_Vendor Jquery Carousel|Vendor Jquery Carousel]]
 - [[_COMMUNITY_Role Admin Assistant|Role Admin Assistant]]
-- [[_COMMUNITY_draftService completeDraft getDraft|draftService completeDraft getDraft]]
-- [[_COMMUNITY_notification NotificationService archive|notification NotificationService archive]]
-- [[_COMMUNITY_farm FarmMediaService constructor|farm FarmMediaService constructor]]
-- [[_COMMUNITY_project detail popup|project detail popup]]
-- [[_COMMUNITY_toast ToastComponent closeToast|toast ToastComponent closeToast]]
-- [[_COMMUNITY_soilClassification addClassifications classifyParameter|soilClassification addClassifications classifyParameter]]
-- [[_COMMUNITY_DualWriteStorageService Migration FileSystemStorageService|DualWriteStorageService Migration FileSystemStorageService]]
-- [[_COMMUNITY_asset DroidSans regular|asset DroidSans regular]]
-- [[_COMMUNITY_WebConfig addCorsMappings WebMvcConfigurer|WebConfig addCorsMappings WebMvcConfigurer]]
-- [[_COMMUNITY_error interceptor cleanupErrorMessage|error interceptor cleanupErrorMessage]]
-- [[_COMMUNITY_jquery migrate min|jquery migrate min]]
-- [[_COMMUNITY_create sample excel|create sample excel]]
-- [[_COMMUNITY_soilTesting createLinkedFertilizerSample handleCropTypeChange|soilTesting createLinkedFertilizerSample handleCropTypeChange]]
-- [[_COMMUNITY_Bilingual Support English|Bilingual Support English]]
-- [[_COMMUNITY_MongoDB Native Hostinger|MongoDB Native Hostinger]]
-- [[_COMMUNITY_Shop Template ShopComponent|Shop Template ShopComponent]]
-- [[_COMMUNITY_Team Template TeamComponent|Team Template TeamComponent]]
-- [[_COMMUNITY_asset assets webfonts|asset assets webfonts]]
-- [[_COMMUNITY_MediaServiceApplication|MediaServiceApplication]]
-- [[_COMMUNITY_StorageProperties Filesystem|StorageProperties Filesystem]]
-- [[_COMMUNITY_auth interceptor authInterceptor|auth interceptor authInterceptor]]
-- [[_COMMUNITY_SecurityConfig|SecurityConfig]]
-- [[_COMMUNITY_Community 100|Community 100]]
-- [[_COMMUNITY_FooterComponent footer|FooterComponent footer]]
-- [[_COMMUNITY_CausesDetailsComponent causes details|CausesDetailsComponent causes details]]
-- [[_COMMUNITY_DonationComponent donation|DonationComponent donation]]
-- [[_COMMUNITY_shop details ShopDetailsComponent|shop details ShopDetailsComponent]]
-- [[_COMMUNITY_ContactComponent contact|ContactComponent contact]]
-- [[_COMMUNITY_testimonials TestimonialsComponent|testimonials TestimonialsComponent]]
-- [[_COMMUNITY_EventDetailsComponent event details|EventDetailsComponent event details]]
-- [[_COMMUNITY_not found NotFoundComponent|not found NotFoundComponent]]
-- [[_COMMUNITY_payment PaymentComponent|payment PaymentComponent]]
-- [[_COMMUNITY_gallery GalleryComponent|gallery GalleryComponent]]
-- [[_COMMUNITY_shop ShopComponent|shop ShopComponent]]
-- [[_COMMUNITY_AboutComponent about|AboutComponent about]]
-- [[_COMMUNITY_BlogComponent blog|BlogComponent blog]]
-- [[_COMMUNITY_BlogDetailsComponent blog details|BlogDetailsComponent blog details]]
-- [[_COMMUNITY_team TeamComponent|team TeamComponent]]
-- [[_COMMUNITY_team details TeamDetailsComponent|team details TeamDetailsComponent]]
-- [[_COMMUNITY_CausesComponent causes|CausesComponent causes]]
-- [[_COMMUNITY_EventsComponent events|EventsComponent events]]
-- [[_COMMUNITY_Application Requirements Document|Application Requirements Document]]
-- [[_COMMUNITY_Custom Billing Payments|Custom Billing Payments]]
-- [[_COMMUNITY_MongoDB Collection MediaEmbeddingService|MongoDB Collection MediaEmbeddingService]]
-- [[_COMMUNITY_getDefaultsForCrop resolveCropKey|getDefaultsForCrop resolveCropKey]]
+- [[_COMMUNITY_Allowed Ensureprojectexists Farmtransactioncontroller|Allowed Ensureprojectexists Farmtransactioncontroller]]
+- [[_COMMUNITY_Features Featureflags Parsebool|Features Featureflags Parsebool]]
+- [[_COMMUNITY_Fertilizercropconfig Getconfig Getcropnames|Fertilizercropconfig Getconfig Getcropnames]]
+- [[_COMMUNITY_Cancel Closemodal Confirm|Cancel Closemodal Confirm]]
+- [[_COMMUNITY_Completedraft Draftservice Getdraft|Completedraft Draftservice Getdraft]]
+- [[_COMMUNITY_Constructor Haspermission Managerial|Constructor Haspermission Managerial]]
+- [[_COMMUNITY_Test Bold Check|Test Bold Check]]
+- [[_COMMUNITY_Refresh Token Session|Refresh Token Session]]
+- [[_COMMUNITY_Addclassifications Classifyparameter Generatefinaldeduction|Addclassifications Classifyparameter Generatefinaldeduction]]
+- [[_COMMUNITY_Allow Ask Deny|Allow Ask Deny]]
+- [[_COMMUNITY_Asyncconfig Bean Executor|Asyncconfig Bean Executor]]
+- [[_COMMUNITY_Cancelstructuredprescription Clearstructuredimages Emptystructuredprescription|Cancelstructuredprescription Clearstructuredimages Emptystructuredprescription]]
+- [[_COMMUNITY_Confirmdeletemedia Farmmediaref Markasattended|Confirmdeletemedia Farmmediaref Markasattended]]
+- [[_COMMUNITY_Asset Droidsans Css|Asset Droidsans Css]]
+- [[_COMMUNITY_Allow Ask Deny|Allow Ask Deny]]
+- [[_COMMUNITY_Firebase Hosting Ignore|Firebase Hosting Ignore]]
+- [[_COMMUNITY_Accel Dualwritestorageservice Filesystemstorageservice|Accel Dualwritestorageservice Filesystemstorageservice]]
+- [[_COMMUNITY_Upgrade Baseline Bootstrap|Upgrade Baseline Bootstrap]]
+- [[_COMMUNITY_Detail Onbackdropclick Onclose|Detail Onbackdropclick Onclose]]
+- [[_COMMUNITY_Dev Media Mongodb|Dev Media Mongodb]]
+- [[_COMMUNITY_Log Backup Mongodb|Log Backup Mongodb]]
+- [[_COMMUNITY_Development Farm Form|Development Farm Form]]
+- [[_COMMUNITY_Farm Forecast Weather|Farm Forecast Weather]]
+- [[_COMMUNITY_Closetoast Constructor Ngoninit|Closetoast Constructor Ngoninit]]
+- [[_COMMUNITY_Log Backup Mongodb|Log Backup Mongodb]]
+- [[_COMMUNITY_Addclassifications Classifyparameter Generatefinaldeduction|Addclassifications Classifyparameter Generatefinaldeduction]]
+- [[_COMMUNITY_Analysis Aws Bilingual|Analysis Aws Bilingual]]
+- [[_COMMUNITY_Create Createsoiltestingtemplate Createwatertestingtemplate|Create Createsoiltestingtemplate Createwatertestingtemplate]]
+- [[_COMMUNITY_Downloadquotationpdf Openquotationdetail Quotation|Downloadquotationpdf Openquotationdetail Quotation]]
+- [[_COMMUNITY_Adapter Farm Pdf|Adapter Farm Pdf]]
+- [[_COMMUNITY_Asset Assets Droid|Asset Assets Droid]]
+- [[_COMMUNITY_Camelcase Jquery Min|Camelcase Jquery Min]]
+- [[_COMMUNITY_Cleanuperrormessage Error Errorinterceptor|Cleanuperrormessage Error Errorinterceptor]]
+- [[_COMMUNITY_Jquery Migrate Min|Jquery Migrate Min]]
+- [[_COMMUNITY_Webconfig Addcorsmappings Java|Webconfig Addcorsmappings Java]]
+- [[_COMMUNITY_Mongodb Native Backup|Mongodb Native Backup]]
+- [[_COMMUNITY_Notificationserviceapplication Java Main|Notificationserviceapplication Java Main]]
+- [[_COMMUNITY_Close Confirmaction Confirmation|Close Confirmaction Confirmation]]
+- [[_COMMUNITY_Createlinkedfertilizersample Handlecroptypechange Soiltesting|Createlinkedfertilizersample Handlecroptypechange Soiltesting]]
+- [[_COMMUNITY_Shop Template Details|Shop Template Details]]
+- [[_COMMUNITY_Otp Whatsapp Cloud|Otp Whatsapp Cloud]]
+- [[_COMMUNITY_Notification Bell Actions|Notification Bell Actions]]
+- [[_COMMUNITY_Team Template Details|Team Template Details]]
+- [[_COMMUNITY_Compose Docker Sync|Compose Docker Sync]]
+- [[_COMMUNITY_Java Settings Compile|Java Settings Compile]]
+- [[_COMMUNITY_Format Claude Consumption|Format Claude Consumption]]
+- [[_COMMUNITY_Mongoose Notification Notificationschema|Mongoose Notification Notificationschema]]
+- [[_COMMUNITY_Farmdesignref Opendesignlightbox Trackdesign|Farmdesignref Opendesignlightbox Trackdesign]]
+- [[_COMMUNITY_Behaviorsubject Downloadprogress Downloadprogressservice|Behaviorsubject Downloadprogress Downloadprogressservice]]
+- [[_COMMUNITY_Configurations Json Launch|Configurations Json Launch]]
+- [[_COMMUNITY_Mediaserviceapplication Java Main|Mediaserviceapplication Java Main]]
+- [[_COMMUNITY_Storageproperties Filesystem Java|Storageproperties Filesystem Java]]
+- [[_COMMUNITY_Java Tool Upgrade|Java Tool Upgrade]]
+- [[_COMMUNITY_Emailproperties Java Oauth|Emailproperties Java Oauth]]
+- [[_COMMUNITY_Otpproperties Java Whatsapp|Otpproperties Java Whatsapp]]
+- [[_COMMUNITY_Typescript Scope Angular|Typescript Scope Angular]]
+- [[_COMMUNITY_Tasks Json Version|Tasks Json Version]]
+- [[_COMMUNITY_About Aboutcomponent Html|About Aboutcomponent Html]]
+- [[_COMMUNITY_Community 238|Community 238]]
+- [[_COMMUNITY_Module Billing Custom|Module Billing Custom]]
+- [[_COMMUNITY_Context Document Llm|Context Document Llm]]
+- [[_COMMUNITY_Soil Test Testing|Soil Test Testing]]
+- [[_COMMUNITY_Blog Blogdetailscomponent Details|Blog Blogdetailscomponent Details]]
+- [[_COMMUNITY_Causes Causescomponent|Causes Causescomponent]]
+- [[_COMMUNITY_Asyncproperties Java|Asyncproperties Java]]
+- [[_COMMUNITY_Securityproperties Java|Securityproperties Java]]
+- [[_COMMUNITY_Whatsappproperties Java|Whatsappproperties Java]]
+- [[_COMMUNITY_Contact Contactcomponent Html|Contact Contactcomponent Html]]
+- [[_COMMUNITY_Donation Donationcomponent|Donation Donationcomponent]]
+- [[_COMMUNITY_Environment Prod|Environment Prod]]
+- [[_COMMUNITY_Details Event Eventdetailscomponent|Details Event Eventdetailscomponent]]
+- [[_COMMUNITY_Events Eventscomponent|Events Eventscomponent]]
+- [[_COMMUNITY_Farm Dashboard Filtering|Farm Dashboard Filtering]]
+- [[_COMMUNITY_Admin Transaction Adapter|Admin Transaction Adapter]]
+- [[_COMMUNITY_Getdefaultsforcrop Resolvecropkey|Getdefaultsforcrop Resolvecropkey]]
+- [[_COMMUNITY_Footer Footercomponent Html|Footer Footercomponent Html]]
+- [[_COMMUNITY_Angular Cli Readme|Angular Cli Readme]]
+- [[_COMMUNITY_Footer Footercomponent|Footer Footercomponent]]
+- [[_COMMUNITY_About Aboutcomponent|About Aboutcomponent]]
+- [[_COMMUNITY_Blog Blogcomponent|Blog Blogcomponent]]
+- [[_COMMUNITY_Causes Causesdetailscomponent Details|Causes Causesdetailscomponent Details]]
+- [[_COMMUNITY_Contact Contactcomponent|Contact Contactcomponent]]
+- [[_COMMUNITY_Found Not Notfoundcomponent|Found Not Notfoundcomponent]]
+- [[_COMMUNITY_Payment Paymentcomponent|Payment Paymentcomponent]]
+- [[_COMMUNITY_Details Shop Shopdetailscomponent|Details Shop Shopdetailscomponent]]
+- [[_COMMUNITY_Shop Shopcomponent|Shop Shopcomponent]]
+- [[_COMMUNITY_Details Team Teamdetailscomponent|Details Team Teamdetailscomponent]]
+- [[_COMMUNITY_Team Teamcomponent|Team Teamcomponent]]
+- [[_COMMUNITY_Extensions Json Recommendations|Extensions Json Recommendations]]
+- [[_COMMUNITY_Gallerycomponent Gallerytemplate|Gallerycomponent Gallerytemplate]]
+- [[_COMMUNITY_Gallery Gallerycomponent|Gallery Gallerycomponent]]
+- [[_COMMUNITY_Setup Script|Setup Script]]
+- [[_COMMUNITY_Recordtooluse Script|Recordtooluse Script]]
+- [[_COMMUNITY_Invoice Html Template|Invoice Html Template]]
+- [[_COMMUNITY_Collection Media Mediaembeddingservice|Collection Media Mediaembeddingservice]]
+- [[_COMMUNITY_Securityconfig Java|Securityconfig Java]]
+- [[_COMMUNITY_Notfoundcomponent Notfoundtemplate|Notfoundcomponent Notfoundtemplate]]
+- [[_COMMUNITY_Msg91properties Java|Msg91properties Java]]
+- [[_COMMUNITY_Payment Paymentcomponent Template|Payment Paymentcomponent Template]]
+- [[_COMMUNITY_Init Letsencrypt Script|Init Letsencrypt Script]]
 - [[_COMMUNITY_Classification Rulebook Soil|Classification Rulebook Soil]]
-- [[_COMMUNITY_Invoice HTML Template|Invoice HTML Template]]
-- [[_COMMUNITY_Angular CLI README|Angular CLI README]]
-- [[_COMMUNITY_FooterComponent footer html|FooterComponent footer html]]
-- [[_COMMUNITY_environment prod|environment prod]]
-- [[_COMMUNITY_AboutComponent about html|AboutComponent about html]]
-- [[_COMMUNITY_ContactComponent contact html|ContactComponent contact html]]
-- [[_COMMUNITY_GalleryComponent GalleryTemplate|GalleryComponent GalleryTemplate]]
-- [[_COMMUNITY_NotFoundComponent NotFoundTemplate|NotFoundComponent NotFoundTemplate]]
-- [[_COMMUNITY_PaymentComponent Payment Template|PaymentComponent Payment Template]]
-- [[_COMMUNITY_TestimonialsComponent Testimonials Template|TestimonialsComponent Testimonials Template]]
-- [[_COMMUNITY_vendor Bootstrap Popper|vendor Bootstrap Popper]]
-- [[_COMMUNITY_Isotope vendor min|Isotope vendor min]]
-- [[_COMMUNITY_Farm Filtering Workflow|Farm Filtering Workflow]]
-- [[_COMMUNITY_Farm Management|Farm Management]]
-- [[_COMMUNITY_Letter Pad Printing|Letter Pad Printing]]
-- [[_COMMUNITY_README|README]]
-- [[_COMMUNITY_getConfig|getConfig]]
-- [[_COMMUNITY_getCropNames|getCropNames]]
-- [[_COMMUNITY_admin role definition|admin role definition]]
-- [[_COMMUNITY_user role definition|user role definition]]
-- [[_COMMUNITY_assistant role definition|assistant role definition]]
-- [[_COMMUNITY_manager role definition|manager role definition]]
-- [[_COMMUNITY_getCurrentUser|getCurrentUser]]
-- [[_COMMUNITY_authorize deprecated|authorize deprecated]]
-- [[_COMMUNITY_getByProject|getByProject]]
-- [[_COMMUNITY_softDelete instance|softDelete instance]]
+- [[_COMMUNITY_Testimonials Testimonialscomponent|Testimonials Testimonialscomponent]]
+- [[_COMMUNITY_Template Testimonials Testimonialscomponent|Template Testimonials Testimonialscomponent]]
+- [[_COMMUNITY_Recordtooluse Script|Recordtooluse Script]]
+- [[_COMMUNITY_Vendor Bootstrap Popper|Vendor Bootstrap Popper]]
+- [[_COMMUNITY_Isotope Vendor Min|Isotope Vendor Min]]
+- [[_COMMUNITY_Configurations Json Launch|Configurations Json Launch]]
+- [[_COMMUNITY_Farm Management Module|Farm Management Module]]
+- [[_COMMUNITY_Letter Module Pad|Letter Module Pad]]
+- [[_COMMUNITY_Readme|Readme]]
+- [[_COMMUNITY_Getconfig|Getconfig]]
+- [[_COMMUNITY_Getcropnames|Getcropnames]]
+- [[_COMMUNITY_Admin Definition Role|Admin Definition Role]]
+- [[_COMMUNITY_Definition Role User|Definition Role User]]
+- [[_COMMUNITY_Assistant Definition Role|Assistant Definition Role]]
+- [[_COMMUNITY_Definition Manager Role|Definition Manager Role]]
+- [[_COMMUNITY_Getcurrentuser|Getcurrentuser]]
+- [[_COMMUNITY_Authorize Deprecated|Authorize Deprecated]]
+- [[_COMMUNITY_Getbyproject|Getbyproject]]
+- [[_COMMUNITY_Instance Softdelete|Instance Softdelete]]
 - [[_COMMUNITY_Product Schema|Product Schema]]
 - [[_COMMUNITY_Auth Router|Auth Router]]
-- [[_COMMUNITY_getMetadata|getMetadata]]
-- [[_COMMUNITY_getContent|getContent]]
+- [[_COMMUNITY_Getmetadata|Getmetadata]]
+- [[_COMMUNITY_Getcontent|Getcontent]]
+- [[_COMMUNITY_Network|Network]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `FarmDashboardComponent` - 73 edges
-2. `FertilizerTestingComponent` - 64 edges
-3. `SoilTestingComponent` - 61 edges
-4. `WaterTestingComponent` - 59 edges
-5. `DashboardService` - 44 edges
-6. `ProjectListComponent` - 43 edges
-7. `ProjectDetailsComponent` - 42 edges
-8. `ProjectWizardComponent` - 39 edges
-9. `FarmProjectDetailsComponent` - 38 edges
-10. `PdfService` - 36 edges
+1. `FarmProjectDetailsComponent` - 145 edges
+2. `FarmDashboardComponent` - 73 edges
+3. `FertilizerTestingComponent` - 64 edges
+4. `SoilTestingComponent` - 61 edges
+5. `WaterTestingComponent` - 59 edges
+6. `DashboardService` - 44 edges
+7. `ProjectListComponent` - 43 edges
+8. `ProjectDetailsComponent` - 42 edges
+9. `PDFGeneratorService` - 41 edges
+10. `ProjectWizardComponent` - 39 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Role-Based Access Control (RBAC)` --semantically_similar_to--> `Auth Guard`  [INFERRED] [semantically similar]
   claude-skills/SKILLS.md → frontend/src/app/app.routes.ts
 - `Role-Based Access Control (RBAC)` --semantically_similar_to--> `Auth Interceptor`  [INFERRED] [semantically similar]
   claude-skills/SKILLS.md → frontend/src/app/app.config.ts
+- `Manager Farmer Auto Provisioning` --semantically_similar_to--> `Manager Farmer Phone Lookup`  [INFERRED] [semantically similar]
+  docs/PHONE_OTP_LOGIN_GUIDE.md → frontend/src/app/components/farm-registration-form/farm-registration-form.ts
 - `Media Service Architecture` --semantically_similar_to--> `Spring Boot Media Service`  [INFERRED] [semantically similar]
   Media Service Arch.md → context.md
-- `api service (prod)` --references--> `Express App (server.js)`  [INFERRED]
-  docker-compose.prod.yml → backend/src/server.js
-- `Angular SPA` --semantically_similar_to--> `App Routes`  [INFERRED] [semantically similar]
-  frontend/FIREBASE_DEPLOYMENT.md → frontend/src/app/app.routes.ts
+- `api service (dev)` --references--> `Express App (server.js)`  [INFERRED]
+  docker-compose.yml → backend/src/server.js
 
 ## Hyperedges (group relationships)
-- **Farm Registration To Approval Flow** — farm-registration_FarmerRegistrationJourney, farm-management_FarmManagementDashboard, farm-project-details_ApprovalLifecyclePanel, notification-bell_NotificationToProjectNavigation [EXTRACTED 0.90]
-- **Mobile Linked Registration Prerequisite** — farm-registration_MobileNumberPrerequisite, my-account_ProfilePhoneEditor, auth.service_ProfileUpdateEndpoint, auth.service_UserSessionState [EXTRACTED 0.85]
-- **RBAC Navigation and API Gatekeeping** — permissions_rbac_permissions, projects_project_routes, users_user_routes, header_permission_navigation [INFERRED 0.80]
+- **Runtime Service Topology** — docker_compose_api_service, docker_compose_mongodb_service, docker_compose_media_service, docker_compose_notification_service, docker_compose_frontend_service, docker_compose_nginx_service [EXTRACTED 1.00]
+- **UI UX Design System Pipeline** — skill_ui_ux_pro_max, search_cli, core_csv_search, core_bm25_search_engine, design_system_generator, design_system_persistence [EXTRACTED 1.00]
+- **GitHub Actions Deployment Pipeline** — workflow_deploy_api, workflow_deploy_frontend, workflow_deploy_media, workflow_deploy_nginx, workflow_deploy_notification, workflow_deploy_service, workflow_deploy_permissions [EXTRACTED 1.00]
+- **Farm Asset Uploads Notify Owner** — farm_design_upload_controller, farm_media_quota_upload_controller, farm_prescription_controller, notification_farm_event_schema [INFERRED 0.80]
+- **Identity Login And Profile Completion** — auth_google_oauth_login_flow, otp_auth_phone_signup_flow, auth_profile_identity_completion_flow, features_otp_login_flag, model_user_identity [EXTRACTED 1.00]
+- **Farm Project Operational Surface** — project_lifecycle_controller, farm_report_pdf_streaming_flow, farm_transaction_admin_controller, quotation_acceptance_controller, auth_middleware_project_access_gate [INFERRED 0.85]
+- **Farm Report PDF Linking Flow** — pdfGeneration_soil_pdf_flow, fertilizerTesting_session_pdf_flow, waterTesting_classified_pdf_flow, farmReportLinker_sample_project_matcher, Project_embedded_lab_reports, pdfGenerator_puppeteer_template_engine [EXTRACTED 1.00]
+- **Farm Asset Upload Flow** — projects_access_routing_matrix, farmMediaService_quota_upload_attendance, farmDesignService_media_design_upload, farmPrescriptionService_prescription_documents, Project_embedded_farm_assets [EXTRACTED 1.00]
+- **Phone Identity OTP Flow** — auth_otp_profile_routes, otpService_rate_limited_memory_store, otpDelivery_delivery_modes, notificationClient_internal_http_api, User_phone_email_identity, migrate_phone_email_unique_identity_migration [INFERRED 0.85]
+- **Unified Phone and Google Session Flow** — phone_otp_login_flow, session_session_layer, session_refresh_cookie, session_generate_access_token [EXTRACTED 1.00]
+- **Protected Identity Completion Flow** — routes_protected_profile_routes, profile_complete_guard, profile_complete_redirect, phone_otp_profile_phone_attach [INFERRED 0.82]
+- **Farm Project Operational Surface** — farm_registration_form_component, farm_weather_component, notification_bell_component, phone_otp_manager_farmer_autoprovision [INFERRED 0.76]
+- **Authentication And Profile Completion** — auth_service_session_lifecycle, login_google_code_flow, login_phone_otp_flow, complete_profile_first_login_gate, my_account_locked_phone_addition [EXTRACTED 1.00]
+- **Farm Project Details Subsystems** — farm_project_details_orchestrator, farm_project_media_workflow, farm_project_design_workflow, farm_project_prescription_workflow, farm_project_report_workflow, farm_project_transaction_workflow, farm_project_quotation_workflow [EXTRACTED 1.00]
+- **Multipart Upload Progress Pattern** — farm_project_media_workflow, farm_project_design_workflow, farm_project_prescription_workflow, farm_media_service_unattended_attended_model, farm_design_service_upload_adapter, farm_prescription_service_structured_adapter [INFERRED 0.88]
+- **Media Filesystem Storage Implementation** — application_media_service_configuration, storageproperties_media_storage_properties, storageservice_storage_service_contract, filesystemstorageservice_file_system_storage_service [EXTRACTED 1.00]
+- **Notification Channel Delivery Surface** — readme_notification_service, emailcontroller_email_controller, whatsappcontroller_whatsapp_controller, otpcontroller_otp_controller [EXTRACTED 1.00]
+- **Notification Runtime Configuration** — asyncproperties_async_properties, emailproperties_email_properties, msg91properties_msg91_sms_properties, otpproperties_otp_delivery_properties, securityproperties_api_key_properties, whatsappproperties_whatsapp_properties [EXTRACTED 1.00]
+- **Notification Provider Delivery Paths** — WhatsAppService_cloud_api_sender, SmsService_msg91_flow_sender, EmailService_gmail_smtp_sender, application_provider_secret_environment [INFERRED 0.86]
+- **OTP Runtime Channel Switching** — OtpDispatchService_configured_otp_router, application_otp_channel_switch, WhatsAppService_cloud_api_sender, SmsService_msg91_flow_sender [EXTRACTED 1.00]
+- **Production VPS Operational Flow** — vps-setup_hostinger_vps_bootstrap, vps-setup_production_compose_stack, init-letsencrypt_webroot_certificate_bootstrap, backup-mongodb_docker_mongodump_archive [EXTRACTED 1.00]
 
-## Communities
+## Communities (369 total, 143 thin omitted)
 
-### Community 0 - "min jquery isotope"
-Cohesion: 0.04
-Nodes (99): a(), e(), i(), n(), o(), r(), s(), t() (+91 more)
-
-### Community 1 - "interface routes html"
-Cohesion: 0.03
-Nodes (104): Adobe Acrobat Pro authoring tool, Angular HttpClient, Angular SPA, App Routes, authGuard, Auth Guard, authInterceptor, AuthResponse interface (+96 more)
-
-### Community 2 - "Deployment FileSystemStorageService MongoDB"
-Cohesion: 0.04
-Nodes (23): Backend Deployment, Backend Service, StorageConfig, GlobalExceptionHandler, Frontend Deployment, Frontend Service (LoadBalancer), MediaServiceApplication, MediaDocument (+15 more)
-
-### Community 3 - "FarmDashboardComponent allSelected applyFilters"
-Cohesion: 0.04
-Nodes (1): FarmDashboardComponent
-
-### Community 4 - "FertilizerTestingComponent applyCropDefaults canMoveToNextState"
+### Community 0 - "Java String Providerexception"
 Cohesion: 0.05
-Nodes (1): FertilizerTestingComponent
+Nodes (39): Boolean, RestTemplateConfig, ErrorResponse, Exception, GlobalExceptionHandler, ProviderException, ExceptionHandler, FilterChain (+31 more)
 
-### Community 5 - "soil testing SoilTestingComponent"
-Cohesion: 0.05
-Nodes (1): SoilTestingComponent
+### Community 2 - "Normal Spray1 Spray2"
+Cohesion: 0.17
+Nodes (55): ADAD, normal, CHANA, normal, Cotton, normal, Dhana, normal (+47 more)
 
-### Community 6 - "dev Model HTML"
-Cohesion: 0.04
-Nodes (60): api routes, auth routes, Angular 20 Frontend SPA, Node.js/Express Backend API, High-Level Architecture, MongoDB 7.0 Database, Nginx Reverse Proxy, Spring Boot Media Service (+52 more)
-
-### Community 7 - "water testing WaterTestingComponent"
-Cohesion: 0.05
-Nodes (1): WaterTestingComponent
-
-### Community 8 - "deleteProject deleteSelectedRows bulkArchive"
-Cohesion: 0.05
-Nodes (2): ProjectDetailsComponent, ConfirmationModalService
-
-### Community 9 - "dashboard DashboardService addContact"
-Cohesion: 0.05
-Nodes (1): DashboardService
-
-### Community 10 - "DatalistCellEditor afterGuiAttached destroy"
-Cohesion: 0.09
-Nodes (2): DatalistCellEditor, PDFGeneratorService
-
-### Community 11 - "project list ProjectListComponent"
-Cohesion: 0.07
-Nodes (1): ProjectListComponent
-
-### Community 12 - "projectService mapUrlParser applyDerivedCoordinates"
+### Community 3 - "Search Design System"
 Cohesion: 0.06
-Nodes (8): applyDerivedCoordinates(), normalizePhoneNumber(), ProjectService, followRedirects(), isShortlink(), isValidLatLng(), parseLatLngFromMapUrl(), resolveAndParseLatLng()
+Nodes (42): bool, BM25, detect_domain(), _load_csv(), Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query, Load CSV and return list of dicts (+34 more)
 
-### Community 13 - "storage application yml"
+### Community 4 - "Jquery Min"
+Cohesion: 0.08
+Nodes (44): a(), ae(), be(), C(), ce(), ct(), de(), Ee() (+36 more)
+
+### Community 5 - "Java Sendresponse String"
+Cohesion: 0.08
+Nodes (35): EmailController, OtpController, WhatsAppController, accepted(), sent(), EmailRequest, InternetAddress, JavaMailSenderImpl (+27 more)
+
+### Community 7 - "Farm Notification Routes"
+Cohesion: 0.07
+Nodes (49): Farm Management Design System, Notification Model, Embedded Farm Assets, Embedded Lab Report Links, Project Pre-save Normalization, Project Model, Project Quotation State Machine, Quotation Installment Generation (+41 more)
+
+### Community 8 - "Builder Buildtarget Configurations"
+Cohesion: 0.05
+Nodes (45): build, extract-i18n, serve, test, builder, configurations, defaultConfiguration, options (+37 more)
+
+### Community 10 - "Constructor Farm List"
+Cohesion: 0.05
+Nodes (17): TabKey, UploadProgressItem, FarmAdminTransactionService, FarmTransactionListResponse, FarmTransactionPayload, FarmTransactionSummary, FarmTransactionType, FarmDesignListResponse (+9 more)
+
+### Community 12 - "Media Mongodb Storage"
 Cohesion: 0.06
 Nodes (41): media-service application.yml, media.storage.filesystem.root-dir, max-file-size: 20MB, spring.data.mongodb.uri, server.port=8081, media.storage.active-backend, FileSystemStorageService, generateStorageKey (+33 more)
 
-### Community 14 - "project wizard ProjectWizardComponent"
+### Community 13 - "Angular Karma Jasmine"
+Cohesion: 0.05
+Nodes (39): dependencies, ag-grid-angular, ag-grid-community, @angular/common, @angular/compiler, @angular/core, @angular/forms, @angular/platform-browser (+31 more)
+
+### Community 15 - "Farm Otp Media"
 Cohesion: 0.08
-Nodes (1): ProjectWizardComponent
+Nodes (38): Backend Refresh Session Flow, Google OAuth Login Flow, Authentication And Permission Middleware, Project Stakeholder Access Gate, Profile Identity Completion Flow, Farm Design Upload Controller, Farm Media Attendance Controller, Farm Media Quota Upload Controller (+30 more)
 
-### Community 15 - "auth getCurrentUser googleLogin"
-Cohesion: 0.08
-Nodes (12): getCurrentUser(), googleLogin(), googleLoginWithCode(), normalizePhoneNumber(), refreshAccessToken(), serializeUser(), updateCurrentUserProfile(), authenticate() (+4 more)
+### Community 22 - "Archive Constructor Markread"
+Cohesion: 0.11
+Nodes (5): NotificationBellComponent, AppNotification, AppNotificationType, NotificationListResponse, NotificationService
 
-### Community 16 - "FarmProjectDetailsComponent approve areaUnitLabel"
-Cohesion: 0.06
-Nodes (1): FarmProjectDetailsComponent
-
-### Community 17 - "pdf PdfService checkHealth"
-Cohesion: 0.09
-Nodes (1): PdfService
-
-### Community 18 - "invoices InvoicesComponent addLineItem"
-Cohesion: 0.09
-Nodes (1): InvoicesComponent
-
-### Community 19 - "managerial work ManagerialWorkService"
-Cohesion: 0.06
-Nodes (1): ManagerialWorkService
-
-### Community 20 - "updateTransaction addContact addMilestone"
+### Community 23 - "Module Updatetransaction Addcontact"
 Cohesion: 0.07
 Nodes (30): addContact, addMilestone, addTransaction, bulkDeleteProjects, bulkUpdateProjects, createProject, deleteProject, exportProjects (+22 more)
 
-### Community 21 - "Permissions Model RBAC"
-Cohesion: 0.1
+### Community 25 - "Permissions Rbac Action"
+Cohesion: 0.10
 Nodes (29): authenticate, hasPermission utility, requireOwnership, requirePermission, googleLogin, googleLoginWithCode, logout, refreshAccessToken (+21 more)
 
-### Community 22 - "Confirmation Modal Download"
+### Community 26 - "Min Popper"
+Cohesion: 0.24
+Nodes (27): $(), le(), _(), a(), b(), c(), d(), e() (+19 more)
+
+### Community 28 - "Access Based Confirmation"
 Cohesion: 0.08
 Nodes (28): App Config, App Template, App Spec, App Component, Auth Interceptor, Backend Architecture: Routes/Controllers/Services/Models, Confirmation Modal Component, Confirmation Modal Service (+20 more)
 
-### Community 23 - "letters LettersComponent applyFilters"
-Cohesion: 0.11
-Nodes (1): LettersComponent
-
-### Community 24 - "DashboardOverviewComponent constructor formatCurrency"
+### Community 30 - "Whatsapp Channel Email"
 Cohesion: 0.12
-Nodes (1): DashboardOverviewComponent
+Nodes (28): API Key Authentication Gate, Health Endpoint Auth Bypass, Asynchronous Email Delivery, Email MIME Attachment Builder, Gmail SMTP Email Sender, API Error Mapping Advice, Error Response Contract, Google OAuth Token Refresh (+20 more)
 
-### Community 25 - "DTO MediaController batchResolve"
-Cohesion: 0.09
-Nodes (15): BatchResolveRequest DTO, BatchResolveResponse DTO, MediaController, ErrorResponse DTO, InitiateUploadRequest DTO, InitiateUploadResponse DTO, MediaController, MediaController.batchResolve (+7 more)
+### Community 31 - "Html Interface Management"
+Cohesion: 0.13
+Nodes (24): backend roles routes, ConfirmationConfig interface, ConfirmationModalService, HasPermissionDirective, HasRoleDirective, HeaderComponent, InvoicesComponent, InvoicesTemplate (+16 more)
 
-### Community 26 - "Notification Routes Farm"
-Cohesion: 0.14
-Nodes (23): Farm Management Design System, Notification Model, Project Model, User Model, API Router, Frontend Application Routes, Current User Profile Controller, Google OAuth Session Controller (+15 more)
+### Community 35 - "Fruit Month Large"
+Cohesion: 0.20
+Nodes (26): Chikoo, large-fruit, small-fruit, JAMBU, large-fruit, small-fruit, m1_chhaniyu, m1_erandakhol (+18 more)
 
-### Community 27 - "Farm Notification Project"
+### Community 36 - "Properties Whatsapp Email"
+Cohesion: 0.10
+Nodes (26): Notification Executor Bean, Async Properties, Authentication Template Create Request, Email Attachments Endpoint, Email Controller, Email JSON Endpoint, Email Properties, Gmail OAuth Properties (+18 more)
+
+### Community 37 - "Farm Adapter Login"
+Cohesion: 0.10
+Nodes (25): Internal Request Auth Policy, Token Refresh And 401 Retry Flow, Phone OTP Authentication, Farmer Profile Completion Rule, Profile Phone Attachment, Auth Session Lifecycle, Complete Profile First Login Gate, Farm Design Upload Adapter (+17 more)
+
+### Community 38 - "Farm Constructor Management"
+Cohesion: 0.11
+Nodes (6): User, AreaUnit, FarmListResponse, FarmManagementService, FarmRegistrationPayload, FarmStatus
+
+### Community 39 - "Farm Notification Profile"
 Cohesion: 0.11
 Nodes (23): Auth Service, Profile Update Endpoint, User Session State, Farm Approval API, Farm Lifecycle Status API, Farm Management Service, Farm Project Data Contract, Farm Registration Payload (+15 more)
 
-### Community 28 - "role management RoleManagementComponent"
+### Community 44 - "Workflow Deploy Deployment"
+Cohesion: 0.16
+Nodes (22): API Service, API Uploads Volume, Certbot Service, Certbot Webroot and Certificate Volumes, Development Docker Compose Stack, Frontend Service, Media Service, MongoDB Service (+14 more)
+
+### Community 45 - "Mediacontroller Dto Batchresolve"
+Cohesion: 0.09
+Nodes (14): BatchResolveRequest DTO, BatchResolveResponse DTO, MediaController, InitiateUploadRequest DTO, InitiateUploadResponse DTO, MediaController, MediaController.batchResolve, MediaController.completeUpload (+6 more)
+
+### Community 48 - "Authenticate Express Farmdesigncontroller"
+Cohesion: 0.10
+Nodes (15): { authenticate, requirePermission, requireProjectAccess }, express, farmDesignController, farmDesignUpload, farmMediaController, farmMediaUpload, farmPrescriptionController, farmPrescriptionUpload (+7 more)
+
+### Community 49 - "Auth Codes Complete"
 Cohesion: 0.12
-Nodes (1): RoleManagementComponent
+Nodes (14): routes, COUNTRY_CODES, PhoneStep, profileCompleteGuard(), authInterceptor(), isInternalRequest(), COUNTRY_CODES, LoginTab (+6 more)
 
-### Community 29 - "receipts ReceiptsComponent applyFilters"
-Cohesion: 0.13
-Nodes (1): ReceiptsComponent
-
-### Community 30 - "FarmManagementComponent applyClientFilters applyFilters"
-Cohesion: 0.1
-Nodes (1): FarmManagementComponent
-
-### Community 31 - "soil testing SoilTestingService"
-Cohesion: 0.1
-Nodes (1): SoilTestingService
-
-### Community 32 - "Router Model Project"
-Cohesion: 0.14
-Nodes (21): ActivityLog Model, Activity Log Service, API Aggregator Router, Auth Middleware, Draft Model, Draft Service, Invoice Controller, JWT Utility (+13 more)
-
-### Community 33 - "water testing WaterTestingService"
-Cohesion: 0.1
-Nodes (1): WaterTestingService
-
-### Community 34 - "permission PermissionService assignRoleToUser"
-Cohesion: 0.13
-Nodes (1): PermissionService
-
-### Community 35 - "FarmRegistrationFormComponent addCrop combinedClientPhone"
-Cohesion: 0.15
-Nodes (1): FarmRegistrationFormComponent
-
-### Community 36 - "notification bell NotificationBellComponent"
-Cohesion: 0.13
-Nodes (1): NotificationBellComponent
-
-### Community 37 - "fertilizer testing FertilizerTestingService"
+### Community 52 - "Quotationservice Logger Quotation"
 Cohesion: 0.11
-Nodes (1): FertilizerTestingService
+Nodes (11): logger, quotationService, installmentSchema, mongoose, quotationSchema, logger, notificationService, Project (+3 more)
 
-### Community 38 - "Schema Invoice hasPermission"
+### Community 54 - "Java Mediadocument Mediarepository"
+Cohesion: 0.17
+Nodes (3): MediaDocument, MediaRepository, MediaService
+
+### Community 55 - "Migrate Permissions Archiver"
+Cohesion: 0.11
+Nodes (18): dependencies, archiver, cookie-parser, cors, dotenv, exceljs, express, google-auth-library (+10 more)
+
+### Community 56 - "Classifydoctype Farmprescriptionservice Mimes"
+Cohesion: 0.12
+Nodes (7): DOCX_MIMES, FarmPrescriptionService, logger, mongoose, notificationService, Project, TEXT_MIMES
+
+### Community 57 - "Deliverotp Delivery Mode"
+Cohesion: 0.15
+Nodes (17): requestProfilePhoneOtp(), buildE164(), buildNormalizedKey(), crypto, { deliverOtp, OTP_DELIVERY_MODE }, { issueSession }, normalizeDigits(), otpService (+9 more)
+
+### Community 58 - "Testing Json Firebase"
+Cohesion: 0.13
+Nodes (16): Angular SPA, App Routes, Auth Guard, Datalist Cell Editor (AG Grid), Fertilizer Testing Page, FertilizerTestingTemplate, Firebase Deployment Instructions, Firebase Hosting (+8 more)
+
+### Community 59 - "Jquery Prettyphoto"
+Cohesion: 0.18
+Nodes (15): e(), _e(), ue(), _(), c(), d(), g(), h() (+7 more)
+
+### Community 62 - "Interface Routes Testing"
+Cohesion: 0.15
+Nodes (18): Angular HttpClient, backend fertilizer-testing routes, backend soil-testing routes, backend users routes, backend water-testing routes, environment, FertilizerCropConfig interface, FertilizerSampleData interface (+10 more)
+
+### Community 64 - "Farmmediaquota Farmmediaservice Logger"
+Cohesion: 0.12
+Nodes (12): farmMediaService, logger, Project, farmMediaQuotaSchema, mongoose, mongoose, Project, projectSchema (+4 more)
+
+### Community 65 - "Watersample Addclassifications Authenticate"
+Cohesion: 0.12
+Nodes (14): mongoose, sampleSchema, { addClassifications }, { authenticate, requirePermission }, ExcelJS, express, farmReportLinker, logger (+6 more)
+
+### Community 66 - "Dashboard Html Interface"
+Cohesion: 0.12
+Nodes (14): backend projects routes, backend transactions routes, DashboardMetrics interface, Dashboard Overview Component, DashboardService, Dashboard Service, Farm Dashboard Page, FertilizerSessionStateManager (+6 more)
+
+### Community 67 - "Schema Haspermission Invoice"
 Cohesion: 0.15
 Nodes (17): ActivityLog Schema, logActivity, Draft Schema, Invoice Schema, Invoice Line Item Schema, Letter Schema, Permission Schema, Project Schema (+9 more)
 
-### Community 39 - "home HomeComponent closePopup"
-Cohesion: 0.17
-Nodes (1): HomeComponent
+### Community 68 - "Clearrefreshcookie User Authcontroller"
+Cohesion: 0.13
+Nodes (14): client, crypto, { deliverOtp }, { features }, { generateAccessToken, verifyToken, decodeToken }, { issueSession, findUserByRefreshToken, clearRefreshCookie, REFRESH_COOKIE_NAME }, logout(), { OAuth2Client } (+6 more)
 
-### Community 40 - "html details blog"
+### Community 69 - "Constructor Deletemedia Farm"
+Cohesion: 0.12
+Nodes (7): FarmMediaAttendedResponse, FarmMediaListResponse, FarmMediaQuota, FarmMediaService, FarmMediaType, FarmMediaUploadEvent, FarmMediaUploadResult
+
+### Community 70 - "Addmanualprescription Addstructuredprescription Addtextprescription"
+Cohesion: 0.12
+Nodes (8): FarmPrescriptionService, PrescriptionAttachedImage, PrescriptionDocType, PrescriptionFarmingOperations, PrescriptionListResponse, PrescriptionUploadEvent, PrescriptionUploadResult, StructuredPrescriptionEvent
+
+### Community 71 - "Weather Applyresponse Constructor"
+Cohesion: 0.14
+Nodes (5): FarmWeatherComponent, ForecastDay, OpenMeteoResponse, WEATHER_ICONS, WEATHER_LABELS
+
+### Community 73 - "Filesystemstorageservice Delete Exists"
+Cohesion: 0.31
+Nodes (6): InputStream, Override, StorageResult, String, Path, FileSystemStorageService
+
+### Community 74 - "Haspermission Auth Authorize"
+Cohesion: 0.14
+Nodes (11): draftService, { hasPermission }, {log}, logger, projectService, hasPermission(), Permission, requirePermission() (+3 more)
+
+### Community 75 - "Getauthconfig Getcurrentuser Setprofileemail"
+Cohesion: 0.19
+Nodes (14): getAuthConfig(), getCurrentUser(), normalizePhoneNumber(), serializeUser(), setProfileEmail(), setProfilePhone(), updateCurrentUserProfile(), verifyProfilePhoneOtp() (+6 more)
+
+### Community 76 - "Generateaccesstoken Crypto Days"
+Cohesion: 0.21
+Nodes (13): googleLogin(), googleLoginWithCode(), refreshAccessToken(), decodeToken(), generateAccessToken(), crypto, findUserByRefreshToken(), { generateAccessToken } (+5 more)
+
+### Community 77 - "Java Filevalidationexception Medianotfoundexception"
+Cohesion: 0.13
+Nodes (7): FileValidationException, MediaNotFoundException, NotificationException, StorageException, String, Throwable, RuntimeException
+
+### Community 78 - "Fertilizersample Addclassifications Farmreportcontroller"
+Cohesion: 0.14
+Nodes (11): { addClassifications }, FertilizerSample, logger, pdfGenerator, Project, REPORT_LABELS, SAMPLE_MODELS, SoilSample (+3 more)
+
+### Community 79 - "Buildreportentry Escaperegex Farmreportlinker"
+Cohesion: 0.22
+Nodes (13): buildReportEntry(), escapeRegex(), findMatchingProject(), formatPhoneForDisplay(), linkSampleToFarm(), logger, mongoose, normalizeName() (+5 more)
+
+### Community 80 - "Authenticate Exceljs Express"
+Cohesion: 0.14
+Nodes (12): { authenticate, requirePermission }, ExcelJS, express, farmReportLinker, fertilizerCropConfig, FertilizerSample, FertilizerSession, logger (+4 more)
+
+### Community 81 - "Authenticate Soilsample Express"
+Cohesion: 0.14
+Nodes (12): authenticate(), mongoose, sampleSchema, { authenticate }, express, farmReportLinker, logger, pdfGeneratorService (+4 more)
+
+### Community 82 - "Farmdesignservice Logger Farmdesigncontroller"
+Cohesion: 0.14
+Nodes (7): farmDesignService, logger, Project, FarmDesignService, logger, notificationService, Project
+
+### Community 83 - "Html Details Blog"
 Cohesion: 0.16
 Nodes (7): BlogComponent, BlogDetailsComponent, CausesComponent, CausesDetailsComponent, DonationComponent, EventDetailsComponent, EventsComponent
 
-### Community 41 - "user management UserManagementComponent"
-Cohesion: 0.23
-Nodes (1): UserManagementComponent
+### Community 84 - "Tool Event Name"
+Cohesion: 0.14
+Nodes (13): cwd, hook_event_name, session_id, timestamp, tool_input, event, phase, projectPath (+5 more)
 
-### Community 42 - "farm management FarmManagementService"
-Cohesion: 0.15
-Nodes (1): FarmManagementService
+### Community 85 - "Storageservice Completeupload Delete"
+Cohesion: 0.25
+Nodes (4): InputStream, StorageResult, String, StorageService
 
-### Community 43 - "font asset assets"
+### Community 86 - "Font Asset Assets"
 Cohesion: 0.23
 Nodes (13): asset:frontend/src/assets/webfonts/fa-brands-400.svg, asset:frontend/src/assets/webfonts/fa-regular-400.svg, asset:frontend/src/assets/webfonts/fa-solid-900.svg, asset_dir:frontend/src/assets/webfonts, asset_group:fa-brands-400-webfont-formats, asset_group:font-awesome-5-free-regular-webfont-formats, asset_group:font-awesome-5-free-solid-webfont-formats, css:frontend/src/assets/css/all.min.css (+5 more)
 
-### Community 44 - "session state model"
-Cohesion: 0.24
-Nodes (1): SessionStateManager
-
-### Community 45 - "fertilizer session state"
-Cohesion: 0.24
-Nodes (1): FertilizerSessionStateManager
-
-### Community 46 - "account MyAccountComponent cancelProfileEdit"
-Cohesion: 0.2
-Nodes (1): MyAccountComponent
-
-### Community 47 - "activityLogService transactionService logActivity"
+### Community 87 - "Activeotps Canissueotp Constanttimeequals"
 Cohesion: 0.21
-Nodes (2): logActivity(), TransactionService
+Nodes (9): activeOtps, constantTimeEquals(), crypto, generateCode(), hashCode(), issuanceLog, issueOtp(), sweepIntervalRef (+1 more)
 
-### Community 48 - "FarmWeatherComponent applyResponse constructor"
-Cohesion: 0.2
-Nodes (1): FarmWeatherComponent
+### Community 88 - "Min Carousel Isotope"
+Cohesion: 0.29
+Nodes (10): a(), i(), n(), o(), r(), s(), t(), e() (+2 more)
 
-### Community 49 - "DownloadProgressComponent close constructor"
-Cohesion: 0.18
-Nodes (1): DownloadProgressComponent
+### Community 90 - "Interface Pdf Routes"
+Cohesion: 0.17
+Nodes (11): Adobe Acrobat Pro authoring tool, backend managerial-work routes, backend pdf routes, Invoice interface, Letter interface, LibreOffice authoring tool, managerialWork backend routes, ManagerialWorkService (+3 more)
 
-### Community 50 - "Schema Testing Router"
+### Community 94 - "Phone Profile Complete"
+Cohesion: 0.21
+Nodes (12): Manager Farmer Phone Lookup, Notification Project Navigation, Phone OTP Login Flow, Manager Farmer Auto Provisioning, Profile Phone Attach Flow, Sparse Email and Phone Identity Indexes, Profile Complete Guard, Complete Profile Redirect (+4 more)
+
+### Community 95 - "Followredirects Hosts Http"
+Cohesion: 0.25
+Nodes (10): followRedirects(), http, https, isShortlink(), isValidLatLng(), logger, parseLatLngFromMapUrl(), resolveAndParseLatLng() (+2 more)
+
+### Community 98 - "Downloadreport Farm Farmreport"
+Cohesion: 0.20
+Nodes (3): FarmReport, FarmReportListResponse, FarmReportType
+
+### Community 99 - "Router Aggregator Auth"
+Cohesion: 0.22
+Nodes (11): API Aggregator Router, Auth Middleware, Invoice Controller, JWT Utility, Letter Controller, Managerial Work Router, Receipt Controller, Role Controller (+3 more)
+
+### Community 100 - "Search Design Domain"
+Cohesion: 0.25
+Nodes (11): BM25 Search Engine, CSV Domain Search, Query Domain Detection, Stack Guideline Search, Design System Output Formatters, Design System Generator, Intelligent Page Overrides, Master and Page Override Persistence (+3 more)
+
+### Community 101 - "Schema Router Testing"
 Cohesion: 0.42
 Nodes (11): FertilizerSample Schema, FertilizerSession Schema, Fertilizer Testing Router, SoilSample Schema, SoilSession Schema, createLinkedFertilizerSample, handleCropTypeChange, Soil Testing Router (+3 more)
 
-### Community 51 - "farmMediaService FarmMediaService getIsoWeek"
-Cohesion: 0.24
-Nodes (1): FarmMediaService
+### Community 102 - "Logger Pdfgenerator Farmprescriptioncontroller"
+Cohesion: 0.20
+Nodes (8): farmPrescriptionService, logger, pdfGenerator, Project, fsSync, logger, path, puppeteer
 
-### Community 52 - "FileValidationException MediaNotFoundException StorageException"
-Cohesion: 0.2
-Nodes (4): FileValidationException, MediaNotFoundException, StorageException, RuntimeException
+### Community 106 - "Isotope Min Pkgd"
+Cohesion: 0.49
+Nodes (9): a(), e(), i(), n(), o(), r(), s(), t() (+1 more)
 
-### Community 53 - "HasPermissionDirective checkPermissions constructor"
-Cohesion: 0.29
-Nodes (1): HasPermissionDirective
+### Community 107 - "Backup Mongodb Bootstrap"
+Cohesion: 0.27
+Nodes (10): Docker Compose MongoDB Archive Backup, Seven Day Backup Retention, Nginx HTTPS Enablement Steps, Let's Encrypt Webroot Certificate Bootstrap, Local MongoDB Tarball Backup, Local Seven Day Backup Retention, Daily MongoDB Backup Cron, VPS Firewall Policy (+2 more)
 
-### Community 54 - "bootstrap min"
+### Community 108 - "Bootstrap Min"
 Cohesion: 0.24
 Nodes (4): i(), o(), s(), t()
 
-### Community 55 - "Template Project Testing"
+### Community 109 - "Draft Transaction Activity"
+Cohesion: 0.33
+Nodes (10): ActivityLog Model, Activity Log Service, Draft Model, Draft Service, Project Controller, Project Model, Project Service, Projects Router (+2 more)
+
+### Community 110 - "Invoice Createinvoice Deleteinvoice"
+Cohesion: 0.20
+Nodes (10): Invoice Model, createInvoice, deleteInvoice, duplicateInvoice, getInvoiceById, getInvoices, getNextInvoiceNumber, getServiceOptions (+2 more)
+
+### Community 111 - "Letter Createletter Deleteletter"
+Cohesion: 0.20
+Nodes (10): Letter Model, createLetter, deleteLetter, getAllTags, getLetterById, getLetters, getNextLetterNumber, getServiceListTemplate (+2 more)
+
+### Community 112 - "Html Template Pdf"
+Cohesion: 0.20
+Nodes (10): Create Sample Excel Templates Script, Letter HTML Template, Normal Fertilizer Report HTML Template, PDF Generation Router, PDF Generator Service, Receipt Safe HTML Template, Receipt HTML Template, Soil Report HTML Template (+2 more)
+
+### Community 113 - "Angular Context Asset"
+Cohesion: 0.20
+Nodes (10): Angular Build Pipeline, Angular Frontend Application, Global CSS and JavaScript Asset Bundle, Firebase SPA Hosting, Angular 20 Frontend Stack, Pre Commit Context Update Hook, Claude Local Tool Permissions, Git Hooks Setup Script (+2 more)
+
+### Community 114 - "Template Testing Details"
 Cohesion: 0.27
 Nodes (10): ProjectDetailsComponent, Project Details Template, ProjectWizardComponent, Project Wizard Template, PdfService, ToastService, SoilTestingComponent, Soil Testing Template (+2 more)
 
-### Community 56 - "FarmRegistrationPageComponent cancel constructor"
-Cohesion: 0.2
-Nodes (1): FarmRegistrationPageComponent
+### Community 115 - "Deployment Mongodb Agri"
+Cohesion: 0.24
+Nodes (10): Backend Deployment, Backend Service, Frontend Deployment, Frontend Service (LoadBalancer), MediaServiceApplication, MongoDB Deployment, MongoDB PersistentVolumeClaim, MongoDB Service (+2 more)
 
-### Community 57 - "lab testing LabTestingComponent"
-Cohesion: 0.31
-Nodes (1): LabTestingComponent
-
-### Community 58 - "isotope pkgd min"
-Cohesion: 0.53
-Nodes (8): a(), e(), i(), n(), o(), r(), s(), t()
-
-### Community 59 - "migrate permissions connectDB"
-Cohesion: 0.42
-Nodes (8): connectDB(), determineCategory(), loadConfig(), migrate(), printSummary(), syncPermissions(), syncRoles(), syncUserPermissions()
-
-### Community 60 - "transactionController TransactionController createTransaction"
-Cohesion: 0.22
-Nodes (1): TransactionController
-
-### Community 61 - "draftService DraftService completeDraft"
-Cohesion: 0.25
-Nodes (1): DraftService
-
-### Community 62 - "Guide docker compose"
+### Community 117 - "Docker Certbot Compose"
 Cohesion: 0.31
 Nodes (8): Certbot / Let's Encrypt SSL, Shiv-Agri Deployment Guide, Docker Hub Image Registry, GitHub Actions CI/CD, Hostinger VPS, docker-compose.yml (dev), certbot service (prod), SETUP Guide
 
-### Community 63 - "HasRoleDirective checkRoles constructor"
-Cohesion: 0.43
-Nodes (1): HasRoleDirective
-
-### Community 64 - "header HeaderComponent constructor"
+### Community 118 - "Auth Interface Access"
 Cohesion: 0.25
-Nodes (1): HeaderComponent
+Nodes (9): authGuard, authInterceptor, AuthResponse interface, AuthService, User interface (auth), backend auth routes, errorInterceptor, Google OAuth flow (+1 more)
 
-### Community 66 - "notificationService NotificationService archive"
+### Community 119 - "Soil Water Name"
+Cohesion: 0.22
+Nodes (9): Crop Name (Soil), Farmer's Name (Soil), Sample Number (Soil), Taluka (Soil), Soil Testing Template Columns, Bore/Well (Water Source Type), Farmer's Name (Water), Sample Number (Water) (+1 more)
+
+### Community 121 - "Prod Routes Auth"
+Cohesion: 0.22
+Nodes (8): api routes, auth routes, connectDB, api service (prod), nginx service (prod), loadConfig, logger utility (Winston), Express App (server.js)
+
+### Community 122 - "Receipt Createreceipt Deletereceipt"
+Cohesion: 0.22
+Nodes (9): updatePaymentStatus, Receipt Model, createReceipt, deleteReceipt, getNextReceiptNumber, getReceiptById, getReceipts, updatePdfReference (receipt) (+1 more)
+
+### Community 123 - "Migrate Connectdb Determinecategory"
+Cohesion: 0.42
+Nodes (8): connectDB(), determineCategory(), loadConfig(), migrate(), printSummary(), syncPermissions(), syncRoles(), syncUserPermissions()
+
+### Community 127 - "Buildheaders Notificationclient Post"
+Cohesion: 0.46
+Nodes (7): buildHeaders(), post(), sendHelloWorldTemplate(), sendOtp(), sendWhatsAppOtpFreeText(), sendWhatsAppOtpTemplate(), sendWhatsAppText()
+
+### Community 128 - "Exceljs Isvalidlatlng Logger"
 Cohesion: 0.25
-Nodes (1): NotificationService
+Nodes (7): ExcelJS, logger, notificationService, Project, { resolveAndParseLatLng, isValidLatLng }, Role, User
 
-### Community 67 - "role selection modal"
-Cohesion: 0.38
-Nodes (1): RoleSelectionModalComponent
-
-### Community 68 - "login LoginComponent constructor"
-Cohesion: 0.33
-Nodes (1): LoginComponent
-
-### Community 69 - "user UserService constructor"
+### Community 133 - "Storage Media Capture"
 Cohesion: 0.29
-Nodes (1): UserService
+Nodes (8): Media Service Application Configuration, File System Storage Service, Path Traversal Protection, SHA-256 Checksum Capture, Date Partitioned UUID Storage Key Generation, Filesystem Storage Settings, Media Storage Properties, Storage Service Contract
 
-### Community 70 - "Report Template Gujarati"
+### Community 136 - "Media Architecture Angular"
+Cohesion: 0.43
+Nodes (8): Angular 20 Frontend SPA, Node.js/Express Backend API, High-Level Architecture, MongoDB 7.0 Database, Nginx Reverse Proxy, Spring Boot Media Service, media-service (prod), Media Service Architecture
+
+### Community 138 - "Farm Registration Prescription"
+Cohesion: 0.29
+Nodes (8): Farm Registration Form Component, Hydrate Farm Registration Form, Farm Registration Payload Emit, Farm Registration Validation, Gujarati Farm Prescription PDF Template, Prescription Main Slip, Other Notes Page, Prescription Photo Pages
+
+### Community 140 - "Dry Email Ensureindex"
+Cohesion: 0.39
+Nodes (7): DRY_RUN, ensureIndex(), findDuplicates(), log(), main(), mongoose, path
+
+### Community 142 - "Java Storageconfig Filesystemstorageservice"
+Cohesion: 0.29
+Nodes (4): StorageConfig, StorageConfig, StorageProperties, StorageService
+
+### Community 144 - "Applyderivedcoordinates Createproject Normalizephonenumber"
+Cohesion: 0.48
+Nodes (3): applyDerivedCoordinates(), normalizePhoneNumber(), parseClientPhone()
+
+### Community 149 - "Log Setup Vps"
+Cohesion: 0.52
+Nodes (6): log_error(), log_info(), log_success(), log_warning(), print_header(), vps-setup.sh script
+
+### Community 151 - "Report Template Fruit"
 Cohesion: 0.38
 Nodes (7): Fertilizer Recommendation, Gujarati Font Support (Noto Sans Gujarati), Large Fruit Crop Report Template, Shiv Agri Consultancy and Laboratory, Small Fruit Tree Report Template, Water Report Template, Water Test Report
 
-### Community 71 - "vendor jQuery custom"
+### Community 153 - "Vendor Jquery Carousel"
 Cohesion: 0.29
 Nodes (7): custom.js site script, jQuery (vendor), jQuery Migrate (vendor), jQuery Plugin (vendor), Owl Carousel (vendor), jQuery prettyPhoto (vendor), Slick Slider (vendor)
 
-### Community 72 - "userController deleteUser getAllUsers"
-Cohesion: 0.33
-Nodes (2): lookupUserByPhone(), normalizePhoneNumber()
-
-### Community 73 - "ConfirmationModalComponent cancel closeModal"
-Cohesion: 0.33
-Nodes (1): ConfirmationModalComponent
-
-### Community 74 - "managerial work ManagerialWorkComponent"
-Cohesion: 0.33
-Nodes (1): ManagerialWorkComponent
-
-### Community 75 - "fertilizerCropConfig getConfig getCropNames"
-Cohesion: 0.4
-Nodes (2): getDefaultsForCrop(), resolveCropKey()
-
-### Community 76 - "waterClassification addClassifications classifyParameter"
-Cohesion: 0.6
-Nodes (5): addClassifications(), classifyParameter(), generateFinalDeduction(), getECClassCode(), processWaterTest()
-
-### Community 77 - "Role Admin Assistant"
-Cohesion: 0.4
+### Community 154 - "Role Admin Assistant"
+Cohesion: 0.40
 Nodes (6): Admin Role, Assistant Role, JWT Tokens, Google OAuth 2.0, Role-Based Web Platform, User Role (Client)
 
-### Community 78 - "draftService completeDraft getDraft"
+### Community 155 - "Allowed Ensureprojectexists Farmtransactioncontroller"
+Cohesion: 0.33
+Nodes (4): ALLOWED_TYPES, logger, Project, TransactionService
+
+### Community 156 - "Features Featureflags Parsebool"
+Cohesion: 0.40
+Nodes (3): features, { features }, requireOtpEnabled()
+
+### Community 159 - "Completedraft Draftservice Getdraft"
 Cohesion: 0.33
 Nodes (6): draftService module, completeDraft, getDraft, getUserDrafts, saveDraft, updateDraft
 
-### Community 79 - "notification NotificationService archive"
-Cohesion: 0.33
-Nodes (1): NotificationService
+### Community 163 - "Test Bold Check"
+Cohesion: 0.67
+Nodes (5): bold(), check(), green(), red(), test-api.sh script
 
-### Community 80 - "farm FarmMediaService constructor"
-Cohesion: 0.33
-Nodes (1): FarmMediaService
+### Community 164 - "Refresh Token Session"
+Cohesion: 0.40
+Nodes (6): Find User By Refresh Token, JWT Access Token Generation, Issue Session, HttpOnly Refresh Cookie, Refresh Token SHA-256 Hash, Backend Session Layer
 
-### Community 81 - "project detail popup"
-Cohesion: 0.5
-Nodes (1): ProjectDetailPopupComponent
+### Community 166 - "Addclassifications Classifyparameter Generatefinaldeduction"
+Cohesion: 0.60
+Nodes (5): addClassifications(), classifyParameter(), generateFinalDeduction(), getECClassCode(), processWaterTest()
 
-### Community 82 - "toast ToastComponent closeToast"
-Cohesion: 0.4
-Nodes (1): ToastComponent
+### Community 168 - "Allow Ask Deny"
+Cohesion: 0.40
+Nodes (4): permissions, allow, ask, deny
 
-### Community 83 - "soilClassification addClassifications classifyParameter"
-Cohesion: 0.7
-Nodes (4): addClassifications(), classifyParameter(), generateFinalDeduction(), processSoilTest()
+### Community 169 - "Asyncconfig Bean Executor"
+Cohesion: 0.60
+Nodes (3): AsyncConfig, Executor, Bean
 
-### Community 84 - "DualWriteStorageService Migration FileSystemStorageService"
-Cohesion: 0.5
-Nodes (5): DualWriteStorageService Migration, FileSystemStorageService, S3StorageService, StorageService Strategy Pattern, NGINX X-Accel-Redirect
-
-### Community 85 - "asset DroidSans regular"
-Cohesion: 0.5
+### Community 172 - "Asset Droidsans Css"
+Cohesion: 0.50
 Nodes (5): asset:DroidSans-regular-format-set, asset:DroidSans-webfont.svg, directory:frontend-webfonts, font:DroidSansRegular, stylesheet:custom-css
 
-### Community 86 - "WebConfig addCorsMappings WebMvcConfigurer"
-Cohesion: 0.67
-Nodes (2): WebConfig, WebMvcConfigurer
+### Community 173 - "Allow Ask Deny"
+Cohesion: 0.40
+Nodes (4): permissions, allow, ask, deny
 
-### Community 87 - "error interceptor cleanupErrorMessage"
-Cohesion: 0.67
-Nodes (2): cleanupErrorMessage(), handleError()
+### Community 174 - "Firebase Hosting Ignore"
+Cohesion: 0.40
+Nodes (4): hosting, ignore, public, rewrites
 
-### Community 88 - "jquery migrate min"
-Cohesion: 0.67
-Nodes (2): d(), e()
+### Community 175 - "Accel Dualwritestorageservice Filesystemstorageservice"
+Cohesion: 0.50
+Nodes (5): DualWriteStorageService Migration, FileSystemStorageService, S3StorageService, StorageService Strategy Pattern, NGINX X-Accel-Redirect
 
-### Community 89 - "create sample excel"
+### Community 176 - "Upgrade Baseline Bootstrap"
+Cohesion: 0.40
+Nodes (5): Maven Wrapper Bootstrap, Baseline And Final Validation, Incremental Upgrade Strategy, Java Upgrade Plan Template, Technology Stack Compatibility Matrix
+
+### Community 180 - "Dev Media Mongodb"
+Cohesion: 0.40
+Nodes (5): api service (dev), frontend service (dev), media-service (dev), mongodb service (dev), nginx service (dev)
+
+### Community 181 - "Log Backup Mongodb"
+Cohesion: 0.70
+Nodes (4): log_error(), log_info(), log_warn(), mongodb-backup.sh script
+
+### Community 182 - "Development Farm Form"
+Cohesion: 0.40
+Nodes (5): Farm Registration Form Template, Full Stack Implementation Policy, Safety and Workflow Rules, Shivagri Development Skill, Shivagri UI UX Standards
+
+### Community 183 - "Farm Forecast Weather"
+Cohesion: 0.40
+Nodes (5): Farm Geolocation Capture, Farm Weather Component, Forecast and 30 Day Rainfall Summary, Open-Meteo Forecast Request, Farm Weather Template
+
+### Community 186 - "Log Backup Mongodb"
+Cohesion: 0.70
+Nodes (4): log_error(), log_info(), log_warning(), backup-mongodb.sh script
+
+### Community 187 - "Addclassifications Classifyparameter Generatefinaldeduction"
+Cohesion: 0.70
+Nodes (4): addClassifications(), classifyParameter(), generateFinalDeduction(), processSoilTest()
+
+### Community 190 - "Analysis Aws Bilingual"
+Cohesion: 0.50
+Nodes (4): Bilingual Support (English/Gujarati), OCR (Tesseract.js / AWS Textract), Soil & Water Analysis Module, Session State Machine (started>details>ready>completed)
+
+### Community 191 - "Create Createsoiltestingtemplate Createwatertestingtemplate"
 Cohesion: 0.83
 Nodes (3): createSoilTestingTemplate(), createWaterTestingTemplate(), main()
 
-### Community 90 - "soilTesting createLinkedFertilizerSample handleCropTypeChange"
-Cohesion: 0.67
-Nodes (2): createLinkedFertilizerSample(), handleCropTypeChange()
+### Community 193 - "Adapter Farm Pdf"
+Cohesion: 0.50
+Nodes (4): Structured Prescription Adapter, Prescription Workflow, Farm Report PDF Workflow, Farm Report PDF Adapter
 
-### Community 91 - "Bilingual Support English"
-Cohesion: 0.5
-Nodes (4): Bilingual Support (English/Gujarati), OCR (Tesseract.js / AWS Textract), Soil & Water Analysis Module, Session State Machine (started>details>ready>completed)
-
-### Community 92 - "MongoDB Native Hostinger"
-Cohesion: 0.5
-Nodes (4): Hostinger VPS, MongoDB Backup Strategy (mongodump), MongoDB Migration Guide (Docker to Native), MongoDB Native Installation
-
-### Community 93 - "Shop Template ShopComponent"
-Cohesion: 0.5
-Nodes (4): ShopComponent, Shop Template, ShopDetailsComponent, Shop Details Template
-
-### Community 94 - "Team Template TeamComponent"
-Cohesion: 0.5
-Nodes (4): TeamComponent, Team Template, TeamDetailsComponent, Team Details Template
-
-### Community 95 - "asset assets webfonts"
-Cohesion: 0.5
+### Community 196 - "Asset Assets Droid"
+Cohesion: 0.50
 Nodes (4): asset:frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg, asset_group:frontend/src/assets/webfonts, font:droid_sansbold, font_family:Droid Sans
 
-### Community 96 - "MediaServiceApplication"
+### Community 201 - "Mongodb Native Backup"
+Cohesion: 0.50
+Nodes (4): Hostinger VPS, MongoDB Backup Strategy (mongodump), MongoDB Migration Guide (Docker to Native), MongoDB Native Installation
+
+### Community 205 - "Shop Template Details"
+Cohesion: 0.50
+Nodes (4): ShopComponent, Shop Template, ShopDetailsComponent, Shop Details Template
+
+### Community 206 - "Otp Whatsapp Cloud"
+Cohesion: 0.50
+Nodes (4): Phone OTP Backend API, WhatsApp Template Notification Endpoint, OTP Service Policy, WhatsApp Cloud API
+
+### Community 207 - "Notification Bell Actions"
+Cohesion: 0.50
+Nodes (4): Bulk Read and Archive Actions, Notification Bell Component, Notification Loading, Notification Bell Template
+
+### Community 210 - "Team Template Details"
+Cohesion: 0.50
+Nodes (4): TeamComponent, Team Template, TeamDetailsComponent, Team Details Template
+
+### Community 211 - "Compose Docker Sync"
+Cohesion: 0.50
+Nodes (4): Backend Runtime Stack, Docker Compose Sync And Optional Restart Flow, Docker Compose VPS Sync Flow, Java Service Launch Configurations
+
+### Community 212 - "Java Settings Compile"
+Cohesion: 0.50
+Nodes (3): java.compile.nullAnalysis.mode, java.debug.settings.onBuildFailureProceed, java.project.sourcePaths
+
+### Community 226 - "Behaviorsubject Downloadprogress Downloadprogressservice"
 Cohesion: 0.67
-Nodes (1): MediaServiceApplication
+Nodes (3): DownloadProgress interface, DownloadProgressService, RxJS BehaviorSubject
 
-### Community 97 - "StorageProperties Filesystem"
+### Community 230 - "Java Tool Upgrade"
 Cohesion: 0.67
-Nodes (2): Filesystem, StorageProperties
+Nodes (3): Java Upgrade Tool Use Recorder, Java Upgrade Tool Use Log, Modernize Java Upgrade Tool Use Recorder
 
-### Community 98 - "auth interceptor authInterceptor"
-Cohesion: 1.0
-Nodes (2): authInterceptor(), isInternalRequest()
+### Community 234 - "Typescript Scope Angular"
+Cohesion: 0.67
+Nodes (3): Application TypeScript Build Scope, Spec TypeScript Test Scope, Strict TypeScript and Angular Template Checking
 
-### Community 99 - "SecurityConfig"
-Cohesion: 1.0
-Nodes (1): SecurityConfig
-
-### Community 100 - "Community 100"
-Cohesion: 1.0
-Nodes (1): App
-
-### Community 101 - "FooterComponent footer"
-Cohesion: 1.0
-Nodes (1): FooterComponent
-
-### Community 102 - "CausesDetailsComponent causes details"
-Cohesion: 1.0
-Nodes (1): CausesDetailsComponent
-
-### Community 103 - "DonationComponent donation"
-Cohesion: 1.0
-Nodes (1): DonationComponent
-
-### Community 104 - "shop details ShopDetailsComponent"
-Cohesion: 1.0
-Nodes (1): ShopDetailsComponent
-
-### Community 105 - "ContactComponent contact"
-Cohesion: 1.0
-Nodes (1): ContactComponent
-
-### Community 106 - "testimonials TestimonialsComponent"
-Cohesion: 1.0
-Nodes (1): TestimonialsComponent
-
-### Community 107 - "EventDetailsComponent event details"
-Cohesion: 1.0
-Nodes (1): EventDetailsComponent
-
-### Community 108 - "not found NotFoundComponent"
-Cohesion: 1.0
-Nodes (1): NotFoundComponent
-
-### Community 109 - "payment PaymentComponent"
-Cohesion: 1.0
-Nodes (1): PaymentComponent
-
-### Community 110 - "gallery GalleryComponent"
-Cohesion: 1.0
-Nodes (1): GalleryComponent
-
-### Community 111 - "shop ShopComponent"
-Cohesion: 1.0
-Nodes (1): ShopComponent
-
-### Community 112 - "AboutComponent about"
-Cohesion: 1.0
-Nodes (1): AboutComponent
-
-### Community 113 - "BlogComponent blog"
-Cohesion: 1.0
-Nodes (1): BlogComponent
-
-### Community 114 - "BlogDetailsComponent blog details"
-Cohesion: 1.0
-Nodes (1): BlogDetailsComponent
-
-### Community 115 - "team TeamComponent"
-Cohesion: 1.0
-Nodes (1): TeamComponent
-
-### Community 116 - "team details TeamDetailsComponent"
-Cohesion: 1.0
-Nodes (1): TeamDetailsComponent
-
-### Community 117 - "CausesComponent causes"
-Cohesion: 1.0
-Nodes (1): CausesComponent
-
-### Community 118 - "EventsComponent events"
-Cohesion: 1.0
-Nodes (1): EventsComponent
-
-### Community 125 - "Application Requirements Document"
-Cohesion: 1.0
-Nodes (2): Application Requirements Document, Application Context (LLM context.md)
-
-### Community 126 - "Custom Billing Payments"
-Cohesion: 1.0
-Nodes (2): Custom Billing & Payments Module, Landscaping Management Module
-
-### Community 127 - "MongoDB Collection MediaEmbeddingService"
-Cohesion: 1.0
-Nodes (2): MongoDB media Collection, MediaEmbeddingService
-
-### Community 128 - "getDefaultsForCrop resolveCropKey"
-Cohesion: 1.0
-Nodes (2): getDefaultsForCrop, resolveCropKey
-
-### Community 129 - "Classification Rulebook Soil"
-Cohesion: 1.0
-Nodes (2): Soil Classification Rulebook, Water Classification Rulebook
-
-### Community 130 - "Invoice HTML Template"
-Cohesion: 1.0
-Nodes (2): Invoice, Invoice HTML Template
-
-### Community 131 - "Angular CLI README"
-Cohesion: 1.0
-Nodes (2): Angular CLI 20.3.6, Frontend README
-
-### Community 132 - "FooterComponent footer html"
-Cohesion: 1.0
-Nodes (1): FooterComponent
-
-### Community 133 - "environment prod"
-Cohesion: 1.0
-Nodes (2): environment, environment.prod
-
-### Community 134 - "AboutComponent about html"
-Cohesion: 1.0
-Nodes (1): AboutComponent
-
-### Community 135 - "ContactComponent contact html"
-Cohesion: 1.0
-Nodes (1): ContactComponent
-
-### Community 136 - "GalleryComponent GalleryTemplate"
-Cohesion: 1.0
-Nodes (2): GalleryComponent, GalleryTemplate
-
-### Community 137 - "NotFoundComponent NotFoundTemplate"
-Cohesion: 1.0
-Nodes (2): NotFoundComponent, NotFoundTemplate
-
-### Community 138 - "PaymentComponent Payment Template"
-Cohesion: 1.0
-Nodes (2): PaymentComponent, Payment Template
-
-### Community 139 - "TestimonialsComponent Testimonials Template"
-Cohesion: 1.0
-Nodes (2): TestimonialsComponent, Testimonials Template
-
-### Community 140 - "vendor Bootstrap Popper"
-Cohesion: 1.0
-Nodes (2): Bootstrap JS (vendor), Popper (vendor)
-
-### Community 141 - "Isotope vendor min"
-Cohesion: 1.0
-Nodes (2): Isotope (vendor), Isotope min (vendor)
-
-### Community 142 - "Farm Filtering Workflow"
-Cohesion: 1.0
-Nodes (2): Farm Filtering Workflow, Farm Management Dashboard
-
-### Community 192 - "Farm Management"
-Cohesion: 1.0
-Nodes (1): Farm Management Module
-
-### Community 193 - "Letter Pad Printing"
-Cohesion: 1.0
-Nodes (1): Letter Pad Printing Module
-
-### Community 194 - "README"
-Cohesion: 1.0
-Nodes (1): README
-
-### Community 195 - "getConfig"
-Cohesion: 1.0
-Nodes (1): getConfig
-
-### Community 196 - "getCropNames"
-Cohesion: 1.0
-Nodes (1): getCropNames
-
-### Community 197 - "admin role definition"
-Cohesion: 1.0
-Nodes (1): admin role definition
-
-### Community 198 - "user role definition"
-Cohesion: 1.0
-Nodes (1): user role definition
-
-### Community 199 - "assistant role definition"
-Cohesion: 1.0
-Nodes (1): assistant role definition
-
-### Community 200 - "manager role definition"
-Cohesion: 1.0
-Nodes (1): manager role definition
-
-### Community 201 - "getCurrentUser"
-Cohesion: 1.0
-Nodes (1): getCurrentUser
-
-### Community 202 - "authorize deprecated"
-Cohesion: 1.0
-Nodes (1): authorize (deprecated)
-
-### Community 203 - "getByProject"
-Cohesion: 1.0
-Nodes (1): getByProject
-
-### Community 204 - "softDelete instance"
-Cohesion: 1.0
-Nodes (1): softDelete instance
-
-### Community 205 - "Product Schema"
-Cohesion: 1.0
-Nodes (1): Product Schema
-
-### Community 206 - "Auth Router"
-Cohesion: 1.0
-Nodes (1): Auth Router
-
-### Community 207 - "getMetadata"
-Cohesion: 1.0
-Nodes (1): getMetadata
-
-### Community 208 - "getContent"
-Cohesion: 1.0
-Nodes (1): getContent
+## Ambiguous Edges - Review These
+- `Unattended And Attended Media Model` → `Media Service Two Step API Test`  [AMBIGUOUS]
+  media-service/test-api.sh · relation: references
 
 ## Knowledge Gaps
-- **301 isolated node(s):** `StorageProperties`, `Filesystem`, `SecurityConfig`, `App`, `FooterComponent` (+296 more)
+- **732 isolated node(s):** `StorageProperties`, `Filesystem`, `SecurityConfig`, `App`, `FooterComponent` (+727 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `FarmDashboardComponent allSelected applyFilters`** (72 nodes): `FarmDashboardComponent`, `.allSelected()`, `.applyFilters()`, `.bulkExport()`, `.calculateFilterCount()`, `.calculateProjectSummaryStats()`, `.clearAllFilters()`, `.clearFilters()`, `.clearSearch()`, `.clearSelection()`, `.constructor()`, `.createNewProject()`, `.exportAll()`, `.exportProjects()`, `.formatCurrency()`, `.formatSize()`, `.getBudgetStatusClass()`, `.getRelativeTime()`, `.getStatusBadgeColor()`, `.getTimeAgo()`, `.getVisitUrgencyClass()`, `.goToPage()`, `.handleFavoriteToggle()`, `.hideDashboard()`, `.isSelected()`, `.loadBudgetSummary()`, `.loadDashboardData()`, `.loadFavoriteProjects()`, `.loadMetrics()`, `.loadProjects()`, `.loadProjectStatusDistribution()`, `.loadRecentActivities()`, `.loadUpcomingVisits()`, `.loadViewPreference()`, `.nextPage()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onChartSelect()`, `.onMetricCardClick()`, `.onSearchChange()`, `.onSearchInput()`, `.onSearchResultClick()`, `.onSortChange()`, `.pages()`, `.previousPage()`, `.recordVisit()`, `.refreshDashboard()`, `.refreshProjects()`, `.removeFilter()`, `.saveViewPreference()`, `.setFilter()`, `.setupSearch()`, `.setView()`, `.showActiveProjects()`, `.showCompletedProjects()`, `.showDashboard()`, `.showMyProjects()`, `.someSelected()`, `.toggleArrayFilter()`, `.toggleFavorite()`, `.toggleFilterDrawer()`, `.toggleProjectFavorite()`, `.toggleProjectsView()`, `.toggleSelectAll()`, `.toggleSelection()`, `.updateProjectsEmptyState()`, `.viewAllActivities()`, `.viewAllProjects()`, `.viewFinancialDashboard()`, `.viewProject()`, `.viewProjectDetails()`, `farm-dashboard.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FertilizerTestingComponent applyCropDefaults canMoveToNextState`** (65 nodes): `FertilizerTestingComponent`, `.applyCropDefaults()`, `.canMoveToNextState()`, `.canMoveToPreviousState()`, `.canPerformAction()`, `.checkBackendConnection()`, `.closeSession()`, `.closeSoilPopup()`, `.colDefs()`, `.constructor()`, `.copySessionLink()`, `.downloadAllPdfs()`, `.downloadSinglePdf()`, `.extractGridData()`, `.fallbackCopyToClipboard()`, `.getAvailableTransitions()`, `.getCurrentStateColor()`, `.getCurrentStateDescription()`, `.getCurrentStateIcon()`, `.getCurrentStateLabel()`, `.getFormattedDate()`, `.getStateProgress()`, `.getStatusColor()`, `.getStatusIcon()`, `.getStatusLabel()`, `.goToDashboard()`, `.goToPage()`, `.handleDocumentClick()`, `.handleSessionLoadError()`, `.handleSessionNotFound()`, `.initializeColumnDefinitions()`, `.initializeStateManager()`, `.isStateActive()`, `.isStateCompleted()`, `.loadActiveSessionsPage()`, `.loadCompletedSessionsPage()`, `.loadMoreSamples()`, `.loadSamplesForCropType()`, `.loadSessionFromUrl()`, `.loadSessions()`, `.nextCompletedPage()`, `.nextPage()`, `.nextState()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onBodyScroll()`, `.onCellClicked()`, `.onCellEditingStarted()`, `.onCellEditingStopped()`, `.onCellValueChanged()`, `.onGridReady()`, `.onRowClicked()`, `.onSelectionChanged()`, `.prevCompletedPage()`, `.previousState()`, `.prevPage()`, `.resumeSession()`, `.saveCurrentSession()`, `.showSoilDataForSample()`, `.startNewSession()`, `.switchCropType()`, `.toggleCompletedSessions()`, `.transitionToState()`, `.updateGridEditability()`, `fertilizer-testing.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `soil testing SoilTestingComponent`** (61 nodes): `soil-testing.ts`, `SoilTestingComponent`, `.addNewRow()`, `.autoSaveSession()`, `.canMoveToNextState()`, `.canMoveToPreviousState()`, `.canPerformAction()`, `.checkBackendConnection()`, `.closeSession()`, `.constructor()`, `.copySessionLink()`, `.downloadAllPdfs()`, `.downloadSinglePdf()`, `.extractGridDataWithCalculatedValues()`, `.fallbackCopyToClipboard()`, `.getAvailableTransitions()`, `.getCurrentStateColor()`, `.getCurrentStateDescription()`, `.getCurrentStateIcon()`, `.getCurrentStateLabel()`, `.getFormattedDate()`, `.getStateProgress()`, `.getStatusColor()`, `.getStatusIcon()`, `.getStatusLabel()`, `.getTodaySessionCount()`, `.goToDashboard()`, `.goToPage()`, `.handleSessionLoadError()`, `.handleSessionNotFound()`, `.initializeStateManager()`, `.isStateActive()`, `.isStateCompleted()`, `.loadActiveSessionsPage()`, `.loadCompletedSessionsPage()`, `.loadMoreSamples()`, `.loadSessionFromUrl()`, `.loadSessions()`, `.loadTodaySessionCount()`, `.nextCompletedPage()`, `.nextPage()`, `.nextState()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onBodyScroll()`, `.onCellValueChanged()`, `.onExcelFileSelected()`, `.onGridReady()`, `.onSelectionChanged()`, `.prevCompletedPage()`, `.previewPdf()`, `.previousState()`, `.prevPage()`, `.resumeSession()`, `.saveCurrentSession()`, `.startNewSession()`, `.toggleCompletedSessions()`, `.transitionToState()`, `.triggerExcelUpload()`, `.updateGridEditability()`, `.uploadExcelFile()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `water testing WaterTestingComponent`** (59 nodes): `water-testing.ts`, `WaterTestingComponent`, `.addNewRow()`, `.canMoveToNextState()`, `.canMoveToPreviousState()`, `.canPerformAction()`, `.checkBackendConnection()`, `.closeSession()`, `.constructor()`, `.copySessionLink()`, `.downloadAllPdfs()`, `.downloadSinglePdf()`, `.extractGridDataWithCalculatedValues()`, `.fallbackCopyToClipboard()`, `.getAvailableTransitions()`, `.getCurrentStateColor()`, `.getCurrentStateDescription()`, `.getCurrentStateIcon()`, `.getCurrentStateLabel()`, `.getFormattedDate()`, `.getStateProgress()`, `.getStatusColor()`, `.getStatusIcon()`, `.getStatusLabel()`, `.getTodaySessionCount()`, `.goToDashboard()`, `.goToPage()`, `.handleSessionLoadError()`, `.handleSessionNotFound()`, `.initializeStateManager()`, `.isStateActive()`, `.isStateCompleted()`, `.loadActiveSessionsPage()`, `.loadCompletedSessionsPage()`, `.loadMoreSamples()`, `.loadSessionFromUrl()`, `.loadSessions()`, `.loadTodaySessionCount()`, `.nextCompletedPage()`, `.nextPage()`, `.nextState()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onBodyScroll()`, `.onCellValueChanged()`, `.onExcelFileSelected()`, `.onGridReady()`, `.onSelectionChanged()`, `.prevCompletedPage()`, `.previousState()`, `.prevPage()`, `.resumeSession()`, `.saveCurrentSession()`, `.startNewSession()`, `.toggleCompletedSessions()`, `.transitionToState()`, `.triggerExcelUpload()`, `.updateGridEditability()`, `.uploadExcelFile()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `deleteProject deleteSelectedRows bulkArchive`** (51 nodes): `.bulkArchive()`, `.bulkDelete()`, `project-details.ts`, `confirmation-modal.service.ts`, `ProjectDetailsComponent`, `.closeTransactionModal()`, `.constructor()`, `.deleteProject()`, `.deleteTransaction()`, `.editProject()`, `.formatDateTime()`, `.getActiveContacts()`, `.getBudgetHealthColor()`, `.getBudgetUtilization()`, `.getCompletedMilestones()`, `.getDirectionsUrl()`, `.getMapEmbedUrl()`, `.getNetExpenses()`, `.getPrimaryContact()`, `.getPriorityColor()`, `.getRemainingBudget()`, `.getStatusColor()`, `.getTotalCredits()`, `.getTotalDebits()`, `.getTotalProjectVisits()`, `.getTransactionTypeClass()`, `.getTransactionTypeLabel()`, `.getUpcomingMilestones()`, `.getVisibleImages()`, `.getVisitsPerYear()`, `.goBack()`, `.goToTransactionPage()`, `.loadProject()`, `.loadTransactions()`, `.nextTransactionPage()`, `.ngOnDestroy()`, `.ngOnInit()`, `.openAddTransactionModal()`, `.openEditTransactionModal()`, `.openLocation()`, `.prevTransactionPage()`, `.saveTransaction()`, `.setActiveTab()`, `.toggleImageGallery()`, `.deleteProject()`, `ConfirmationModalService`, `.close()`, `.confirm()`, `.confirmAction()`, `.deleteSelectedRows()`, `.deleteSelectedRows()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `dashboard DashboardService addContact`** (45 nodes): `dashboard.service.ts`, `DashboardService`, `.addContact()`, `.addMilestone()`, `.addTransaction()`, `.bulkDeleteProjects()`, `.bulkUpdateProjects()`, `.completeDraft()`, `.constructor()`, `.createProject()`, `.deleteProject()`, `.deleteTransaction()`, `.exportProjects()`, `.getBudgetSummary()`, `.getBudgetTrend()`, `.getDashboardMetrics()`, `.getFavoriteProjects()`, `.getMockActivities()`, `.getMockBudgetSummary()`, `.getMockBudgetTrend()`, `.getMockFavoriteProjects()`, `.getMockMetrics()`, `.getMockProjects()`, `.getMockProjectStatusData()`, `.getMockSearchResults()`, `.getMockUpcomingVisits()`, `.getProjectActivity()`, `.getProjectById()`, `.getProjectDetails()`, `.getProjectDraft()`, `.getProjectList()`, `.getProjects()`, `.getProjectStatusDistribution()`, `.getProjectTimeline()`, `.getProjectTransactions()`, `.getRecentActivities()`, `.getUpcomingVisits()`, `.getUserDrafts()`, `.hardDeleteProject()`, `.saveProjectDraft()`, `.searchProjects()`, `.toggleFavorite()`, `.updateProject()`, `.updateProjectDraft()`, `.updateTransaction()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `DatalistCellEditor afterGuiAttached destroy`** (44 nodes): `DatalistCellEditor`, `.afterGuiAttached()`, `.destroy()`, `.getGui()`, `.getValue()`, `.init()`, `.isPopup()`, `pdfGenerator.js`, `datalist-cell-editor.ts`, `.formatCurrency()`, `.formatDate()`, `PDFGeneratorService`, `._buildDay45Row()`, `._buildDay75Row()`, `._buildHormoneDoseWithUnit()`, `.closeBrowser()`, `.constructor()`, `.fillFertilizerLargeFruitTemplate()`, `.fillFertilizerNormalTemplate()`, `.fillFertilizerSmallFruitTemplate()`, `.fillFertilizerTemplate()`, `.fillInvoiceTemplate()`, `.fillLetterTemplate()`, `.fillReceiptTemplate()`, `.fillTemplate()`, `.fillWaterTemplate()`, `.generateBulkFertilizerPDFs()`, `.generateBulkPDFs()`, `.generateBulkPDFsStream()`, `.generateBulkWaterPDFs()`, `.generateCombinedFertilizerPDF()`, `.generateCombinedPDF()`, `.generateCombinedWaterPDF()`, `.generateFertilizerPDF()`, `.generateInvoicePDF()`, `.generateLetterPDF()`, `.generateReceiptPDF()`, `.generateSinglePDF()`, `._generateSinglePDFOptimized()`, `.generateWaterPDF()`, `.initBrowser()`, `.loadTemplate()`, `.preloadTemplates()`, `._processInParallel()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `project list ProjectListComponent`** (43 nodes): `project-list.ts`, `ProjectListComponent`, `.applyFilters()`, `.calculateFilterCount()`, `.calculateSummaryStats()`, `.clearAllFilters()`, `.clearFilters()`, `.clearSearch()`, `.clearSelection()`, `.constructor()`, `.filterProjectsByDraftStatus()`, `.formatCurrency()`, `.formatSize()`, `.getCategoryLabel()`, `.getStatusBadgeColor()`, `.getTimeAgo()`, `.goToPage()`, `.isAdmin()`, `.isCategorySelected()`, `.isSelected()`, `.loadProjects()`, `.loadViewPreference()`, `.nextPage()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onSearchChange()`, `.onSortChange()`, `.pages()`, `.previousPage()`, `.refreshProjects()`, `.removeFilter()`, `.resumeDraft()`, `.saveViewPreference()`, `.setupSearch()`, `.setView()`, `.toggleArrayFilter()`, `.toggleCategory()`, `.toggleDrafts()`, `.toggleFavorite()`, `.toggleFilterDrawer()`, `.toggleSelection()`, `.updateEmptyState()`, `.viewProject()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `project wizard ProjectWizardComponent`** (40 nodes): `project-wizard.ts`, `ProjectWizardComponent`, `.addContact()`, `.addCrop()`, `.cancel()`, `.checkModeAndLoadData()`, `.collectFormData()`, `.constructor()`, `.cultivablePercentage()`, `.equalDistribution()`, `.getDirectionsUrl()`, `.getEmptyContact()`, `.getMapEmbedUrl()`, `.goToStep()`, `.hasInvalidCoordinates()`, `.hasValidCoordinates()`, `.loadDraft()`, `.loadDraftData()`, `.loadProjectData()`, `.nextStep()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onBudgetChange()`, `.onPercentageChange()`, `.populateFormFromDraft()`, `.previousStep()`, `.progressPercentage()`, `.removeContact()`, `.removeCrop()`, `.saveDraft()`, `.setPrimaryContact()`, `.setupAutoSave()`, `.submitProject()`, `.toggleConsultant()`, `.toggleFieldWorker()`, `.toggleWaterSource()`, `.totalBudgetPercentage()`, `.triggerAutoSave()`, `.updateBudgetAmounts()`, `.validateStep()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FarmProjectDetailsComponent approve areaUnitLabel`** (39 nodes): `FarmProjectDetailsComponent`, `.approve()`, `.areaUnitLabel()`, `.canApprove()`, `.canChangeLifecycleStatus()`, `.canEdit()`, `.canManageLifecycle()`, `.canUploadMedia()`, `.changeLifecycleStatus()`, `.closeLightbox()`, `.constructor()`, `.cropSummary()`, `.farmLatitude()`, `.farmLongitude()`, `.formatSize()`, `.isFarmer()`, `.isFarmOwner()`, `.loadMedia()`, `.loadProject()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onFilesSelected()`, `.openLightbox()`, `.pollForNewMedia()`, `.quotaPercent()`, `.quotaResetsLabel()`, `.quotaStatus()`, `.refreshQuota()`, `.reject()`, `.startFarmerPollingIfNeeded()`, `.statusLabel()`, `.submitEditRequest()`, `.switchTab()`, `.trackMedia()`, `.trackUpload()`, `.triggerFilePicker()`, `.uploadFiles()`, `.weatherLocationLabel()`, `farm-project-details.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `pdf PdfService checkHealth`** (37 nodes): `pdf.service.ts`, `PdfService`, `.checkHealth()`, `.constructor()`, `.delay()`, `.downloadBulkFertilizerPDFs()`, `.downloadBulkFertilizerPDFsHelper()`, `.downloadBulkPDFs()`, `.downloadBulkSessionPDFs()`, `.downloadBulkWaterPDFs()`, `.downloadBulkWaterPDFsHelper()`, `.downloadCombinedFertilizerSessionPDF()`, `.downloadCombinedSessionPDF()`, `.downloadCombinedWaterSessionPDF()`, `.downloadFertilizerSamplePDF()`, `.downloadPDF()`, `.downloadSinglePDF()`, `.downloadWaterSamplePDF()`, `.generateBulkFertilizerPDFs()`, `.generateBulkSessionPDFs()`, `.generateBulkWaterPDFs()`, `.generateCombinedFertilizerPDF()`, `.generateCombinedSessionPDF()`, `.generateCombinedWaterPDF()`, `.generateFertilizerSamplePDF()`, `.generateMultiplePDFs()`, `.generateSinglePDF()`, `.generateWaterSamplePDF()`, `.getAuthHeaders()`, `.openPDFInNewTab()`, `.parseMultipartResponse()`, `.previewPDF()`, `.previewSinglePDF()`, `.processStreamingPDFs()`, `.streamBulkFertilizerPDFs()`, `.streamBulkSessionPDFs()`, `.streamBulkWaterPDFs()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `invoices InvoicesComponent addLineItem`** (34 nodes): `invoices.ts`, `InvoicesComponent`, `.addLineItem()`, `.applyFilters()`, `.applySearch()`, `.calculateTotals()`, `.cancelForm()`, `.changePage()`, `.clearFilters()`, `.constructor()`, `.deleteInvoice()`, `.duplicateInvoice()`, `.editInvoice()`, `.formatCurrency()`, `.formatDate()`, `.generatePDF()`, `.getEmptyInvoice()`, `.getInvoiceTypeLabel()`, `.getPaymentStatusBadge()`, `.getPaymentStatusLabel()`, `.getStaticItems()`, `.hasPermission()`, `.loadInvoices()`, `.loadServiceOptions()`, `.ngOnInit()`, `.onLineItemChange()`, `.recalculateSerialNumbers()`, `.removeLineItem()`, `.saveInvoice()`, `.selectServiceTemplate()`, `.showCreateForm()`, `.toggleDrafts()`, `.updatePaymentStatus()`, `.validateInvoice()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `managerial work ManagerialWorkService`** (31 nodes): `managerial-work.service.ts`, `ManagerialWorkService`, `.constructor()`, `.createInvoice()`, `.createLetter()`, `.createReceipt()`, `.deleteInvoice()`, `.deleteLetter()`, `.deleteReceipt()`, `.downloadFile()`, `.duplicateInvoice()`, `.generateInvoicePDF()`, `.generateLetterPDF()`, `.generateReceiptPDF()`, `.getAllTags()`, `.getInvoiceById()`, `.getInvoices()`, `.getLetterById()`, `.getLetters()`, `.getNextInvoiceNumber()`, `.getNextLetterNumber()`, `.getNextReceiptNumber()`, `.getReceiptById()`, `.getReceipts()`, `.getServiceListTemplate()`, `.getServiceOptions()`, `.numberToWords()`, `.updateInvoice()`, `.updateLetter()`, `.updatePaymentStatus()`, `.updateReceipt()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `letters LettersComponent applyFilters`** (27 nodes): `letters.ts`, `LettersComponent`, `.applyFilters()`, `.applySearch()`, `.cancelForm()`, `.changePage()`, `.clearFilters()`, `.constructor()`, `.convertHtmlToText()`, `.convertTextToHtml()`, `.deleteLetter()`, `.editLetter()`, `.execCommand()`, `.formatDate()`, `.generatePDF()`, `.getEmptyLetter()`, `.getLetterTypeLabel()`, `.insertList()`, `.loadLetters()`, `.loadServiceListTemplate()`, `.loadTags()`, `.ngOnInit()`, `.onTagsInputChange()`, `.saveLetter()`, `.showCreateForm()`, `.toggleDrafts()`, `.validateLetter()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `DashboardOverviewComponent constructor formatCurrency`** (23 nodes): `DashboardOverviewComponent`, `.constructor()`, `.formatCurrency()`, `.getActivityIcon()`, `.getBudgetStatusClass()`, `.getRelativeTime()`, `.loadBudgetSummary()`, `.loadBudgetTrend()`, `.loadDashboardData()`, `.loadFavoriteProjects()`, `.loadMetrics()`, `.loadProjectStatusDistribution()`, `.loadRecentActivities()`, `.loadUpcomingVisits()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onChartSelect()`, `.onMetricCardClick()`, `.recordVisit()`, `.viewAllActivities()`, `.viewFinancialDashboard()`, `.viewProjectDetails()`, `dashboard-overview.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `role management RoleManagementComponent`** (22 nodes): `role-management.component.ts`, `RoleManagementComponent`, `.closeModal()`, `.constructor()`, `.createRole()`, `.deleteRole()`, `.filteredRoles()`, `.isPermissionSelected()`, `.isResourceGroupSelected()`, `.loadPermissions()`, `.loadRoles()`, `.ngOnInit()`, `.objectKeys()`, `.openCreateModal()`, `.openDeleteModal()`, `.openEditModal()`, `.openPermissionsModal()`, `.resetForm()`, `.togglePermission()`, `.toggleResourceGroup()`, `.updateRole()`, `.validateForm()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `receipts ReceiptsComponent applyFilters`** (22 nodes): `receipts.ts`, `ReceiptsComponent`, `.applyFilters()`, `.applySearch()`, `.cancelForm()`, `.changePage()`, `.clearFilters()`, `.constructor()`, `.deleteReceipt()`, `.editReceipt()`, `.formatCurrency()`, `.formatDate()`, `.generatePDF()`, `.getEmptyReceipt()`, `.getPaymentMethodLabel()`, `.getPaymentTypeLabel()`, `.loadReceipts()`, `.ngOnInit()`, `.onAmountChange()`, `.saveReceipt()`, `.showCreateForm()`, `.validateReceipt()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FarmManagementComponent applyClientFilters applyFilters`** (22 nodes): `FarmManagementComponent`, `.applyClientFilters()`, `.applyFilters()`, `.areaUnitLabel()`, `.canApprove()`, `.canCreateDirectly()`, `.closeForm()`, `.constructor()`, `.cropNames()`, `.isFarmer()`, `.loadFarms()`, `.ngOnDestroy()`, `.ngOnInit()`, `.openForm()`, `.openProject()`, `.resetFilters()`, `.showLinkedMobileStat()`, `.statusLabel()`, `.submitFarm()`, `.switchTab()`, `.trackFarm()`, `farm-management.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `soil testing SoilTestingService`** (21 nodes): `soil-testing.service.ts`, `SoilTestingService`, `.bulkUpdateSamples()`, `.constructor()`, `.createSample()`, `.createSession()`, `.deleteSample()`, `.deleteSamplesBulk()`, `.deleteSession()`, `.getSampleById()`, `.getSamplesForSession()`, `.getSession()`, `.getSessionCount()`, `.getSessions()`, `.getSessionsByDate()`, `.getSoilDataForSample()`, `.getTodaySessionCount()`, `.updateSample()`, `.updateSession()`, `.updateSessionStatus()`, `.uploadExcel()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `water testing WaterTestingService`** (20 nodes): `water-testing.service.ts`, `WaterTestingService`, `.bulkUpdateSamples()`, `.constructor()`, `.createSample()`, `.createSession()`, `.deleteSample()`, `.deleteSamplesBulk()`, `.deleteSession()`, `.getSampleById()`, `.getSamplesForSession()`, `.getSession()`, `.getSessionCount()`, `.getSessions()`, `.getSessionsByDate()`, `.getTodaySessionCount()`, `.updateSample()`, `.updateSession()`, `.updateSessionStatus()`, `.uploadExcel()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `permission PermissionService assignRoleToUser`** (19 nodes): `permission.service.ts`, `PermissionService`, `.assignRoleToUser()`, `.clearPermissions()`, `.constructor()`, `.createRole()`, `.deleteRole()`, `.getAllPermissions()`, `.getAllRoles()`, `.getCurrentUser()`, `.getRole()`, `.hasAllPermissions()`, `.hasAnyPermission()`, `.hasPermission()`, `.hasRole()`, `.loadUserPermissions()`, `.reloadPermissions()`, `.updateRole()`, `.updateUserPermissions()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FarmRegistrationFormComponent addCrop combinedClientPhone`** (19 nodes): `FarmRegistrationFormComponent`, `.addCrop()`, `.combinedClientPhone()`, `.constructor()`, `.hydrateForm()`, `.ngOnChanges()`, `.ngOnInit()`, `.onClientPhoneChange()`, `.onMapUrlChange()`, `.patchFromInitial()`, `.removeCrop()`, `.resolveUserByPhone()`, `.splitPhoneNumber()`, `.submit()`, `.submitLabel()`, `.toggleWaterSource()`, `.useCurrentLocation()`, `.validate()`, `farm-registration-form.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `notification bell NotificationBellComponent`** (19 nodes): `notification-bell.ts`, `NotificationBellComponent`, `.archive()`, `.constructor()`, `.iconClassFor()`, `.iconFor()`, `.loadNotifications()`, `.markAllAsRead()`, `.markRead()`, `.ngOnDestroy()`, `.ngOnInit()`, `.onDocumentClick()`, `.onEscape()`, `.openRequest()`, `.projectId()`, `.relativeTime()`, `.removeOptimistically()`, `.toggleOpen()`, `.trackById()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `fertilizer testing FertilizerTestingService`** (18 nodes): `fertilizer-testing.service.ts`, `FertilizerTestingService`, `.bulkUpdateSamples()`, `.constructor()`, `.createSession()`, `.deleteSamplesBulk()`, `.deleteSession()`, `.getCropConfig()`, `.getCropNamesSnapshot()`, `.getDefaultsForCrop()`, `.getSamplesForSession()`, `.getSession()`, `.getSessions()`, `.getSessionsByDate()`, `.getTodaySessionCount()`, `.updateSession()`, `.updateSessionStatus()`, `.uploadExcel()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `home HomeComponent closePopup`** (16 nodes): `home.ts`, `HomeComponent`, `.closePopup()`, `.constructor()`, `.initializeOwlCarousel()`, `.loadCarouselSlides()`, `.loadMiniPhotos()`, `.loadProjects()`, `.navigateProject()`, `.ngAfterViewInit()`, `.ngOnDestroy()`, `.ngOnInit()`, `.openProject()`, `.scrollToServices()`, `.scrollToTop()`, `.setupScrollListener()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `user management UserManagementComponent`** (13 nodes): `user-management.component.ts`, `UserManagementComponent`, `.changeUserRole()`, `.constructor()`, `.deleteUser()`, `.getRoleBadgeClass()`, `.loadRoles()`, `.loadUsers()`, `.nextPage()`, `.ngOnInit()`, `.onRoleFilterChange()`, `.onSearchChange()`, `.previousPage()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `farm management FarmManagementService`** (13 nodes): `farm-management.service.ts`, `FarmManagementService`, `.approveFarm()`, `.completeFarm()`, `.constructor()`, `.getFarmById()`, `.getFarms()`, `.lookupUserByPhone()`, `.registerFarm()`, `.rejectFarm()`, `.requestFarmEdit()`, `.startFarm()`, `.updateFarmStatus()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `session state model`** (12 nodes): `session-state.model.ts`, `SessionStateManager`, `.canPerformAction()`, `.canTransitionTo()`, `.constructor()`, `.getAllStates()`, `.getCurrentState()`, `.getNextState()`, `.getPreviousState()`, `.getStateConfig()`, `.getStateProgress()`, `.transitionTo()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `fertilizer session state`** (12 nodes): `fertilizer-session-state.model.ts`, `FertilizerSessionStateManager`, `.canPerformAction()`, `.canTransitionTo()`, `.constructor()`, `.getAllStates()`, `.getCurrentState()`, `.getNextState()`, `.getPreviousState()`, `.getStateConfig()`, `.getStateProgress()`, `.transitionTo()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `account MyAccountComponent cancelProfileEdit`** (12 nodes): `my-account.ts`, `MyAccountComponent`, `.cancelProfileEdit()`, `.constructor()`, `.getRoleBadgeClass()`, `.logout()`, `.ngOnInit()`, `.onProfileImageError()`, `.saveProfile()`, `.showPhoneProfileEditor()`, `.splitPhoneNumber()`, `.startProfileEdit()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `activityLogService transactionService logActivity`** (12 nodes): `activityLogService.js`, `transactionService.js`, `logActivity()`, `TransactionService`, `.createTransaction()`, `.deleteProjectTransactions()`, `.deleteTransaction()`, `.getCategoryBreakdown()`, `.getProjectSummary()`, `.getTransactionById()`, `.getTransactionsByProject()`, `.updateTransaction()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FarmWeatherComponent applyResponse constructor`** (12 nodes): `FarmWeatherComponent`, `.applyResponse()`, `.constructor()`, `.hasCoords()`, `.loadWeather()`, `.ngOnChanges()`, `.ngOnDestroy()`, `.retry()`, `.shortDay()`, `.weatherIcon()`, `.weatherLabel()`, `farm-weather.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `DownloadProgressComponent close constructor`** (11 nodes): `DownloadProgressComponent`, `.close()`, `.constructor()`, `.getEstimatedTime()`, `.getHeaderTitle()`, `.ngOnDestroy()`, `.ngOnInit()`, `.progressPercent()`, `.strokeDashoffset()`, `.toggleMinimize()`, `download-progress.component.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `farmMediaService FarmMediaService getIsoWeek`** (11 nodes): `farmMediaService.js`, `FarmMediaService`, `.getIsoWeek()`, `.getMaxFilesPerUpload()`, `.getQuotaSnapshot()`, `.getResetsAt()`, `.getWeeklyLimit()`, `.incrementQuota()`, `.listMedia()`, `.notifyOwner()`, `.uploadMedia()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `HasPermissionDirective checkPermissions constructor`** (10 nodes): `HasPermissionDirective`, `.checkPermissions()`, `.constructor()`, `.hasPermission()`, `.hasPermissionElse()`, `.hasPermissionMode()`, `.ngOnDestroy()`, `.ngOnInit()`, `.updateView()`, `has-permission.directive.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FarmRegistrationPageComponent cancel constructor`** (10 nodes): `FarmRegistrationPageComponent`, `.cancel()`, `.constructor()`, `.goToAccount()`, `.isFarmer()`, `.needsPhoneNumber()`, `.ngOnDestroy()`, `.ngOnInit()`, `.submitFarm()`, `farm-registration.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `lab testing LabTestingComponent`** (9 nodes): `lab-testing.ts`, `LabTestingComponent`, `.checkPermissions()`, `.constructor()`, `.isActive()`, `.navigateToSubModule()`, `.ngOnInit()`, `.redirectToFirstAvailableModule()`, `.setActiveSubModuleFromRoute()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `transactionController TransactionController createTransaction`** (9 nodes): `transactionController.js`, `TransactionController`, `.createTransaction()`, `.deleteTransaction()`, `.getCategoryBreakdown()`, `.getProjectSummary()`, `.getTransactionById()`, `.getTransactions()`, `.updateTransaction()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `draftService DraftService completeDraft`** (9 nodes): `draftService.js`, `DraftService`, `.completeDraft()`, `.createFinalProject()`, `.createProjectWithDraft()`, `.deleteDraft()`, `.getDraftByProjectId()`, `.getUserDrafts()`, `.updateDraft()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `HasRoleDirective checkRoles constructor`** (8 nodes): `HasRoleDirective`, `.checkRoles()`, `.constructor()`, `.hasRole()`, `.hasRoleElse()`, `.ngOnInit()`, `.updateView()`, `has-role.directive.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `header HeaderComponent constructor`** (8 nodes): `header.ts`, `HeaderComponent`, `.constructor()`, `.logout()`, `.ngAfterViewInit()`, `.ngOnInit()`, `.onProfileImageError()`, `.updatePermissions()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `notificationService NotificationService archive`** (8 nodes): `notificationService.js`, `NotificationService`, `.archive()`, `.archiveFarmRegistration()`, `.createForUser()`, `.createForUsersWithPermission()`, `.listForUser()`, `.markRead()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `role selection modal`** (7 nodes): `role-selection-modal.component.ts`, `RoleSelectionModalComponent`, `.cancel()`, `.close()`, `.confirm()`, `.getRoleBadgeClass()`, `.show()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `login LoginComponent constructor`** (7 nodes): `login.ts`, `LoginComponent`, `.constructor()`, `.handleCodeResponse()`, `.initializeGoogleSignIn()`, `.ngOnInit()`, `.setupCodeClient()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `user UserService constructor`** (7 nodes): `user.service.ts`, `UserService`, `.constructor()`, `.deleteUser()`, `.getAllUsers()`, `.getUser()`, `.updateUserRole()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `userController deleteUser getAllUsers`** (7 nodes): `userController.js`, `deleteUser()`, `getAllUsers()`, `getUser()`, `lookupUserByPhone()`, `normalizePhoneNumber()`, `updateUserRole()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `ConfirmationModalComponent cancel closeModal`** (6 nodes): `ConfirmationModalComponent`, `.cancel()`, `.closeModal()`, `.confirm()`, `.constructor()`, `confirmation-modal.component.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `managerial work ManagerialWorkComponent`** (6 nodes): `managerial-work.ts`, `ManagerialWorkComponent`, `.constructor()`, `.hasPermission()`, `.ngOnInit()`, `.setActiveTab()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `fertilizerCropConfig getConfig getCropNames`** (6 nodes): `fertilizerCropConfig.js`, `getConfig()`, `getCropNames()`, `getDefaultsForCrop()`, `loadConfig()`, `resolveCropKey()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `notification NotificationService archive`** (6 nodes): `notification.service.ts`, `NotificationService`, `.archive()`, `.constructor()`, `.getNotifications()`, `.markRead()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `farm FarmMediaService constructor`** (6 nodes): `farm-media.service.ts`, `FarmMediaService`, `.constructor()`, `.getQuota()`, `.listMedia()`, `.uploadFiles()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `project detail popup`** (5 nodes): `project-detail-popup.ts`, `ProjectDetailPopupComponent`, `.onBackdropClick()`, `.onClose()`, `.stopPropagation()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `toast ToastComponent closeToast`** (5 nodes): `toast.component.ts`, `ToastComponent`, `.closeToast()`, `.constructor()`, `.ngOnInit()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `WebConfig addCorsMappings WebMvcConfigurer`** (4 nodes): `WebConfig`, `.addCorsMappings()`, `WebConfig.java`, `WebMvcConfigurer`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `error interceptor cleanupErrorMessage`** (4 nodes): `error.interceptor.ts`, `cleanupErrorMessage()`, `errorInterceptor()`, `handleError()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `jquery migrate min`** (4 nodes): `jquery-migrate-1.4.1.min.js`, `b()`, `d()`, `e()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `soilTesting createLinkedFertilizerSample handleCropTypeChange`** (4 nodes): `soilTesting.js`, `createLinkedFertilizerSample()`, `handleCropTypeChange()`, `sortSamplesByNumber()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `MediaServiceApplication`** (3 nodes): `MediaServiceApplication`, `.main()`, `MediaServiceApplication.java`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `StorageProperties Filesystem`** (3 nodes): `Filesystem`, `StorageProperties`, `StorageProperties.java`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `auth interceptor authInterceptor`** (3 nodes): `auth.interceptor.ts`, `authInterceptor()`, `isInternalRequest()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `SecurityConfig`** (2 nodes): `SecurityConfig`, `SecurityConfig.java`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (2 nodes): `App`, `app.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FooterComponent footer`** (2 nodes): `FooterComponent`, `footer.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `CausesDetailsComponent causes details`** (2 nodes): `CausesDetailsComponent`, `causes-details.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `DonationComponent donation`** (2 nodes): `DonationComponent`, `donation.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `shop details ShopDetailsComponent`** (2 nodes): `shop-details.ts`, `ShopDetailsComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `ContactComponent contact`** (2 nodes): `ContactComponent`, `contact.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `testimonials TestimonialsComponent`** (2 nodes): `testimonials.ts`, `TestimonialsComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `EventDetailsComponent event details`** (2 nodes): `EventDetailsComponent`, `event-details.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `not found NotFoundComponent`** (2 nodes): `not-found.ts`, `NotFoundComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `payment PaymentComponent`** (2 nodes): `payment.ts`, `PaymentComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `gallery GalleryComponent`** (2 nodes): `gallery.ts`, `GalleryComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `shop ShopComponent`** (2 nodes): `shop.ts`, `ShopComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `AboutComponent about`** (2 nodes): `AboutComponent`, `about.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `BlogComponent blog`** (2 nodes): `BlogComponent`, `blog.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `BlogDetailsComponent blog details`** (2 nodes): `BlogDetailsComponent`, `blog-details.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `team TeamComponent`** (2 nodes): `team.ts`, `TeamComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `team details TeamDetailsComponent`** (2 nodes): `team-details.ts`, `TeamDetailsComponent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `CausesComponent causes`** (2 nodes): `CausesComponent`, `causes.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `EventsComponent events`** (2 nodes): `EventsComponent`, `events.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Application Requirements Document`** (2 nodes): `Application Requirements Document`, `Application Context (LLM context.md)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Custom Billing Payments`** (2 nodes): `Custom Billing & Payments Module`, `Landscaping Management Module`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `MongoDB Collection MediaEmbeddingService`** (2 nodes): `MongoDB media Collection`, `MediaEmbeddingService`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getDefaultsForCrop resolveCropKey`** (2 nodes): `getDefaultsForCrop`, `resolveCropKey`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Classification Rulebook Soil`** (2 nodes): `Soil Classification Rulebook`, `Water Classification Rulebook`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Invoice HTML Template`** (2 nodes): `Invoice`, `Invoice HTML Template`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Angular CLI README`** (2 nodes): `Angular CLI 20.3.6`, `Frontend README`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `FooterComponent footer html`** (2 nodes): `FooterComponent`, `footer.html`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `environment prod`** (2 nodes): `environment`, `environment.prod`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `AboutComponent about html`** (2 nodes): `AboutComponent`, `about.html`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `ContactComponent contact html`** (2 nodes): `ContactComponent`, `contact.html`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `GalleryComponent GalleryTemplate`** (2 nodes): `GalleryComponent`, `GalleryTemplate`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `NotFoundComponent NotFoundTemplate`** (2 nodes): `NotFoundComponent`, `NotFoundTemplate`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `PaymentComponent Payment Template`** (2 nodes): `PaymentComponent`, `Payment Template`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `TestimonialsComponent Testimonials Template`** (2 nodes): `TestimonialsComponent`, `Testimonials Template`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `vendor Bootstrap Popper`** (2 nodes): `Bootstrap JS (vendor)`, `Popper (vendor)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Isotope vendor min`** (2 nodes): `Isotope (vendor)`, `Isotope min (vendor)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Farm Filtering Workflow`** (2 nodes): `Farm Filtering Workflow`, `Farm Management Dashboard`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Farm Management`** (1 nodes): `Farm Management Module`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Letter Pad Printing`** (1 nodes): `Letter Pad Printing Module`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `README`** (1 nodes): `README`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getConfig`** (1 nodes): `getConfig`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getCropNames`** (1 nodes): `getCropNames`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `admin role definition`** (1 nodes): `admin role definition`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `user role definition`** (1 nodes): `user role definition`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `assistant role definition`** (1 nodes): `assistant role definition`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `manager role definition`** (1 nodes): `manager role definition`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getCurrentUser`** (1 nodes): `getCurrentUser`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `authorize deprecated`** (1 nodes): `authorize (deprecated)`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getByProject`** (1 nodes): `getByProject`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `softDelete instance`** (1 nodes): `softDelete instance`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Product Schema`** (1 nodes): `Product Schema`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Auth Router`** (1 nodes): `Auth Router`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getMetadata`** (1 nodes): `getMetadata`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `getContent`** (1 nodes): `getContent`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **143 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `WaterTestingComponent` connect `water testing WaterTestingComponent` to `deleteProject deleteSelectedRows bulkArchive`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `ProjectDetailsComponent` connect `deleteProject deleteSelectedRows bulkArchive` to `DatalistCellEditor afterGuiAttached destroy`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `FarmDashboardComponent` connect `FarmDashboardComponent allSelected applyFilters` to `deleteProject deleteSelectedRows bulkArchive`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **What is the exact relationship between `Unattended And Attended Media Model` and `Media Service Two Step API Test`?**
+  _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
+- **Why does `ProjectDetailsComponent` connect `Closetransactionmodal Constructor Details` to `Getbudgetutilization Getnetexpenses Getremainingbudget`, `Gototransactionpage Loadtransactions Nexttransactionpage`, `Formatcurrency Afterguiattached Buildday45row`, `Deleteproject Deleteselectedrows Bulkarchive`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `PDFGeneratorService` connect `Formatcurrency Afterguiattached Buildday45row` to `Logger Pdfgenerator Farmprescriptioncontroller`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **Why does `FarmProjectDetailsComponent` connect `Acceptquotation Approve Areaunitlabel` to `Reject Rejectquotation`, `Onfilesselected Uploadfiles`, `Downloadprescriptionfromrow Prescriptioncheckeditems Prescriptionicon`, `Formatcurrency Afterguiattached Buildday45row`, `Constructor Farm List`, `Deletetransaction Farmtransaction Openquotationform`, `Closeprescriptionoverlay Closereportoverlay Ngondestroy`, `Farm Constructor Management`, `Cancelstructuredprescription Clearstructuredimages Emptystructuredprescription`, `Confirmdeletemedia Farmmediaref Markasattended`, `Applyclientfilters Applyfilters Areaunitlabel`, `Auth Codes Complete`, `Downloadquotationpdf Openquotationdetail Quotation`, `Constructor Deletemedia Farm`, `Gotoattendedpage Loadattendedmedia Toggleattendedmedia`, `Applyformat Submitquotation Synceditorcontent`, `Farmdesignref Opendesignlightbox Trackdesign`, `Downloadreport Farm Farmreport`, `Loaddesigns Loadmedia Loadprescriptions`, `Onprescriptionfilesselected Uploadprescriptionfiles`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **What connects `StorageProperties`, `Filesystem`, `SecurityConfig` to the rest of the system?**
-  _301 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `min jquery isotope` be split into smaller, more focused modules?**
-  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
-- **Should `interface routes html` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Deployment FileSystemStorageService MongoDB` be split into smaller, more focused modules?**
-  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
+  _758 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Java String Providerexception` be split into smaller, more focused modules?**
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+- **Should `Acceptquotation Approve Areaunitlabel` be split into smaller, more focused modules?**
+  _Cohesion score 0.03076923076923077 - nodes in this community are weakly interconnected._
