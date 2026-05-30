@@ -14,6 +14,12 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      # Media microservice — backend talks to it through nginx (same URL as the browser sees).
+      # This is a "hairpin": api → nginx (public) → media-service. Trades a bit of latency
+      # for a single URL surface. To switch back to direct container-to-container calls,
+      # set MEDIA_SERVICE_URL=http://media-service:8081 in the prod .env.
+      MEDIA_SERVICE_URL: ${MEDIA_SERVICE_URL:-https://shivagri.com}
+      MEDIA_SERVICE_PUBLIC_URL: ${MEDIA_SERVICE_PUBLIC_URL:-https://shivagri.com}
       OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
       OTP_DELIVERY_MODE: ${OTP_DELIVERY_MODE:-template}
       OTP_BRAND_NAME: ${OTP_BRAND_NAME:-Shiv-Agri}
@@ -99,7 +105,14 @@ services:
       - api
       - frontend
     networks:
-      - app-network
+      app-network:
+        # Aliases let other containers resolve shivagri.com to nginx's internal IP,
+        # so api → media-service via nginx stays on the docker network (no hairpin
+        # out to the public internet, no DNS round-trip, TLS still valid because
+        # the cert is genuinely for shivagri.com).
+        aliases:
+          - shivagri.com
+          - www.shivagri.com
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:

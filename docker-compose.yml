@@ -30,6 +30,10 @@ services:
       PORT: 3000
       MONGODB_URI: mongodb://mongodb:27017/shiv-agri
       NODE_ENV: development
+      # Dev keeps direct container-to-container — no public domain or TLS to terminate.
+      # Prod routes through nginx via a network alias (see docker-compose.prod.yml).
+      MEDIA_SERVICE_URL: ${MEDIA_SERVICE_URL:-http://media-service:8081}
+      MEDIA_SERVICE_PUBLIC_URL: ${MEDIA_SERVICE_PUBLIC_URL:-http://localhost:80}
       OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
       NOTIFICATION_SERVICE_URL: http://notification-service:8082
       NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY:-dev-api-key-change-me}
