@@ -233,6 +233,41 @@ exports.downloadPrescriptionPdf = async (req, res) => {
   }
 };
 
+/**
+ * Soft-delete a prescription. Admin can delete any prescription; manager
+ * may delete only items they uploaded.
+ */
+exports.deletePrescription = async (req, res) => {
+  const projectId = req.params.id;
+  const prescriptionId = req.params.prescriptionId;
+  try {
+    logger.info(`[FarmPrescription] DELETE /projects/${projectId}/prescriptions/${prescriptionId} by user=${req.user._id}`);
+
+    const isAdmin = req.user?.role === 'admin';
+    const result = await farmPrescriptionService.deletePrescription(
+      projectId,
+      prescriptionId,
+      req.user,
+      { allowAnyUploader: isAdmin }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Prescription removed',
+      mediaId: result.mediaId,
+      attachedMediaIds: result.attachedMediaIds
+    });
+  } catch (error) {
+    const status = error?.status || 500;
+    logger.error(`[FarmPrescription] deletePrescription error: ${error.message}`);
+    return res.status(status).json({
+      success: false,
+      error: 'Failed to delete prescription',
+      message: error.message || 'Unknown error'
+    });
+  }
+};
+
 exports.listPrescriptions = async (req, res) => {
   const projectId = req.params.id;
   try {

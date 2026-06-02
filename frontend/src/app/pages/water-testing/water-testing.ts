@@ -12,16 +12,19 @@ import {
   ModuleRegistry,
 } from 'ag-grid-community';
 import { WaterTestingService, Session, WaterTestingData } from '../../services/water-testing.service';
+import { FarmManagementService } from '../../services/farm-management.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
+import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-water-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular, HasPermissionDirective],
-  providers: [WaterTestingService, PdfService],
+  providers: [WaterTestingService, FarmManagementService, PdfService],
   templateUrl: './water-testing.html',
   styleUrls: ['./water-testing.css'],
 })
@@ -72,6 +75,8 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   showCompletedSessions: boolean = false;
   completedSessionsLoaded: boolean = false;
 
+  // Auto-save timeout
+  private saveTimeout: any = null;
 
   // Column Definitions
   colDefs: ColDef<WaterTestingData>[] = [
@@ -126,6 +131,18 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: true,
       minWidth: 150,
+      // Suggest farm names linked to the phone number entered on the same
+      // row. Users can still type any custom value — the datalist is
+      // suggestion-only, not restrictive.
+      cellEditor: DatalistCellEditor,
+      cellEditorParams: {
+        values: (cellParams: any) => {
+          const phone = cellParams?.data?.mobileNo;
+          if (!phone) return [];
+          return firstValueFrom(this.farmService.getFarmNamesByPhone(String(phone)))
+            .catch(() => [] as string[]);
+        }
+      }
     },
     {
       field: 'taluka',
@@ -347,6 +364,8 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
     floatingFilter: true,
     autoHeaderHeight: true,
     wrapHeaderText: true,
+    suppressMovable: true,
+    lockPosition: true,
   };
 
   // Row Data
@@ -354,6 +373,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
 
   constructor(
     private waterTestingService: WaterTestingService,
+    private farmService: FarmManagementService,
     private pdfService: PdfService,
     private toastService: ToastService,
     private route: ActivatedRoute,
@@ -1050,6 +1070,50 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
 
     // Auto-resize the column that was edited
     event.api.autoSizeColumns([colId], false);
+
+    // Trigger auto-save after 2 seconds of inactivity
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.autoSaveSession();
+    }, 2000);
+  }
+
+  /**
+   * Auto-save session data without refreshing the grid
+   */
+  private autoSaveSession(): void {
+    if (!this.currentSession || !this.currentSession._id) {
+      return;
+    }
+
+    const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
+
+    if (allGridData.length === 0) {
+      return;
+    }
+
+    this.waterTestingService.bulkUpdateSamples(this.currentSession._id, allGridData).subscribe({
+      next: (response: any) => {
+        // Update IDs without refreshing the entire grid
+        if (response.samples && Array.isArray(response.samples)) {
+          this.gridApi.forEachNode((node, index) => {
+            if (node.data && response.samples[index]) {
+              const updatedSample = response.samples[index];
+              if (!node.data._id && updatedSample._id) {
+                node.data._id = updatedSample._id;
+              }
+            }
+          });
+        }
+        this.toastService.success('Changes saved', 1000);
+      },
+      error: (error) => {
+        console.error('Auto-save failed:', error);
+        this.toastService.error('Auto-save failed. Please try again.');
+      }
+    });
   }
 
   onSelectionChanged() {

@@ -13,17 +13,19 @@ import {
 } from 'ag-grid-community';
 import { SoilTestingService, Session, SoilTestingData } from '../../services/soil-testing.service';
 import { FertilizerTestingService } from '../../services/fertilizer-testing.service';
+import { FarmManagementService } from '../../services/farm-management.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
 import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-soil-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular, HasPermissionDirective],
-  providers: [SoilTestingService, FertilizerTestingService, PdfService],
+  providers: [SoilTestingService, FertilizerTestingService, FarmManagementService, PdfService],
   templateUrl: './soil-testing.html',
   styleUrls: ['./soil-testing.css'],
 })
@@ -132,6 +134,18 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: true,
       minWidth: 150,
+      // Suggest farm names linked to the phone number entered on the same
+      // row. Users can still type any custom value — the datalist is
+      // suggestion-only, not restrictive.
+      cellEditor: DatalistCellEditor,
+      cellEditorParams: {
+        values: (cellParams: any) => {
+          const phone = cellParams?.data?.mobileNo;
+          if (!phone) return [];
+          return firstValueFrom(this.farmService.getFarmNamesByPhone(String(phone)))
+            .catch(() => [] as string[]);
+        }
+      }
     },
     {
       field: 'taluka',
@@ -359,6 +373,8 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
     floatingFilter: true,
     autoHeaderHeight: true,
     wrapHeaderText: true,
+    suppressMovable: true,
+    lockPosition: true,
   };
 
   // Row Data
@@ -367,6 +383,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   constructor(
     private soilTestingService: SoilTestingService,
     private fertilizerTestingService: FertilizerTestingService,
+    private farmService: FarmManagementService,
     private pdfService: PdfService,
     private toastService: ToastService,
     private route: ActivatedRoute,

@@ -22,13 +22,124 @@ exports.createQuotation = async (req, res) => {
 
 exports.listQuotations = async (req, res) => {
   try {
-    const quotations = await quotationService.getQuotationsForProject(req.params.id);
+    const { kind } = req.query;
+    const quotations = await quotationService.getQuotationsForProject(req.params.id, { kind });
     res.status(200).json({ success: true, quotations });
   } catch (error) {
     logger.error(`Error listing quotations for project ${req.params.id}: ${error.message}`);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch quotations',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Create an adhoc BOP (Bill of Project) quotation for a landscaping project.
+ */
+exports.createBopQuotation = async (req, res) => {
+  try {
+    const result = await quotationService.createBopQuotation(req.params.id, req.body, req.user);
+    res.status(201).json({
+      success: true,
+      data: { quotation: result.quotation, project: result.project },
+      message: 'BOP quotation created.'
+    });
+  } catch (error) {
+    logger.error(`Error creating BOP quotation for project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to create BOP quotation',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Admin-only: revert a previously-marked-paid installment. Resets the
+ * installment to pending and soft-deletes the linked invoice.
+ */
+exports.revertInstallmentPayment = async (req, res) => {
+  try {
+    const installmentNumber = parseInt(req.params.installmentNumber, 10);
+    if (!Number.isInteger(installmentNumber) || installmentNumber < 1 || installmentNumber > 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid installment number'
+      });
+    }
+
+    const result = await quotationService.revertInstallmentPayment(
+      req.params.id,
+      req.params.quotationId,
+      installmentNumber,
+      req.user
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        quotation: result.quotation,
+        revertedInstallment: result.revertedInstallment,
+        invoiceNumber: result.invoiceNumber,
+        invoiceSoftDeleted: result.invoiceSoftDeleted
+      },
+      message: result.invoiceSoftDeleted
+        ? `Installment ${result.revertedInstallment} reverted. Invoice ${result.invoiceNumber} removed.`
+        : `Installment ${result.revertedInstallment} reverted.`
+    });
+  } catch (error) {
+    logger.error(`Error reverting installment payment: ${error.message}`);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to revert installment payment',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Mark a quotation installment as paid and idempotently create an invoice
+ * for the paid amount. Returns the (possibly pre-existing) invoice so the
+ * client can immediately offer/download the PDF.
+ */
+exports.markInstallmentPaid = async (req, res) => {
+  try {
+    const installmentNumber = parseInt(req.params.installmentNumber, 10);
+    if (!Number.isInteger(installmentNumber) || installmentNumber < 1 || installmentNumber > 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid installment number'
+      });
+    }
+
+    const result = await quotationService.markInstallmentPaid(
+      req.params.id,
+      req.params.quotationId,
+      installmentNumber,
+      req.user
+    );
+
+    res.status(result.alreadyPaid ? 200 : 201).json({
+      success: true,
+      alreadyPaid: result.alreadyPaid,
+      data: {
+        quotation: result.quotation,
+        invoice: result.invoice.toClientJSON ? result.invoice.toClientJSON() : result.invoice
+      },
+      message: result.alreadyPaid
+        ? 'Installment was already paid. Existing invoice returned.'
+        : 'Installment marked paid. Invoice created.'
+    });
+  } catch (error) {
+    logger.error(`Error marking installment paid: ${error.message}`);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to mark installment paid',
       message: error.message
     });
   }

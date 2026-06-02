@@ -130,6 +130,52 @@ class FarmDesignService {
     };
   }
 
+  /**
+   * Soft-delete a landscaping design. Authorization is enforced at the
+   * route layer. Admins may delete any design; managers may delete designs
+   * they uploaded themselves.
+   */
+  async deleteDesign(projectId, designId, user, { allowAnyUploader = false } = {}) {
+    const project = await Project.findOne(
+      { _id: projectId, 'landscapingDesigns._id': designId },
+      { 'landscapingDesigns.$': 1 }
+    ).lean();
+
+    if (!project || !project.landscapingDesigns?.[0]) {
+      throw { status: 404, message: 'Design not found on this project' };
+    }
+
+    const design = project.landscapingDesigns[0];
+    if (!allowAnyUploader) {
+      const uploader = design.uploadedBy?.toString();
+      if (!uploader || uploader !== user._id.toString()) {
+        throw {
+          status: 403,
+          message: 'You may only delete designs that you uploaded.'
+        };
+      }
+    }
+
+    const result = await Project.updateOne(
+      { _id: projectId, 'landscapingDesigns._id': designId },
+      {
+        $set: {
+          'landscapingDesigns.$.status': 'DELETED',
+          'landscapingDesigns.$.deletedAt': new Date(),
+          'landscapingDesigns.$.deletedBy': user._id,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (!result.matchedCount) {
+      throw { status: 404, message: 'Design not found on this project' };
+    }
+
+    logger.info(`[FarmDesign] Design soft-deleted: project=${projectId}, designId=${designId}, by=${user._id}`);
+    return { success: true, mediaId: design.mediaId };
+  }
+
   getMaxFilesPerUpload() {
     return MAX_FILES_PER_UPLOAD;
   }

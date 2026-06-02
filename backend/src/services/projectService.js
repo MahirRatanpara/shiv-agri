@@ -108,13 +108,19 @@ class ProjectService {
       startBefore,
       isFavorite,
       submittedBy,
-      showDrafts
+      showDrafts,
+      includeArchived
     } = filters;
 
     const { sortBy = 'updatedAt', sortOrder = 'desc' } = sort;
 
     // Build query
     const query = { isDeleted: false };
+
+    // Hide archived farms from main listings unless explicitly requested.
+    if (!includeArchived) {
+      query.isArchived = { $ne: true };
+    }
 
     // Return both draft and non-draft projects - filtering will be done on frontend
     // No draft filtering here

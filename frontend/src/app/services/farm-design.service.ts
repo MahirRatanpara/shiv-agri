@@ -6,6 +6,7 @@ import { environment } from '../environments/environment';
 export type FarmDesignType = 'image' | 'video';
 
 export interface FarmDesignRef {
+  _id?: string;
   mediaId: string;
   url: string;
   mimeType: string;
@@ -50,6 +51,16 @@ export class FarmDesignService {
           pagination: response.pagination
         }))
       );
+  }
+
+  /**
+   * Soft-delete a landscaping design. Backend enforces role gating:
+   * admin can delete any design; manager can only delete their own uploads.
+   */
+  deleteDesign(projectId: string, designId: string): Observable<void> {
+    return this.http
+      .delete<any>(`${this.apiUrl}/projects/${projectId}/designs/${designId}`)
+      .pipe(map(() => void 0));
   }
 
   uploadDesigns(

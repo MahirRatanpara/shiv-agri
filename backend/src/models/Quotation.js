@@ -10,7 +10,25 @@ const installmentSchema = new mongoose.Schema({
     default: 'pending'
   },
   paidAt: { type: Date },
-  paidAmount: { type: Number, default: 0 }
+  paidAmount: { type: Number, default: 0 },
+  // Set when an admin/manager marks the installment as paid; used for
+  // idempotent invoice creation so re-clicking "Mark Paid" returns the
+  // existing invoice rather than creating a duplicate.
+  invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
+  invoiceNumber: { type: String, trim: true },
+  paidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { _id: false });
+
+/**
+ * BOP (Bill of Project) line item — used only for landscaping BOP quotations.
+ * Annual farm quotations don't use this; they're driven entirely by
+ * `amountPerYear` + auto-derived installments.
+ */
+const bopLineItemSchema = new mongoose.Schema({
+  description: { type: String, trim: true, required: true },
+  quantity: { type: Number, min: 0, default: 1 },
+  rate: { type: Number, min: 0, default: 0 },
+  total: { type: Number, min: 0, default: 0 }
 }, { _id: false });
 
 const quotationSchema = new mongoose.Schema({
@@ -21,11 +39,43 @@ const quotationSchema = new mongoose.Schema({
     index: true
   },
 
+  /**
+   * Quotation kind.
+   *  - 'annual': the existing annual farm quotation that drives the project
+   *    quotation/acceptance status flow (default for backward compatibility).
+   *  - 'bop': adhoc Bill-of-Project quotation for landscaping projects.
+   *    BOP quotations are NOT part of the pending-quotation status flow,
+   *    have their own line items, and don't supersede annual quotations.
+   */
+  kind: {
+    type: String,
+    enum: ['annual', 'bop'],
+    default: 'annual',
+    index: true
+  },
+
   // Rich text HTML content composed by the admin/manager in the quotation editor
   content: {
     type: String,
     required: true,
     trim: true
+  },
+
+  /**
+   * Line items for BOP quotations. Empty for annual quotations.
+   */
+  bopItems: {
+    type: [bopLineItemSchema],
+    default: []
+  },
+
+  /**
+   * Optional title for BOP quotations (e.g. "Hardscape Phase 1 BOP").
+   */
+  title: {
+    type: String,
+    trim: true,
+    maxlength: 200
   },
 
   // Plain-text fallback derived from content (for previews / search)
@@ -94,8 +144,13 @@ const quotationSchema = new mongoose.Schema({
 quotationSchema.index({ project: 1, status: 1, createdAt: -1 });
 
 quotationSchema.pre('validate', function(next) {
-  // Auto-build the 4 quarterly installments from amountPerYear when missing
-  if ((!this.installments || this.installments.length !== 4) && this.amountPerYear > 0) {
+  // Auto-build the 4 quarterly installments from amountPerYear when missing.
+  // BOP quotations are adhoc and have NO installments — skip the auto-build.
+  if (
+    this.kind !== 'bop' &&
+    (!this.installments || this.installments.length !== 4) &&
+    this.amountPerYear > 0
+  ) {
     const start = this.startDate ? new Date(this.startDate) : new Date();
     const installmentAmount = Math.round((this.amountPerYear / 4) * 100) / 100;
     const installments = [];

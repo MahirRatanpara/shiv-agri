@@ -40,7 +40,7 @@ const farmDesignUpload = multer({
   }
 });
 
-const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
+const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|video\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
 
 const farmPrescriptionUpload = multer({
   storage: multer.memoryStorage(),
@@ -216,6 +216,16 @@ router.get('/export',
   authenticate,
   requirePermission('project.export'),
   projectController.exportProjects
+);
+
+/**
+ * @route   GET /api/projects/farm-names-by-phone
+ * @desc    Farm-name suggestions for a phone number (testing grids).
+ * @access  Private (any authenticated user)
+ */
+router.get('/farm-names-by-phone',
+  authenticate,
+  projectController.getFarmNamesByPhone
 );
 
 /**
@@ -623,33 +633,51 @@ router.patch('/:id/media/:mediaId/attend',
 
 /**
  * @route   DELETE /api/projects/:id/media/:mediaId
- * @desc    Soft-delete a single media item from a project (admin only).
- * @access  Private (Admin)
+ * @desc    Soft-delete a single media item from a project.
+ *          - Admin may delete any item (quota refunds).
+ *          - Manager may delete items they uploaded (quota refunds).
+ *          - Farm owner may delete their own UNATTENDED uploads (NO quota
+ *            refund — the weekly cap is one-way).
+ *          Role detection and per-mode policy are enforced inside the
+ *          controller, so the route just requires authentication.
+ * @access  Private (Admin / Manager / Farm owner)
  */
 router.delete('/:id/media/:mediaId',
   authenticate,
-  (req, res, next) => {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied. Admin privileges required to delete farm media.'
-      });
-    }
-    next();
-  },
   farmMediaController.deleteMedia
 );
 
 /**
  * @route   POST /api/projects/:id/media
  * @desc    Upload up to 5 photos/videos to a farm project (max 25MB each).
- *          ONLY the farm owner who registered the farm may upload here.
- *          Managers and admins use /designs or /prescriptions instead.
- * @access  Private (farm owner only)
+ *          Farm owner uploads count toward weekly quota and start unattended.
+ *          Admin/manager uploads bypass the quota and land already attended.
+ * @access  Private (farm owner OR admin/manager)
  */
 router.post('/:id/media',
   authenticate,
-  requireFarmOwner,
+  async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Admins always pass.
+    if (req.user.role === 'admin') {
+      req.mediaUploadContext = { isPrivileged: true };
+      return next();
+    }
+
+    // Managers (or anyone holding farm.projects.update) also pass as privileged.
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    if (userPermissions.includes('farm.projects.update')) {
+      req.mediaUploadContext = { isPrivileged: true };
+      return next();
+    }
+
+    // Otherwise fall back to the farm-owner check.
+    return requireFarmOwner(req, res, next);
+  },
   (req, res, next) => {
     farmMediaUpload.array('files', 5)(req, res, (err) => {
       if (err) {
@@ -693,6 +721,18 @@ router.post('/:id/designs',
     });
   },
   farmDesignController.uploadDesigns
+);
+
+/**
+ * @route   DELETE /api/projects/:id/designs/:designId
+ * @desc    Soft-delete a landscaping design. Admin deletes any; manager
+ *          deletes their own uploads.
+ * @access  Private (Admin / Manager)
+ */
+router.delete('/:id/designs/:designId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmDesignController.deleteDesign
 );
 
 // ========================
@@ -761,6 +801,18 @@ router.get('/:id/prescriptions/:prescriptionId/pdf',
   authenticate,
   requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
   farmPrescriptionController.downloadPrescriptionPdf
+);
+
+/**
+ * @route   DELETE /api/projects/:id/prescriptions/:prescriptionId
+ * @desc    Soft-delete a prescription. Admin deletes any; manager deletes
+ *          only items they uploaded.
+ * @access  Private (Admin / Manager)
+ */
+router.delete('/:id/prescriptions/:prescriptionId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.deletePrescription
 );
 
 // ========================
@@ -880,6 +932,43 @@ router.get('/:id/quotations/:quotationId/pdf',
   authenticate,
   requireProjectAccess(['farm.projects.view', 'farms.view']),
   quotationController.downloadQuotationPdf
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations/bop
+ * @desc    Create an adhoc BOP (Bill of Project) quotation for a landscaping
+ *          project. BOP quotations are separate from the annual pending-quotation
+ *          flow and do not change the project status.
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations/bop',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.createBopQuotation
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid
+ * @desc    Mark a quotation installment as paid and create an invoice
+ *          idempotently. Returns the (possibly pre-existing) invoice.
+ * @access  Private (manager or admin)
+ */
+router.patch('/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.markInstallmentPaid
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/installments/:installmentNumber/revert
+ * @desc    Admin-only: revert a previously-marked-paid installment back to
+ *          pending and soft-delete the linked invoice.
+ * @access  Private (admin only)
+ */
+router.patch('/:id/quotations/:quotationId/installments/:installmentNumber/revert',
+  authenticate,
+  requireAdmin,
+  quotationController.revertInstallmentPayment
 );
 
 // ========================

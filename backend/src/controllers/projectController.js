@@ -40,6 +40,7 @@ exports.getProjects = async (req, res) => {
       startAfter,
       startBefore,
       isFavorite,
+      includeArchived,
       sortBy,
       sortOrder
     } = req.query;
@@ -72,6 +73,7 @@ exports.getProjects = async (req, res) => {
       startAfter,
       startBefore,
       isFavorite: isFavorite === 'true',
+      includeArchived: includeArchived === 'true',
       submittedBy: submittedBy === 'me' ? req.user._id : submittedBy
     };
 
@@ -126,6 +128,57 @@ exports.getProjectStats = async (req, res) => {
       error: 'Failed to fetch project statistics',
       message: error.message
     });
+  }
+};
+
+/**
+ * @route   GET /api/projects/farm-names-by-phone
+ * @desc    Suggest farm names linked to a phone number. Used by the testing
+ *          grids (soil/water/fertilizer) so entering a phone surfaces all
+ *          farms the farmer already has. Matching uses the same last-10-digits
+ *          normalization as farmReportLinker.
+ * @access  Private (any authenticated user)
+ */
+exports.getFarmNamesByPhone = async (req, res) => {
+  try {
+    const Project = require('../models/Project');
+    const { normalizePhone } = require('../services/farmReportLinker');
+    const rawPhone = (req.query.phone || '').toString();
+    const phoneKey = normalizePhone(rawPhone);
+
+    if (!phoneKey || phoneKey.length < 10) {
+      return res.status(200).json({ success: true, farmNames: [] });
+    }
+
+    // Match by last 10 digits — clientPhone may include country code or spaces.
+    // Use a regex anchored to end so "+91 9876543210", "919876543210", and
+    // "9876543210" all match the same phoneKey.
+    const phoneRegex = new RegExp(`${phoneKey}$`);
+    const candidates = await Project.find({
+      isDeleted: false,
+      isArchived: { $ne: true },
+      clientPhone: { $regex: phoneRegex }
+    })
+      .select('name clientPhone')
+      .limit(50)
+      .lean();
+
+    // De-dupe by case-insensitive farm name while preserving order.
+    const seen = new Set();
+    const farmNames = [];
+    for (const p of candidates) {
+      const name = (p.name || '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      farmNames.push(name);
+    }
+
+    res.status(200).json({ success: true, farmNames });
+  } catch (error) {
+    logger.error('Error fetching farm names by phone: ' + error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch farm names' });
   }
 };
 

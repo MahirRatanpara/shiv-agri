@@ -77,6 +77,24 @@ const invoiceSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Auto-generated invoices from the quotation flow populate these so the
+  // PDF template can render the full Indian-style address block.
+  taluka: {
+    type: String,
+    trim: true
+  },
+  district: {
+    type: String,
+    trim: true
+  },
+  state: {
+    type: String,
+    trim: true
+  },
+  pincode: {
+    type: String,
+    trim: true
+  },
   phoneNumber: {
     type: String,
     trim: true
@@ -84,6 +102,18 @@ const invoiceSchema = new mongoose.Schema({
   mobileNumber: {
     type: String,
     trim: true
+  },
+  // Soft link back to the quotation/installment that generated this invoice
+  // (used by the admin revert flow). Manual invoices leave these null.
+  sourceQuotationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quotation',
+    index: true
+  },
+  sourceInstallmentNumber: {
+    type: Number,
+    min: 1,
+    max: 4
   },
   // Line Items
   items: {
@@ -232,8 +262,14 @@ invoiceSchema.methods.toClientJSON = function() {
     referenceNumber: this.referenceNumber,
     location: this.location,
     village: this.village,
+    taluka: this.taluka,
+    district: this.district,
+    state: this.state,
+    pincode: this.pincode,
     phoneNumber: this.phoneNumber,
     mobileNumber: this.mobileNumber,
+    sourceQuotationId: this.sourceQuotationId,
+    sourceInstallmentNumber: this.sourceInstallmentNumber,
     items: this.items,
     subtotal: this.subtotal,
     taxAmount: this.taxAmount,

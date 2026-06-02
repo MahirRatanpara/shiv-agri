@@ -135,8 +135,11 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
       const matchesSource = !source || farm.registrationSource === source;
       const matchesLandscaping = !this.showLandscapingOnly || farm.needsLandscapingConsultancy === true;
       const matchesDistrict = !district || (farm.location?.district || '').toLowerCase() === district;
+      // Hide archived farms from main listings (belt-and-braces — backend
+      // already filters by default).
+      const notArchived = !farm.isArchived;
 
-      return matchesText && matchesStatus && matchesSource && matchesLandscaping && matchesDistrict;
+      return matchesText && matchesStatus && matchesSource && matchesLandscaping && matchesDistrict && notArchived;
     });
   }
 

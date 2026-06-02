@@ -131,6 +131,37 @@ export class FarmManagementService {
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Return farm names linked to a given phone number. Used by the testing
+   * grids (soil/water/fertilizer) to suggest farm names once the user has
+   * typed a phone number. Cached per normalized phone to avoid repeat calls
+   * as the user tabs across the same row.
+   */
+  private farmNameCache: Map<string, string[]> = new Map();
+
+  getFarmNamesByPhone(phone: string): Observable<string[]> {
+    const key = (phone || '').replace(/\D/g, '').slice(-10);
+    if (!key || key.length < 10) {
+      return new Observable<string[]>((sub) => { sub.next([]); sub.complete(); });
+    }
+    if (this.farmNameCache.has(key)) {
+      const cached = this.farmNameCache.get(key) || [];
+      return new Observable<string[]>((sub) => { sub.next(cached); sub.complete(); });
+    }
+    return this.http
+      .get<{ success: boolean; farmNames: string[] }>(
+        `${this.apiUrl}/projects/farm-names-by-phone`,
+        { params: new HttpParams().set('phone', key) }
+      )
+      .pipe(
+        map((response) => {
+          const names = response?.farmNames || [];
+          this.farmNameCache.set(key, names);
+          return names;
+        })
+      );
+  }
+
   getFarms(options: {
     status?: string;
     submittedBy?: 'me';
