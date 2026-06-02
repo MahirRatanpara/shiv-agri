@@ -54,6 +54,91 @@
         (formSubmit)="submitFarm($event)"
         (cancel)="cancel()"
       ></app-farm-registration-form>
+
+      <!-- ============================
+           Inline quotation block (manager/admin only).
+           Lets the manager attach a quotation in one step and activate
+           the farm to "ready" (Running).
+           ============================ -->
+      <section class="inline-quotation-block" *ngIf="isManagerMode">
+        <header class="inline-quotation-head">
+          <label class="inline-toggle">
+            <input
+              type="checkbox"
+              [checked]="includeQuotation"
+              (change)="toggleIncludeQuotation()"
+              [disabled]="isSubmitting"
+            />
+            <span class="inline-toggle-text">
+              <strong>
+                <i class="fas fa-file-invoice-dollar"></i>
+                Add quotation now
+              </strong>
+              <small>Attach an annual quotation when you save the farm — the farmer won't need to accept separately.</small>
+            </span>
+          </label>
+        </header>
+
+        <div class="inline-quotation-body" *ngIf="includeQuotation">
+          <div class="inline-quotation-grid">
+            <label class="quotation-field">
+              <span><i class="fas fa-rupee-sign"></i> Annual amount (₹)</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [(ngModel)]="quotationAmountPerYear"
+                placeholder="e.g. 60000"
+                [disabled]="isSubmitting"
+              />
+            </label>
+            <label class="quotation-field">
+              <span><i class="fas fa-calendar"></i> First instalment date</span>
+              <input
+                type="date"
+                [(ngModel)]="quotationStartDate"
+                [disabled]="isSubmitting"
+              />
+            </label>
+          </div>
+
+          <label class="quotation-field">
+            <span><i class="fas fa-align-left"></i> Quotation details</span>
+            <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('italic')" title="Italic"><i class="fas fa-italic"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('underline')" title="Underline"><i class="fas fa-underline"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('insertUnorderedList')" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('insertOrderedList')" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('removeFormat')" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+            </div>
+            <div
+              #inlineQuotationEditor
+              class="quotation-editor"
+              contenteditable="true"
+              (input)="syncQuotationContent()"
+              placeholder="Describe the scope of the annual consultancy..."
+            ></div>
+          </label>
+
+          <label class="inline-toggle inline-activate">
+            <input
+              type="checkbox"
+              [(ngModel)]="activateAfterCreate"
+              [disabled]="isSubmitting"
+            />
+            <span class="inline-toggle-text">
+              <strong>Activate immediately</strong>
+              <small>Move the farm to <em>Running</em> (ready) right after the quotation is attached.</small>
+            </span>
+          </label>
+
+          <div class="inline-quotation-help" *ngIf="includeQuotation">
+            <i class="fas fa-info-circle"></i>
+            The quotation will be attached as <strong>accepted</strong> and visible in the farm's history. The farmer will not need to accept again.
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </main>

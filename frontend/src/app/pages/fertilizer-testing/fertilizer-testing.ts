@@ -7,10 +7,13 @@ import { AgGridAngular } from 'ag-grid-angular';
 import { ColDef, GridApi, GridReadyEvent, CellValueChangedEvent } from 'ag-grid-community';
 import { FertilizerTestingService, FertilizerSession, FertilizerSampleData } from '../../services/fertilizer-testing.service';
 import { SoilTestingService } from '../../services/soil-testing.service';
+import { FarmManagementService } from '../../services/farm-management.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { FertilizerSessionStateManager, FertilizerSessionStatus } from '../../models/fertilizer-session-state.model';
+import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
+import { firstValueFrom } from 'rxjs';
 
 type CropType = 'normal' | 'small-fruit' | 'large-fruit';
 
@@ -18,7 +21,7 @@ type CropType = 'normal' | 'small-fruit' | 'large-fruit';
   selector: 'app-fertilizer-testing',
   standalone: true,
   imports: [CommonModule, AgGridAngular, HasPermissionDirective],
-  providers: [FertilizerTestingService, SoilTestingService, PdfService],
+  providers: [FertilizerTestingService, SoilTestingService, FarmManagementService, PdfService],
   templateUrl: './fertilizer-testing.html',
   styleUrls: ['./fertilizer-testing.css'],
 })
@@ -92,6 +95,8 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
     floatingFilter: true,
     autoHeaderHeight: true,
     wrapHeaderText: true,
+    suppressMovable: true,
+    lockPosition: true,
   };
 
   // Row Data
@@ -103,14 +108,41 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   private soilDataCache: Map<string, any> = new Map();
   private currentEditingRowId: string | null = null;
 
+  // Auto-save timeout
+  private saveTimeout: any = null;
+
   constructor(
     private fertilizerTestingService: FertilizerTestingService,
     private soilTestingService: SoilTestingService,
+    private farmService: FarmManagementService,
     private pdfService: PdfService,
     private toastService: ToastService,
     private route: ActivatedRoute,
     private router: Router
   ) { }
+
+  /**
+   * Resolve farm-name suggestions for a fertilizer row by way of its linked
+   * soil sample (fertilizer rows don't carry a phone of their own).
+   */
+  private async getFarmNameSuggestionsForRow(row: any): Promise<string[]> {
+    if (!row?.soilSampleId) return [];
+    try {
+      // Reuse the soilDataCache so we don't hit the soil API repeatedly.
+      let soilData: any = this.soilDataCache.get(row.soilSampleId);
+      if (!soilData) {
+        soilData = await firstValueFrom(
+          this.soilTestingService.getSoilDataForSample(row.soilSampleId)
+        );
+        if (soilData) this.soilDataCache.set(row.soilSampleId, soilData);
+      }
+      const phone = soilData?.mobileNo;
+      if (!phone) return [];
+      return await firstValueFrom(this.farmService.getFarmNamesByPhone(String(phone)));
+    } catch {
+      return [];
+    }
+  }
 
   ngOnInit(): void {
     this.initializeColumnDefinitions();
@@ -202,9 +234,15 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       {
         field: 'farmsName',
         headerName: "Farm Name",
-        editable: false,
+        editable: true,
         filter: true,
         minWidth: 160,
+        // Suggest farm names linked to the soil sample's phone number. Users
+        // can still type any custom value — the datalist is suggestion-only.
+        cellEditor: DatalistCellEditor,
+        cellEditorParams: {
+          values: (cellParams: any) => this.getFarmNameSuggestionsForRow(cellParams?.data)
+        }
       },
       {
         field: 'cropName',
@@ -1219,6 +1257,50 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
 
     // Auto-resize the column that was edited
     event.api.autoSizeColumns([event.column.getColId()], false);
+
+    // Trigger auto-save after 2 seconds of inactivity
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.autoSaveSession();
+    }, 2000);
+  }
+
+  /**
+   * Auto-save session data without refreshing the grid
+   */
+  private autoSaveSession(): void {
+    if (!this.currentSession || !this.currentSession._id) {
+      return;
+    }
+
+    const allGridData: FertilizerSampleData[] = this.extractGridData();
+
+    if (allGridData.length === 0) {
+      return;
+    }
+
+    this.fertilizerTestingService.bulkUpdateSamples(this.currentSession._id, allGridData).subscribe({
+      next: (response: any) => {
+        // Update IDs without refreshing the grid
+        if (response && Array.isArray(response.samples)) {
+          this.gridApi.forEachNode((node, index) => {
+            if (node.data && response.samples[index]) {
+              const updatedSample = response.samples[index];
+              if (!node.data._id && updatedSample._id) {
+                node.data._id = updatedSample._id;
+              }
+            }
+          });
+        }
+        this.toastService.success('Changes saved', 1000);
+      },
+      error: (error) => {
+        console.error('Auto-save failed:', error);
+        this.toastService.error('Auto-save failed. Please try again.');
+      }
+    });
   }
 
   onSelectionChanged() {

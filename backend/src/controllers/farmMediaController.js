@@ -50,21 +50,27 @@ exports.uploadMedia = async (req, res) => {
       }
     }
 
-    const reservation = await farmMediaService.reserveQuota(projectId, files.length);
+    // Admin/manager uploads bypass the farmer's weekly quota. The privilege
+    // flag is set by the route's auth gate (see routes/projects.js).
+    const bypassQuota = !!req.mediaUploadContext?.isPrivileged;
 
-    if (!reservation.reserved) {
-      const quota = reservation.snapshot;
-      const remaining = Math.max(quota.limit - quota.used, 0);
-      logger.warn(`[FarmMedia] Quota exhausted for project=${projectId}: used=${quota.used}, limit=${quota.limit}, requested=${files.length}`);
-      setQuotaHeaders(res, quota);
-      return res.status(429).json({
-        success: false,
-        error: 'Weekly upload limit reached',
-        message: remaining > 0
-          ? `Only ${remaining} more upload(s) allowed this week. Resets ${new Date(quota.resetsAt).toUTCString()}.`
-          : `Weekly limit of ${quota.limit} uploads reached. Resets ${new Date(quota.resetsAt).toUTCString()}.`,
-        quota
-      });
+    if (!bypassQuota) {
+      const reservation = await farmMediaService.reserveQuota(projectId, files.length);
+
+      if (!reservation.reserved) {
+        const quota = reservation.snapshot;
+        const remaining = Math.max(quota.limit - quota.used, 0);
+        logger.warn(`[FarmMedia] Quota exhausted for project=${projectId}: used=${quota.used}, limit=${quota.limit}, requested=${files.length}`);
+        setQuotaHeaders(res, quota);
+        return res.status(429).json({
+          success: false,
+          error: 'Weekly upload limit reached',
+          message: remaining > 0
+            ? `Only ${remaining} more upload(s) allowed this week. Resets ${new Date(quota.resetsAt).toUTCString()}.`
+            : `Weekly limit of ${quota.limit} uploads reached. Resets ${new Date(quota.resetsAt).toUTCString()}.`,
+          quota
+        });
+      }
     }
 
     const uploaded = [];
@@ -72,7 +78,7 @@ exports.uploadMedia = async (req, res) => {
 
     for (const file of files) {
       try {
-        const ref = await farmMediaService.uploadMedia(projectId, file, req.user);
+        const ref = await farmMediaService.uploadMedia(projectId, file, req.user, { bypassQuota });
         uploaded.push(ref);
       } catch (err) {
         const status = err?.status || 500;
@@ -82,7 +88,7 @@ exports.uploadMedia = async (req, res) => {
       }
     }
 
-    if (failures.length) {
+    if (failures.length && !bypassQuota) {
       await farmMediaService.releaseQuota(projectId, failures.length);
     }
 
@@ -252,18 +258,77 @@ exports.markAttended = async (req, res) => {
 };
 
 /**
- * Soft-delete a media item. Admin-only; route enforces authorization.
+ * Soft-delete a media item. Three callers are supported:
+ *  - Admin: deletes any item, quota refunds normally
+ *  - Manager (`farm.projects.update`): deletes own uploads only,
+ *    quota refunds normally
+ *  - Farm owner: deletes own UNATTENDED uploads only, NO quota refund
+ *    (the weekly cap is one-way so the farmer can't recycle to bypass it)
+ *
+ * Role is detected here so the route can stay permissive — see
+ * `routes/projects.js` which only requires authentication for this endpoint.
  */
 exports.deleteMedia = async (req, res) => {
   const projectId = req.params.id;
   const mediaId = req.params.mediaId;
   try {
-    logger.info(`[FarmMedia] DELETE /projects/${projectId}/media/${mediaId} by user=${req.user._id}`);
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
 
-    await farmMediaService.deleteMedia(projectId, mediaId, req.user);
+    const isAdmin = req.user.role === 'admin';
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    const isManager = !isAdmin && userPermissions.includes('farm.projects.update');
+
+    // For the owner path we need the project's ownership info up-front.
+    let isOwner = false;
+    if (!isAdmin && !isManager) {
+      const Project = require('../models/Project');
+      const project = await Project.findById(projectId)
+        .select('submittedBy clientId createdBy')
+        .lean();
+      if (!project) {
+        return res.status(404).json({ success: false, error: 'Project not found' });
+      }
+      const me = req.user._id.toString();
+      isOwner = [project.submittedBy, project.clientId, project.createdBy]
+        .filter(Boolean)
+        .map((id) => id.toString())
+        .includes(me);
+
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          error: 'Insufficient permissions',
+          message: 'Only the farm owner, a manager, or an admin can delete farm media.'
+        });
+      }
+    }
+
+    const mode = isAdmin ? 'admin' : (isManager ? 'manager' : 'owner');
+    logger.info(`[FarmMedia] DELETE /projects/${projectId}/media/${mediaId} by user=${req.user._id} (mode=${mode})`);
+
+    const result = await farmMediaService.deleteMedia(projectId, mediaId, req.user, {
+      allowAnyUploader: isAdmin,
+      // Owner self-delete: never refund. Manager/admin: refund as before.
+      refundQuota: !isOwner,
+      // Owner can only delete still-unattended items (their own uploads
+      // that the team hasn't reviewed yet). Once attended, only admin/manager
+      // can remove the item.
+      requireUnattended: isOwner
+    });
+
+    // Surface fresh quota headers so the UI updates the badge after a refund.
+    const snapshot = await farmMediaService.getQuotaSnapshot(projectId);
+    setQuotaHeaders(res, snapshot);
+
     return res.status(200).json({
       success: true,
-      message: 'Media removed'
+      message: 'Media removed',
+      quotaRefunded: !!result.quotaRefunded,
+      mode,
+      quota: snapshot
     });
   } catch (error) {
     const status = error?.status || 500;

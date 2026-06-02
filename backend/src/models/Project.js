@@ -280,13 +280,20 @@ const projectSchema = new mongoose.Schema({
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedByName: { type: String },
     uploadedAt: { type: Date, default: Date.now, index: true },
+    // Tracks whether this upload counted toward the farmer's weekly quota.
+    // Farmer uploads default to true; admin/manager uploads bypass the quota
+    // and are stamped countsTowardQuota=false so deletes don't refund anything.
+    countsTowardQuota: { type: Boolean, default: true },
     // Attended workflow: new uploads land in the "unattended" bucket
     // (shown as thumbnails). The project's owner/workers can acknowledge
     // them by marking attended, which moves them to the paginated drawer.
     attended: { type: Boolean, default: false },
     attendedAt: { type: Date },
     attendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    attendedByName: { type: String }
+    attendedByName: { type: String },
+    // Soft-delete metadata (populated when an admin/manager removes the item)
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }],
 
   // Landscaping designs (images/videos uploaded by managers/admins for landscaping projects)
@@ -301,7 +308,10 @@ const projectSchema = new mongoose.Schema({
     status: { type: String, default: 'ACTIVE' },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedByName: { type: String },
-    uploadedAt: { type: Date, default: Date.now, index: true }
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Soft-delete metadata
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }],
 
   // Lab testing reports linked to this farm (soil / water / fertilizer).
@@ -346,7 +356,7 @@ const projectSchema = new mongoose.Schema({
     source: { type: String, enum: ['file', 'manual', 'structured'], default: 'file' },
     docType: {
       type: String,
-      enum: ['image', 'pdf', 'docx', 'text', 'manual', 'structured'],
+      enum: ['image', 'video', 'pdf', 'docx', 'text', 'manual', 'structured'],
       required: true
     },
     title: { type: String, trim: true },
@@ -424,7 +434,10 @@ const projectSchema = new mongoose.Schema({
     status: { type: String, default: 'ACTIVE' },
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     uploadedByName: { type: String },
-    uploadedAt: { type: Date, default: Date.now, index: true }
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Soft-delete metadata
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }],
 
   // Project Specific Data

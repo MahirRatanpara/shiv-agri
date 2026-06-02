@@ -538,11 +538,11 @@
             <button
               type="button"
               class="media-delete"
-              *ngIf="canDeleteMedia"
+              *ngIf="canDeleteMediaItem(item, { isAttended: false })"
               [disabled]="deletingMediaIds.has(item.mediaId)"
               (click)="confirmDeleteMedia(item, $event)"
               aria-label="Delete photo"
-              title="Delete photo (admin)"
+              [title]="isAdmin ? 'Delete photo (admin)' : 'Remove this photo'"
             >
               <i
                 class="fas"
@@ -605,11 +605,11 @@
               <button
                 type="button"
                 class="media-delete"
-                *ngIf="canDeleteMedia"
+                *ngIf="canDeleteMediaItem(item, { isAttended: true })"
                 [disabled]="deletingMediaIds.has(item.mediaId)"
                 (click)="confirmDeleteMedia(item, $event)"
                 aria-label="Delete photo"
-                title="Delete photo (admin)"
+                title="Delete photo"
               >
                 <i
                   class="fas"
@@ -743,27 +743,42 @@
       </div>
 
       <div class="media-grid" *ngIf="designItems.length">
-        <button
-          type="button"
-          class="media-tile"
+        <div
+          class="media-tile media-tile-wrapper"
           *ngFor="let item of designItems; trackBy: trackDesign"
-          (click)="openDesignLightbox(item)"
-          [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : 'View design uploaded ') + (item.uploadedAt | date:'medium')"
         >
-          <ng-container *ngIf="item.type === 'image'">
-            <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
-          </ng-container>
-          <ng-container *ngIf="item.type === 'video'">
-            <video [src]="item.url" preload="metadata" muted playsinline></video>
-            <span class="play-icon" aria-hidden="true">
-              <i class="fas fa-play"></i>
-            </span>
-          </ng-container>
-          <div class="media-overlay">
-            <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
-            <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
-          </div>
-        </button>
+          <button
+            type="button"
+            class="media-tile-inner"
+            (click)="openDesignLightbox(item)"
+            [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : 'View design uploaded ') + (item.uploadedAt | date:'medium')"
+          >
+            <ng-container *ngIf="item.type === 'image'">
+              <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
+            </ng-container>
+            <ng-container *ngIf="item.type === 'video'">
+              <video [src]="item.url" preload="metadata" muted playsinline></video>
+              <span class="play-icon" aria-hidden="true">
+                <i class="fas fa-play"></i>
+              </span>
+            </ng-container>
+            <div class="media-overlay">
+              <span class="media-date">{{ item.uploadedAt | date:'MMM d, h:mm a' }}</span>
+              <span class="media-author" *ngIf="item.uploadedByName">by {{ item.uploadedByName }}</span>
+            </div>
+          </button>
+          <button
+            *ngIf="canDeleteDesign(item)"
+            type="button"
+            class="media-tile-delete"
+            (click)="confirmDeleteDesign(item, $event)"
+            [disabled]="deletingDesignIds.has(item._id || '')"
+            [attr.aria-label]="'Delete this design'"
+            title="Delete design"
+          >
+            <i class="fas" [class.fa-trash-alt]="!deletingDesignIds.has(item._id || '')" [class.fa-circle-notch]="deletingDesignIds.has(item._id || '')" [class.fa-spin]="deletingDesignIds.has(item._id || '')"></i>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -1052,6 +1067,17 @@
               >
                 <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(item)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(item)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(item)"></i>
                 <span>Download</span>
+              </button>
+              <button
+                *ngIf="canDeletePrescription(item)"
+                type="button"
+                class="report-btn danger-ghost"
+                (click)="confirmDeletePrescription(item, $event)"
+                [disabled]="deletingPrescriptionIds.has(item._id || '')"
+                [attr.aria-label]="'Delete ' + (item.title || 'prescription')"
+              >
+                <i class="fas" [class.fa-trash-alt]="!deletingPrescriptionIds.has(item._id || '')" [class.fa-circle-notch]="deletingPrescriptionIds.has(item._id || '')" [class.fa-spin]="deletingPrescriptionIds.has(item._id || '')"></i>
+                <span>Delete</span>
               </button>
             </div>
           </div>
@@ -1372,6 +1398,39 @@
   <ng-container *ngIf="!isLoading && project && activeTab === 'quotation' && showQuotationTab">
     <section class="quotation-section">
 
+      <!-- ============== Subsection chips (Annual / BOP) ============== -->
+      <!-- Only show the segment when the farm is landscaping — otherwise
+           there's only one subsection and the chips would be redundant. -->
+      <nav class="quotation-subtabs" *ngIf="showBopSection" role="tablist" aria-label="Quotation type">
+        <button
+          type="button"
+          role="tab"
+          class="quotation-subtab"
+          [class.active]="quotationSubTab === 'annual'"
+          [attr.aria-selected]="quotationSubTab === 'annual'"
+          (click)="setQuotationSubTab('annual')"
+        >
+          <i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>
+          <span>Annual Quotation</span>
+          <span class="subtab-count" *ngIf="quotationHistory.length">{{ quotationHistory.length }}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="quotation-subtab"
+          [class.active]="quotationSubTab === 'bop'"
+          [attr.aria-selected]="quotationSubTab === 'bop'"
+          (click)="setQuotationSubTab('bop')"
+        >
+          <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+          <span>BOP Quotations</span>
+          <span class="subtab-count" *ngIf="bopQuotations.length">{{ bopQuotations.length }}</span>
+        </button>
+      </nav>
+
+      <!-- ============== ANNUAL SUBSECTION ============== -->
+      <div class="quotation-subpanel" *ngIf="quotationSubTab === 'annual' || !showBopSection">
+
       <!-- ============== EMPTY STATE (pending_quotation, no quotation yet) ============== -->
       <div class="quotation-empty-block" *ngIf="!quotationLoading && !activeQuotation && project.status === 'pending_quotation'">
         <div class="quotation-empty-state">
@@ -1475,16 +1534,46 @@
                   {{ installmentStatusLabel(installment) }}
                 </span>
               </div>
+              <!-- Manager/Admin: mark installment paid + auto-generate invoice -->
               <button
                 type="button"
-                class="installment-pay-btn"
-                *ngIf="installment.status === 'pending' && (project.status === 'approved' || project.status === 'Running')"
-                disabled
-                title="Payment gateway coming soon"
+                class="installment-pay-btn mark-paid"
+                *ngIf="canMarkInstallmentPaid(installment)"
+                (click)="markInstallmentPaid(activeQuotation, installment)"
+                [disabled]="isMarkingInstallmentPaid(activeQuotation, installment)"
               >
-                <i class="fas fa-credit-card"></i>
-                Pay Now
+                <i class="fas" [class.fa-check]="!isMarkingInstallmentPaid(activeQuotation, installment)" [class.fa-circle-notch]="isMarkingInstallmentPaid(activeQuotation, installment)" [class.fa-spin]="isMarkingInstallmentPaid(activeQuotation, installment)"></i>
+                {{ isMarkingInstallmentPaid(activeQuotation, installment) ? 'Processing...' : 'Mark Paid & Download Invoice' }}
               </button>
+
+              <!-- Already-paid: download invoice -->
+              <button
+                type="button"
+                class="installment-invoice-btn"
+                *ngIf="installment.status === 'paid' && installment.invoiceId"
+                (click)="downloadInvoice(installment.invoiceId)"
+                [disabled]="downloadingInvoiceId === installment.invoiceId"
+              >
+                <i class="fas" [class.fa-file-invoice]="downloadingInvoiceId !== installment.invoiceId" [class.fa-circle-notch]="downloadingInvoiceId === installment.invoiceId" [class.fa-spin]="downloadingInvoiceId === installment.invoiceId"></i>
+                Download Invoice
+              </button>
+
+              <!-- Admin-only: revert a paid installment (resets to pending + soft-deletes the invoice) -->
+              <button
+                type="button"
+                class="installment-revert-btn"
+                *ngIf="canRevertInstallmentPayment(installment)"
+                (click)="revertInstallmentPayment(activeQuotation, installment)"
+                [disabled]="isRevertingInstallment(activeQuotation, installment)"
+                title="Admin: revert payment & remove invoice"
+              >
+                <i class="fas" [class.fa-rotate-left]="!isRevertingInstallment(activeQuotation, installment)" [class.fa-circle-notch]="isRevertingInstallment(activeQuotation, installment)" [class.fa-spin]="isRevertingInstallment(activeQuotation, installment)"></i>
+                {{ isRevertingInstallment(activeQuotation, installment) ? 'Reverting...' : 'Revert Payment' }}
+              </button>
+
+              <div class="installment-invoice-meta" *ngIf="installment.status === 'paid' && installment.invoiceNumber">
+                Invoice {{ installment.invoiceNumber }}
+              </div>
             </div>
           </div>
         </section>
@@ -1660,8 +1749,203 @@
           </li>
         </ul>
       </article>
+
+      </div> <!-- /annual subpanel -->
+
+      <!-- ============== BOP SUBSECTION ============== -->
+      <div class="quotation-subpanel" *ngIf="quotationSubTab === 'bop' && showBopSection">
+
+      <!-- ============== Landscaping BOP Quotations ============== -->
+      <article class="bop-section" *ngIf="showBopSection">
+        <header class="bop-section-head">
+          <div>
+            <h3><i class="fas fa-clipboard-list"></i> BOP Quotations <span style="font-size: 11px; color: #6B7280; font-weight: 500;">Landscaping only</span></h3>
+            <p *ngIf="canCreateBopQuotation">
+              Adhoc Bill of Project quotations for landscaping work. Separate from the annual farm quotation — these don't change project status.
+            </p>
+            <p *ngIf="!canCreateBopQuotation && isPreApproval">
+              Landscaping BOP quotations can be created after this farm's annual quotation flow is complete.
+            </p>
+          </div>
+          <button
+            *ngIf="canCreateBopQuotation && !showBopForm"
+            type="button"
+            class="bop-create-btn"
+            (click)="openBopForm()"
+          >
+            <i class="fas fa-plus"></i>
+            New BOP Quotation
+          </button>
+        </header>
+
+        <div class="bop-empty" *ngIf="bopQuotations.length === 0 && !showBopForm">
+          <div><i class="fas fa-folder-open"></i></div>
+          <div>No BOP quotations yet.</div>
+        </div>
+
+        <ul class="bop-list" *ngIf="bopQuotations.length">
+          <li
+            class="bop-item"
+            *ngFor="let bop of bopQuotations; trackBy: trackBop"
+            (click)="openBopDetail(bop)"
+            tabindex="0"
+            role="button"
+            (keyup.enter)="openBopDetail(bop)"
+          >
+            <div class="bop-item-main">
+              <p class="bop-item-title">{{ bop.title || 'BOP Quotation' }}</p>
+              <div class="bop-item-meta">
+                <span><i class="fas fa-calendar"></i> {{ bop.createdAt | date:'mediumDate' }}</span>
+                <span *ngIf="bop.submittedByName"><i class="fas fa-user-tie"></i> {{ bop.submittedByName }}</span>
+                <span *ngIf="bop.bopItems?.length"><i class="fas fa-list-ol"></i> {{ bop.bopItems?.length }} item{{ (bop.bopItems?.length || 0) > 1 ? 's' : '' }}</span>
+              </div>
+            </div>
+            <div class="bop-item-amount">{{ formatCurrency(bop.amountPerYear) }}</div>
+            <div class="bop-item-actions" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="quotation-download-btn"
+                (click)="downloadBopPdf(bop)"
+                [disabled]="isDownloadingBopId === bop._id"
+              >
+                <i class="fas" [class.fa-file-pdf]="isDownloadingBopId !== bop._id" [class.fa-circle-notch]="isDownloadingBopId === bop._id" [class.fa-spin]="isDownloadingBopId === bop._id"></i>
+                PDF
+              </button>
+            </div>
+          </li>
+        </ul>
+
+        <!-- ============== BOP create form ============== -->
+        <article class="bop-form-card" *ngIf="showBopForm && canCreateBopQuotation">
+          <h2><i class="fas fa-pen-to-square"></i> New BOP Quotation</h2>
+
+          <label class="quotation-field">
+            <span><i class="fas fa-heading"></i> Title (optional)</span>
+            <input
+              type="text"
+              [(ngModel)]="bopForm.title"
+              maxlength="200"
+              placeholder="e.g. Hardscape Phase 1 BOP"
+            />
+          </label>
+
+          <label class="quotation-field">
+            <span><i class="fas fa-align-left"></i> Scope &amp; Notes</span>
+            <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
+              <button type="button" class="rt-btn" (click)="applyBopFormat('bold')"><i class="fas fa-bold"></i></button>
+              <button type="button" class="rt-btn" (click)="applyBopFormat('italic')"><i class="fas fa-italic"></i></button>
+              <button type="button" class="rt-btn" (click)="applyBopFormat('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="rt-btn" (click)="applyBopFormat('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div
+              #bopEditor
+              class="quotation-editor"
+              contenteditable="true"
+              (input)="syncBopEditorContent()"
+              placeholder="Describe the scope of the BOP work..."
+            ></div>
+          </label>
+
+          <label class="quotation-field">
+            <span><i class="fas fa-list-check"></i> Line Items</span>
+          </label>
+
+          <div class="bop-items-grid">
+            <div class="bop-row" style="font-weight: 700; font-size: 12px; color: #6B7280;">
+              <div>Description</div>
+              <div>Qty</div>
+              <div>Rate (₹)</div>
+              <div>Total (₹)</div>
+              <div></div>
+            </div>
+            <div class="bop-row" *ngFor="let item of bopForm.items; let i = index">
+              <input type="text" [(ngModel)]="item.description" placeholder="Item description" />
+              <input type="number" min="0" [(ngModel)]="item.quantity" (ngModelChange)="onBopLineChanged(i)" />
+              <input type="number" min="0" [(ngModel)]="item.rate" (ngModelChange)="onBopLineChanged(i)" />
+              <input type="number" min="0" [(ngModel)]="item.total" />
+              <button
+                type="button"
+                class="bop-row-remove"
+                (click)="removeBopLineItem(i)"
+                [disabled]="bopForm.items.length <= 1"
+                title="Remove row"
+              >
+                <i class="fas fa-times-circle"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="bop-add-row" (click)="addBopLineItem()">
+            <i class="fas fa-plus"></i> Add Line Item
+          </button>
+
+          <div class="bop-total-row">
+            <span>Total:</span>
+            <strong>{{ formatCurrency(bopTotal) }}</strong>
+          </div>
+
+          <div class="quotation-form-actions">
+            <button type="button" class="rx-cancel" (click)="cancelBopForm()" [disabled]="isSubmittingBop">Cancel</button>
+            <button type="button" class="rx-save" (click)="submitBopQuotation()" [disabled]="isSubmittingBop">
+              <i class="fas" [class.fa-paper-plane]="!isSubmittingBop" [class.fa-circle-notch]="isSubmittingBop" [class.fa-spin]="isSubmittingBop"></i>
+              {{ isSubmittingBop ? 'Saving...' : 'Save BOP Quotation' }}
+            </button>
+          </div>
+        </article>
+      </article>
+
+      <!-- Pre-approval landscaping note shown inside the BOP subtab -->
+      <div class="bop-pre-approval-note" *ngIf="isLandscapingProject && isPreApproval">
+        <div class="bop-empty">
+          <div><i class="fas fa-info-circle"></i></div>
+          <div>Landscaping projects may receive adhoc BOP quotations after the annual quotation flow is complete.</div>
+        </div>
+      </div>
+
+      </div> <!-- /bop subpanel -->
+
     </section>
   </ng-container>
+
+  <!-- BOP detail popup -->
+  <div
+    class="quotation-overlay"
+    *ngIf="selectedBopDetail"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeBopDetail()"
+  >
+    <div class="quotation-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="quotation-overlay-head">
+        <h3>{{ selectedBopDetail.title || 'BOP Quotation' }}</h3>
+        <button type="button" class="quotation-overlay-close" (click)="closeBopDetail()" aria-label="Close">
+          <i class="fas fa-times"></i>
+        </button>
+      </header>
+      <div class="quotation-overlay-body">
+        <div class="quotation-content-rendered" [innerHTML]="selectedBopDetailSafe"></div>
+        <div class="quotation-installments-block" *ngIf="selectedBopDetail.bopItems?.length">
+          <h4><i class="fas fa-list-ol"></i> Line Items</h4>
+          <ul class="bop-list">
+            <li class="bop-item" *ngFor="let it of selectedBopDetail.bopItems">
+              <div class="bop-item-main">
+                <p class="bop-item-title">{{ it.description }}</p>
+                <div class="bop-item-meta">
+                  <span>Qty: {{ it.quantity }}</span>
+                  <span>Rate: {{ formatCurrency(it.rate) }}</span>
+                </div>
+              </div>
+              <div class="bop-item-amount">{{ formatCurrency(it.total) }}</div>
+            </li>
+          </ul>
+          <div class="bop-total-row">
+            <span>Total:</span>
+            <strong>{{ formatCurrency(selectedBopDetail.amountPerYear) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Quotation detail popup -->
   <div
@@ -1797,11 +2081,18 @@
           <div class="spinner"></div>
           <p>Generating PDF preview...</p>
         </div>
-        <iframe
-          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview"
+        <video
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType === 'video'"
           class="report-overlay-frame"
           [src]="prescriptionPreviewUrl"
-          title="Prescription PDF preview"
+          controls
+          playsinline
+        ></video>
+        <iframe
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video'"
+          class="report-overlay-frame"
+          [src]="prescriptionPreviewUrl"
+          title="Prescription preview"
         ></iframe>
       </div>
     </div>

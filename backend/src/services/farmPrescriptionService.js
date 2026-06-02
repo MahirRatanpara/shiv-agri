@@ -17,6 +17,7 @@ const TEXT_MIMES = new Set(['text/plain', 'text/markdown']);
 function classifyDocType(mimeType) {
   if (!mimeType) return 'text';
   if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
   if (mimeType === PDF_MIME) return 'pdf';
   if (DOCX_MIMES.has(mimeType)) return 'docx';
   if (TEXT_MIMES.has(mimeType)) return 'text';
@@ -314,6 +315,61 @@ class FarmPrescriptionService {
       total,
       page,
       totalPages: Math.ceil(total / limit) || 1
+    };
+  }
+
+  /**
+   * Soft-delete a prescription. Admin may delete any prescription; manager
+   * may delete only items they uploaded themselves. Returns metadata about
+   * any media-service-backed media files so the caller can also remove
+   * them from storage if desired.
+   */
+  async deletePrescription(projectId, prescriptionId, user, { allowAnyUploader = false } = {}) {
+    const project = await Project.findOne(
+      { _id: projectId, 'prescriptions._id': prescriptionId },
+      { 'prescriptions.$': 1 }
+    ).lean();
+
+    if (!project || !project.prescriptions?.[0]) {
+      throw { status: 404, message: 'Prescription not found on this project' };
+    }
+
+    const prescription = project.prescriptions[0];
+    if (!allowAnyUploader) {
+      const uploader = prescription.uploadedBy?.toString();
+      if (!uploader || uploader !== user._id.toString()) {
+        throw {
+          status: 403,
+          message: 'You may only delete prescriptions that you uploaded.'
+        };
+      }
+    }
+
+    const result = await Project.updateOne(
+      { _id: projectId, 'prescriptions._id': prescriptionId },
+      {
+        $set: {
+          'prescriptions.$.status': 'DELETED',
+          'prescriptions.$.deletedAt': new Date(),
+          'prescriptions.$.deletedBy': user._id,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (!result.matchedCount) {
+      throw { status: 404, message: 'Prescription not found on this project' };
+    }
+
+    const attachedMediaIds = (prescription.attachedImages || [])
+      .map((img) => img.mediaId)
+      .filter(Boolean);
+
+    logger.info(`[FarmPrescription] Prescription soft-deleted: project=${projectId}, rxId=${prescriptionId}, by=${user._id}`);
+    return {
+      success: true,
+      mediaId: prescription.mediaId,
+      attachedMediaIds
     };
   }
 

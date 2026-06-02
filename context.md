@@ -546,11 +546,11 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
 
-**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed), attended (Boolean, default false), attendedAt, attendedBy, attendedByName } — photos/videos uploaded via Media Service, embedded as references. **Owner-only uploads:** only the farm owner (submittedBy / clientId / createdBy) may upload here; managers/admins use the separate Designs and Prescriptions sections. New uploads land in the unattended bucket (shown as thumbnails); admins/farm managers acknowledge them via mark-attended, which moves them into the paginated drawer.
+**Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed), attended (Boolean, default false), attendedAt, attendedBy, attendedByName, countsTowardQuota (Boolean, default true), deletedAt, deletedBy } — photos/videos uploaded via Media Service, embedded as references. **Owner, manager, and admin uploads** are all accepted: owner uploads count toward the weekly quota and start unattended; admin/manager uploads bypass the quota (`countsTowardQuota=false`) and land already attended. Owner uploads land in the unattended bucket (shown as thumbnails); admins/farm managers acknowledge them via mark-attended, which moves them into the paginated drawer.
 
-**Landscaping Designs:** `landscapingDesigns[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, title, notes, status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin-only uploads for landscaping projects, stored via Media Service.
+**Landscaping Designs:** `landscapingDesigns[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, title, notes, status, uploadedBy, uploadedByName, uploadedAt (indexed), deletedAt, deletedBy } — manager/admin-only uploads for landscaping projects, stored via Media Service.
 
-**Prescriptions:** `prescriptions[]` of { _id, source (file|manual|structured), docType (image|pdf|docx|text|manual|structured), title, notes, textContent, mediaId, url, mimeType, sizeBytes, fileName, structured, attachedImages[], status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin upload only, owner read-only. Supports uploaded files (image/pdf/doc/docx/text), inline text snippets, prescriptions composed via the in-app manual builder, and the **structured** Shiv Agri standard visit prescription (mirrors the printed slip — farmer name, visit date, lastVisitReview, landPreparation, sowingPlanting, farmingOperations (leveling/marking/digging/soilFilling/tractor/supports/fillGaps/pruning/other), irrigation, weedControl, fertilizers (farmyardManure/chemical/organic/jivamrut/spray), pests (soilBorne/root/stem/leaf/flower/fruit), diseases (soilBorne/stem/branch/leaf/flower/fruit/other), hormoneTreatment, fruitHarvesting, grading, packing, otherNotes — plus `attachedImages[]` of {mediaId,url,mimeType,sizeBytes,fileName} rendered into the PDF).
+**Prescriptions:** `prescriptions[]` of { _id, source (file|manual|structured), docType (image|video|pdf|docx|text|manual|structured), title, notes, textContent, mediaId, url, mimeType, sizeBytes, fileName, structured, attachedImages[], status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin upload only, owner read-only. Supports uploaded files (image/pdf/doc/docx/text), inline text snippets, prescriptions composed via the in-app manual builder, and the **structured** Shiv Agri standard visit prescription (mirrors the printed slip — farmer name, visit date, lastVisitReview, landPreparation, sowingPlanting, farmingOperations (leveling/marking/digging/soilFilling/tractor/supports/fillGaps/pruning/other), irrigation, weedControl, fertilizers (farmyardManure/chemical/organic/jivamrut/spray), pests (soilBorne/root/stem/leaf/flower/fruit), diseases (soilBorne/stem/branch/leaf/flower/fruit/other), hormoneTreatment, fruitHarvesting, grading, packing, otherNotes — plus `attachedImages[]` of {mediaId,url,mimeType,sizeBytes,fileName} rendered into the PDF). Soft-delete metadata (`deletedAt`, `deletedBy`) on both the subdoc and each `attachedImages[]` entry.
 
 **Lab Reports:** `reports[]` of { sampleType (soil|water|fertilizer, indexed), sampleId (ObjectId, refPath sampleModel, indexed), sampleModel (SoilSample|WaterSample|FertilizerSample), sessionId, sampleNumber, farmerName, farmsName, mobileNo, cropName, fertilizerType, sessionDate, generatedAt (indexed), generatedBy (User ref), generatedByName } — auto-populated on PDF generation by `backend/src/services/farmReportLinker.js` when the sample's `farmsName` + `mobileNo` match this project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone). One entry per (sampleType + sampleId); re-runs update the existing entry rather than duplicating.
 
@@ -566,7 +566,8 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
-| GET | `/api/projects` | farm.projects.view OR farms.view | Filtered/paginated list. Filters incl. `district`, `submittedBy=me`. End-users auto-filtered to own FARM submissions. |
+| GET | `/api/projects` | farm.projects.view OR farms.view | Filtered/paginated list. Filters incl. `district`, `submittedBy=me`, `includeArchived=true` (default hides archived). End-users auto-filtered to own FARM submissions. |
+| GET | `/api/projects/farm-names-by-phone` | authenticated | Farm-name suggestions for a phone number (last-10-digits match via farmReportLinker; used by soil/water/fertilizer testing grid datalists). |
 | GET | `/api/projects/stats` | farm.projects.view | Statistics |
 | GET | `/api/projects/export` | project.export | Export to Excel/CSV |
 | GET | `/api/projects/:id` | requireProjectAccess(farm.projects.view, farms.view) | Get single project — gate also lets stakeholders (submitter/client/assigned workers/PM/consultants/team) read |
@@ -596,21 +597,26 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects/:id/media` | requireProjectAccess(farm.projects.view, farms.view) | List **unattended** media (no pagination) plus `attendedTotal` count for the drawer |
 | GET | `/api/projects/:id/media/older` | requireProjectAccess(farm.projects.view, farms.view) | Paginated list of **attended** media (page/limit query params; route preserved for back-compat — semantically "attended", not "older") |
 | GET | `/api/projects/:id/media/quota` | requireProjectAccess(farm.projects.view, farms.view) | Current week's upload quota snapshot |
-| POST | `/api/projects/:id/media` | farm owner only (submittedBy/clientId/createdBy) | Upload up to 5 photos/videos (≤25MB each); enforces weekly quota; rejects 409 if project is archived. Managers/admins are excluded — they use `/designs` or `/prescriptions` |
+| POST | `/api/projects/:id/media` | farm owner OR admin/manager | Upload up to 5 photos/videos (≤25MB each). Owner uploads count toward weekly quota and start unattended. Admin/manager uploads (route gate sets `req.mediaUploadContext.isPrivileged`) bypass the quota (`countsTowardQuota=false`) and land already attended. Rejects 409 if archived. |
 | GET | `/api/projects/:id/designs` | farm.projects.view OR farms.view | List landscaping designs |
 | POST | `/api/projects/:id/designs` | manager or admin (farm.projects.update) | Upload up to 5 design images/videos (≤25MB each) |
+| DELETE | `/api/projects/:id/designs/:designId` | manager or admin | Soft-delete a design (sets `status='DELETED'` + `deletedAt`/`deletedBy`). Admin deletes any; manager deletes own uploads. |
 | GET | `/api/projects/:id/prescriptions` | farm.projects.view OR farms.view | List prescriptions (owner read-only) |
 | POST | `/api/projects/:id/prescriptions` | manager or admin | Upload up to 5 prescription files (image/pdf/doc/docx/text, ≤25MB each) |
 | POST | `/api/projects/:id/prescriptions/text` | manager or admin | Add an inline text-only prescription |
 | POST | `/api/projects/:id/prescriptions/manual` | manager or admin | Add a prescription composed via the in-app manual builder |
 | POST | `/api/projects/:id/prescriptions/structured` | manager or admin | Submit the Shiv Agri standard visit-prescription form (JSON `structured` payload + up to 5 image attachments, ≤25MB each) |
 | GET | `/api/projects/:id/prescriptions/:prescriptionId/pdf` | farm.projects.view OR farms.view | Inline-rendered PDF of a structured prescription (404 for other docTypes) |
-| GET | `/api/projects/:id/quotations` | requireProjectAccess(farm.projects.view, farms.view) | List all quotations for a project (history) |
+| DELETE | `/api/projects/:id/prescriptions/:prescriptionId` | manager or admin | Soft-delete a prescription. Admin deletes any; manager deletes own uploads. |
+| GET | `/api/projects/:id/quotations` | requireProjectAccess(farm.projects.view, farms.view) | List quotations for a project (history). Supports `?kind=annual\|bop` filter. |
 | GET | `/api/projects/:id/quotations/active` | requireProjectAccess(farm.projects.view, farms.view) | Currently-active quotation (status submitted or accepted) |
 | GET | `/api/projects/:id/quotations/:quotationId` | requireProjectAccess(farm.projects.view, farms.view) | Get a specific quotation |
-| POST | `/api/projects/:id/quotations` | manager or admin | Submit a quotation (rich-text `content` + `amountPerYear`; supersedes prior submitted quotations and moves project → `pending_acceptance`) |
+| POST | `/api/projects/:id/quotations` | manager or admin | Submit a quotation (rich-text `content` + `amountPerYear`; supersedes prior submitted quotations and moves project → `pending_acceptance`). Supports `attachInitial=true` to attach a pre-accepted quotation at farm-creation time without farmer notification or status change. |
+| POST | `/api/projects/:id/quotations/bop` | manager or admin | Adhoc BOP (Bill of Project) quotation for landscaping projects (`kind='bop'`, `bopItems[]`). Does NOT change project status or supersede annual quotations. |
 | PATCH | `/api/projects/:id/quotations/:quotationId/accept` | farm owner only (enforced in service) | Farmer accepts → project moves to `approved` |
 | PATCH | `/api/projects/:id/quotations/:quotationId/reject` | farm owner only (enforced in service) | Farmer rejects (optional `reason`) → project reverts to `pending_quotation` |
+| PATCH | `/api/projects/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid` | manager or admin | Idempotently marks the installment paid and creates a linked Invoice (`invoiceType='cash'`, `paymentStatus='paid'`). Stamps `installment.invoiceId`/`invoiceNumber`/`paidBy`. |
+| PATCH | `/api/projects/:id/quotations/:quotationId/installments/:installmentNumber/revert` | admin only | Reverts an installment to pending and soft-deletes the linked invoice. |
 | GET | `/api/projects/:id/quotations/:quotationId/pdf` | requireProjectAccess(farm.projects.view, farms.view) | Quotation rendered on the company letterhead (uses the letter template + installment table) |
 | GET | `/api/projects/:id/admin-transactions` | admin only | List manual transactions for the farm (page/limit/sortBy/sortOrder/type/category/startDate/endDate) |
 | GET | `/api/projects/:id/admin-transactions/summary` | admin only | Totals + count summary |
@@ -622,7 +628,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects/:id/reports/:reportId/pdf/download` | requireProjectAccess(farm.projects.view, farms.view) | Attachment-disposition PDF for explicit download |
 | PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
 | PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
-| DELETE | `/api/projects/:id/media/:mediaId` | admin | Soft-delete a media item (sets `farmMedia.$.status='DELETED'`) |
+| DELETE | `/api/projects/:id/media/:mediaId` | admin / manager / farm owner | Soft-delete a media item (sets `farmMedia.$.status='DELETED'` + `deletedAt`/`deletedBy`). Admin deletes any (refunds quota if `countsTowardQuota=true` and uploaded in current ISO week); manager deletes own uploads (same refund rule); owner deletes own UNATTENDED uploads (NO quota refund). |
 | PATCH | `/api/projects/bulk` | project.update | Bulk update |
 | POST | `/api/projects/bulk-delete` | project.delete | Bulk soft delete |
 
@@ -637,18 +643,21 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 ### Quotations Workflow (`backend/src/models/Quotation.js`, `controllers/quotationController.js`, `services/quotationService.js`)
 
-- **Model:** `Quotation` = { project (ref, indexed), content (rich-text HTML, required), contentText (plain-text fallback ≤1000 chars), amountPerYear (≥0), installments[] (4 quarterly installments auto-derived in a `pre('validate')` hook: equal split of amountPerYear, due dates at start, +3mo, +6mo, +9mo from `startDate`; each has installmentNumber 1-4, amount, dueDate, status (pending/paid/overdue), paidAt, paidAmount), startDate (Date, default now), status (submitted/accepted/rejected/superseded, indexed), submittedBy/submittedByName, acceptedBy/acceptedAt, rejectedBy/rejectedAt/rejectedReason (≤500), timestamps }. Compound index: `project+status+createdAt`.
-- **Submit:** `createQuotation` — farm-only; rejects if the project is already approved. Marks any prior `submitted` quotation as `superseded`, creates the new doc, sets `project.status='pending_acceptance'` + `project.activeQuotation=quotation._id`, archives pending farm_registration / farm_quotation_required notifications, and notifies the farmer (`farm_quotation_received`, metadata: farmName, quotationId).
+- **Model:** `Quotation` = { project (ref, indexed), kind (enum: annual/bop, default 'annual', indexed), title (String, ≤200, used for BOP), content (rich-text HTML, required), contentText (plain-text fallback ≤1000 chars), amountPerYear (≥0), bopItems[] ({description, quantity, rate, total} — empty for annual; sum populates `amountPerYear` on BOP), installments[] (4 quarterly installments auto-derived in a `pre('validate')` hook **for `kind='annual'` only** — BOP variants skip installment auto-build; each has installmentNumber 1-4, amount, dueDate, status (pending/paid/overdue), paidAt, paidAmount, invoiceId (Invoice ref), invoiceNumber, paidBy (User ref)), startDate (Date, default now), status (submitted/accepted/rejected/superseded, indexed), submittedBy/submittedByName, acceptedBy/acceptedAt, rejectedBy/rejectedAt/rejectedReason (≤500), timestamps }. Compound index: `project+status+createdAt`.
+- **Submit:** `createQuotation` — farm-only; rejects if the project is already approved. Marks any prior `submitted` quotation as `superseded`, creates the new doc, sets `project.status='pending_acceptance'` + `project.activeQuotation=quotation._id`, archives pending farm_registration / farm_quotation_required notifications, and notifies the farmer (`farm_quotation_received`, metadata: farmName, quotationId). **Attach-on-create flow:** when `payload.attachInitial=true` (used during manager-direct farm registration on an already-approved project), the quotation is created with `status='accepted'`, no farmer notification is fired, and the project status is not changed.
 - **Accept:** `acceptQuotation` — only the farm owner (matched against `submittedBy` or `clientId`) may accept. Moves project to `approved` (sets `approvedBy/approvedAt/quotationAcceptedAt`) and notifies approvers with `farm_quotation_accepted`.
 - **Reject:** `rejectQuotation` — owner-only. Records optional `rejectedReason` (≤500), reverts project to `pending_quotation`, clears `activeQuotation`, and notifies approvers with `farm_quotation_required` ("Quotation revision requested") including the rejection reason.
+- **BOP creation:** `createBopQuotation` — landscaping-only (gated by `isLandscapingProject` helper checking category/projectType/needsLandscapingConsultancy). Stores `kind='bop'`, `title`, and `bopItems[]`; sums item totals into `amountPerYear`. Does NOT touch project status and does NOT supersede annual quotations.
+- **Mark installment paid:** `markInstallmentPaid` — idempotent (returns the pre-existing invoice if `installment.invoiceId` already set). Creates an Invoice via `Invoice.getNextInvoiceNumber()` with `invoiceType='cash'`, `paymentStatus='paid'`, a line item describing the installment, full project location (address→`referenceNumber`, city→`location`, taluka→`village`+`taluka`, district, state, pincode) and `sourceQuotationId`/`sourceInstallmentNumber` back-links. Stamps the installment with `invoiceId`/`invoiceNumber`/`paidBy`.
+- **Revert installment payment:** `revertInstallmentPayment` — admin only. Resets installment fields to pending/null and soft-deletes the linked invoice.
 - **PDF:** `pdfGenerator.generateQuotationPDF(quotation, project)` composes a letter-body (greeting, scope HTML, INR-formatted annual fee, installment table) inside the existing letterhead template (`templates/letter.html`). Filename: `Quotation_<farmName>_<date>.pdf`.
 
 ### Farm Media Upload (`backend/src/controllers/farmMediaController.js`, `services/farmMediaService.js`)
 
-- **Flow:** Controller checks the project is not archived → calls `reserveQuota(projectId, files.length)` to atomically debit the weekly counter → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds reference on `Project.farmMedia[]` (with `attended:false`) → on partial failure, calls `releaseQuota(projectId, failures.length)` to refund the unused reservation → notifies all project **stakeholders** (owner + assigned workers/PM/consultants/team, excluding the uploader) via `notifyOnUpload` with type `farm_media_upload`.
+- **Flow:** Controller checks the project is not archived → if the caller is privileged (`req.mediaUploadContext.isPrivileged`, set by the route gate for manager/admin) the quota is bypassed entirely; otherwise calls `reserveQuota(projectId, files.length)` to atomically debit the weekly counter → forwards each file to Media Service (initiate `POST /api/v1/media` then complete `PUT /:id/upload`) → embeds reference on `Project.farmMedia[]` (privileged uploads stamped `countsTowardQuota=false` and `attended=true`; owner uploads stamped `countsTowardQuota=true` and `attended=false`) → on partial failure, owner uploads call `releaseQuota(projectId, failures.length)` to refund the unused reservation (skipped for privileged uploads) → notifies all project **stakeholders** (owner + assigned workers/PM/consultants/team, excluding the uploader) via `notifyOnUpload` with type `farm_media_upload`.
 - **Designs (`farmDesignController.js` / `farmDesignService.js`):** Manager/admin-only flow. Validates image/video MIME, uploads to Media Service, embeds on `Project.landscapingDesigns[]`, and notifies stakeholders with type `farm_design_upload` (carries `documentType` + `itemCount` in metadata).
 - **Prescriptions (`farmPrescriptionController.js` / `farmPrescriptionService.js`):** Manager/admin-only flow with four entry points: file upload (image/pdf/doc/docx/text via Media Service), inline text (`/text`), manual builder (`/manual`), and the **structured visit form** (`/structured` — JSON `structured` payload + optional image attachments uploaded via Media Service into `attachedImages[]`; pre-generates the subdoc `_id` so the response reliably surfaces it). Embeds on `Project.prescriptions[]` and notifies stakeholders with type `farm_prescription_upload`. Structured prescriptions can additionally be rendered to PDF via `GET /:id/prescriptions/:prescriptionId/pdf` (uses `pdfGenerator.generatePrescriptionPDF` against `templates/prescription.html`).
-- **Attended workflow:** New uploads start unattended. `markAttended` (single, via `$elemMatch` + positional `$`) and `markAllAttended` (bulk, via `arrayFilters`) flip `attended=true` and stamp `attendedAt/attendedBy/attendedByName`. The default `GET /:id/media` returns only unattended items plus an `attendedTotal` count; the attended drawer is loaded on demand via `GET /:id/media/older`. `deleteMedia` soft-deletes by setting `status='DELETED'`.
+- **Attended workflow:** New owner uploads start unattended (admin/manager uploads start attended). `markAttended` (single, via `$elemMatch` + positional `$`) and `markAllAttended` (bulk, via `arrayFilters`) flip `attended=true` and stamp `attendedAt/attendedBy/attendedByName`. The default `GET /:id/media` returns only unattended items plus an `attendedTotal` count; the attended drawer is loaded on demand via `GET /:id/media/older`. `deleteMedia` soft-deletes by setting `status='DELETED'` + `deletedAt`/`deletedBy`; three deletion modes: admin (any item, refund eligible), manager (own uploads, refund eligible), owner (own UNATTENDED uploads, never refunds). Quota refunds only apply when caller is admin/manager AND item was `countsTowardQuota=true` AND uploaded in the current ISO week. Designs and prescriptions follow the same admin-any / manager-own soft-delete policy.
 - **Limits:** ≤5 files/request, ≤25MB/file (multer memory storage), `image/*` or `video/*` only. Quota: `FARM_MEDIA_WEEKLY_LIMIT` (default 10) uploads per project per ISO week.
 - **Quota model (`backend/src/models/FarmMediaQuota.js`):** `{ projectId, isoWeek ("YYYY-Www"), uploadCount, lastUploadAt }`. The service treats the row as project-scoped: `getCurrentQuotaRecord` rolls a stale row forward when the ISO week changes (resets `uploadCount` to 0 in-place via aggregation pipeline). `reserveQuota` is the atomic debit (conditional `findOneAndUpdate` requiring `uploadCount ≤ WEEKLY_LIMIT - count`); `releaseQuota` refunds for failed uploads (clamped at 0). Resets at start of next ISO week (Monday 00:00 UTC).
 - **Response headers:** `X-Media-Quota-Used`, `X-Media-Quota-Limit`, `X-Media-Quota-Resets-At` set on every media response.
@@ -667,7 +676,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Service:** `services/farm-media.service.ts` — `listMedia()` (unattended + `attendedTotal`), `listAttendedMedia(page, limit)`, `markAttended(mediaId)`, `markAllAttended()`, `deleteMedia(mediaId)`, `getQuota()`, `uploadFiles()` (returns `progress`/`done` events via `HttpEventType`).
 - **Service:** `services/farm-design.service.ts` — `listDesigns(projectId)`, `uploadDesigns(projectId, files)` (progress/done events) for landscaping design uploads.
 - **Service:** `services/farm-prescription.service.ts` — `listPrescriptions(projectId)`, `uploadPrescriptions(projectId, files)`, `addTextPrescription(projectId, payload)`, `addManualPrescription(projectId, payload)`, `addStructuredPrescription(projectId, payload, images)` (returns progress/done events for the structured visit form), `downloadPrescriptionPdf(projectId, prescriptionId)` → Blob.
-- **Service:** `services/quotation.service.ts` — `list(projectId)`, `getActive(projectId)`, `getById(projectId, quotationId)`, `submit(projectId, payload)`, `accept(projectId, quotationId)`, `reject(projectId, quotationId, reason?)`, `downloadPdf(projectId, quotationId)` → Blob. Exposes `Quotation`, `QuotationInstallment`, `QuotationPayload`, `QuotationStatus` types.
+- **Service:** `services/quotation.service.ts` — `list(projectId, { kind? })`, `getActive(projectId)`, `getById(projectId, quotationId)`, `submit(projectId, payload)` (supports `attachInitial`), `createBopQuotation(projectId, payload)`, `accept(projectId, quotationId)`, `reject(projectId, quotationId, reason?)`, `markInstallmentPaid(projectId, quotationId, installmentNumber)`, `revertInstallmentPayment(projectId, quotationId, installmentNumber)`, `downloadPdf(projectId, quotationId)` → Blob. Exposes `Quotation`, `QuotationInstallment`, `QuotationPayload`, `QuotationStatus`, BOP types.
 - **Service:** `services/farm-admin-transaction.service.ts` — `list(projectId, page, limit)`, `getSummary(projectId)`, `create(projectId, payload)`, `update(projectId, txId, payload)`, `delete(projectId, txId)` for admin-only farm transactions.
 - **Service:** `services/farm-report.service.ts` — `listReports(projectId)`, `viewReportPdf(projectId, reportId)` (inline blob), `downloadReportPdf(projectId, reportId)` (attachment blob), `triggerBrowserDownload(blob, filename)` for the auto-linked lab reports tab.
 - **Route:** `/farm-dashboard` (authGuard), `/project-details/:id`, `/farm-management` (authGuard), `/farm-management/new` (authGuard), `/farm-management/project/:id` (authGuard)
@@ -763,11 +772,12 @@ Create invoices with line items, track payment status, link to receipts, support
 
 - `invoiceNumber` (String, unique, indexed — auto-generated INV-XXXX)
 - `invoiceType` (enum: cash, debit_memo)
-- `date`, `customerName`, `referenceNumber`, `location`, `village`, `phoneNumber`, `mobileNumber`
+- `date`, `customerName`, `referenceNumber`, `location`, `village`, `taluka`, `district`, `state`, `pincode`, `phoneNumber`, `mobileNumber`
 - `items[]` — { serialNumber, description, descriptionGujarati, rate, quantity, total }
 - `subtotal`, `taxAmount`, `discount`, `grandTotal`, `grandTotalInWords`
 - `paymentStatus` (enum: unpaid, partial, paid), `paidAmount`
 - `linkedReceipts[]` (Receipt refs)
+- `sourceQuotationId` (Quotation ref, indexed), `sourceInstallmentNumber` (1-4) — soft back-link to the quotation/installment that auto-generated this invoice (nullable for manual invoices; used by the admin revert flow)
 - `consultantName`, `consultantCredentials`
 - `pdfUrl`, `pdfGeneratedAt`, `remarks`
 - `isDraft`, soft delete fields, version tracking
@@ -918,6 +928,8 @@ Server-side PDF generation using Puppeteer (Chromium) for HTML-to-PDF conversion
 
 **Number Formatting:** `formatNumber` defaults to 2 decimal places but displays integers without decimals for cleaner output.
 
+**Browser resilience:** `initBrowser` verifies liveness on the cached Puppeteer instance (`connected`/`isConnected`) and relaunches if disconnected; it also registers a `'disconnected'` handler that nulls the cache. `_withFreshBrowser(renderFn)` is a helper that retries a single-PDF render once when the cached browser is dead (detects "Connection closed" / "Protocol error" / "Target closed" / "Session closed"). `generateInvoicePDF` is wrapped through `_withFreshBrowser`. The invoice template (`templates/invoice.html`) now binds `{{taluka}}`, `{{district}}`, `{{state}}`, `{{pincode}}` for the full Indian-style address block rendered by quotation-installment invoices.
+
 ### API Endpoints (`backend/src/routes/pdfGeneration.js`)
 
 | Method | Path | Description |
@@ -982,6 +994,13 @@ Dedicated Spring Boot microservice for media upload, storage, and retrieval. Use
 - Proxied via `/api/v1/media` location block
 - 25MB max body size
 - X-Accel-Redirect for efficient internal file serving
+
+### Scheduled Media Cleanup (`backend/src/services/mediaCleanupService.js`)
+- Background sweep started from `server.js` via `mediaCleanupService.startScheduled()`.
+- Permanently purges soft-deleted subdocs (`farmMedia`, `landscapingDesigns`, `prescriptions`, and prescription `attachedImages[]`) once their `deletedAt` is older than `MEDIA_PURGE_RETENTION_DAYS` (default 30).
+- For each purged item, best-effort `DELETE /api/v1/media/:id` against the media service to remove the underlying file (failures logged, not thrown).
+- Cursor-iterates candidate projects (any array carrying `status='DELETED'`), then `$pull`s expired subdocs in one update per project.
+- Initial sweep 60s after boot, then every `MEDIA_PURGE_INTERVAL_MS` (default 24h). Handle is `.unref()`'d so it doesn't block shutdown.
 
 ---
 
@@ -1221,7 +1240,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
 | projects | Project.js | category+status, city, state, taluka, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status, needsLandscapingConsultancy, activeQuotation |
-| quotations | Quotation.js | project, status, project+status+createdAt — farm consultancy quotations with 4 auto-derived quarterly installments |
+| quotations | Quotation.js | project, status, kind, project+status+createdAt — farm consultancy quotations; `kind='annual'` auto-derives 4 quarterly installments (each carrying `invoiceId`/`invoiceNumber`/`paidBy`), `kind='bop'` (landscaping Bill of Project) skips installment auto-build and stores `bopItems[]` |
 | transactions | Transaction.js | projectId+date, projectId+type, projectId+category |
 | soilsessions | SoilSession.js | date, (date+version unique) |
 | soilsamples | SoilSample.js | sessionId, sessionDate |
@@ -1230,7 +1249,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | fertilizersessions | FertilizerSession.js | date, (date+version unique) |
 | fertilizersamples | FertilizerSample.js | sessionId, sessionDate |
 | receipts | Receipt.js | receiptNumber (unique), date, customerName |
-| invoices | Invoice.js | invoiceNumber (unique), date |
+| invoices | Invoice.js | invoiceNumber (unique), date, sourceQuotationId — also stores taluka/district/state/pincode for the full address block |
 | letters | Letter.js | letterNumber (unique sparse), date |
 | activitylogs | ActivityLog.js | projectId+timestamp, userId+timestamp |
 | notifications | Notification.js | user, type (incl. `farm_media_upload`, `farm_design_upload`, `farm_prescription_upload`, `farm_quotation_required`, `farm_quotation_received`, `farm_quotation_accepted`), project, isRead, archivedAt, user+isRead+createdAt, user+archivedAt+createdAt; metadata adds `documentType`/`itemCount` (design/prescription uploads) and `quotationId`/`amountPerYear` (quotation events) |
@@ -1260,6 +1279,8 @@ SoilSample ── fertilizerSampleId ──→ FertilizerSample
 Project ←── linkedProjectId ── SoilSample / WaterSample / FertilizerSample
 Project ── reports[].sampleId ──→ SoilSample / WaterSample / FertilizerSample (refPath sampleModel)
 Invoice ── linkedReceipts[] ──→ Receipt
+Quotation ── installments[].invoiceId ──→ Invoice
+Invoice ── sourceQuotationId ──→ Quotation
 ```
 
 ---
@@ -1488,6 +1509,8 @@ docker system prune -a -f                               # Cleanup
 | WHATSAPP_OTP_TEMPLATE_NAME / _LANGUAGE / _HAS_BUTTON | otp_login / en / true | WhatsApp template wiring for OTP |
 | DEFAULT_PHONE_COUNTRY_CODE | +91 | Default country code for phone parsing/lookup |
 | DEFAULT_PHONE_SIGNUP_ROLE | user | Role granted to phone-OTP first-time signups |
+| MEDIA_PURGE_RETENTION_DAYS | 30 | Days after soft-delete before media subdocs are permanently purged |
+| MEDIA_PURGE_INTERVAL_MS | 86400000 (24h) | Interval for the scheduled media-purge sweep |
 
 ### Production (.env — on VPS)
 | Variable | Purpose |

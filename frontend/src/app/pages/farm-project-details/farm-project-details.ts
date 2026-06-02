@@ -39,7 +39,10 @@ import {
 } from '../../services/farm-report.service';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import {
+  BopLineItem,
+  BopQuotationPayload,
   Quotation,
+  QuotationInstallment,
   QuotationPayload,
   QuotationService
 } from '../../services/quotation.service';
@@ -56,7 +59,7 @@ const MAX_FILES_PER_BATCH = 5;
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const FARMER_POLL_INTERVAL_MS = 25_000;
 
-const PRESCRIPTION_ACCEPT = 'image/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,.txt,.md';
+const PRESCRIPTION_ACCEPT = 'image/*,video/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,.txt,.md';
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
 const DESIGN_MIME_PATTERN = /^(image|video)\//i;
 
@@ -114,6 +117,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   isUploadingDesigns = false;
   designUploadingBatch: UploadProgressItem[] = [];
   designLightboxItem: FarmDesignRef | null = null;
+  deletingDesignIds = new Set<string>();
 
   // Prescriptions
   prescriptionItems: PrescriptionRef[] = [];
@@ -121,6 +125,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   isUploadingPrescriptions = false;
   prescriptionUploadingBatch: UploadProgressItem[] = [];
   expandedPrescriptionId: string | null = null;
+  deletingPrescriptionIds = new Set<string>();
 
   // Prescription PDF overlay (mirrors reports overlay)
   activePrescription: PrescriptionRef | null = null;
@@ -194,6 +199,32 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   selectedQuotationDetailSafe: SafeHtml | null = null;
 
   @ViewChild('quotationEditor') quotationEditor?: ElementRef<HTMLDivElement>;
+
+  // Quotation tab has two subsections for landscaping farms:
+  // 'annual' — the regular annual quotation flow (default)
+  // 'bop'    — adhoc Bill-of-Project quotations
+  // Non-landscaping farms see only 'annual'.
+  quotationSubTab: 'annual' | 'bop' = 'annual';
+
+  // BOP (Bill of Project) quotations — adhoc, landscaping-only.
+  bopQuotations: Quotation[] = [];
+  bopLoading = false;
+  showBopForm = false;
+  isSubmittingBop = false;
+  bopForm: { title: string; content: string; items: BopLineItem[] } = {
+    title: '',
+    content: '',
+    items: []
+  };
+  selectedBopDetail: Quotation | null = null;
+  selectedBopDetailSafe: SafeHtml | null = null;
+  isDownloadingBopId: string | null = null;
+  @ViewChild('bopEditor') bopEditor?: ElementRef<HTMLDivElement>;
+
+  // Installment payment (Mark Paid & Download Invoice)
+  payingInstallmentKey: string | null = null;
+  downloadingInvoiceId: string | null = null;
+  revertingInstallmentKey: string | null = null;
 
   private knownMediaIds = new Set<string>();
   private pollSubscription?: Subscription;
@@ -379,7 +410,36 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   get canDeleteMedia(): boolean {
+    // Back-compat: admin can delete anywhere; other modes use canDeleteMediaItem().
     return this.isAdmin;
+  }
+
+  /**
+   * Per-item delete permission. Three modes:
+   *  - Admin: any item, anywhere
+   *  - Manager: items they uploaded themselves, anywhere
+   *  - Farm owner: items they uploaded themselves AND still unattended
+   *    (attended items have been triaged by the team — only admin/manager
+   *    can remove those)
+   *
+   * Quota refund behaviour is handled server-side; owner self-deletes
+   * intentionally don't refund the weekly quota.
+   */
+  canDeleteMediaItem(item: FarmMediaRef, opts: { isAttended?: boolean } = {}): boolean {
+    if (!this.project || this.project.isArchived) return false;
+    if (this.isAdmin) return true;
+
+    const me = (this.currentUser?.id || '').toString();
+    if (!me) return false;
+    const uploadedByMe = String(item.uploadedBy || '') === me;
+    if (!uploadedByMe) return false;
+
+    if (this.isManagerOrAdmin) return true;
+    if (this.isFarmOwner) {
+      const attended = opts.isAttended ?? !!item.attended;
+      return !attended;
+    }
+    return false;
   }
 
   get canArchiveProject(): boolean {
@@ -541,8 +601,13 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (quotations) => {
-          this.quotationHistory = quotations;
-          const active = quotations.find((q) => q.status === 'submitted' || q.status === 'accepted') || null;
+          // Annual quotations drive the active card. BOP quotations are
+          // tracked separately and rendered in a dedicated panel.
+          const annual = quotations.filter((q) => (q.kind || 'annual') === 'annual');
+          this.quotationHistory = annual;
+          this.bopQuotations = quotations.filter((q) => q.kind === 'bop');
+
+          const active = annual.find((q) => q.status === 'submitted' || q.status === 'accepted') || null;
           this.activeQuotation = active;
           this.quotationContentSafe = active
             ? this.sanitizer.bypassSecurityTrustHtml(active.content)
@@ -551,6 +616,371 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.quotationLoading = false;
+        }
+      });
+  }
+
+  // ========================
+  // BOP Quotations (landscaping only)
+  // ========================
+
+  get canCreateBopQuotation(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (!this.isManagerOrAdmin) return false;
+    // BOP is adhoc — only available after the annual quotation flow has
+    // moved past pending_quotation/pending_acceptance.
+    const status = this.project.status;
+    return this.isLandscapingProject && !(
+      status === 'pending_quotation' ||
+      status === 'pending_acceptance' ||
+      status === 'pending_approval' ||
+      status === 'rejected'
+    );
+  }
+
+  get showBopSection(): boolean {
+    return this.isLandscapingProject && !!this.project;
+  }
+
+  /**
+   * Switch between the Annual and BOP subsections inside the Quotation tab.
+   * If the project isn't landscaping, only 'annual' is meaningful.
+   */
+  setQuotationSubTab(tab: 'annual' | 'bop'): void {
+    if (tab === 'bop' && !this.showBopSection) return;
+    this.quotationSubTab = tab;
+  }
+
+  openBopForm(): void {
+    if (!this.canCreateBopQuotation) return;
+    this.showBopForm = true;
+    this.bopForm = {
+      title: '',
+      content: '',
+      items: [{ description: '', quantity: 1, rate: 0, total: 0 }]
+    };
+    setTimeout(() => {
+      if (this.bopEditor?.nativeElement) {
+        this.bopEditor.nativeElement.innerHTML = '';
+      }
+      const formEl = document.querySelector('.bop-form-card');
+      formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  }
+
+  cancelBopForm(): void {
+    this.showBopForm = false;
+    this.bopForm = { title: '', content: '', items: [] };
+  }
+
+  addBopLineItem(): void {
+    this.bopForm.items.push({ description: '', quantity: 1, rate: 0, total: 0 });
+  }
+
+  removeBopLineItem(index: number): void {
+    if (this.bopForm.items.length <= 1) return;
+    this.bopForm.items.splice(index, 1);
+  }
+
+  onBopLineChanged(index: number): void {
+    const it = this.bopForm.items[index];
+    if (!it) return;
+    const qty = Number(it.quantity) || 0;
+    const rate = Number(it.rate) || 0;
+    // Only overwrite total when both qty and rate are set; otherwise leave
+    // whatever the user typed manually so they can override the auto-calc.
+    if (qty > 0 && rate > 0) {
+      it.total = Math.round(qty * rate * 100) / 100;
+    }
+  }
+
+  /** Recompute totals across all rows. Used right before saving so the
+   * on-screen total reflects the final keystroke even when ngModelChange
+   * hasn't fired (e.g. user clicks Save while still focused in an input). */
+  private recomputeBopTotals(): void {
+    this.bopForm.items.forEach((it, i) => this.onBopLineChanged(i));
+  }
+
+  get bopTotal(): number {
+    return this.bopForm.items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+  }
+
+  applyBopFormat(command: string, value: string | undefined = undefined): void {
+    const editor = this.bopEditor?.nativeElement;
+    if (!editor) return;
+    editor.focus();
+    document.execCommand(command, false, value);
+    this.syncBopEditorContent();
+  }
+
+  syncBopEditorContent(): void {
+    const editor = this.bopEditor?.nativeElement;
+    if (!editor) return;
+    this.bopForm.content = editor.innerHTML;
+  }
+
+  submitBopQuotation(): void {
+    if (!this.projectId || !this.canCreateBopQuotation) return;
+
+    this.syncBopEditorContent();
+    this.recomputeBopTotals();
+    const content = (this.bopForm.content || '').trim();
+    const plain = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    if (!plain) {
+      this.toastService.warning('Please enter the BOP details (scope / notes).');
+      return;
+    }
+
+    // Normalize line items. Total is computed defensively from qty * rate
+    // when the auto-compute hasn't fired (e.g., the user typed in the rate
+    // and clicked Save without blurring). Items are kept as long as they
+    // have a description AND any usable amount (manual total OR qty*rate).
+    const items = this.bopForm.items
+      .map((it) => {
+        const description = String(it.description || '').trim();
+        const quantity = Number(it.quantity) || 0;
+        const rate = Number(it.rate) || 0;
+        let total = Number(it.total) || 0;
+        if (total <= 0 && quantity > 0 && rate > 0) {
+          total = Math.round(quantity * rate * 100) / 100;
+        }
+        return { description, quantity, rate, total };
+      })
+      .filter((it) => it.description.length > 0 && it.total > 0);
+
+    if (!items.length) {
+      const hasAnyDescription = this.bopForm.items.some((it) => String(it.description || '').trim());
+      const message = hasAnyDescription
+        ? 'Each line item needs both a description and an amount (qty × rate > 0 or a non-zero total).'
+        : 'Add at least one line item with a description and amount.';
+      this.toastService.warning(message);
+      return;
+    }
+
+    const payload: BopQuotationPayload = {
+      title: this.bopForm.title.trim() || undefined,
+      content,
+      bopItems: items
+    };
+
+    this.isSubmittingBop = true;
+    this.quotationService.createBopQuotation(this.projectId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toastService.success('BOP quotation created.');
+          this.isSubmittingBop = false;
+          this.showBopForm = false;
+          this.loadQuotations();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isSubmittingBop = false;
+          // Surface the actual backend message so the user sees why it
+          // failed (validation, permission, archive state, etc.).
+          const msg = err?.error?.message
+            || err?.error?.error
+            || err?.message
+            || 'Unable to create BOP quotation.';
+          this.toastService.error(msg);
+          console.error('[BOP] save failed', err);
+        }
+      });
+  }
+
+  openBopDetail(quotation: Quotation): void {
+    this.selectedBopDetail = quotation;
+    this.selectedBopDetailSafe = this.sanitizer.bypassSecurityTrustHtml(quotation.content);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeBopDetail(): void {
+    this.selectedBopDetail = null;
+    this.selectedBopDetailSafe = null;
+    document.body.style.overflow = '';
+  }
+
+  downloadBopPdf(quotation: Quotation): void {
+    if (!quotation || !this.projectId) return;
+    if (this.isDownloadingBopId) return;
+    this.isDownloadingBopId = quotation._id;
+    this.quotationService.downloadPdf(this.projectId, quotation._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
+          const dateStr = new Date(quotation.createdAt).toISOString().slice(0, 10);
+          const filename = `BOP_${farm}_${dateStr}.pdf`;
+          const url = window.URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = filename;
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          window.URL.revokeObjectURL(url);
+          this.isDownloadingBopId = null;
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isDownloadingBopId = null;
+          this.toastService.error(err?.error?.message || 'Unable to download BOP PDF.');
+        }
+      });
+  }
+
+  trackBop(_: number, q: Quotation): string {
+    return q._id;
+  }
+
+  // ========================
+  // Installment payment + invoice download
+  // ========================
+
+  private installmentKey(q: Quotation, n: number): string {
+    return `${q._id}:${n}`;
+  }
+
+  canMarkInstallmentPaid(installment: QuotationInstallment): boolean {
+    if (!this.isManagerOrAdmin) return false;
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (installment.status === 'paid') return false;
+    return this.project.status === 'approved' ||
+      this.project.status === 'Running' ||
+      this.project.status === 'Completed';
+  }
+
+  async markInstallmentPaid(quotation: Quotation, installment: QuotationInstallment): Promise<void> {
+    if (!quotation || !this.projectId) return;
+    if (!this.canMarkInstallmentPaid(installment)) return;
+    const key = this.installmentKey(quotation, installment.installmentNumber);
+    if (this.payingInstallmentKey === key) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Mark this installment as paid?',
+      message: `Installment ${installment.installmentNumber} of 4 (${this.formatCurrency(installment.amount)}) will be marked paid and a new invoice will be generated for download.`,
+      confirmText: 'Mark Paid',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-primary',
+      icon: 'fas fa-check'
+    });
+    if (!confirmed) return;
+
+    this.payingInstallmentKey = key;
+    this.quotationService.markInstallmentPaid(
+      this.projectId,
+      quotation._id,
+      installment.installmentNumber
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.payingInstallmentKey = null;
+          this.toastService.success(
+            result.alreadyPaid
+              ? 'This installment was already paid. Downloading existing invoice.'
+              : 'Installment marked paid. Downloading invoice...'
+          );
+          // Refresh quotation state so the installment renders as paid + invoice link.
+          this.loadQuotations();
+          const invoiceId = result.invoice?.id || result.invoice?._id;
+          if (invoiceId) this.downloadInvoice(invoiceId);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.payingInstallmentKey = null;
+          this.toastService.error(err?.error?.message || 'Unable to mark installment paid.');
+        }
+      });
+  }
+
+  /**
+   * Download the invoice PDF for a paid installment. Used by both the
+   * post-mark-paid flow and the standalone "Download Invoice" button on
+   * already-paid installments.
+   */
+  downloadInvoice(invoiceId: string): void {
+    if (!invoiceId || this.downloadingInvoiceId === invoiceId) return;
+    this.downloadingInvoiceId = invoiceId;
+    this.quotationService.downloadInvoicePdf(invoiceId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
+          const filename = `Invoice_${invoiceId}_${farm}.pdf`;
+          const url = window.URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = filename;
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          window.URL.revokeObjectURL(url);
+          this.downloadingInvoiceId = null;
+        },
+        error: (err: HttpErrorResponse) => {
+          this.downloadingInvoiceId = null;
+          this.toastService.error(err?.error?.message || 'Unable to download invoice.');
+        }
+      });
+  }
+
+  isMarkingInstallmentPaid(quotation: Quotation, installment: QuotationInstallment): boolean {
+    return this.payingInstallmentKey === this.installmentKey(quotation, installment.installmentNumber);
+  }
+
+  /**
+   * Admin-only: whether the current user can revert a paid installment.
+   * Reverting is more destructive than marking paid (it removes the invoice
+   * from the customer's history) so it's gated to admins.
+   */
+  canRevertInstallmentPayment(installment: QuotationInstallment): boolean {
+    if (!this.isAdmin) return false;
+    if (!this.project || this.project.isArchived) return false;
+    return installment.status === 'paid';
+  }
+
+  isRevertingInstallment(quotation: Quotation, installment: QuotationInstallment): boolean {
+    return this.revertingInstallmentKey === this.installmentKey(quotation, installment.installmentNumber);
+  }
+
+  async revertInstallmentPayment(quotation: Quotation, installment: QuotationInstallment): Promise<void> {
+    if (!quotation || !this.projectId) return;
+    if (!this.canRevertInstallmentPayment(installment)) return;
+    const key = this.installmentKey(quotation, installment.installmentNumber);
+    if (this.revertingInstallmentKey === key) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: `Revert installment ${installment.installmentNumber}?`,
+      message: installment.invoiceNumber
+        ? `This will reset installment ${installment.installmentNumber} of 4 to pending and remove invoice ${installment.invoiceNumber} from the customer's history. The action can be undone by marking the installment paid again (a new invoice will be issued).`
+        : `This will reset installment ${installment.installmentNumber} of 4 to pending.`,
+      confirmText: 'Revert Payment',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-rotate-left'
+    });
+    if (!confirmed) return;
+
+    this.revertingInstallmentKey = key;
+    this.quotationService.revertInstallmentPayment(
+      this.projectId,
+      quotation._id,
+      installment.installmentNumber
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.revertingInstallmentKey = null;
+          this.toastService.success(
+            result.invoiceSoftDeleted
+              ? `Installment reverted. Invoice ${result.invoiceNumber || ''} removed.`
+              : 'Installment reverted.'
+          );
+          this.loadQuotations();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.revertingInstallmentKey = null;
+          this.toastService.error(err?.error?.message || 'Unable to revert installment payment.');
         }
       });
   }
@@ -913,11 +1343,17 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       event.stopPropagation();
       event.preventDefault();
     }
-    if (!this.canDeleteMedia || this.deletingMediaIds.has(item.mediaId)) return;
+    if (!this.canDeleteMediaItem(item) || this.deletingMediaIds.has(item.mediaId)) return;
+
+    // Owner self-delete shows a different message so the farmer understands
+    // their weekly upload quota will NOT be returned.
+    const isOwnerSelfDelete = !this.isAdmin && !this.isManagerOrAdmin && this.isFarmOwner;
 
     const confirmed = await this.confirmationModalService.confirm({
       title: 'Delete this photo?',
-      message: `This will permanently remove the ${item.type} from the farm record. This cannot be undone.`,
+      message: isOwnerSelfDelete
+        ? `This will remove the ${item.type} from the farm record. Note: deleting your own upload does NOT restore this week's upload allowance.`
+        : `This will permanently remove the ${item.type} from the farm record. This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       confirmClass: 'btn-danger',
@@ -1267,6 +1703,54 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   trackDesign(_: number, item: FarmDesignRef): string {
     return item.mediaId;
+  }
+
+  /**
+   * Whether the current user can delete this design.
+   * Admin: any design. Manager: only items they uploaded themselves.
+   */
+  canDeleteDesign(item: FarmDesignRef): boolean {
+    if (!this.project || this.project.isArchived) return false;
+    if (this.isAdmin) return true;
+    if (!this.isManagerOrAdmin) return false;
+    const me = (this.currentUser?.id || '').toString();
+    return !!me && String(item.uploadedBy || '') === me;
+  }
+
+  async confirmDeleteDesign(item: FarmDesignRef, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!this.canDeleteDesign(item)) return;
+    const designId = (item as any)._id;
+    if (!designId || this.deletingDesignIds.has(designId)) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Delete this design?',
+      message: `This will remove the landscaping ${item.type} from the project record. This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash-alt'
+    });
+    if (!confirmed) return;
+
+    this.deletingDesignIds.add(designId);
+    this.farmDesignService.deleteDesign(this.projectId, designId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingDesignIds.delete(designId);
+          this.designItems = this.designItems.filter((d: any) => d._id !== designId);
+          if ((this.designLightboxItem as any)?._id === designId) this.closeDesignLightbox();
+          this.toastService.success('Design removed.');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.deletingDesignIds.delete(designId);
+          this.toastService.error(err?.error?.message || 'Unable to delete this design.');
+        }
+      });
   }
 
   // ========================
@@ -1685,6 +2169,55 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     this.expandedPrescriptionId = this.expandedPrescriptionId === id ? null : id;
   }
 
+  /**
+   * Whether the current user can delete this prescription.
+   * Admin: any prescription. Manager: only items they uploaded.
+   */
+  canDeletePrescription(item: PrescriptionRef): boolean {
+    if (!this.project || this.project.isArchived) return false;
+    if (this.isAdmin) return true;
+    if (!this.isManagerOrAdmin) return false;
+    const me = (this.currentUser?.id || '').toString();
+    return !!me && String(item.uploadedBy || '') === me;
+  }
+
+  async confirmDeletePrescription(item: PrescriptionRef, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!this.canDeletePrescription(item)) return;
+    const id = item._id;
+    if (!id || this.deletingPrescriptionIds.has(id)) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Delete this prescription?',
+      message: `"${item.title || item.fileName || 'Prescription'}" will be removed from the farm record. This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash-alt'
+    });
+    if (!confirmed) return;
+
+    this.deletingPrescriptionIds.add(id);
+    this.farmPrescriptionService.deletePrescription(this.projectId, id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingPrescriptionIds.delete(id);
+          this.prescriptionItems = this.prescriptionItems.filter((p) => p._id !== id);
+          if (this.activePrescription?._id === id) this.closePrescriptionOverlay();
+          if (this.expandedPrescriptionId === id) this.expandedPrescriptionId = null;
+          this.toastService.success('Prescription removed.');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.deletingPrescriptionIds.delete(id);
+          this.toastService.error(err?.error?.message || 'Unable to delete this prescription.');
+        }
+      });
+  }
+
   prescriptionId(item: PrescriptionRef): string {
     if (!item) return '';
     const raw = item._id || item.mediaId || `${item.uploadedAt}-${item.title || 'rx'}`;
@@ -1698,6 +2231,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   prescriptionIcon(item: PrescriptionRef): string {
     switch (item.docType) {
       case 'image': return 'fa-file-image';
+      case 'video': return 'fa-file-video';
       case 'pdf': return 'fa-file-pdf';
       case 'docx': return 'fa-file-word';
       case 'text': return 'fa-file-lines';
@@ -1766,6 +2300,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   prescriptionTypeLabel(item: PrescriptionRef): string {
     switch (item.docType) {
       case 'image': return 'Image';
+      case 'video': return 'Video';
       case 'pdf': return 'PDF';
       case 'docx': return 'Word doc';
       case 'text': return 'Text';

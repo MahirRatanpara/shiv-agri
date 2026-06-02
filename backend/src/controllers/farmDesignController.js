@@ -116,6 +116,38 @@ exports.listDesigns = async (req, res) => {
   }
 };
 
+/**
+ * Soft-delete a single landscaping design. Admin can delete any design;
+ * manager may delete only items they uploaded. The route enforces basic
+ * manager/admin gating; per-uploader checks happen here.
+ */
+exports.deleteDesign = async (req, res) => {
+  const projectId = req.params.id;
+  const designId = req.params.designId;
+  try {
+    logger.info(`[FarmDesign] DELETE /projects/${projectId}/designs/${designId} by user=${req.user._id}`);
+
+    const isAdmin = req.user?.role === 'admin';
+    const result = await farmDesignService.deleteDesign(projectId, designId, req.user, {
+      allowAnyUploader: isAdmin
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Design removed',
+      mediaId: result.mediaId
+    });
+  } catch (error) {
+    const status = error?.status || 500;
+    logger.error(`[FarmDesign] deleteDesign error: ${error.message}`);
+    return res.status(status).json({
+      success: false,
+      error: 'Failed to delete design',
+      message: error.message || 'Unknown error'
+    });
+  }
+};
+
 function isLandscapingProject(project) {
   if (!project) return false;
   if (project.category && project.category.toUpperCase() === 'LANDSCAPING') return true;

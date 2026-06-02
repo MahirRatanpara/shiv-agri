@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export type PrescriptionDocType = 'image' | 'pdf' | 'docx' | 'text' | 'manual' | 'structured';
+export type PrescriptionDocType = 'image' | 'video' | 'pdf' | 'docx' | 'text' | 'manual' | 'structured';
 
 export interface PrescriptionFarmingOperations {
   leveling?: boolean;
@@ -226,5 +226,15 @@ export class FarmPrescriptionService {
       `${this.apiUrl}/projects/${projectId}/prescriptions/${prescriptionId}/pdf`,
       { responseType: 'blob' }
     );
+  }
+
+  /**
+   * Soft-delete a prescription. Backend enforces role gating: admin may
+   * delete any prescription; manager may delete only their own uploads.
+   */
+  deletePrescription(projectId: string, prescriptionId: string): Observable<void> {
+    return this.http
+      .delete<any>(`${this.apiUrl}/projects/${projectId}/prescriptions/${prescriptionId}`)
+      .pipe(map(() => void 0));
   }
 }

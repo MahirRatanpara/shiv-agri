@@ -205,8 +205,15 @@ class FarmMediaService {
   /**
    * Upload a single media file to the media service then embed a reference
    * on the project document. Throws { status, message } on failure.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.bypassQuota=false] When true, the upload is
+   *   stamped with `countsTowardQuota=false` and lands already attended.
+   *   Used for admin/manager uploads so they don't consume the farmer's
+   *   weekly allowance and don't need triage in the unattended bucket.
    */
-  async uploadMedia(projectId, file, user) {
+  async uploadMedia(projectId, file, user, options = {}) {
+    const { bypassQuota = false } = options;
     const start = Date.now();
     logger.info(`[FarmMedia] Upload start: project=${projectId}, file=${file.originalname}, size=${file.size}, mime=${file.mimetype}, user=${user._id}`);
 
@@ -264,7 +271,13 @@ class FarmMediaService {
       uploadedBy: user._id,
       uploadedByName: user.name || user.email,
       uploadedAt: new Date(completed.createdAt || Date.now()),
-      attended: false
+      // Admin/manager uploads land attended and don't count toward the
+      // farmer's weekly quota.
+      attended: bypassQuota,
+      attendedAt: bypassQuota ? new Date() : undefined,
+      attendedBy: bypassQuota ? user._id : undefined,
+      attendedByName: bypassQuota ? (user.name || user.email) : undefined,
+      countsTowardQuota: !bypassQuota
     };
 
     await Project.updateOne(
@@ -470,15 +483,64 @@ class FarmMediaService {
   }
 
   /**
-   * Soft-delete a media item by marking its status. Authorization (admin only)
-   * is enforced at the route layer.
+   * Soft-delete a media item by marking its status.
+   *
+   * Three deletion modes are supported via options:
+   *  - Admin   (`allowAnyUploader: true`,  `refundQuota: true`)  — any item,
+   *            attended or not. Quota refunds for current-week farmer items.
+   *  - Manager (`allowAnyUploader: false`, `refundQuota: true`)  — only items
+   *            the manager uploaded themselves. Quota refunds for current-week
+   *            farmer items (manager uploads have `countsTowardQuota=false`
+   *            so they don't refund anyway).
+   *  - Owner   (`allowAnyUploader: false`, `refundQuota: false`,
+   *             `requireUnattended: true`) — farm owner cleaning up their own
+   *            uploads. Quota is NOT refunded — the rate limit is one-way.
+   *            The item must still be unattended (admin/manager hasn't
+   *            triaged it yet); attended items are part of the historical
+   *            record and only admin/manager can remove them.
    */
-  async deleteMedia(projectId, mediaId, user) {
+  async deleteMedia(projectId, mediaId, user, options = {}) {
+    const {
+      allowAnyUploader = false,
+      refundQuota = true,
+      requireUnattended = false
+    } = options;
+
+    const project = await Project.findOne(
+      { _id: projectId, 'farmMedia.mediaId': mediaId },
+      { 'farmMedia.$': 1 }
+    ).lean();
+
+    if (!project || !project.farmMedia?.[0]) {
+      throw { status: 404, message: 'Media not found on this project' };
+    }
+
+    const media = project.farmMedia[0];
+
+    if (!allowAnyUploader) {
+      const uploader = media.uploadedBy?.toString();
+      if (!uploader || uploader !== user._id.toString()) {
+        throw {
+          status: 403,
+          message: 'You may only delete media that you uploaded.'
+        };
+      }
+    }
+
+    if (requireUnattended && media.attended === true) {
+      throw {
+        status: 403,
+        message: 'This photo has already been reviewed by the team. Please contact your manager to remove it.'
+      };
+    }
+
     const result = await Project.updateOne(
       { _id: projectId, 'farmMedia.mediaId': mediaId },
       {
         $set: {
           'farmMedia.$.status': 'DELETED',
+          'farmMedia.$.deletedAt': new Date(),
+          'farmMedia.$.deletedBy': user._id,
           updatedAt: new Date()
         }
       }
@@ -488,8 +550,27 @@ class FarmMediaService {
       throw { status: 404, message: 'Media not found on this project' };
     }
 
-    logger.info(`[FarmMedia] Media deleted: project=${projectId}, mediaId=${mediaId}, by=${user._id}`);
-    return { success: true };
+    // Refund the farmer's weekly quota only when the caller is allowed to
+    // trigger refunds (admin/manager) AND the deleted item was a
+    // quota-counting farmer upload from the CURRENT ISO week. Farmer
+    // self-deletes never refund quota — the weekly cap is intentionally
+    // one-way so the farmer can't cycle uploads to bypass the limit.
+    let quotaRefunded = false;
+    if (refundQuota) {
+      const counted = media.countsTowardQuota !== false; // Default true for legacy items
+      const sameWeek = media.uploadedAt
+        ? this.getIsoWeek(new Date(media.uploadedAt)) === this.getIsoWeek()
+        : false;
+
+      if (counted && sameWeek) {
+        await this.releaseQuota(projectId, 1);
+        quotaRefunded = true;
+        logger.info(`[FarmMedia] Quota refunded on delete: project=${projectId}, mediaId=${mediaId}`);
+      }
+    }
+
+    logger.info(`[FarmMedia] Media deleted: project=${projectId}, mediaId=${mediaId}, by=${user._id}, quotaRefunded=${quotaRefunded}, mode=${allowAnyUploader ? 'admin' : (requireUnattended ? 'owner' : 'manager')}`);
+    return { success: true, mediaId: media.mediaId, quotaRefunded };
   }
 
   getWeeklyLimit() {

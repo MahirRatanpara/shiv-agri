@@ -55,9 +55,26 @@ class PDFGeneratorService {
     }
 
     /**
-     * Initialize browser instance (reusable for multiple PDFs)
+     * Initialize browser instance (reusable for multiple PDFs).
+     *
+     * The cached browser can become dead between requests (OOM kill, manual
+     * Chrome crash, container restart) but the in-memory reference is still
+     * non-null. Calling `newPage()` on a dead browser surfaces as
+     * "Connection closed" / "Protocol error". We now verify liveness on
+     * every entry and re-launch if needed.
      */
     async initBrowser() {
+        const isAlive = this.browser
+            && (typeof this.browser.connected === 'boolean'
+                ? this.browser.connected
+                : (typeof this.browser.isConnected === 'function' ? this.browser.isConnected() : true));
+
+        if (this.browser && !isAlive) {
+            logger.warn('Cached Puppeteer browser is disconnected — discarding and relaunching');
+            try { await this.browser.close(); } catch (_) { /* already dead */ }
+            this.browser = null;
+        }
+
         if (!this.browser) {
             logger.info('Initializing Puppeteer browser');
             this.browser = await puppeteer.launch({
@@ -72,10 +89,41 @@ class PDFGeneratorService {
                 ]
             });
 
+            // If the browser dies later (process killed, crash, etc.), null
+            // the cache so the next request relaunches a fresh instance
+            // instead of trying to talk to a dead CDP socket.
+            this.browser.on('disconnected', () => {
+                logger.warn('Puppeteer browser disconnected — cache cleared');
+                this.browser = null;
+            });
+
             // Pre-cache templates
             await this.preloadTemplates();
         }
         return this.browser;
+    }
+
+    /**
+     * Wrapper that retries a page-based PDF render once when the cached
+     * browser turns out to be dead mid-render. Used by single-PDF flows
+     * (receipt, invoice, letter, quotation, prescription) which don't
+     * naturally retry. Bulk flows manage their own retry semantics.
+     */
+    async _withFreshBrowser(renderFn) {
+        try {
+            const browser = await this.initBrowser();
+            return await renderFn(browser);
+        } catch (error) {
+            const msg = (error && error.message) || '';
+            const isDeadBrowser = /Connection closed|Protocol error|Target closed|Session closed/i.test(msg);
+            if (!isDeadBrowser) throw error;
+
+            logger.warn(`PDF render failed with "${msg}" — relaunching browser and retrying once`);
+            try { if (this.browser) await this.browser.close(); } catch (_) {}
+            this.browser = null;
+            const browser = await this.initBrowser();
+            return renderFn(browser);
+        }
     }
 
     /**
@@ -1155,44 +1203,43 @@ class PDFGeneratorService {
      * Generate Invoice PDF
      */
     async generateInvoicePDF(invoiceData) {
-        const browser = await this.initBrowser();
-        const page = await browser.newPage();
+        return this._withFreshBrowser(async (browser) => {
+            const page = await browser.newPage();
+            try {
+                logger.info(`Generating invoice PDF for: ${invoiceData.invoiceNumber || 'unknown'}`);
 
-        try {
-            logger.info(`Generating invoice PDF for: ${invoiceData.invoiceNumber || 'unknown'}`);
+                const template = this.templateCache.invoice || await fs.readFile(this.invoiceTemplatePath, 'utf-8');
+                const html = this.fillInvoiceTemplate(template, invoiceData);
 
-            const template = this.templateCache.invoice || await fs.readFile(this.invoiceTemplatePath, 'utf-8');
-            const html = this.fillInvoiceTemplate(template, invoiceData);
+                // Inject font CSS
+                const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
 
-            // Inject font CSS
-            const htmlWithFonts = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
+                await page.setContent(htmlWithFonts, {
+                    waitUntil: 'domcontentloaded'
+                });
 
-            await page.setContent(htmlWithFonts, {
-                waitUntil: 'domcontentloaded'
-            });
+                await new Promise(resolve => setTimeout(resolve, 200));
 
-            await new Promise(resolve => setTimeout(resolve, 200));
+                const pdfBuffer = await page.pdf({
+                    format: 'A4',
+                    printBackground: true,
+                    margin: {
+                        top: '10mm',
+                        right: '10mm',
+                        bottom: '10mm',
+                        left: '10mm'
+                    }
+                });
 
-            const pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm'
-                }
-            });
-
-            logger.info(`Invoice PDF generated successfully for: ${invoiceData.invoiceNumber}`);
-            return pdfBuffer;
-
-        } catch (error) {
-            logger.error(`Error generating invoice PDF: ${error.message}`, {stack: error.stack});
-            throw error;
-        } finally {
-            await page.close();
-        }
+                logger.info(`Invoice PDF generated successfully for: ${invoiceData.invoiceNumber}`);
+                return pdfBuffer;
+            } catch (error) {
+                logger.error(`Error generating invoice PDF: ${error.message}`, {stack: error.stack});
+                throw error;
+            } finally {
+                try { await page.close(); } catch (_) { /* browser may already be gone */ }
+            }
+        });
     }
 
     /**
@@ -1252,6 +1299,10 @@ class PDFGeneratorService {
             '{{referenceNumber}}': data.referenceNumber || '',
             '{{location}}': data.location || '',
             '{{village}}': data.village || '',
+            '{{taluka}}': data.taluka || '',
+            '{{district}}': data.district || '',
+            '{{state}}': data.state || '',
+            '{{pincode}}': data.pincode || '',
             '{{phoneNumber}}': data.phoneNumber || '',
             '{{mobileNumber}}': data.mobileNumber || '',
             '{{itemsRows}}': itemsRows,

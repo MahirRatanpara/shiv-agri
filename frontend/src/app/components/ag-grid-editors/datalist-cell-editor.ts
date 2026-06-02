@@ -14,16 +14,23 @@ import { ICellEditorComp, ICellEditorParams } from 'ag-grid-community';
  *     cellEditorPopup: true
  *   }
  *
- * `values` may be either an array or a function returning an array, to allow
- * late-loaded config (e.g. fetched from the backend at startup).
+ * `values` may be:
+ *  - an array of strings
+ *  - a function returning an array (sync)
+ *  - a function returning a Promise<string[]> (async)
+ *  - a function that receives the AG Grid cellParams (so options can be row-aware)
  */
+type ValuesProvider =
+  | string[]
+  | ((params?: ICellEditorParams) => string[] | Promise<string[]>);
+
 export class DatalistCellEditor implements ICellEditorComp {
   private eGui!: HTMLDivElement;
   private eInput!: HTMLInputElement;
   private eDatalist!: HTMLDataListElement;
   private datalistId!: string;
 
-  init(params: ICellEditorParams & { values?: string[] | (() => string[]) }): void {
+  init(params: ICellEditorParams & { values?: ValuesProvider }): void {
     this.datalistId = `datalist-editor-${Math.random().toString(36).slice(2)}`;
 
     this.eGui = document.createElement('div');
@@ -46,16 +53,30 @@ export class DatalistCellEditor implements ICellEditorComp {
     this.eDatalist = document.createElement('datalist');
     this.eDatalist.id = this.datalistId;
 
-    const rawValues = typeof params.values === 'function' ? params.values() : params.values;
-    const values = Array.isArray(rawValues) ? rawValues : [];
-    for (const v of values) {
-      const opt = document.createElement('option');
-      opt.value = v;
-      this.eDatalist.appendChild(opt);
-    }
-
     this.eGui.appendChild(this.eInput);
     this.eGui.appendChild(this.eDatalist);
+
+    const populate = (values: string[]) => {
+      // Clear any previous options before repopulating
+      while (this.eDatalist.firstChild) {
+        this.eDatalist.removeChild(this.eDatalist.firstChild);
+      }
+      for (const v of values) {
+        if (!v) continue;
+        const opt = document.createElement('option');
+        opt.value = v;
+        this.eDatalist.appendChild(opt);
+      }
+    };
+
+    const raw = typeof params.values === 'function' ? params.values(params) : params.values;
+    if (Array.isArray(raw)) {
+      populate(raw);
+    } else if (raw && typeof (raw as Promise<string[]>).then === 'function') {
+      (raw as Promise<string[]>).then(populate).catch(() => populate([]));
+    } else {
+      populate([]);
+    }
   }
 
   getGui(): HTMLElement {
