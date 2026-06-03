@@ -4,6 +4,61 @@ const Project = require('../models/Project');
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
 
+const MEDIA_SERVICE_URL = process.env.MEDIA_SERVICE_URL || 'http://localhost:8081';
+const MEDIA_SERVICE_PUBLIC_URL = process.env.MEDIA_SERVICE_PUBLIC_URL || MEDIA_SERVICE_URL;
+
+/**
+ * Upload a single file to the Media Service and return a normalized
+ * attachment ref. Throws { status, message } on failure. Shared by the BOP
+ * create + attach-later flows so both surface the same shape.
+ */
+async function uploadBopAttachmentFile(projectId, file) {
+  const initiateRes = await fetch(`${MEDIA_SERVICE_URL}/api/v1/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      altText: `BOP quotation attachment for project ${projectId}`,
+      tags: ['bop-attachment', `project-${projectId}`]
+    })
+  });
+  if (!initiateRes.ok) {
+    const text = await initiateRes.text();
+    logger.error(`[BOPAttachment] Initiate failed: status=${initiateRes.status}, body=${text}`);
+    throw { status: 502, message: 'Media service unavailable. Please try again.' };
+  }
+  const initiated = await initiateRes.json();
+
+  const formData = new FormData();
+  const blob = new Blob([file.buffer], { type: file.mimetype });
+  formData.append('file', blob, file.originalname);
+
+  const uploadRes = await fetch(`${MEDIA_SERVICE_URL}/api/v1/media/${initiated.id}/upload`, {
+    method: 'PUT',
+    body: formData
+  });
+  if (!uploadRes.ok) {
+    const text = await uploadRes.text();
+    logger.error(`[BOPAttachment] Complete failed: id=${initiated.id}, status=${uploadRes.status}, body=${text}`);
+    throw { status: 502, message: 'Upload failed. Please try again.' };
+  }
+  const completed = await uploadRes.json();
+
+  const fullUrl = completed.contentUrl?.startsWith('http')
+    ? completed.contentUrl
+    : `${MEDIA_SERVICE_PUBLIC_URL}${completed.contentUrl}`;
+
+  return {
+    mediaId: completed.id,
+    url: fullUrl,
+    mimeType: completed.mimeType,
+    sizeBytes: completed.sizeBytes,
+    fileName: file.originalname
+  };
+}
+
 const isLandscapingProject = (project) => {
   if (!project) return false;
   if (project.category && String(project.category).toUpperCase() === 'LANDSCAPING') return true;
@@ -48,7 +103,8 @@ class QuotationService {
     const content = String(payload?.content || '').trim();
     const amountPerYear = Number(payload?.amountPerYear);
 
-    if (!content) throw new Error('Quotation details are required.');
+    // `content` is optional — the annual amount + installment schedule are
+    // the primary signal. Only the amount is enforced here.
     if (!Number.isFinite(amountPerYear) || amountPerYear <= 0) {
       throw new Error('A valid annual amount is required.');
     }
@@ -129,7 +185,7 @@ class QuotationService {
    * they do not change the project status and do not supersede the annual
    * quotation.
    */
-  async createBopQuotation(projectId, payload, user) {
+  async createBopQuotation(projectId, payload, user, files = []) {
     const project = await Project.findOne({ _id: projectId, isDeleted: false });
     if (!project) throw new Error('Project not found');
 
@@ -139,7 +195,8 @@ class QuotationService {
 
     const content = String(payload?.content || '').trim();
     const items = Array.isArray(payload?.bopItems) ? payload.bopItems : [];
-    if (!content) throw new Error('Quotation details are required.');
+    // `content` is optional for BOPs too — the line items + total are the
+    // contract. We only enforce that at least one line item is present.
     if (!items.length) throw new Error('A BOP quotation must have at least one line item.');
 
     const processedItems = items.map((item) => {
@@ -156,6 +213,25 @@ class QuotationService {
 
     const amountPerYear = processedItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
 
+    // Upload attachments to the Media Service first so the quotation doc
+    // can land with the URLs already populated. If any single upload fails
+    // we still create the quotation with whatever succeeded — partial-success
+    // is preferable to losing the line-item work.
+    const attachments = [];
+    const failures = [];
+    for (const file of files) {
+      try {
+        const ref = await uploadBopAttachmentFile(projectId, file);
+        attachments.push({
+          ...ref,
+          uploadedBy: user._id,
+          uploadedByName: user.name || user.fullName || ''
+        });
+      } catch (err) {
+        failures.push({ filename: file.originalname, status: err?.status || 500, message: err?.message || 'Upload failed' });
+      }
+    }
+
     const quotation = await Quotation.create({
       project: project._id,
       kind: 'bop',
@@ -164,13 +240,77 @@ class QuotationService {
       contentText: stripHtml(content).slice(0, 1000),
       amountPerYear,
       bopItems: processedItems,
+      attachments,
       startDate: payload?.startDate ? new Date(payload.startDate) : new Date(),
       submittedBy: user._id,
       submittedByName: user.name || user.fullName || ''
     });
 
-    logger.info(`BOP quotation ${quotation._id} created for landscaping project ${project._id} by ${user._id}`);
-    return { quotation, project };
+    logger.info(`BOP quotation ${quotation._id} created for landscaping project ${project._id} by ${user._id} (attachments=${attachments.length}, failures=${failures.length})`);
+    return { quotation, project, attachmentFailures: failures };
+  }
+
+  /**
+   * Attach more photos/PDFs to an existing BOP quotation. Mirrors the
+   * create-time upload logic for partial-success handling.
+   */
+  async addBopAttachments(projectId, quotationId, files, user) {
+    const quotation = await Quotation.findOne({ _id: quotationId, project: projectId });
+    if (!quotation) throw new Error('Quotation not found');
+    if (quotation.kind !== 'bop') {
+      throw new Error('Attachments are only supported on BOP quotations.');
+    }
+    if (!files?.length) throw new Error('No files provided.');
+
+    const added = [];
+    const failures = [];
+    for (const file of files) {
+      try {
+        const ref = await uploadBopAttachmentFile(projectId, file);
+        added.push({
+          ...ref,
+          uploadedBy: user._id,
+          uploadedByName: user.name || user.fullName || ''
+        });
+      } catch (err) {
+        failures.push({ filename: file.originalname, status: err?.status || 500, message: err?.message || 'Upload failed' });
+      }
+    }
+
+    if (added.length) {
+      await Quotation.updateOne(
+        { _id: quotation._id },
+        { $push: { attachments: { $each: added } } }
+      );
+    }
+
+    const fresh = await Quotation.findById(quotation._id).lean();
+    logger.info(`[BOPAttachment] Added ${added.length} attachment(s) to BOP ${quotation._id} (failures=${failures.length}) by ${user._id}`);
+    return { quotation: fresh, added, failures };
+  }
+
+  /**
+   * Remove a single attachment from a BOP quotation. Soft removal at the
+   * subdoc level (pull); the underlying media-service file is left alone so
+   * the 30-day cleanup job can sweep it on its normal cadence.
+   */
+  async removeBopAttachment(projectId, quotationId, attachmentId, user) {
+    const quotation = await Quotation.findOne({ _id: quotationId, project: projectId });
+    if (!quotation) throw new Error('Quotation not found');
+    if (quotation.kind !== 'bop') {
+      throw new Error('Attachments are only supported on BOP quotations.');
+    }
+    const exists = (quotation.attachments || []).some(
+      (a) => a._id?.toString() === String(attachmentId)
+    );
+    if (!exists) throw new Error('Attachment not found on this quotation.');
+
+    await Quotation.updateOne(
+      { _id: quotation._id },
+      { $pull: { attachments: { _id: attachmentId } } }
+    );
+    logger.info(`[BOPAttachment] Removed attachment ${attachmentId} from BOP ${quotationId} by ${user._id}`);
+    return { success: true };
   }
 
   // ========================

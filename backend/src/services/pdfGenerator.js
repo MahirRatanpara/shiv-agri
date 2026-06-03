@@ -1426,8 +1426,10 @@ class PDFGeneratorService {
                     Based on our review, please find below the proposed annual consultancy quotation.
                 </p>
 
-                <h3 style="font-size:15px;margin:20px 0 8px;font-weight:700;text-decoration:underline;">Scope &amp; Details</h3>
-                <div style="font-size:14px;line-height:1.8;">${quotation.content || ''}</div>
+                ${quotation.content && String(quotation.content).replace(/<[^>]*>/g, '').trim()
+                  ? `<h3 style="font-size:15px;margin:20px 0 8px;font-weight:700;text-decoration:underline;">Scope &amp; Details</h3>
+                     <div style="font-size:14px;line-height:1.8;">${quotation.content}</div>`
+                  : ''}
 
                 <h3 style="font-size:15px;margin:24px 0 8px;font-weight:700;text-decoration:underline;">Annual Fee</h3>
                 <p style="font-size:18px;font-weight:700;color:#15803D;">${formatINR(quotation.amountPerYear)} per year</p>

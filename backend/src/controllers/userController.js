@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Role = require('../models/Role');
+const logger = require('../utils/logger');
+const { propagateIdentityToProjects } = require('../utils/identityPropagation');
 
 const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
 
@@ -35,7 +37,7 @@ const getAllUsers = async (req, res) => {
         path: 'roleRef',
         select: 'name displayName'
       })
-      .select('_id name email role profilePhoto createdAt')
+      .select('_id name email role profilePhoto createdAt metadata.phoneNumber metadata.phoneCountryCode metadata.phoneNumberNormalized')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
@@ -216,10 +218,150 @@ const lookupUserByPhone = async (req, res) => {
   }
 };
 
+/**
+ * Admin-only: update a user's identity (name / email / phone). Strict
+ * uniqueness is enforced — the operation fails if the new email or phone
+ * already belongs to another user. Empty strings clear the field.
+ *
+ * Body: { name?, email?, phone?, phoneCountryCode? }
+ *   - email: null/'' clears the email
+ *   - phone: digits-only, normalized internally; null/'' clears the phone
+ */
+const updateUserIdentity = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, email, phone, phoneCountryCode } = req.body || {};
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Snapshot the BEFORE state so we can detect which denormalized fields
+    // need to be propagated to the user's projects after the save.
+    const before = {
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.metadata?.phoneNumber || ''
+    };
+
+    // ---- Name ----
+    if (typeof name === 'string') {
+      const trimmed = name.trim();
+      if (trimmed) user.name = trimmed;
+    }
+
+    // ---- Email ----
+    if (email !== undefined) {
+      const cleanEmail = email == null ? '' : String(email).trim().toLowerCase();
+      if (cleanEmail !== (user.email || '')) {
+        if (cleanEmail) {
+          const taken = await User.findOne({ email: cleanEmail, _id: { $ne: user._id } })
+            .select('_id')
+            .lean();
+          if (taken) {
+            return res.status(409).json({ error: 'This email is already linked to another account.' });
+          }
+          user.email = cleanEmail;
+        } else {
+          user.email = undefined;
+        }
+      }
+    }
+
+    // ---- Phone ----
+    if (phone !== undefined) {
+      const rawPhone = phone == null ? '' : String(phone).trim();
+      if (!rawPhone) {
+        // Clearing the phone — remove all phone metadata.
+        if (user.metadata) {
+          user.metadata.phoneNumber = '';
+          user.metadata.phoneCountryCode = '';
+          user.metadata.phoneNumberNormalized = undefined;
+        }
+        user.phoneVerified = false;
+      } else {
+        const allDigits = normalizePhoneNumber(rawPhone);
+        if (allDigits.length < 10) {
+          return res.status(400).json({ error: 'Phone number must have at least 10 digits.' });
+        }
+        // Default to +91 if country code wasn't given AND the number is exactly 10 digits.
+        const cc = String(phoneCountryCode || '').trim() || (allDigits.length === 10 ? '+91' : '');
+        const ccDigits = cc.replace(/\D/g, '');
+        const normalizedKey = ccDigits && !allDigits.startsWith(ccDigits)
+          ? ccDigits + allDigits
+          : allDigits;
+
+        const taken = await User.findOne({
+          _id: { $ne: user._id },
+          'metadata.phoneNumberNormalized': normalizedKey
+        }).select('_id').lean();
+        if (taken) {
+          return res.status(409).json({ error: 'This phone number is already linked to another account.' });
+        }
+
+        user.metadata = {
+          ...(user.metadata?.toObject ? user.metadata.toObject() : (user.metadata || {})),
+          phoneCountryCode: cc || user.metadata?.phoneCountryCode || '+91',
+          phoneNumber: rawPhone,
+          phoneNumberNormalized: normalizedKey
+        };
+      }
+    }
+
+    try {
+      await user.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({ error: 'Email or phone already in use by another account.' });
+      }
+      throw err;
+    }
+
+    // Detect which identity fields actually changed, then push the new
+    // values into every project's denormalized clientName/clientEmail/
+    // clientPhone fields. Strict equality is fine here — both sides are
+    // already normalised (trimmed, lowercased for email).
+    const after = {
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.metadata?.phoneNumber || ''
+    };
+    const changes = {};
+    if (after.name !== before.name) changes.name = after.name;
+    if (after.email !== before.email) changes.email = after.email;
+    if (after.phone !== before.phone) changes.phone = after.phone;
+
+    // Best-effort denormalization sync to every project anchored on this
+    // user. The util swallows its own errors so the admin's primary save
+    // isn't blocked by a follow-up failure.
+    const projectsUpdated = Object.keys(changes).length
+      ? await propagateIdentityToProjects(user._id, changes)
+      : 0;
+
+    const fresh = await User.findById(user._id)
+      .populate({ path: 'roleRef', select: 'name displayName' })
+      .select('_id name email role profilePhoto createdAt metadata');
+
+    res.json({
+      success: true,
+      message: projectsUpdated > 0
+        ? `User identity updated. ${projectsUpdated} project${projectsUpdated === 1 ? '' : 's'} re-synced.`
+        : 'User identity updated.',
+      user: fresh,
+      projectsUpdated
+    });
+  } catch (error) {
+    console.error('Error updating user identity:', error);
+    res.status(500).json({ error: 'Failed to update user identity' });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUser,
   updateUserRole,
+  updateUserIdentity,
   deleteUser,
   lookupUserByPhone
 };

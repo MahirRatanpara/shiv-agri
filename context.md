@@ -281,6 +281,7 @@ Once an account exists, normal users may ATTACH a phone (never change it) via:
 - `POST /api/auth/profile/phone` (no OTP) — used ONLY in Google-only mode (`OTP_LOGIN_ENABLED=false`) for manual phone entry on the complete-profile step.
 - `POST /api/auth/profile/email` — attaches an email when none exists (no verification).
 - `PATCH /api/auth/profile` is now **admin-only** — non-admins receive 403 with guidance to use OTP. Numbers are immutable once set; admins must fix mistakes.
+- `GET /api/auth/me` is wrapped in a no-store/no-ETag header middleware so browser caches can't serve a 304 with stale profile state after an identity edit.
 
 ### Profile-Complete Gate
 
@@ -398,7 +399,7 @@ Managed by `SessionStateManager` class (frontend: `models/session-state.model.ts
 | PUT | `/api/soil-testing/sessions/:id` | soil.sessions.update | Update session & samples |
 | PATCH | `/api/soil-testing/sessions/:id/status` | soil.sessions.update | Update session status |
 | DELETE | `/api/soil-testing/sessions/:id` | — | Delete session & samples |
-| POST | `/api/soil-testing/sessions/:id/upload-excel` | soil.sessions.update | Upload Excel samples (columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name) |
+| POST | `/api/soil-testing/sessions/:id/upload-excel` | soil.sessions.update | Upload Excel samples (columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name). Cell extraction goes through `utils/excelCellText.extractCellText`, which unwraps ExcelJS rich-text / formula / hyperlink / shared-formula shapes so formatted cells don't end up persisted as the literal "[object Object]". Same helper is used by the water and fertilizer Excel upload routes. |
 | GET | `/api/soil-testing/sessions/:sessionId/samples` | soil.sessions.view | Paginated samples |
 | PATCH | `/api/soil-testing/sessions/:sessionId/samples` | soil.sessions.update | Bulk upsert samples |
 | DELETE | `/api/soil-testing/sessions/:sessionId/samples` | soil.samples.delete | Bulk delete samples |
@@ -526,7 +527,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Land Details:**
 - `totalArea`, `areaUnit` (enum: acres, hectares, sqmeters, vigha-16, vigha-24), `cultivableArea`, `soilType`
-- `waterSource[]` (legacy), `irrigationSystem` (Bore, Well, Mixed, Canal, River), `terrainType`
+- `waterSource[]` (legacy), `irrigationSystem` (legacy single string — back-compat reads; mirrored on save from `irrigationSources`), `irrigationSources[]` (multi-select water sources: Bore, Well, Canal, River, Pond, Tank, ...), `irrigationMethod` (Drip, Flood, Sprinkler, Furrow, ...), `terrainType`. Pre-save hook keeps `irrigationSystem` and `irrigationSources[]` in sync (back-fills the array from the legacy field on first save).
 
 **Electricity / Power Supply:**
 - `electricity.transformerHp`, `electricity.motorCount`, `electricity.totalMotorHp`
@@ -544,13 +545,15 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 
 **Visit Tracking:** `totalVisitsPlanned`, `totalVisitsCompleted`, `visitFrequency`, `numberOfYears`
 
-**Other:** `crops[]`, `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
+**Other:** `crops[]` ({ name, variety, season, plantingDate, expectedHarvestDate, area, **cropAge** (years, for perennials), **totalTrees** (count), **spacing** (free-text e.g. "5x5 ft") }), `tags[]`, `priority`, `isFavorite[]` (user IDs), `coverImage`, `images[]`
 
 **Farm Media:** `farmMedia[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, status, uploadedBy, uploadedByName, uploadedAt (indexed), attended (Boolean, default false), attendedAt, attendedBy, attendedByName, countsTowardQuota (Boolean, default true), deletedAt, deletedBy } — photos/videos uploaded via Media Service, embedded as references. **Owner, manager, and admin uploads** are all accepted: owner uploads count toward the weekly quota and start unattended; admin/manager uploads bypass the quota (`countsTowardQuota=false`) and land already attended. Owner uploads land in the unattended bucket (shown as thumbnails); admins/farm managers acknowledge them via mark-attended, which moves them into the paginated drawer.
 
 **Landscaping Designs:** `landscapingDesigns[]` of { mediaId, url, mimeType, type (image|video), sizeBytes, title, notes, status, uploadedBy, uploadedByName, uploadedAt (indexed), deletedAt, deletedBy } — manager/admin-only uploads for landscaping projects, stored via Media Service.
 
 **Prescriptions:** `prescriptions[]` of { _id, source (file|manual|structured), docType (image|video|pdf|docx|text|manual|structured), title, notes, textContent, mediaId, url, mimeType, sizeBytes, fileName, structured, attachedImages[], status, uploadedBy, uploadedByName, uploadedAt (indexed) } — manager/admin upload only, owner read-only. Supports uploaded files (image/pdf/doc/docx/text), inline text snippets, prescriptions composed via the in-app manual builder, and the **structured** Shiv Agri standard visit prescription (mirrors the printed slip — farmer name, visit date, lastVisitReview, landPreparation, sowingPlanting, farmingOperations (leveling/marking/digging/soilFilling/tractor/supports/fillGaps/pruning/other), irrigation, weedControl, fertilizers (farmyardManure/chemical/organic/jivamrut/spray), pests (soilBorne/root/stem/leaf/flower/fruit), diseases (soilBorne/stem/branch/leaf/flower/fruit/other), hormoneTreatment, fruitHarvesting, grading, packing, otherNotes — plus `attachedImages[]` of {mediaId,url,mimeType,sizeBytes,fileName} rendered into the PDF). Soft-delete metadata (`deletedAt`, `deletedBy`) on both the subdoc and each `attachedImages[]` entry.
+
+**Manual Reports:** `manualReports[]` of { mediaId, url, mimeType, sizeBytes, fileName, title, notes, sampleType (soil|water|fertilizer|other, default 'other'), status (default 'ACTIVE'), uploadedBy, uploadedByName, uploadedAt (indexed), deletedAt, deletedBy } — admin/manager-uploaded images/PDFs (third-party lab reports, hand-written notes) that supplement the auto-linked `reports[]` below. Owner is read-only. Soft-delete via `status='DELETED'` (admin can delete any; manager only own uploads).
 
 **Lab Reports:** `reports[]` of { sampleType (soil|water|fertilizer, indexed), sampleId (ObjectId, refPath sampleModel, indexed), sampleModel (SoilSample|WaterSample|FertilizerSample), sessionId, sampleNumber, farmerName, farmsName, mobileNo, cropName, fertilizerType, sessionDate, generatedAt (indexed), generatedBy (User ref), generatedByName } — auto-populated on PDF generation by `backend/src/services/farmReportLinker.js` when the sample's `farmsName` + `mobileNo` match this project's `name` + `clientPhone` (case-insensitive name, last-10-digits phone). One entry per (sampleType + sampleId); re-runs update the existing entry rather than duplicating.
 
@@ -612,7 +615,7 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects/:id/quotations/active` | requireProjectAccess(farm.projects.view, farms.view) | Currently-active quotation (status submitted or accepted) |
 | GET | `/api/projects/:id/quotations/:quotationId` | requireProjectAccess(farm.projects.view, farms.view) | Get a specific quotation |
 | POST | `/api/projects/:id/quotations` | manager or admin | Submit a quotation (rich-text `content` + `amountPerYear`; supersedes prior submitted quotations and moves project → `pending_acceptance`). Supports `attachInitial=true` to attach a pre-accepted quotation at farm-creation time without farmer notification or status change. |
-| POST | `/api/projects/:id/quotations/bop` | manager or admin | Adhoc BOP (Bill of Project) quotation for landscaping projects (`kind='bop'`, `bopItems[]`). Does NOT change project status or supersede annual quotations. |
+| POST | `/api/projects/:id/quotations/bop` | manager or admin | Adhoc BOP (Bill of Project) quotation for landscaping projects (`kind='bop'`, `bopItems[]`). Accepts optional multipart `files` (≤5 image/PDF attachments ≤25MB each) — partial-success returns 207 with `attachmentFailures[]`. Does NOT change project status or supersede annual quotations. |
 | PATCH | `/api/projects/:id/quotations/:quotationId/accept` | farm owner only (enforced in service) | Farmer accepts → project moves to `approved` |
 | PATCH | `/api/projects/:id/quotations/:quotationId/reject` | farm owner only (enforced in service) | Farmer rejects (optional `reason`) → project reverts to `pending_quotation` |
 | PATCH | `/api/projects/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid` | manager or admin | Idempotently marks the installment paid and creates a linked Invoice (`invoiceType='cash'`, `paymentStatus='paid'`). Stamps `installment.invoiceId`/`invoiceNumber`/`paidBy`. |
@@ -626,6 +629,11 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 | GET | `/api/projects/:id/reports` | requireProjectAccess(farm.projects.view, farms.view) | List soil/water/fertilizer reports auto-linked to this farm (newest first) |
 | GET | `/api/projects/:id/reports/:reportId/pdf` | requireProjectAccess(farm.projects.view, farms.view) | Inline PDF for the in-app overlay viewer |
 | GET | `/api/projects/:id/reports/:reportId/pdf/download` | requireProjectAccess(farm.projects.view, farms.view) | Attachment-disposition PDF for explicit download |
+| GET | `/api/projects/:id/manual-reports` | requireProjectAccess(farm.projects.view, farms.view) | List manually-uploaded reports (admin/manager-attached images/PDFs) |
+| POST | `/api/projects/:id/manual-reports` | manager or admin | Upload up to 5 image/PDF manual reports (≤25MB each). Body fields: `title`, `notes`, `sampleType` (soil/water/fertilizer/other). Rejects 409 if project archived. |
+| DELETE | `/api/projects/:id/manual-reports/:reportId` | manager or admin | Soft-delete a manual report. Admin deletes any; manager only own uploads. |
+| POST | `/api/projects/:id/quotations/:quotationId/attachments` | manager or admin | Attach more photo/PDF files (≤5, ≤25MB each) to an existing BOP quotation. |
+| DELETE | `/api/projects/:id/quotations/:quotationId/attachments/:attachmentId` | manager or admin | Remove a single attachment from a BOP quotation (`$pull`s the subdoc; underlying media file left for the 30-day cleanup sweep). |
 | PATCH | `/api/projects/:id/media/attend-all` | admin or farm.projects.approve | Bulk-mark every unattended media item as attended (uses arrayFilters) |
 | PATCH | `/api/projects/:id/media/:mediaId/attend` | admin or farm.projects.approve | Mark a single media item as attended |
 | DELETE | `/api/projects/:id/media/:mediaId` | admin / manager / farm owner | Soft-delete a media item (sets `farmMedia.$.status='DELETED'` + `deletedAt`/`deletedBy`). Admin deletes any (refunds quota if `countsTowardQuota=true` and uploaded in current ISO week); manager deletes own uploads (same refund rule); owner deletes own UNATTENDED uploads (NO quota refund). |
@@ -639,15 +647,15 @@ Full project lifecycle management for farm consulting projects. Projects have ca
 - **Farmer self-registration:** End-users (`end_user`/`user` role) submit via `POST /api/projects` → status `pending_quotation` (was `pending_approval`), `registrationSource=farmer_self`, clientId/clientPhone auto-populated from the user's profile. Notifies users with `farm.projects.approve` (type `farm_quotation_required`).
 - **Manager-direct registration:** Managers/admins POST a farm → `ProjectService.resolveOrCreateFarmer({ rawPhone, email, name })` resolves the client by normalized phone first, then by email (attaching the phone if the email-user has no phone), and finally **auto-provisions a brand-new `role: user` farmer** (`phoneVerified=false`) with the canonical `<cc><national>` normalized key so the farmer's first phone-OTP or Google login claims this same account. Conflicts (different phone on same email, or duplicate phone/email) are rejected. Status becomes `approved` immediately with `registrationSource=manager_direct`.
 - **Approval/Rejection (legacy):** `approveProject` and `rejectProject` archive open `farm_registration` notifications and notify the submitter (`farm_approved` / `farm_rejected`). Used only for the legacy `pending_approval` path (e.g. edit requests on already-approved farms).
-- **Edit requests:** `requestProjectEdit` lets owners (submitter or linked client) or approvers update a farm. If the farm was already approved (`approved`/`Running`/`Completed`/`On Hold`), it resets to `pending_approval` (legacy flow). Otherwise it resets to `pending_quotation` so the manager re-quotes.
+- **Edit requests:** `requestProjectEdit` differentiates approver vs farmer edits. **Approver (admin/manager) edits are in-place**: status, `submittedBy`/`submittedAt`, and `approvedBy` are preserved (only `lastUpdatedBy` is stamped). **Farmer self-edits** still reset the workflow: previously-approved farms drop into `pending_approval` (legacy flow), brand-new farms reset to `pending_quotation` so the manager re-quotes. When a farmer edit supplies a `clientEmail` and the requester's account has no email yet, the service back-fills the email onto the user (uniqueness checked, 409 on conflict) and propagates it to every project owned by that user via `propagateIdentityToProjects`.
 
 ### Quotations Workflow (`backend/src/models/Quotation.js`, `controllers/quotationController.js`, `services/quotationService.js`)
 
-- **Model:** `Quotation` = { project (ref, indexed), kind (enum: annual/bop, default 'annual', indexed), title (String, ≤200, used for BOP), content (rich-text HTML, required), contentText (plain-text fallback ≤1000 chars), amountPerYear (≥0), bopItems[] ({description, quantity, rate, total} — empty for annual; sum populates `amountPerYear` on BOP), installments[] (4 quarterly installments auto-derived in a `pre('validate')` hook **for `kind='annual'` only** — BOP variants skip installment auto-build; each has installmentNumber 1-4, amount, dueDate, status (pending/paid/overdue), paidAt, paidAmount, invoiceId (Invoice ref), invoiceNumber, paidBy (User ref)), startDate (Date, default now), status (submitted/accepted/rejected/superseded, indexed), submittedBy/submittedByName, acceptedBy/acceptedAt, rejectedBy/rejectedAt/rejectedReason (≤500), timestamps }. Compound index: `project+status+createdAt`.
+- **Model:** `Quotation` = { project (ref, indexed), kind (enum: annual/bop, default 'annual', indexed), title (String, ≤200, used for BOP), content (rich-text HTML, **optional** — annual amount + installment schedule, or BOP line items, are the primary signal; PDF skips the Scope & Details block when content is blank), contentText (plain-text fallback ≤1000 chars), amountPerYear (≥0), bopItems[] ({description, quantity, rate, total} — empty for annual; sum populates `amountPerYear` on BOP), installments[] (4 quarterly installments auto-derived in a `pre('validate')` hook **for `kind='annual'` only** — BOP variants skip installment auto-build; each has installmentNumber 1-4, amount, dueDate, status (pending/paid/overdue), paidAt, paidAmount, invoiceId (Invoice ref), invoiceNumber, paidBy (User ref)), startDate (Date, default now), status (submitted/accepted/rejected/superseded, indexed), submittedBy/submittedByName, acceptedBy/acceptedAt, rejectedBy/rejectedAt/rejectedReason (≤500), timestamps }. Compound index: `project+status+createdAt`.
 - **Submit:** `createQuotation` — farm-only; rejects if the project is already approved. Marks any prior `submitted` quotation as `superseded`, creates the new doc, sets `project.status='pending_acceptance'` + `project.activeQuotation=quotation._id`, archives pending farm_registration / farm_quotation_required notifications, and notifies the farmer (`farm_quotation_received`, metadata: farmName, quotationId). **Attach-on-create flow:** when `payload.attachInitial=true` (used during manager-direct farm registration on an already-approved project), the quotation is created with `status='accepted'`, no farmer notification is fired, and the project status is not changed.
 - **Accept:** `acceptQuotation` — only the farm owner (matched against `submittedBy` or `clientId`) may accept. Moves project to `approved` (sets `approvedBy/approvedAt/quotationAcceptedAt`) and notifies approvers with `farm_quotation_accepted`.
 - **Reject:** `rejectQuotation` — owner-only. Records optional `rejectedReason` (≤500), reverts project to `pending_quotation`, clears `activeQuotation`, and notifies approvers with `farm_quotation_required` ("Quotation revision requested") including the rejection reason.
-- **BOP creation:** `createBopQuotation` — landscaping-only (gated by `isLandscapingProject` helper checking category/projectType/needsLandscapingConsultancy). Stores `kind='bop'`, `title`, and `bopItems[]`; sums item totals into `amountPerYear`. Does NOT touch project status and does NOT supersede annual quotations.
+- **BOP creation:** `createBopQuotation` — landscaping-only (gated by `isLandscapingProject` helper checking category/projectType/needsLandscapingConsultancy). Stores `kind='bop'`, `title`, and `bopItems[]`; sums item totals into `amountPerYear`. `content` is optional — at least one line item is the contract. Accepts optional multipart `files` (image/PDF) uploaded to the Media Service and stored as `attachments[]` ({mediaId, url, mimeType, sizeBytes, fileName, uploadedBy, uploadedByName, uploadedAt}); partial-upload failures are reported in the response and do not block quotation creation. `addBopAttachments` and `removeBopAttachment` support adding/removing attachments after creation. Does NOT touch project status and does NOT supersede annual quotations.
 - **Mark installment paid:** `markInstallmentPaid` — idempotent (returns the pre-existing invoice if `installment.invoiceId` already set). Creates an Invoice via `Invoice.getNextInvoiceNumber()` with `invoiceType='cash'`, `paymentStatus='paid'`, a line item describing the installment, full project location (address→`referenceNumber`, city→`location`, taluka→`village`+`taluka`, district, state, pincode) and `sourceQuotationId`/`sourceInstallmentNumber` back-links. Stamps the installment with `invoiceId`/`invoiceNumber`/`paidBy`.
 - **Revert installment payment:** `revertInstallmentPayment` — admin only. Resets installment fields to pending/null and soft-deletes the linked invoice.
 - **PDF:** `pdfGenerator.generateQuotationPDF(quotation, project)` composes a letter-body (greeting, scope HTML, INR-formatted annual fee, installment table) inside the existing letterhead template (`templates/letter.html`). Filename: `Quotation_<farmName>_<date>.pdf`.
@@ -850,11 +858,12 @@ Admin can manage users, create custom roles with granular permissions, and assig
 ### Database Models
 
 **User** (`backend/src/models/User.js`)
-- `name` (default `'New User'`), `email` (optional — sparse unique, lowercase), `googleId` (unique, sparse)
+- `name` (default `'New User'`), `email` (optional, lowercase), `googleId` (optional)
 - `phoneVerified` (boolean, set true after successful OTP verify), `phoneVerifiedAt` (Date)
 - `profilePhoto`, `role` (enum: admin, user, end_user, assistant, lab_technician, manager)
 - `roleRef` (ObjectId → Role — RBAC), `refreshToken` (SHA-256 hash of opaque backend refresh token), `refreshTokenExpiresAt` (Date), `googleRefreshToken`
-- `lastLogin`, `metadata` (department, designation, phoneCountryCode, phoneNumber, phoneNumberNormalized — normalized digits-only key `<cc><national>`; sparse-unique-indexed so phone is a 1-1 identity)
+- `lastLogin`, `metadata` (department, designation, phoneCountryCode, phoneNumber, phoneNumberNormalized — normalized digits-only key `<cc><national>`)
+- **Identity uniqueness:** `email`, `googleId`, and `metadata.phoneNumberNormalized` are each indexed with a *partial* unique index (`partialFilterExpression: { $type: 'string', $gt: '' }`) so the constraint only covers non-empty string values. Plain `sparse: true` is intentionally NOT used because Mongo sparse indexes still cover documents whose field is `null` or `""` — which would collide as soon as a second blank-valued user is inserted. A pre-save hook strips empty strings to `undefined` on these fields so they fall into the partial-index exclusion zone. Startup hygiene (`utils/userIdentityHygiene.js`, called from `config/database.js` after connect) unsets pre-existing null/empty values, drops any legacy sparse-unique indexes still on the collection, and runs `User.syncIndexes()` — idempotent, best-effort, never throws.
 - Methods: `toClientJSON()`, `hasPermission(name)`
 - Static: `findByRole(role)`
 
@@ -882,7 +891,10 @@ Admin can manage users, create custom roles with granular permissions, and assig
 | GET | `/api/users/lookup/by-phone` | users.view | Lookup user by `phone` query (matches normalized + raw phone variants) |
 | GET | `/api/users/:id` | users.view | Get user |
 | PUT | `/api/users/:userId/role` | users.assign-role | Change role |
+| PATCH | `/api/users/:userId/identity` | admin only | Update name / email / phone. Strict uniqueness — 409 if the new email or normalized phone is already linked elsewhere. Empty strings clear the field. After save, denormalized clientName/clientEmail/clientPhone are propagated to every project anchored on the user via `utils/identityPropagation.propagateIdentityToProjects` (matches `clientId`, `submittedBy`, or `createdBy`). |
 | DELETE | `/api/users/:userId` | users.delete | Delete user |
+
+The users router applies a no-store `Cache-Control` header to all responses (and strips `ETag`) so the SPA always reflects the latest identity state after an edit — without it, browsers can return 304 with stale name/email/phone.
 
 **Role Management (`backend/src/routes/roles.js`):**
 
@@ -1121,11 +1133,11 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 | FarmMediaService | `farm-media.service.ts` | listMedia(projectId) → unattended + attendedTotal, listAttendedMedia(projectId, page, limit), markAttended(projectId, mediaId), markAllAttended(projectId), deleteMedia(projectId, mediaId), getQuota(projectId), uploadFiles(projectId, files) → progress/done events |
 | FarmDesignService | `farm-design.service.ts` | listDesigns(projectId), uploadDesigns(projectId, files) → progress/done events |
 | FarmPrescriptionService | `farm-prescription.service.ts` | listPrescriptions(projectId), uploadPrescriptions(projectId, files), addTextPrescription(projectId, payload), addManualPrescription(projectId, payload), addStructuredPrescription(projectId, payload, images) → progress/done events, downloadPrescriptionPdf(projectId, prescriptionId) → Blob |
-| QuotationService | `quotation.service.ts` | list(projectId), getActive(projectId), getById(projectId, quotationId), submit(projectId, payload), accept(projectId, quotationId), reject(projectId, quotationId, reason?), downloadPdf(projectId, quotationId) → Blob |
+| QuotationService | `quotation.service.ts` | list(projectId, { kind? }), getActive(projectId), getById(projectId, quotationId), submit(projectId, payload) (supports `attachInitial`), createBopQuotation(projectId, payload, files?) (multipart), addBopAttachments(projectId, quotationId, files), removeBopAttachment(projectId, quotationId, attachmentId), accept(projectId, quotationId), reject(projectId, quotationId, reason?), markInstallmentPaid(projectId, quotationId, installmentNumber), revertInstallmentPayment(projectId, quotationId, installmentNumber), downloadPdf(projectId, quotationId) → Blob |
 | FarmAdminTransactionService | `farm-admin-transaction.service.ts` | list(projectId, page, limit), getSummary(projectId), create(projectId, payload), update(projectId, txId, payload), delete(projectId, txId) — admin-only manual farm transactions |
-| FarmReportService | `farm-report.service.ts` | listReports(projectId), viewReportPdf(projectId, reportId) → Blob (inline), downloadReportPdf(projectId, reportId) → Blob (attachment), triggerBrowserDownload(blob, filename) — auto-linked lab reports |
+| FarmReportService | `farm-report.service.ts` | listReports(projectId), viewReportPdf(projectId, reportId) → Blob (inline), downloadReportPdf(projectId, reportId) → Blob (attachment), triggerBrowserDownload(blob, filename), listManualReports(projectId), uploadManualReports(projectId, files, meta) → progress/done events, deleteManualReport(projectId, reportId) — auto-linked lab reports + admin/manager-uploaded manual reports |
 | NotificationService | `notification.service.ts` | getNotifications() → {notifications, unreadCount}, markRead(id), archive(id) |
-| UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), deleteUser() |
+| UserService | `user.service.ts` | getAllUsers(), getUser(), updateUserRole(), updateUserIdentity(userId, payload) (admin-only name/email/phone edit), deleteUser() |
 | PermissionService | `permission.service.ts` | hasPermission(), hasRole(), hasAnyPermission(), getAllRoles(), createRole(), assignRoleToUser() |
 | SoilTestingService | `soil-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel(), getSoilDataForSample() |
 | WaterTestingService | `water-testing.service.ts` | getSessions(page, limit, status), getSession(id), sample CRUD, bulkUpdateSamples(), uploadExcel() |
@@ -1236,7 +1248,7 @@ Multi-step project creation wizard with draft auto-save. Users can save incomple
 
 | Collection | Model File | Key Indexes |
 |-----------|------------|-------------|
-| users | User.js | email (unique+sparse), role, createdAt, metadata.phoneNumberNormalized (unique+sparse) |
+| users | User.js | email (unique, partial — non-empty string only), googleId (unique, partial — non-empty string only), role, createdAt, metadata.phoneNumberNormalized (unique, partial — non-empty string only) |
 | roles | Role.js | name (unique), isActive |
 | permissions | Permission.js | name (unique), resource, action |
 | projects | Project.js | category+status, city, state, taluka, createdBy, text(name), 2dsphere(coordinates), status+submittedBy, registrationSource+status, needsLandscapingConsultancy, activeQuotation |

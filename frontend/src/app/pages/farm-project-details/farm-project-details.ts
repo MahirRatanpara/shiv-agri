@@ -35,7 +35,9 @@ import {
 import {
   FarmReport,
   FarmReportType,
-  FarmReportService
+  FarmReportService,
+  ManualReport,
+  ManualReportSampleType
 } from '../../services/farm-report.service';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
 import {
@@ -161,6 +163,15 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   isLoadingReportPreview = false;
   isDownloadingReportId: string | null = null;
 
+  // Manually-attached reports (admin/manager uploads images + PDFs)
+  manualReports: ManualReport[] = [];
+  manualReportsLoading = false;
+  isUploadingManualReport = false;
+  manualReportUploadingBatch: UploadProgressItem[] = [];
+  deletingManualReportIds = new Set<string>();
+  manualReportSampleType: ManualReportSampleType = 'other';
+  readonly manualReportAccept = 'image/*,application/pdf';
+
   // Admin-only transactions
   transactions: FarmTransaction[] = [];
   transactionsLoading = false;
@@ -216,10 +227,18 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     content: '',
     items: []
   };
+  // Files staged on the create form. Cleared after submit/cancel.
+  bopAttachmentDrafts: File[] = [];
+  // Post-create attachment management. Indexed by quotation id.
+  uploadingBopAttachmentsForId: string | null = null;
+  deletingBopAttachmentIds = new Set<string>();
+  readonly bopAttachmentAccept = 'image/*,application/pdf';
   selectedBopDetail: Quotation | null = null;
   selectedBopDetailSafe: SafeHtml | null = null;
   isDownloadingBopId: string | null = null;
   @ViewChild('bopEditor') bopEditor?: ElementRef<HTMLDivElement>;
+  @ViewChild('bopAttachmentInput') bopAttachmentInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('bopDetailAttachmentInput') bopDetailAttachmentInput?: ElementRef<HTMLInputElement>;
 
   // Installment payment (Mark Paid & Download Invoice)
   payingInstallmentKey: string | null = null;
@@ -517,7 +536,33 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     if (this.project.isArchived) return false;
     if (!this.isManagerOrAdmin) return false;
     return this.project.status === 'pending_quotation' ||
-           this.project.status === 'pending_acceptance';
+           this.project.status === 'pending_acceptance' ||
+           // Approved manager-direct farms without a quotation can have one
+           // attached retroactively (see canAttachInitialQuotation).
+           this.canAttachInitialQuotation;
+  }
+
+  /**
+   * Admin/manager can retroactively attach an "initial" quotation to a farm
+   * they created directly when no quotation was supplied at creation time.
+   * Used by the "Add Quotation" CTA in the Quotation tab. The created
+   * quotation is pre-accepted (no farmer acceptance needed) — see the
+   * `attachInitial: true` path in quotationService.createQuotation.
+   */
+  get canAttachInitialQuotation(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (!this.isManagerOrAdmin) return false;
+    if (this.activeQuotation) return false;
+    if (this.quotationLoading) return false;
+    // The farm must already be in (or past) the approved bucket — we don't
+    // surface this CTA in pre-approval states, where canSubmitQuotation
+    // already drives the normal flow.
+    const status = this.project.status;
+    return status === 'approved' ||
+           status === 'Running' ||
+           status === 'Completed' ||
+           status === 'On Hold';
   }
 
   /** Farmer can accept/reject when a quotation is currently submitted. */
@@ -660,6 +705,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       content: '',
       items: [{ description: '', quantity: 1, rate: 0, total: 0 }]
     };
+    this.bopAttachmentDrafts = [];
     setTimeout(() => {
       if (this.bopEditor?.nativeElement) {
         this.bopEditor.nativeElement.innerHTML = '';
@@ -672,6 +718,146 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   cancelBopForm(): void {
     this.showBopForm = false;
     this.bopForm = { title: '', content: '', items: [] };
+    this.bopAttachmentDrafts = [];
+  }
+
+  // ---- BOP create-form attachment helpers ----
+
+  triggerBopAttachmentPicker(): void {
+    this.bopAttachmentInput?.nativeElement.click();
+  }
+
+  onBopAttachmentsSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0) return;
+    const incoming = Array.from(fileList);
+    input.value = '';
+
+    if (this.bopAttachmentDrafts.length + incoming.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can attach up to ${MAX_FILES_PER_BATCH} files per BOP quotation.`);
+      return;
+    }
+    const oversize = incoming.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+    const invalid = incoming.find((f) => !(f.type.startsWith('image/') || f.type === 'application/pdf'));
+    if (invalid) {
+      this.toastService.error(`${invalid.name} is not a supported image or PDF.`);
+      return;
+    }
+    this.bopAttachmentDrafts = [...this.bopAttachmentDrafts, ...incoming];
+  }
+
+  removeBopAttachmentDraft(index: number): void {
+    this.bopAttachmentDrafts.splice(index, 1);
+  }
+
+  // ---- Existing-BOP attachment helpers (detail view) ----
+
+  triggerBopDetailAttachmentPicker(): void {
+    this.bopDetailAttachmentInput?.nativeElement.click();
+  }
+
+  onBopDetailAttachmentsSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0 || !this.selectedBopDetail) return;
+    const incoming = Array.from(fileList);
+    input.value = '';
+
+    if (incoming.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can upload up to ${MAX_FILES_PER_BATCH} files at a time.`);
+      return;
+    }
+    const oversize = incoming.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+    const invalid = incoming.find((f) => !(f.type.startsWith('image/') || f.type === 'application/pdf'));
+    if (invalid) {
+      this.toastService.error(`${invalid.name} is not a supported image or PDF.`);
+      return;
+    }
+
+    const quotationId = this.selectedBopDetail._id;
+    this.uploadingBopAttachmentsForId = quotationId;
+    this.quotationService.addBopAttachments(this.projectId, quotationId, incoming)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.uploadingBopAttachmentsForId = null;
+          if (result.added.length) {
+            this.toastService.success(
+              result.added.length === 1
+                ? '1 attachment added.'
+                : `${result.added.length} attachments added.`
+            );
+            // Patch the open detail view + the list entry so we don't need a refetch.
+            if (this.selectedBopDetail && this.selectedBopDetail._id === quotationId) {
+              this.selectedBopDetail = result.quotation as any;
+            }
+            this.bopQuotations = this.bopQuotations.map((q) =>
+              q._id === quotationId ? (result.quotation as any) : q
+            );
+          }
+          if (result.failures.length) {
+            this.toastService.error(`${result.failures.length} file(s) failed to upload.`);
+          }
+        },
+        error: (err) => {
+          this.uploadingBopAttachmentsForId = null;
+          this.toastService.error(err?.error?.message || 'Unable to add attachments.');
+        }
+      });
+  }
+
+  async confirmRemoveBopAttachment(quotation: Quotation, attachment: any, event?: Event): Promise<void> {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    if (!attachment?._id) return;
+    if (this.deletingBopAttachmentIds.has(attachment._id)) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Remove this attachment?',
+      message: `"${attachment.fileName || 'Attachment'}" will be removed from this BOP quotation.`,
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash-alt'
+    });
+    if (!confirmed) return;
+
+    this.deletingBopAttachmentIds.add(attachment._id);
+    this.quotationService.removeBopAttachment(this.projectId, quotation._id, attachment._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingBopAttachmentIds.delete(attachment._id);
+          const filtered = (quotation.attachments || []).filter((a: any) => a._id !== attachment._id);
+          (quotation as any).attachments = filtered;
+          if (this.selectedBopDetail && this.selectedBopDetail._id === quotation._id) {
+            (this.selectedBopDetail as any).attachments = filtered;
+          }
+          this.toastService.success('Attachment removed.');
+        },
+        error: (err) => {
+          this.deletingBopAttachmentIds.delete(attachment._id);
+          this.toastService.error(err?.error?.message || 'Unable to remove attachment.');
+        }
+      });
+  }
+
+  openBopAttachment(attachment: any): void {
+    if (attachment?.url) window.open(attachment.url, '_blank', 'noopener');
+  }
+
+  bopAttachmentIcon(att: any): string {
+    if (att?.mimeType === 'application/pdf') return 'fa-file-pdf';
+    if (att?.mimeType?.startsWith('image/')) return 'fa-file-image';
+    return 'fa-file';
   }
 
   addBopLineItem(): void {
@@ -725,12 +911,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.syncBopEditorContent();
     this.recomputeBopTotals();
+    // Scope/notes content is optional — line items below are the contract.
     const content = (this.bopForm.content || '').trim();
-    const plain = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    if (!plain) {
-      this.toastService.warning('Please enter the BOP details (scope / notes).');
-      return;
-    }
 
     // Normalize line items. Total is computed defensively from qty * rate
     // when the auto-compute hasn't fired (e.g., the user typed in the rate
@@ -765,13 +947,19 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     };
 
     this.isSubmittingBop = true;
-    this.quotationService.createBopQuotation(this.projectId, payload)
+    this.quotationService.createBopQuotation(this.projectId, payload, this.bopAttachmentDrafts)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: (result) => {
           this.toastService.success('BOP quotation created.');
+          if (result.attachmentFailures && result.attachmentFailures.length) {
+            this.toastService.error(
+              `${result.attachmentFailures.length} attachment(s) failed to upload.`
+            );
+          }
           this.isSubmittingBop = false;
           this.showBopForm = false;
+          this.bopAttachmentDrafts = [];
           this.loadQuotations();
         },
         error: (err: HttpErrorResponse) => {
@@ -985,13 +1173,24 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  openQuotationForm(): void {
-    if (!this.canSubmitQuotation) return;
+  /**
+   * When true, submitQuotation() sends `attachInitial: true` so the new
+   * quotation lands as already-accepted without flipping the project status
+   * back into pending_acceptance. Used by the "Add Quotation" CTA on
+   * orphan manager-direct farms.
+   */
+  private attachQuotationOnSubmit = false;
+
+  openQuotationForm(opts: { attachInitial?: boolean } = {}): void {
+    if (!opts.attachInitial && !this.canSubmitQuotation) return;
+    if (opts.attachInitial && !this.canAttachInitialQuotation) return;
+
+    this.attachQuotationOnSubmit = !!opts.attachInitial;
 
     // When revising an existing quotation, prefill with the previous quotation's
     // content, amount, and first-instalment date. Falls back to today's date
     // for a brand-new quotation.
-    const existing = this.activeQuotation;
+    const existing = opts.attachInitial ? null : this.activeQuotation;
     const existingStart = existing?.startDate
       ? new Date(existing.startDate).toISOString().slice(0, 10)
       : this.todayIso();
@@ -1012,6 +1211,11 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       const formEl = document.querySelector('.quotation-form-card');
       formEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 0);
+  }
+
+  /** Convenience opener for the "Add Quotation" CTA on orphan farms. */
+  openAttachInitialQuotationForm(): void {
+    this.openQuotationForm({ attachInitial: true });
   }
 
   /**
@@ -1049,6 +1253,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
   cancelQuotationForm(): void {
     this.showQuotationForm = false;
+    this.attachQuotationOnSubmit = false;
     this.quotationForm = { content: '', amountPerYear: null, startDate: '' };
   }
 
@@ -1074,20 +1279,21 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     const content = (this.quotationForm.content || '').trim();
     const amount = Number(this.quotationForm.amountPerYear);
 
-    const plain = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    if (!plain) {
-      this.toastService.warning('Please enter the quotation details.');
-      return;
-    }
+    // Quotation details (rich-text content) are optional — the annual
+    // amount alone is enough to lock in the schedule.
     if (!Number.isFinite(amount) || amount <= 0) {
       this.toastService.warning('Please enter a valid annual amount.');
       return;
     }
 
+    const attachInitial = this.attachQuotationOnSubmit;
     const payload: QuotationPayload = {
       content,
       amountPerYear: amount,
-      startDate: this.quotationForm.startDate || undefined
+      startDate: this.quotationForm.startDate || undefined,
+      // attachInitial=true means "this farm is already approved; attach this
+      // quotation as already-accepted without flipping the status flow."
+      attachInitial: attachInitial || undefined
     };
 
     this.isSubmittingQuotation = true;
@@ -1095,9 +1301,14 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.toastService.success('Quotation sent to the farmer for review.');
+          this.toastService.success(
+            attachInitial
+              ? 'Quotation attached to this farm.'
+              : 'Quotation sent to the farmer for review.'
+          );
           this.isSubmittingQuotation = false;
           this.showQuotationForm = false;
+          this.attachQuotationOnSubmit = false;
           this.loadProject();
         },
         error: (err: HttpErrorResponse) => {
@@ -2370,13 +2581,36 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Open the full-screen edit overlay. Locks page scroll so the modal owns
+   * the viewport; closeEditForm() restores it. We also stash whatever the
+   * caller had set on document.body.style.overflow so closing a stacked
+   * modal (lightbox + edit) doesn't strand the page in `hidden`.
+   */
+  openEditForm(): void {
+    if (!this.canEdit) return;
+    this.showEditForm = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeEditForm(): void {
+    if (this.isSubmitting) return;
+    this.showEditForm = false;
+    document.body.style.overflow = '';
+  }
+
   submitEditRequest(payload: FarmRegistrationPayload): void {
     if (!this.project) return;
     this.isSubmitting = true;
     this.farmService.requestFarmEdit(this.project.id || this.project._id || '', payload).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
-        this.toastService.success('Update request submitted for approval.');
+        // Approver edits are in-place (no re-approval); farmer edits still
+        // go through the review flow. The toast wording matches both paths.
+        this.toastService.success(this.isFarmer
+          ? 'Update request submitted for approval.'
+          : 'Project updated.');
         this.showEditForm = false;
+        document.body.style.overflow = '';
         this.isSubmitting = false;
         this.loadProject();
       },
@@ -2628,11 +2862,213 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           this.toastService.error('Unable to load reports.');
         }
       });
+    // Manual reports load alongside the auto-linked ones so the user sees
+    // both lists when the Reports tab opens.
+    this.loadManualReports();
   }
 
   refreshReports(): void {
     this.reports = [];
+    this.manualReports = [];
     this.loadReports();
+  }
+
+  // ========================
+  // Manual reports (admin/manager attach images + PDFs)
+  // ========================
+
+  get canUploadManualReports(): boolean {
+    if (!this.project) return false;
+    if (this.project.isArchived) return false;
+    if (this.isPreApproval) return false;
+    return this.isManagerOrAdmin;
+  }
+
+  canDeleteManualReport(item: ManualReport): boolean {
+    if (!this.project || this.project.isArchived) return false;
+    if (this.isAdmin) return true;
+    if (!this.isManagerOrAdmin) return false;
+    const me = (this.currentUser?.id || '').toString();
+    return !!me && String(item.uploadedBy || '') === me;
+  }
+
+  loadManualReports(): void {
+    if (!this.projectId) return;
+    this.manualReportsLoading = true;
+    this.farmReportService.listManualReports(this.projectId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (items) => {
+          this.manualReports = items;
+          this.manualReportsLoading = false;
+        },
+        error: () => {
+          this.manualReportsLoading = false;
+        }
+      });
+  }
+
+  triggerManualReportPicker(): void {
+    if (!this.canUploadManualReports || this.isUploadingManualReport) return;
+    const input = document.getElementById('manualReportInput') as HTMLInputElement | null;
+    input?.click();
+  }
+
+  setManualReportSampleType(type: ManualReportSampleType): void {
+    this.manualReportSampleType = type;
+  }
+
+  onManualReportFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fileList = input.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const files = Array.from(fileList);
+    input.value = '';
+
+    if (files.length > MAX_FILES_PER_BATCH) {
+      this.toastService.warning(`You can upload up to ${MAX_FILES_PER_BATCH} files at a time.`);
+      return;
+    }
+
+    const oversize = files.find((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversize) {
+      this.toastService.error(`${oversize.name} is larger than ${this.maxFileSizeMb}MB.`);
+      return;
+    }
+
+    const invalid = files.find((f) => !(f.type.startsWith('image/') || f.type === 'application/pdf'));
+    if (invalid) {
+      this.toastService.error(`${invalid.name} is not a supported image or PDF.`);
+      return;
+    }
+
+    this.uploadManualReportFiles(files);
+  }
+
+  private uploadManualReportFiles(files: File[]): void {
+    if (!this.projectId) return;
+    this.isUploadingManualReport = true;
+    this.manualReportUploadingBatch = files.map((file) => ({
+      filename: file.name,
+      size: file.size,
+      status: 'uploading',
+      progress: 0
+    }));
+
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+
+    this.farmReportService.uploadManualReports(this.projectId, files, {
+      sampleType: this.manualReportSampleType
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (event) => {
+          if (event.kind === 'progress') {
+            const ratio = totalBytes > 0 ? event.loaded / totalBytes : 0;
+            this.manualReportUploadingBatch = this.manualReportUploadingBatch.map((item) =>
+              item.status === 'uploading'
+                ? { ...item, progress: Math.min(99, Math.round(ratio * 100)) }
+                : item
+            );
+          } else if (event.kind === 'done') {
+            const { uploaded, failures } = event.result;
+            const failedNames = new Set(failures.map((f) => f.filename));
+            this.manualReportUploadingBatch = this.manualReportUploadingBatch.map((item) => {
+              if (failedNames.has(item.filename)) {
+                const failure = failures.find((f) => f.filename === item.filename);
+                return { ...item, status: 'error', progress: 100, message: failure?.message };
+              }
+              return { ...item, status: 'success', progress: 100 };
+            });
+
+            this.manualReports = [...uploaded, ...this.manualReports];
+
+            if (uploaded.length) {
+              this.toastService.success(
+                uploaded.length === 1 ? '1 report attached' : `${uploaded.length} reports attached`
+              );
+            }
+            if (failures.length) {
+              this.toastService.error(
+                `${failures.length} file${failures.length > 1 ? 's' : ''} failed to upload.`
+              );
+            }
+
+            setTimeout(() => (this.manualReportUploadingBatch = []), 2200);
+            this.isUploadingManualReport = false;
+          }
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isUploadingManualReport = false;
+          this.toastService.error(err.error?.message || 'Upload failed. Please try again.');
+          this.manualReportUploadingBatch = this.manualReportUploadingBatch.map((item) => ({
+            ...item,
+            status: 'error',
+            progress: 100,
+            message: 'Upload failed'
+          }));
+          setTimeout(() => (this.manualReportUploadingBatch = []), 2500);
+        }
+      });
+  }
+
+  async confirmDeleteManualReport(item: ManualReport, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (!this.canDeleteManualReport(item) || !item._id) return;
+    if (this.deletingManualReportIds.has(item._id)) return;
+
+    const confirmed = await this.confirmationModalService.confirm({
+      title: 'Delete this report?',
+      message: `"${item.title || item.fileName || 'Report'}" will be removed from the farm record.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      confirmClass: 'btn-danger',
+      icon: 'fas fa-trash-alt'
+    });
+    if (!confirmed) return;
+
+    const id = item._id;
+    this.deletingManualReportIds.add(id);
+    this.farmReportService.deleteManualReport(this.projectId, id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingManualReportIds.delete(id);
+          this.manualReports = this.manualReports.filter((m) => m._id !== id);
+          this.toastService.success('Report removed.');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.deletingManualReportIds.delete(id);
+          this.toastService.error(err?.error?.message || 'Unable to delete this report.');
+        }
+      });
+  }
+
+  trackManualReport(_: number, item: ManualReport): string {
+    return item._id || item.mediaId;
+  }
+
+  manualReportTypeLabel(type: ManualReportSampleType): string {
+    switch (type) {
+      case 'soil': return 'Soil';
+      case 'water': return 'Water';
+      case 'fertilizer': return 'Fertilizer';
+      default: return 'Other';
+    }
+  }
+
+  manualReportIcon(item: ManualReport): string {
+    if (item.mimeType === 'application/pdf') return 'fa-file-pdf';
+    if (item.mimeType?.startsWith('image/')) return 'fa-file-image';
+    return 'fa-file';
+  }
+
+  openManualReport(item: ManualReport): void {
+    if (item.url) window.open(item.url, '_blank', 'noopener');
   }
 
   setReportFilter(filter: 'all' | FarmReportType): void {

@@ -5,6 +5,7 @@ const ExcelJS = require('exceljs'); // You'll need to npm install exceljs
 const notificationService = require('./notificationService');
 const logger = require('../utils/logger');
 const { resolveAndParseLatLng, isValidLatLng } = require('../utils/mapUrlParser');
+const { propagateIdentityToProjects } = require('../utils/identityPropagation');
 
 const normalizePhoneNumber = (phoneNumber = '') => String(phoneNumber).replace(/\D/g, '');
 const DEFAULT_COUNTRY_DIGITS = normalizePhoneNumber(process.env.DEFAULT_PHONE_COUNTRY_CODE || '+91') || '91';
@@ -374,7 +375,33 @@ class ProjectService {
         { 'metadata.phoneNumber': parsed.formattedPhone }
       ]
     });
-    if (user) return user;
+    if (user) {
+      // Backfill an email when the existing phone-user has none and a clean
+      // email was supplied (e.g. admin/manager editing a farm and filling in
+      // the address). Strict uniqueness still applies — if the email is
+      // already linked elsewhere, throw and let the caller surface it.
+      if (cleanEmail && !user.email) {
+        const emailTaken = await User.findOne({ email: cleanEmail, _id: { $ne: user._id } })
+          .select('_id')
+          .lean();
+        if (emailTaken) {
+          throw new Error('This email is already linked to another account.');
+        }
+        user.email = cleanEmail;
+        try {
+          await user.save();
+          logger.info(`Backfilled email for user ${user._id} from project context`);
+          // Sync the new email into every other project anchored on this user.
+          await propagateIdentityToProjects(user._id, { email: cleanEmail });
+        } catch (err) {
+          if (err.code === 11000) {
+            throw new Error('This email is already linked to another account.');
+          }
+          throw err;
+        }
+      }
+      return user;
+    }
 
     const applyPhone = (target) => {
       const meta = target.metadata?.toObject ? target.metadata.toObject() : (target.metadata || {});
@@ -717,7 +744,35 @@ class ProjectService {
       }
       cleanedUpdates.clientPhone = requesterPhone;
       cleanedUpdates.clientName = requester?.name || project.clientName;
-      cleanedUpdates.clientEmail = requester?.email || project.clientEmail;
+
+      // Email resolution for farmer edits:
+      // 1. If the requester's account already has an email, that wins.
+      // 2. Else, accept whatever the form provided (the farmer is filling
+      //    in a blank account email). Strict uniqueness still applies.
+      // 3. Else, fall back to the project's existing email value.
+      const formEmail = String(updates?.clientEmail || '').trim().toLowerCase();
+      const requesterEmail = String(requester?.email || '').trim().toLowerCase();
+      let resolvedEmail = requesterEmail || formEmail || String(project.clientEmail || '').trim();
+
+      if (!requesterEmail && formEmail) {
+        // Attach the new email to the requester's account. Uniqueness check
+        // first — fail fast if another user already owns it.
+        const User = require('../models/User');
+        const taken = await User.findOne({ email: formEmail, _id: { $ne: requesterId } })
+          .select('_id')
+          .lean();
+        if (taken) {
+          throw new Error('This email is already linked to another account.');
+        }
+        await User.updateOne({ _id: requesterId }, { $set: { email: formEmail } });
+        resolvedEmail = formEmail;
+        logger.info(`Backfilled email for user ${requesterId} from project edit submission`);
+        // Propagate to all of the requester's other projects so the new
+        // email shows up everywhere the user owns a farm.
+        await propagateIdentityToProjects(requesterId, { email: formEmail });
+      }
+
+      cleanedUpdates.clientEmail = resolvedEmail;
       cleanedUpdates.clientId = requesterId;
     } else {
       const isFarm = (cleanedUpdates.category || project.category) === 'FARM' ||
@@ -752,9 +807,22 @@ class ProjectService {
       project.status === 'On Hold';
 
     Object.assign(project, cleanedUpdates);
-    // If the project was already approved, edit requests stay in the
-    // legacy pending_approval flow. Otherwise (newly-submitted farms),
-    // edits reset the flow to pending_quotation so the manager re-quotes.
+
+    // Approver (admin/manager) edits are in-place: they don't restart the
+    // approval/quotation flow, don't bump submittedBy/submittedAt, don't
+    // clear approvedBy. Only farmer self-edits push the project back into
+    // a pending state for re-review.
+    if (isApprover) {
+      project.lastUpdatedBy = requesterId;
+      await project.save();
+
+      logger.info(`Project ${project._id} edited in-place by approver ${requesterId} (status preserved: ${project.status})`);
+      return project;
+    }
+
+    // Farmer self-edit path: previously-approved farms drop into the legacy
+    // pending_approval flow; brand-new farms reset to pending_quotation so
+    // the manager re-quotes.
     project.status = wasApproved ? 'pending_approval' : 'pending_quotation';
     project.registrationSource = 'farmer_self';
     project.submittedBy = requesterId;

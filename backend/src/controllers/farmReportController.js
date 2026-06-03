@@ -3,6 +3,7 @@ const SoilSample = require('../models/SoilSample');
 const WaterSample = require('../models/WaterSample');
 const FertilizerSample = require('../models/FertilizerSample');
 const pdfGenerator = require('../services/pdfGenerator');
+const farmManualReportService = require('../services/farmManualReportService');
 const { addClassifications } = require('../utils/waterClassification');
 const logger = require('../utils/logger');
 
@@ -149,5 +150,132 @@ exports.downloadReportPdf = async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate PDF for report' });
     }
     return res.end();
+  }
+};
+
+// ========================
+// Manually-uploaded farm reports (admin / manager upload, owner read-only)
+// ========================
+
+const MANUAL_REPORT_MIME_PATTERN = /^(image\/.*|application\/pdf)$/i;
+
+/**
+ * GET /api/projects/:id/manual-reports
+ * List all manually-uploaded reports on the project.
+ */
+exports.listManualReports = async (req, res) => {
+  try {
+    const items = await farmManualReportService.listReports(req.params.id);
+    return res.json({ success: true, count: items.length, items });
+  } catch (error) {
+    logger.error(`[FarmManualReport] list failed: ${error.message}`);
+    return res.status(500).json({ error: 'Failed to load manual reports' });
+  }
+};
+
+/**
+ * POST /api/projects/:id/manual-reports
+ * Admin/manager attaches up to 5 image or PDF files. Optional body fields:
+ *   title, notes, sampleType (soil|water|fertilizer|other)
+ */
+exports.uploadManualReports = async (req, res) => {
+  const projectId = req.params.id;
+  try {
+    const project = await Project.findById(projectId).select('_id name isArchived').lean();
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    if (project.isArchived) {
+      return res.status(409).json({
+        success: false,
+        error: 'Project archived',
+        message: 'This farm has been archived. Uploads are no longer accepted.'
+      });
+    }
+
+    const files = req.files || [];
+    if (!files.length) {
+      return res.status(400).json({ success: false, error: 'No files provided' });
+    }
+
+    const maxBatch = farmManualReportService.getMaxFilesPerUpload();
+    if (files.length > maxBatch) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot upload more than ${maxBatch} files at once`
+      });
+    }
+
+    for (const file of files) {
+      if (!MANUAL_REPORT_MIME_PATTERN.test(file.mimetype)) {
+        return res.status(415).json({
+          success: false,
+          error: `Unsupported file type: ${file.originalname} (${file.mimetype})`
+        });
+      }
+    }
+
+    const meta = {
+      title: req.body?.title,
+      notes: req.body?.notes,
+      sampleType: req.body?.sampleType
+    };
+
+    const uploaded = [];
+    const failures = [];
+
+    for (const file of files) {
+      try {
+        const ref = await farmManualReportService.uploadFile(projectId, file, req.user, meta);
+        uploaded.push(ref);
+      } catch (err) {
+        const status = err?.status || 500;
+        const message = err?.message || 'Upload failed';
+        logger.error(`[FarmManualReport] File failed: file=${file.originalname}, status=${status}, message=${message}`);
+        failures.push({ filename: file.originalname, status, message });
+      }
+    }
+
+    const responseStatus = uploaded.length === 0
+      ? 502
+      : (failures.length ? 207 : 201);
+
+    return res.status(responseStatus).json({
+      success: uploaded.length > 0,
+      uploaded,
+      failures
+    });
+  } catch (error) {
+    logger.error(`[FarmManualReport] upload error: ${error.message}`, { stack: error.stack });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to upload manual reports',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * DELETE /api/projects/:id/manual-reports/:reportId
+ * Admin can delete any item; manager can delete only items they uploaded.
+ */
+exports.deleteManualReport = async (req, res) => {
+  try {
+    const isAdmin = req.user?.role === 'admin';
+    const result = await farmManualReportService.deleteReport(
+      req.params.id,
+      req.params.reportId,
+      req.user,
+      { allowAnyUploader: isAdmin }
+    );
+    return res.json({ success: true, mediaId: result.mediaId });
+  } catch (error) {
+    const status = error?.status || 500;
+    logger.error(`[FarmManualReport] delete failed: ${error.message}`);
+    return res.status(status).json({
+      success: false,
+      error: 'Failed to delete manual report',
+      message: error.message || 'Unknown error'
+    });
   }
 };

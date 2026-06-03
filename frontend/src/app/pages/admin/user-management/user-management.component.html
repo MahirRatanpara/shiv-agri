@@ -55,48 +55,123 @@
         <tr>
           <th>User</th>
           <th>Email</th>
+          <th>Phone</th>
           <th>Role</th>
           <th>Joined</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of users">
-          <td class="user-info">
-            <div class="user-avatar">
-              <img *ngIf="user.profilePhoto" [src]="user.profilePhoto" [alt]="user.name" />
-              <span *ngIf="!user.profilePhoto" class="avatar-placeholder">
-                {{ user.name.charAt(0).toUpperCase() }}
+        <ng-container *ngFor="let user of users">
+          <tr [class.row-editing]="isEditingIdentity(user)">
+            <td class="user-info">
+              <div class="user-avatar">
+                <img *ngIf="user.profilePhoto" [src]="user.profilePhoto" [alt]="user.name" />
+                <span *ngIf="!user.profilePhoto" class="avatar-placeholder">
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </span>
+              </div>
+              <span class="user-name">{{ user.name }}</span>
+            </td>
+            <td class="user-email">
+              <span *ngIf="user.email">{{ user.email }}</span>
+              <span *ngIf="!user.email" class="muted">No email</span>
+            </td>
+            <td class="user-phone">
+              <span *ngIf="user.metadata?.phoneNumber">{{ formatUserPhone(user) }}</span>
+              <span *ngIf="!user.metadata?.phoneNumber" class="muted">—</span>
+            </td>
+            <td>
+              <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+                {{ user.roleRef?.displayName || user.role }}
               </span>
-            </div>
-            <span class="user-name">{{ user.name }}</span>
-          </td>
-          <td class="user-email">{{ user.email }}</td>
-          <td>
-            <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
-              {{ user.roleRef?.displayName || user.role }}
-            </span>
-          </td>
-          <td class="user-joined">{{ user.createdAt | date: 'MMM d, y' }}</td>
-          <td class="user-actions">
-            <button
-              class="btn btn-sm btn-primary"
-              (click)="changeUserRole(user)"
-              title="Change Role"
-            >
-              <i class="fas fa-user-tag"></i>
-              Change Role
-            </button>
-            <button
-              class="btn btn-sm btn-danger"
-              (click)="deleteUser(user)"
-              title="Delete User"
-            >
-              <i class="fas fa-trash-alt"></i>
-              Delete
-            </button>
-          </td>
-        </tr>
+            </td>
+            <td class="user-joined">{{ user.createdAt | date: 'MMM d, y' }}</td>
+            <td class="user-actions">
+              <button
+                class="btn btn-sm btn-secondary"
+                (click)="startIdentityEdit(user)"
+                [disabled]="isEditingIdentity(user)"
+                title="Edit name, email, and phone"
+              >
+                <i class="fas fa-id-card"></i>
+                Edit Identity
+              </button>
+              <button
+                class="btn btn-sm btn-primary"
+                (click)="changeUserRole(user)"
+                title="Change Role"
+              >
+                <i class="fas fa-user-tag"></i>
+                Change Role
+              </button>
+              <button
+                class="btn btn-sm btn-danger"
+                (click)="deleteUser(user)"
+                title="Delete User"
+              >
+                <i class="fas fa-trash-alt"></i>
+                Delete
+              </button>
+            </td>
+          </tr>
+
+          <!-- Inline identity-edit row, expands beneath the user row -->
+          <tr *ngIf="isEditingIdentity(user)" class="identity-edit-row">
+            <td colspan="6">
+              <div class="identity-edit-panel">
+                <header class="identity-edit-head">
+                  <h3><i class="fas fa-id-card"></i> Edit {{ user.name }}'s identity</h3>
+                  <p>Add or change name, email, and phone. Strict uniqueness — email or phone already linked elsewhere will be rejected.</p>
+                </header>
+
+                <div class="identity-grid">
+                  <label class="field">
+                    <span>Name</span>
+                    <input type="text" [(ngModel)]="identityDraft.name" placeholder="Full name" />
+                  </label>
+
+                  <label class="field">
+                    <span>Email <em>(leave blank to clear)</em></span>
+                    <input type="email" [(ngModel)]="identityDraft.email" placeholder="user@example.com" />
+                  </label>
+
+                  <label class="field">
+                    <span>Country code</span>
+                    <select [(ngModel)]="identityDraft.phoneCountryCode">
+                      <option *ngFor="let opt of countryCodeOptions" [value]="opt.value">{{ opt.label }}</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Phone <em>(leave blank to clear)</em></span>
+                    <input type="tel" [(ngModel)]="identityDraft.phone" placeholder="98765 43210" />
+                  </label>
+                </div>
+
+                <div class="identity-actions">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    (click)="cancelIdentityEdit()"
+                    [disabled]="isSavingIdentity"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    (click)="saveIdentity(user)"
+                    [disabled]="isSavingIdentity"
+                  >
+                    <i class="fas" [class.fa-check]="!isSavingIdentity" [class.fa-circle-notch]="isSavingIdentity" [class.fa-spin]="isSavingIdentity"></i>
+                    {{ isSavingIdentity ? 'Saving...' : 'Save Identity' }}
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>

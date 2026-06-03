@@ -8,14 +8,16 @@ const userSchema = new mongoose.Schema({
     default: 'New User'
   },
   email: {
-    // Optional — phone-only signups won't have one. Sparse unique allows multiple docs without email.
+    // Optional — phone-only signups won't have one. Uniqueness is enforced
+    // by an explicit *partial* index further down so the constraint only
+    // applies to non-empty string values. `sparse: true` is NOT enough on
+    // its own: Mongo sparse indexes still include documents where the field
+    // is null or empty string, which would collide as soon as a second
+    // blank-email user is created.
     type: String,
     required: false,
-    unique: true,
-    sparse: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
   phoneVerified: {
     type: Boolean,
@@ -25,9 +27,9 @@ const userSchema = new mongoose.Schema({
     type: Date
   },
   googleId: {
-    type: String,
-    unique: true,
-    sparse: true
+    // Uniqueness enforced by an explicit partial index below — same reason
+    // as `email`: Mongo's sparse-unique still collides on null/empty values.
+    type: String
   },
   profilePhoto: {
     type: String
@@ -82,11 +84,49 @@ userSchema.pre('save', function(next) {
 
 // Indexes for performance
 userSchema.index({ role: 1 });
-// Phone is a unique identity just like email — one phone maps to exactly one user.
-// Sparse so phone-less (Google-only) accounts don't collide on a missing value.
-// NOTE: requires the migration in scripts/migrate-phone-email-unique.js to drop the
-// legacy non-unique index and unset empty-string values before this can build.
-userSchema.index({ 'metadata.phoneNumberNormalized': 1 }, { unique: true, sparse: true });
+
+// Identity uniqueness via *partial* indexes — they only cover documents
+// where the field is a non-empty string. This is the only correct way to
+// allow many phone-less / email-less / Google-less accounts without
+// collisions on null or empty values (sparse alone won't do it).
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $type: 'string', $gt: '' } }
+  }
+);
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { googleId: { $type: 'string', $gt: '' } }
+  }
+);
+userSchema.index(
+  { 'metadata.phoneNumberNormalized': 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 'metadata.phoneNumberNormalized': { $type: 'string', $gt: '' } }
+  }
+);
+
+/**
+ * Pre-save hygiene: strip empty strings on identity fields so the document
+ * lands in the partial index's exclusion zone (and so `email === ''` can't
+ * be saved by accident from a careless caller).
+ */
+userSchema.pre('save', function(next) {
+  if (this.email === '' || this.email === null) this.email = undefined;
+  if (this.googleId === '' || this.googleId === null) this.googleId = undefined;
+  if (this.metadata) {
+    if (this.metadata.phoneNumberNormalized === '' || this.metadata.phoneNumberNormalized === null) {
+      this.metadata.phoneNumberNormalized = undefined;
+    }
+    if (this.metadata.phoneNumber === null) this.metadata.phoneNumber = '';
+  }
+  next();
+});
 
 // Instance Methods
 userSchema.methods.toClientJSON = function() {

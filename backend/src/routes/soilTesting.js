@@ -6,6 +6,7 @@ const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
 const fertilizerCropConfig = require('../config/fertilizerCropConfig');
 const { addClassifications } = require('../utils/soilClassification');
+const { extractCellText } = require('../utils/excelCellText');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
@@ -713,13 +714,15 @@ router.post('/sessions/:id/upload-excel',
         try {
           // Extract data from Excel columns
           // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name
-          const sampleNumber = row.getCell(1).value?.toString().trim() || '';
-          const farmersName = row.getCell(2).value?.toString().trim() || '';
-          const mobileNo = row.getCell(3).value?.toString().trim() || '';
-          const location = row.getCell(4).value?.toString().trim() || '';
-          const farmsName = row.getCell(5).value?.toString().trim() || '';
-          const taluka = row.getCell(6).value?.toString().trim() || '';
-          const cropName = row.getCell(7).value?.toString().trim() || '';
+          // extractCellText unwraps rich-text / formula / hyperlink shapes so
+          // formatted cells don't end up persisted as the literal "[object Object]".
+          const sampleNumber = extractCellText(row.getCell(1));
+          const farmersName = extractCellText(row.getCell(2));
+          const mobileNo = extractCellText(row.getCell(3));
+          const location = extractCellText(row.getCell(4));
+          const farmsName = extractCellText(row.getCell(5));
+          const taluka = extractCellText(row.getCell(6));
+          const cropName = extractCellText(row.getCell(7));
 
           // Validate required fields
           if (!sampleNumber) {

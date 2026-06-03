@@ -24,6 +24,12 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   farmName = '';
   clientName = '';
   clientEmail = '';
+  // Snapshot of the email at the time the linked farmer was loaded. When
+  // blank, the form lets the user add one (and the backend backfills it on
+  // save). When non-blank, the email stays read-only — changing an
+  // already-set email is an admin-only operation via the user-management
+  // panel.
+  initialClientEmail = '';
   clientCountryCode = '+91';
   clientPhone = '';
   lookupInProgress = false;
@@ -45,7 +51,12 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   areaUnit: AreaUnit = 'acres';
   cultivableArea: number | null = null;
   soilType = '';
-  irrigationSystem = '';
+  // Multi-select water sources (Bore, Well, Canal, ...). Replaces the
+  // legacy single irrigationSystem string. Legacy data is hydrated into
+  // this array in patchFromInitial().
+  irrigationSources: string[] = [];
+  // How the field is watered (Drip, Flood, Sprinkler, ...).
+  irrigationMethod = '';
   terrainType = '';
   transformerHp: number | null = null;
   motorCount: number | null = null;
@@ -53,7 +64,15 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   needsLandscapingConsultancy = false;
   isOnlineVisit = false;
   cropInput = '';
-  crops: Array<{ name: string; variety?: string; season?: string; area?: number }> = [];
+  crops: Array<{
+    name: string;
+    variety?: string;
+    season?: string;
+    area?: number;
+    cropAge?: number;
+    totalTrees?: number;
+    spacing?: string;
+  }> = [];
   description = '';
   notes = '';
   alternativeContact = '';
@@ -62,7 +81,10 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
   expectedCompletionDate = '';
   errors: Record<string, string> = {};
   private lastResolvedPhone = '';
-  irrigationOptions = ['Bore', 'Well', 'Mixed', 'Canal', 'River'];
+  // Sources can be combined (e.g., Bore + Well). "Mixed" is intentionally
+  // dropped — the multi-select makes it redundant.
+  irrigationSourceOptions = ['Bore', 'Well', 'Canal', 'River', 'Pond', 'Tank', 'Rainwater'];
+  irrigationMethodOptions = ['Drip', 'Flood', 'Sprinkler', 'Furrow', 'Micro-sprinkler', 'Manual'];
   terrainOptions = ['Flat', 'Sloped', 'Hilly', 'Mixed'];
   cropSeasonOptions = ['Kharif', 'Rabi', 'Zaid', 'Perennial'];
   areaUnitOptions: Array<{ value: AreaUnit; label: string }> = [
@@ -103,6 +125,23 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     return this.mode === 'farmer' ? 'Submit for Approval' : 'Create Farm';
   }
 
+  /**
+   * The email input is editable in any of these cases:
+   *  - Manager mode + brand-new farmer (no resolved user yet) — always free.
+   *  - Manager mode + resolved farmer who currently has NO email on record.
+   *  - Farmer mode + the user's profile email is currently blank.
+   * Once an email is on file, it stays read-only — admin can change it via
+   * the user-management identity edit panel.
+   */
+  get isClientEmailLocked(): boolean {
+    if (this.mode === 'manager') {
+      if (!this.userResolved) return false;
+      return !!this.initialClientEmail;
+    }
+    // Farmer mode: locked only when a non-blank email is on record.
+    return !!(this.currentUser?.email || '').trim();
+  }
+
   private hydrateForm(): void {
     if (this.initialData) {
       this.patchFromInitial(this.initialData);
@@ -115,6 +154,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     if (this.mode === 'farmer' && this.currentUser) {
       this.clientName = this.currentUser.name || '';
       this.clientEmail = this.currentUser.email || '';
+      this.initialClientEmail = this.clientEmail;
       const phoneParts = this.splitPhoneNumber(this.currentUser.phoneNumber || '', this.currentUser.phoneCountryCode);
       this.clientCountryCode = phoneParts.countryCode;
       this.clientPhone = phoneParts.localNumber;
@@ -125,6 +165,9 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     this.farmName = data.name || this.farmName;
     this.clientName = data.clientName || this.clientName;
     this.clientEmail = data.clientEmail || this.clientEmail;
+    // Snapshot whatever email the linked farmer already had so the
+    // template can keep it editable when it was blank coming in.
+    this.initialClientEmail = (data.clientEmail || '').trim();
     if (data.clientPhone) {
       const phoneParts = this.splitPhoneNumber(data.clientPhone);
       this.clientCountryCode = phoneParts.countryCode;
@@ -146,7 +189,18 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     this.areaUnit = data.landDetails?.areaUnit || this.areaUnit;
     this.cultivableArea = data.landDetails?.cultivableArea ?? this.cultivableArea;
     this.soilType = data.landDetails?.soilType || this.soilType;
-    this.irrigationSystem = data.landDetails?.irrigationSystem || this.irrigationSystem;
+    // Hydrate multi-select sources: prefer the new array; fall back to
+    // legacy single string (split on comma/semicolon for old saved data).
+    const sourcesField = (data.landDetails as any)?.irrigationSources;
+    if (Array.isArray(sourcesField) && sourcesField.length) {
+      this.irrigationSources = sourcesField.filter(Boolean);
+    } else if (data.landDetails?.irrigationSystem) {
+      this.irrigationSources = data.landDetails.irrigationSystem
+        .split(/[,;/]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    this.irrigationMethod = (data.landDetails as any)?.irrigationMethod || this.irrigationMethod;
     this.terrainType = data.landDetails?.terrainType || this.terrainType;
     this.transformerHp = data.electricity?.transformerHp ?? this.transformerHp;
     this.motorCount = data.electricity?.motorCount ?? this.motorCount;
@@ -205,10 +259,26 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     this.crops = this.crops.filter((item) => item.name !== cropName);
   }
 
+  /** Toggle an irrigation source chip on/off. */
+  toggleIrrigationSource(source: string): void {
+    const idx = this.irrigationSources.indexOf(source);
+    if (idx === -1) {
+      this.irrigationSources = [...this.irrigationSources, source];
+    } else {
+      this.irrigationSources = this.irrigationSources.filter((s) => s !== source);
+    }
+    delete this.errors['irrigationSources'];
+  }
+
+  isIrrigationSourceSelected(source: string): boolean {
+    return this.irrigationSources.includes(source);
+  }
+
   onClientPhoneChange(): void {
     this.userResolved = false;
     this.newFarmer = false;
     this.lastResolvedPhone = '';
+    this.initialClientEmail = '';
     delete this.errors['clientPhone'];
     delete this.errors['userResolved'];
   }
@@ -223,7 +293,10 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     this.farmService.lookupUserByPhone(phone).subscribe({
       next: (user) => {
         this.clientName = user.name;
-        this.clientEmail = user.email;
+        this.clientEmail = user.email || '';
+        // Capture whether this farmer arrived with an email on file.
+        // The template uses this to keep the email editable when blank.
+        this.initialClientEmail = this.clientEmail;
         this.userResolved = true;
         this.newFarmer = false;
         this.lastResolvedPhone = phone;
@@ -268,10 +341,17 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
         }
       : undefined;
 
+    // In farmer mode we trust the user's profile email when it's already set,
+    // but fall through to whatever they typed in the form so they can supply
+    // a brand-new email when their profile email is blank (the backend then
+    // auto-links it to their account via resolveOrCreateFarmer/email backfill).
+    const farmerEmail = (this.currentUser?.email || '').trim() || this.clientEmail.trim();
+    const submittedEmail = (this.mode === 'farmer' ? farmerEmail : this.clientEmail)?.trim();
+
     this.formSubmit.emit({
       name: this.farmName.trim(),
       clientName: ownerName?.trim(),
-      clientEmail: (this.mode === 'farmer' ? this.currentUser?.email : this.clientEmail)?.trim(),
+      clientEmail: submittedEmail,
       clientPhone: resolvedPhone.trim(),
       category: 'FARM',
       projectType: 'farm',
@@ -293,9 +373,13 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
         areaUnit: this.areaUnit,
         soilType: this.soilType.trim(),
         cultivableArea: this.cultivableArea || undefined,
-        irrigationSystem: this.irrigationSystem || undefined,
+        // Multi-select sources replace the legacy single string. The
+        // backend pre-save hook keeps `irrigationSystem` mirrored for any
+        // older readers.
+        irrigationSources: this.irrigationSources.length ? this.irrigationSources : undefined,
+        irrigationMethod: this.irrigationMethod || undefined,
         terrainType: this.terrainType || undefined
-      },
+      } as any,
       electricity,
       needsLandscapingConsultancy: this.needsLandscapingConsultancy,
       isOnlineVisit: this.isOnlineVisit,
@@ -303,7 +387,10 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
         name: crop.name,
         variety: crop.variety?.trim() || undefined,
         season: crop.season || undefined,
-        area: crop.area || undefined
+        area: crop.area || undefined,
+        cropAge: crop.cropAge ?? undefined,
+        totalTrees: crop.totalTrees ?? undefined,
+        spacing: crop.spacing?.trim() || undefined
       })),
       alternativeContact: this.alternativeContact.trim() || undefined,
       description: this.description.trim() || undefined,
@@ -325,7 +412,7 @@ export class FarmRegistrationFormComponent implements OnInit, OnChanges {
     if (!this.district.trim()) errors['district'] = 'District is required.';
     if (!this.totalArea || this.totalArea <= 0) errors['totalArea'] = 'Enter a valid total area.';
     if (!this.soilType.trim()) errors['soilType'] = 'Soil type is required.';
-    if (!this.irrigationSystem) errors['irrigationSystem'] = 'Select an irrigation source.';
+    if (!this.irrigationSources.length) errors['irrigationSources'] = 'Select at least one irrigation source.';
     if (!this.crops.length) errors['crops'] = 'Add at least one crop.';
 
     this.errors = errors;

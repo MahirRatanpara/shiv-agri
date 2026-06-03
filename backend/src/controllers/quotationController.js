@@ -37,13 +37,37 @@ exports.listQuotations = async (req, res) => {
 
 /**
  * Create an adhoc BOP (Bill of Project) quotation for a landscaping project.
+ * Accepts optional multipart `files` (images/PDFs) that become attachments
+ * on the new quotation. Body JSON arrives via the standard multer text
+ * fields, so `bopItems` is JSON-encoded.
  */
 exports.createBopQuotation = async (req, res) => {
   try {
-    const result = await quotationService.createBopQuotation(req.params.id, req.body, req.user);
+    // When the request is multipart, `bopItems` and `attachInitial` flags
+    // come through as strings. JSON requests pass through untouched.
+    const rawBody = req.body || {};
+    const parsedItems = typeof rawBody.bopItems === 'string'
+      ? safeParseJson(rawBody.bopItems, [])
+      : rawBody.bopItems;
+
+    const payload = {
+      ...rawBody,
+      bopItems: parsedItems
+    };
+
+    const files = Array.isArray(req.files) ? req.files : [];
+
+    const result = await quotationService.createBopQuotation(
+      req.params.id,
+      payload,
+      req.user,
+      files
+    );
+
     res.status(201).json({
       success: true,
       data: { quotation: result.quotation, project: result.project },
+      attachmentFailures: result.attachmentFailures || [],
       message: 'BOP quotation created.'
     });
   } catch (error) {
@@ -56,6 +80,72 @@ exports.createBopQuotation = async (req, res) => {
     });
   }
 };
+
+/**
+ * Attach additional photos/PDFs to an existing BOP quotation.
+ */
+exports.addBopAttachments = async (req, res) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (!files.length) {
+      return res.status(400).json({ success: false, error: 'No files provided' });
+    }
+    const result = await quotationService.addBopAttachments(
+      req.params.id,
+      req.params.quotationId,
+      files,
+      req.user
+    );
+    const status = result.added.length === 0 ? 502 : (result.failures.length ? 207 : 201);
+    res.status(status).json({
+      success: result.added.length > 0,
+      added: result.added,
+      failures: result.failures,
+      quotation: result.quotation
+    });
+  } catch (error) {
+    logger.error(`Error adding BOP attachments: ${error.message}`);
+    const code = error.message.includes('not found') ? 404 : 400;
+    res.status(code).json({
+      success: false,
+      error: 'Failed to add attachments',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Remove a single attachment from an existing BOP quotation.
+ */
+exports.removeBopAttachment = async (req, res) => {
+  try {
+    await quotationService.removeBopAttachment(
+      req.params.id,
+      req.params.quotationId,
+      req.params.attachmentId,
+      req.user
+    );
+    res.json({ success: true, message: 'Attachment removed.' });
+  } catch (error) {
+    logger.error(`Error removing BOP attachment: ${error.message}`);
+    const code = error.message.includes('not found') ? 404 : 400;
+    res.status(code).json({
+      success: false,
+      error: 'Failed to remove attachment',
+      message: error.message
+    });
+  }
+};
+
+/** Defensive JSON.parse — returns the fallback on any error. */
+function safeParseJson(raw, fallback) {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed == null ? fallback : parsed;
+  } catch (_) {
+    return fallback;
+  }
+}
 
 /**
  * Admin-only: revert a previously-marked-paid installment. Resets the

@@ -483,3 +483,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* "(optional)" hint next to non-required field labels */
+.quotation-field span .optional {
+  font-style: italic;
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 4px;
+}

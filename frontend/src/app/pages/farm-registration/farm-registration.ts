@@ -104,11 +104,13 @@ export class FarmRegistrationPageComponent implements OnInit, OnDestroy {
   /**
    * Validate the inline quotation block before submit. Returns null if valid,
    * or an error message string. Only checks when includeQuotation is true.
+   *
+   * Quotation details (rich-text content) are optional — only the amount is
+   * required. If the manager leaves details blank, the saved quotation just
+   * records the amount + auto-generated installment schedule.
    */
   private validateInlineQuotation(): string | null {
     if (!this.includeQuotation) return null;
-    const plain = (this.quotationContent || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    if (!plain) return 'Please enter the quotation details or uncheck "Add quotation".';
     const amount = Number(this.quotationAmountPerYear);
     if (!Number.isFinite(amount) || amount <= 0) return 'Please enter a valid annual quotation amount.';
     return null;
