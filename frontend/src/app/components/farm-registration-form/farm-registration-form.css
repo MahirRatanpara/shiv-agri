@@ -631,3 +631,63 @@
     width: 100%;
   }
 }
+
+/* ========================
+   Multi-select irrigation source chips
+   ======================== */
+
+.farm-form .chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.farm-form .chip-row.invalid {
+  outline: 1px dashed #dc2626;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.farm-form .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.farm-form .chip i {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.farm-form .chip:hover:not(.active) {
+  border-color: #15803d;
+  color: #15803d;
+}
+
+.farm-form .chip.active {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.farm-form .chip.active i {
+  color: #ffffff;
+}
+
+.farm-form .field-wide .hint {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 6px;
+}

@@ -146,7 +146,14 @@ const projectSchema = new mongoose.Schema({
     cultivablePercentage: { type: Number }, // Calculated field
     soilType: { type: String },
     waterSource: [{ type: String }], // Legacy: bore well, canal, river, rainwater
-    irrigationSystem: { type: String }, // Bore, Well, Mixed, Canal, River
+    // Legacy single-source field. New code writes to irrigationSources[]
+    // below; this stays for back-compat reads and is mirrored on save.
+    irrigationSystem: { type: String },
+    // Multi-select water sources (Bore, Well, Canal, River, Pond, Tank, ...).
+    // Replaces irrigationSystem going forward.
+    irrigationSources: [{ type: String, trim: true }],
+    // How the field is watered (Drip, Flood, Sprinkler, Furrow, ...).
+    irrigationMethod: { type: String, trim: true },
     terrainType: { type: String } // flat, sloped, hilly, mixed
   },
 
@@ -349,6 +356,31 @@ const projectSchema = new mongoose.Schema({
     generatedByName: { type: String }
   }],
 
+  // Manually-uploaded farm reports (images / PDFs attached by admin/manager
+  // to supplement the auto-linked soil/water/fertilizer reports). Auto-linked
+  // reports remain in `reports[]` above and are never written here.
+  manualReports: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    sizeBytes: { type: Number },
+    fileName: { type: String, trim: true },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    // Optional categorization so the UI can show a chip (soil/water/fertilizer/other).
+    sampleType: {
+      type: String,
+      enum: ['soil', 'water', 'fertilizer', 'other'],
+      default: 'other'
+    },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
   // Prescriptions and ad-hoc documents (uploaded by managers/admins; farm user reads only)
   prescriptions: [{
     // 'file' for uploaded media, 'manual' for free-text prescriptions composed in-app,
@@ -447,7 +479,13 @@ const projectSchema = new mongoose.Schema({
     season: { type: String, enum: ['Kharif', 'Rabi', 'Zaid', 'Perennial', ''] },
     plantingDate: { type: Date },
     expectedHarvestDate: { type: Date },
-    area: { type: Number, min: 0 }
+    area: { type: Number, min: 0 },
+    // Crop age in years (relevant for perennials / orchards).
+    cropAge: { type: Number, min: 0 },
+    // Total number of trees / plants for the crop.
+    totalTrees: { type: Number, min: 0 },
+    // Spacing between plants, free text so users can type "5x5 ft" or "3m x 3m".
+    spacing: { type: String, trim: true }
   }],
 
   soilType: {
@@ -823,6 +861,23 @@ projectSchema.pre('save', function(next) {
 projectSchema.pre('save', function(next) {
   // Note: Expenses are now automatically updated by the Transaction model
   // when transactions are created/updated/deleted
+
+  // Mirror legacy single irrigationSystem field <-> new irrigationSources[]
+  // so both API styles remain readable during the migration window.
+  if (this.landDetails) {
+    const sources = Array.isArray(this.landDetails.irrigationSources)
+      ? this.landDetails.irrigationSources.filter(Boolean)
+      : [];
+    if (sources.length) {
+      this.landDetails.irrigationSystem = sources.join(', ');
+    } else if (this.landDetails.irrigationSystem) {
+      // Backfill irrigationSources[] from the legacy single field on first save.
+      this.landDetails.irrigationSources = this.landDetails.irrigationSystem
+        .split(/[,;/]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
 
   // Update computed fields
   if (this.isModified('budget') || this.isModified('expenses')) {

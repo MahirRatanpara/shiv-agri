@@ -57,6 +57,23 @@ const farmPrescriptionUpload = multer({
   }
 });
 
+// Manual report uploads accept image or PDF only.
+const MANUAL_REPORT_MIME_PATTERN = /^(image\/.*|application\/pdf)$/i;
+const farmManualReportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (MANUAL_REPORT_MIME_PATTERN.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
 // Structured prescriptions only accept image attachments (rendered into the PDF)
 const structuredPrescriptionUpload = multer({
   storage: multer.memoryStorage(),
@@ -856,6 +873,41 @@ router.get('/:id/reports/:reportId/pdf/download',
 );
 
 // ========================
+// Manually-uploaded reports (admin/manager attach photos/PDFs)
+// ========================
+
+router.get('/:id/manual-reports',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.listManualReports
+);
+
+router.post('/:id/manual-reports',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmReportController.uploadManualReports
+);
+
+router.delete('/:id/manual-reports/:reportId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmReportController.deleteManualReport
+);
+
+// ========================
 // Quotations (manager/admin create; farmer accept/reject)
 // ========================
 
@@ -938,13 +990,64 @@ router.get('/:id/quotations/:quotationId/pdf',
  * @route   POST /api/projects/:id/quotations/bop
  * @desc    Create an adhoc BOP (Bill of Project) quotation for a landscaping
  *          project. BOP quotations are separate from the annual pending-quotation
- *          flow and do not change the project status.
+ *          flow and do not change the project status. Accepts optional
+ *          multipart `files` (images / PDFs) as attachments.
  * @access  Private (manager or admin)
  */
 router.post('/:id/quotations/bop',
   authenticate,
   requireManagerOrAdmin,
+  (req, res, next) => {
+    // Reuse the existing image+PDF multer config — BOP attachments share the
+    // same mime guard and 25 MB / 5 files limits.
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
   quotationController.createBopQuotation
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations/:quotationId/attachments
+ * @desc    Add more photo/PDF attachments to an existing BOP quotation.
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations/:quotationId/attachments',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  quotationController.addBopAttachments
+);
+
+/**
+ * @route   DELETE /api/projects/:id/quotations/:quotationId/attachments/:attachmentId
+ * @desc    Remove a single attachment from a BOP quotation.
+ * @access  Private (manager or admin)
+ */
+router.delete('/:id/quotations/:quotationId/attachments/:attachmentId',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.removeBopAttachment
 );
 
 /**

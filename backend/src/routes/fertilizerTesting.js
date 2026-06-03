@@ -5,6 +5,7 @@ const ExcelJS = require('exceljs');
 const FertilizerSession = require('../models/FertilizerSession');
 const FertilizerSample = require('../models/FertilizerSample');
 const fertilizerCropConfig = require('../config/fertilizerCropConfig');
+const { extractCellText } = require('../utils/excelCellText');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const farmReportLinker = require('../services/farmReportLinker');
 const logger = require('../utils/logger');
@@ -522,10 +523,12 @@ router.post('/sessions/:id/upload-excel',
         }
 
         try {
-          // Extract common fields from Excel columns
-          const sampleNumber = row.getCell(1).value?.toString().trim() || '';
-          const farmerName = row.getCell(2).value?.toString().trim() || '';
-          const cropName = row.getCell(3).value?.toString().trim() || '';
+          // Extract common fields from Excel columns.
+          // extractCellText unwraps rich-text / formula / hyperlink shapes
+          // so formatted cells don't end up persisted as "[object Object]".
+          const sampleNumber = extractCellText(row.getCell(1));
+          const farmerName = extractCellText(row.getCell(2));
+          const cropName = extractCellText(row.getCell(3));
 
           // Validate required fields
           if (!sampleNumber) {

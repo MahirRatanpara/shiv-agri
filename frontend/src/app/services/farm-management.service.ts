@@ -44,6 +44,8 @@ export interface FarmProject {
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
+    irrigationSources?: string[];
+    irrigationMethod?: string;
     terrainType?: string;
   };
   electricity?: {
@@ -53,7 +55,7 @@ export interface FarmProject {
   };
   needsLandscapingConsultancy?: boolean;
   isOnlineVisit?: boolean;
-  crops?: Array<{ name: string; variety?: string; season?: string; area?: number }>;
+  crops?: Array<{ name: string; variety?: string; season?: string; area?: number; cropAge?: number; totalTrees?: number; spacing?: string }>;
   registrationSource?: 'farmer_self' | 'manager_direct';
   submittedBy?: string | { _id?: string; id?: string };
   clientId?: string | { _id?: string; id?: string };
@@ -101,6 +103,8 @@ export interface FarmRegistrationPayload {
     cultivableArea?: number;
     waterSource?: string[];
     irrigationSystem?: string;
+    irrigationSources?: string[];
+    irrigationMethod?: string;
     terrainType?: string;
   };
   electricity?: {
@@ -110,7 +114,7 @@ export interface FarmRegistrationPayload {
   };
   needsLandscapingConsultancy?: boolean;
   isOnlineVisit?: boolean;
-  crops: Array<{ name: string; variety?: string; season?: string; area?: number }>;
+  crops: Array<{ name: string; variety?: string; season?: string; area?: number; cropAge?: number; totalTrees?: number; spacing?: string }>;
   alternativeContact?: string;
   description?: string;
   notes?: string;

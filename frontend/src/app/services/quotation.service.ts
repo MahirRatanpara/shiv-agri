@@ -25,6 +25,18 @@ export interface BopLineItem {
   total: number;
 }
 
+export interface BopAttachment {
+  _id: string;
+  mediaId: string;
+  url: string;
+  mimeType: string;
+  sizeBytes?: number;
+  fileName?: string;
+  uploadedBy?: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+}
+
 export interface Quotation {
   _id: string;
   project: string;
@@ -35,6 +47,7 @@ export interface Quotation {
   amountPerYear: number;
   installments: QuotationInstallment[];
   bopItems?: BopLineItem[];
+  attachments?: BopAttachment[];
   startDate: string;
   status: QuotationStatus;
   submittedBy: string;
@@ -89,15 +102,68 @@ export class QuotationService {
 
   /**
    * Adhoc landscaping BOP (Bill of Project) quotation. Separate from the
-   * annual pending-quotation flow.
+   * annual pending-quotation flow. Optional `files` (images / PDFs) become
+   * attachments on the new quotation.
    */
   createBopQuotation(
     projectId: string,
-    payload: BopQuotationPayload
-  ): Observable<{ quotation: Quotation; project: any }> {
+    payload: BopQuotationPayload,
+    files: File[] = []
+  ): Observable<{ quotation: Quotation; project: any; attachmentFailures: Array<{ filename: string; status: number; message: string }> }> {
+    const url = `${this.apiUrl}/projects/${projectId}/quotations/bop`;
+
+    // JSON path — no files attached. Keeps existing callers untouched.
+    if (!files.length) {
+      return this.http.post<any>(url, payload).pipe(
+        map((response) => ({
+          ...response.data,
+          attachmentFailures: response.attachmentFailures || []
+        }))
+      );
+    }
+
+    // Multipart path — bopItems is JSON-encoded so the server can re-parse it.
+    const form = new FormData();
+    if (payload.title) form.append('title', payload.title);
+    if (payload.content) form.append('content', payload.content);
+    if (payload.startDate) form.append('startDate', payload.startDate);
+    form.append('bopItems', JSON.stringify(payload.bopItems || []));
+    files.forEach((f) => form.append('files', f, f.name));
+
+    return this.http.post<any>(url, form).pipe(
+      map((response) => ({
+        ...response.data,
+        attachmentFailures: response.attachmentFailures || []
+      }))
+    );
+  }
+
+  /** Add photo/PDF attachments to an existing BOP quotation. */
+  addBopAttachments(
+    projectId: string,
+    quotationId: string,
+    files: File[]
+  ): Observable<{ added: BopAttachment[]; failures: Array<{ filename: string; status: number; message: string }>; quotation: Quotation }> {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f, f.name));
     return this.http
-      .post<any>(`${this.apiUrl}/projects/${projectId}/quotations/bop`, payload)
-      .pipe(map((response) => response.data));
+      .post<any>(`${this.apiUrl}/projects/${projectId}/quotations/${quotationId}/attachments`, form)
+      .pipe(map((r) => ({
+        added: r.added || [],
+        failures: r.failures || [],
+        quotation: r.quotation
+      })));
+  }
+
+  /** Remove a single attachment from a BOP quotation. */
+  removeBopAttachment(
+    projectId: string,
+    quotationId: string,
+    attachmentId: string
+  ): Observable<void> {
+    return this.http
+      .delete<any>(`${this.apiUrl}/projects/${projectId}/quotations/${quotationId}/attachments/${attachmentId}`)
+      .pipe(map(() => void 0));
   }
 
   /**

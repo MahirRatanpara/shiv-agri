@@ -368,3 +368,108 @@
     justify-content: center;
   }
 }
+
+/* ========================
+   Inline identity edit (admin)
+   ======================== */
+
+.users-table .muted {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.users-table tr.row-editing {
+  background: #f0fdf4;
+}
+
+.identity-edit-row td {
+  padding: 0;
+  background: #f9fafb;
+  border-top: none;
+}
+
+.identity-edit-panel {
+  padding: 22px 24px;
+  background: #ffffff;
+  border-left: 4px solid #15803d;
+  margin: 6px 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.identity-edit-head {
+  margin-bottom: 14px;
+}
+
+.identity-edit-head h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: #14532d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.identity-edit-head h3 i {
+  color: #15803d;
+}
+
+.identity-edit-head p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.identity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.identity-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.identity-grid .field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.identity-grid .field em {
+  font-style: italic;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.identity-grid input,
+.identity-grid select {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #ffffff;
+}
+
+.identity-grid input:focus,
+.identity-grid select:focus {
+  outline: none;
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.identity-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767.98px) {
+  .identity-grid {
+    grid-template-columns: 1fr;
+  }
+}

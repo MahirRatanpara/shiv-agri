@@ -217,9 +217,9 @@
           </select>
         </label>
 
-        <button class="edit-btn" *ngIf="canEdit" (click)="showEditForm = !showEditForm">
-          <i class="fas" [class.fa-pen]="!showEditForm" [class.fa-times]="showEditForm"></i>
-          {{ showEditForm ? 'Cancel Edit' : 'Edit Project' }}
+        <button class="edit-btn" *ngIf="canEdit" (click)="openEditForm()">
+          <i class="fas fa-pen"></i>
+          Edit Project
         </button>
 
         <button
@@ -348,21 +348,6 @@
       [locationLabel]="weatherLocationLabel"
     ></app-farm-weather>
 
-    <section class="edit-panel" *ngIf="showEditForm && project">
-      <header class="card-section-head">
-        <h2><i class="fas fa-pen-to-square"></i> Edit Project</h2>
-        <p>Changes are sent for approval before going live.</p>
-      </header>
-      <app-farm-registration-form
-        [mode]="isFarmer ? 'farmer' : 'manager'"
-        action="edit"
-        [currentUser]="currentUser"
-        [initialData]="project"
-        [isSubmitting]="isSubmitting"
-        (formSubmit)="submitEditRequest($event)"
-        (cancel)="showEditForm = false"
-      ></app-farm-registration-form>
-    </section>
   </ng-container>
 
   <ng-container *ngIf="!isLoading && project && activeTab === 'media'">
@@ -1277,6 +1262,21 @@
         </div>
         <div class="media-head-actions">
           <button
+            *ngIf="canUploadManualReports"
+            type="button"
+            class="upload-btn"
+            [disabled]="isUploadingManualReport"
+            (click)="triggerManualReportPicker()"
+          >
+            <i
+              class="fas"
+              [class.fa-cloud-arrow-up]="!isUploadingManualReport"
+              [class.fa-circle-notch]="isUploadingManualReport"
+              [class.fa-spin]="isUploadingManualReport"
+            ></i>
+            <span>{{ isUploadingManualReport ? 'Uploading...' : 'Attach Report' }}</span>
+          </button>
+          <button
             type="button"
             class="upload-btn ghost"
             [disabled]="reportsLoading"
@@ -1288,6 +1288,90 @@
           </button>
         </div>
       </header>
+
+      <!-- Manual report type selector (admin/manager only) -->
+      <div class="manual-report-type-bar" *ngIf="canUploadManualReports">
+        <span class="type-label">Attach as:</span>
+        <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'other'" (click)="setManualReportSampleType('other')">
+          Other
+        </button>
+        <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'soil'" (click)="setManualReportSampleType('soil')">
+          <i class="fas fa-mound"></i> Soil
+        </button>
+        <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'water'" (click)="setManualReportSampleType('water')">
+          <i class="fas fa-droplet"></i> Water
+        </button>
+        <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'fertilizer'" (click)="setManualReportSampleType('fertilizer')">
+          <i class="fas fa-flask"></i> Fertilizer
+        </button>
+      </div>
+
+      <input
+        id="manualReportInput"
+        type="file"
+        class="media-input"
+        [attr.accept]="manualReportAccept"
+        multiple
+        (change)="onManualReportFilesSelected($event)"
+      />
+
+      <div class="upload-strip" *ngIf="manualReportUploadingBatch.length">
+        <div
+          class="upload-item"
+          *ngFor="let item of manualReportUploadingBatch; trackBy: trackUpload"
+          [attr.data-status]="item.status"
+        >
+          <i class="fas" [class.fa-file-pdf]="item.filename.endsWith('.pdf')" [class.fa-file-image]="!item.filename.endsWith('.pdf')"></i>
+          <span class="upload-name">{{ item.filename }}</span>
+          <span class="upload-progress">{{ item.progress }}%</span>
+        </div>
+      </div>
+
+      <ul class="report-list" *ngIf="manualReports.length">
+        <li class="report-item manual-report" *ngFor="let item of manualReports; trackBy: trackManualReport">
+          <div class="report-icon" [attr.data-type]="item.sampleType" aria-hidden="true">
+            <i class="fas" [ngClass]="manualReportIcon(item)"></i>
+          </div>
+          <div class="report-body">
+            <div class="report-title-row">
+              <h3 class="report-title">
+                {{ item.title || item.fileName || 'Attached report' }}
+              </h3>
+              <span class="report-type-tag" [attr.data-type]="item.sampleType">
+                {{ manualReportTypeLabel(item.sampleType) }} · Manual
+              </span>
+            </div>
+            <div class="report-meta">
+              <span><i class="fas fa-clock"></i> Uploaded {{ item.uploadedAt | date:'medium' }}</span>
+              <span *ngIf="item.uploadedByName"><i class="fas fa-user-tie"></i> {{ item.uploadedByName }}</span>
+              <span *ngIf="item.sizeBytes"><i class="fas fa-weight-hanging"></i> {{ formatSize(item.sizeBytes) }}</span>
+            </div>
+            <p class="report-notes" *ngIf="item.notes">{{ item.notes }}</p>
+          </div>
+          <div class="report-actions">
+            <button
+              type="button"
+              class="report-btn primary"
+              (click)="openManualReport(item)"
+              [attr.aria-label]="'View ' + (item.title || 'attached report')"
+            >
+              <i class="fas fa-eye"></i>
+              <span>View</span>
+            </button>
+            <button
+              *ngIf="canDeleteManualReport(item)"
+              type="button"
+              class="report-btn danger-ghost"
+              (click)="confirmDeleteManualReport(item, $event)"
+              [disabled]="deletingManualReportIds.has(item._id)"
+              [attr.aria-label]="'Delete ' + (item.title || 'report')"
+            >
+              <i class="fas" [class.fa-trash-alt]="!deletingManualReportIds.has(item._id)" [class.fa-circle-notch]="deletingManualReportIds.has(item._id)" [class.fa-spin]="deletingManualReportIds.has(item._id)"></i>
+              <span>Delete</span>
+            </button>
+          </div>
+        </li>
+      </ul>
 
       <div class="report-filter-bar" *ngIf="reports.length">
         <button
@@ -1449,6 +1533,30 @@
           >
             <i class="fas fa-pen-to-square" aria-hidden="true"></i>
             <span>Compose Quotation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ============== ORPHAN FARM CTA — admin/manager attaching a quotation
+            to a farm they created without one ============== -->
+      <div class="quotation-empty-block" *ngIf="!quotationLoading && canAttachInitialQuotation && !showQuotationForm">
+        <div class="quotation-empty-state">
+          <div class="empty-illustration" aria-hidden="true">
+            <i class="fas fa-file-circle-plus"></i>
+          </div>
+          <h3>No quotation on file</h3>
+          <p>
+            This farm was added without a quotation. Attach one now to record the annual fee
+            and unlock the payment schedule — the quotation will be saved as already-accepted,
+            so the farmer doesn't need to accept it again.
+          </p>
+          <button
+            type="button"
+            class="upload-btn"
+            (click)="openAttachInitialQuotationForm()"
+          >
+            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <span>Add Quotation</span>
           </button>
         </div>
       </div>
@@ -1632,7 +1740,7 @@
         </header>
 
         <label class="quotation-field">
-          <span><i class="fas fa-align-left"></i> Quotation Details</span>
+          <span><i class="fas fa-align-left"></i> Quotation Details <em class="optional">(optional)</em></span>
           <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
             <button type="button" class="rt-btn" (click)="applyFormat('bold')" title="Bold (Ctrl+B)"><i class="fas fa-bold"></i></button>
             <button type="button" class="rt-btn" (click)="applyFormat('italic')" title="Italic (Ctrl+I)"><i class="fas fa-italic"></i></button>
@@ -1798,6 +1906,7 @@
                 <span><i class="fas fa-calendar"></i> {{ bop.createdAt | date:'mediumDate' }}</span>
                 <span *ngIf="bop.submittedByName"><i class="fas fa-user-tie"></i> {{ bop.submittedByName }}</span>
                 <span *ngIf="bop.bopItems?.length"><i class="fas fa-list-ol"></i> {{ bop.bopItems?.length }} item{{ (bop.bopItems?.length || 0) > 1 ? 's' : '' }}</span>
+                <span *ngIf="bop.attachments?.length"><i class="fas fa-paperclip"></i> {{ bop.attachments?.length }}</span>
               </div>
             </div>
             <div class="bop-item-amount">{{ formatCurrency(bop.amountPerYear) }}</div>
@@ -1830,7 +1939,7 @@
           </label>
 
           <label class="quotation-field">
-            <span><i class="fas fa-align-left"></i> Scope &amp; Notes</span>
+            <span><i class="fas fa-align-left"></i> Scope &amp; Notes <em class="optional">(optional)</em></span>
             <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
               <button type="button" class="rt-btn" (click)="applyBopFormat('bold')"><i class="fas fa-bold"></i></button>
               <button type="button" class="rt-btn" (click)="applyBopFormat('italic')"><i class="fas fa-italic"></i></button>
@@ -1882,6 +1991,46 @@
           <div class="bop-total-row">
             <span>Total:</span>
             <strong>{{ formatCurrency(bopTotal) }}</strong>
+          </div>
+
+          <!-- Optional attachments: reference photos, drawings, vendor PDFs -->
+          <div class="bop-attachments-block">
+            <div class="bop-attachments-head">
+              <span><i class="fas fa-paperclip"></i> Attachments <em class="optional">(optional · images / PDF)</em></span>
+              <button
+                type="button"
+                class="bop-add-row"
+                (click)="triggerBopAttachmentPicker()"
+                [disabled]="isSubmittingBop"
+              >
+                <i class="fas fa-plus"></i> Add Files
+              </button>
+            </div>
+            <input
+              #bopAttachmentInput
+              type="file"
+              class="media-input"
+              [attr.accept]="bopAttachmentAccept"
+              multiple
+              (change)="onBopAttachmentsSelected($event)"
+            />
+            <ul class="bop-draft-list" *ngIf="bopAttachmentDrafts.length">
+              <li class="bop-draft-item" *ngFor="let f of bopAttachmentDrafts; let i = index">
+                <i class="fas" [class.fa-file-pdf]="f.type === 'application/pdf'" [class.fa-file-image]="f.type.startsWith('image/')"></i>
+                <span class="bop-draft-name">{{ f.name }}</span>
+                <span class="bop-draft-size">{{ formatSize(f.size) }}</span>
+                <button
+                  type="button"
+                  class="bop-draft-remove"
+                  (click)="removeBopAttachmentDraft(i)"
+                  [disabled]="isSubmittingBop"
+                  [attr.aria-label]="'Remove ' + f.name"
+                  title="Remove"
+                >
+                  <i class="fas fa-times-circle"></i>
+                </button>
+              </li>
+            </ul>
           </div>
 
           <div class="quotation-form-actions">
@@ -1942,6 +2091,63 @@
             <span>Total:</span>
             <strong>{{ formatCurrency(selectedBopDetail.amountPerYear) }}</strong>
           </div>
+        </div>
+
+        <!-- Attachments (photos / PDFs) -->
+        <div class="quotation-installments-block bop-detail-attachments">
+          <div class="bop-attachments-head">
+            <h4><i class="fas fa-paperclip"></i> Attachments</h4>
+            <button
+              *ngIf="canCreateBopQuotation"
+              type="button"
+              class="bop-add-row"
+              (click)="triggerBopDetailAttachmentPicker()"
+              [disabled]="uploadingBopAttachmentsForId === selectedBopDetail._id"
+            >
+              <i class="fas" [class.fa-plus]="uploadingBopAttachmentsForId !== selectedBopDetail._id" [class.fa-circle-notch]="uploadingBopAttachmentsForId === selectedBopDetail._id" [class.fa-spin]="uploadingBopAttachmentsForId === selectedBopDetail._id"></i>
+              {{ uploadingBopAttachmentsForId === selectedBopDetail._id ? 'Uploading...' : 'Add Attachment' }}
+            </button>
+          </div>
+
+          <input
+            #bopDetailAttachmentInput
+            type="file"
+            class="media-input"
+            [attr.accept]="bopAttachmentAccept"
+            multiple
+            (change)="onBopDetailAttachmentsSelected($event)"
+          />
+
+          <ul class="bop-attachment-list" *ngIf="selectedBopDetail.attachments?.length">
+            <li class="bop-attachment-item" *ngFor="let att of selectedBopDetail.attachments">
+              <button type="button" class="bop-attachment-open" (click)="openBopAttachment(att)">
+                <i class="fas" [ngClass]="bopAttachmentIcon(att)"></i>
+                <div class="bop-attachment-meta">
+                  <strong>{{ att.fileName || 'Attachment' }}</strong>
+                  <span>
+                    <ng-container *ngIf="att.sizeBytes">{{ formatSize(att.sizeBytes) }} · </ng-container>
+                    {{ att.uploadedAt | date:'medium' }}
+                    <ng-container *ngIf="att.uploadedByName"> · by {{ att.uploadedByName }}</ng-container>
+                  </span>
+                </div>
+              </button>
+              <button
+                *ngIf="canCreateBopQuotation"
+                type="button"
+                class="bop-attachment-remove"
+                (click)="confirmRemoveBopAttachment(selectedBopDetail, att, $event)"
+                [disabled]="deletingBopAttachmentIds.has(att._id)"
+                [attr.aria-label]="'Remove ' + (att.fileName || 'attachment')"
+                title="Remove attachment"
+              >
+                <i class="fas" [class.fa-trash-alt]="!deletingBopAttachmentIds.has(att._id)" [class.fa-circle-notch]="deletingBopAttachmentIds.has(att._id)" [class.fa-spin]="deletingBopAttachmentIds.has(att._id)"></i>
+              </button>
+            </li>
+          </ul>
+
+          <p class="bop-attachment-empty" *ngIf="!selectedBopDetail.attachments?.length">
+            No attachments on this BOP quotation.
+          </p>
         </div>
       </div>
     </div>
@@ -2177,6 +2383,54 @@
       <div class="lightbox-meta">
         <span>{{ lightboxItem.uploadedAt | date:'medium' }}</span>
         <span *ngIf="lightboxItem.uploadedByName">· {{ lightboxItem.uploadedByName }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================
+       Full-screen edit-project modal. Replaces the old inline panel so the
+       form has the whole viewport to work with on tablet/desktop.
+       Backdrop click closes the modal; ESC handling lives in the component.
+       ============================ -->
+  <div
+    class="edit-overlay"
+    *ngIf="showEditForm && project"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="edit-overlay-title"
+    (click)="closeEditForm()"
+  >
+    <div class="edit-overlay-inner" (click)="$event.stopPropagation()">
+      <header class="edit-overlay-head">
+        <div class="edit-overlay-title">
+          <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+          <div>
+            <h2 id="edit-overlay-title">Edit Project</h2>
+            <p *ngIf="isFarmer">Changes are sent for approval before going live.</p>
+            <p *ngIf="!isFarmer">Edits apply in place — the project status will not change.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="edit-overlay-close"
+          (click)="closeEditForm()"
+          [disabled]="isSubmitting"
+          aria-label="Close edit form"
+        >
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </header>
+
+      <div class="edit-overlay-body">
+        <app-farm-registration-form
+          [mode]="isFarmer ? 'farmer' : 'manager'"
+          action="edit"
+          [currentUser]="currentUser"
+          [initialData]="project"
+          [isSubmitting]="isSubmitting"
+          (formSubmit)="submitEditRequest($event)"
+          (cancel)="closeEditForm()"
+        ></app-farm-registration-form>
       </div>
     </div>
   </div>

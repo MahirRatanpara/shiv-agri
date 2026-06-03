@@ -45,13 +45,19 @@
     </label>
 
     <label class="field">
-      <span>Farmer email <em *ngIf="mode === 'manager' && newFarmer">(optional)</em></span>
+      <span>
+        Farmer email
+        <em *ngIf="mode === 'manager' && (newFarmer || !clientEmail)">(optional)</em>
+      </span>
       <input
         name="clientEmail"
         [(ngModel)]="clientEmail"
         type="email"
         placeholder="farmer@example.com"
-        [readonly]="mode === 'manager' ? userResolved : true">
+        [readonly]="isClientEmailLocked">
+      <small class="field-hint" *ngIf="!isClientEmailLocked && userResolved && !initialClientEmail">
+        No email on record for this farmer — add one and it will be linked to their account on save.
+      </small>
     </label>
 
     <label class="field">
@@ -152,13 +158,29 @@
       <input name="cultivableArea" [(ngModel)]="cultivableArea" type="number" min="0" step="0.01">
     </label>
 
+    <div class="field field-wide">
+      <span>Irrigation source <small class="hint">(select one or more)</small></span>
+      <div class="chip-row" [class.invalid]="errors['irrigationSources']">
+        <button
+          type="button"
+          class="chip"
+          *ngFor="let option of irrigationSourceOptions"
+          [class.active]="isIrrigationSourceSelected(option)"
+          (click)="toggleIrrigationSource(option)"
+        >
+          <i class="fas" [class.fa-check]="isIrrigationSourceSelected(option)" [class.fa-plus]="!isIrrigationSourceSelected(option)"></i>
+          {{ option }}
+        </button>
+      </div>
+      <small *ngIf="errors['irrigationSources']">{{ errors['irrigationSources'] }}</small>
+    </div>
+
     <label class="field">
-      <span>Irrigation source</span>
-      <select name="irrigationSystem" [(ngModel)]="irrigationSystem" [class.invalid]="errors['irrigationSystem']">
+      <span>Irrigation method</span>
+      <select name="irrigationMethod" [(ngModel)]="irrigationMethod">
         <option value="">Select</option>
-        <option *ngFor="let option of irrigationOptions" [value]="option">{{ option }}</option>
+        <option *ngFor="let option of irrigationMethodOptions" [value]="option">{{ option }}</option>
       </select>
-      <small *ngIf="errors['irrigationSystem']">{{ errors['irrigationSystem'] }}</small>
     </label>
 
     <label class="field">
@@ -222,6 +244,18 @@
         <label class="field">
           <span>Area</span>
           <input [name]="'cropArea' + i" [(ngModel)]="crop.area" type="number" min="0" step="0.01">
+        </label>
+        <label class="field">
+          <span>Crop age (years)</span>
+          <input [name]="'cropAge' + i" [(ngModel)]="crop.cropAge" type="number" min="0" step="0.5" placeholder="e.g. 3">
+        </label>
+        <label class="field">
+          <span>Total trees</span>
+          <input [name]="'cropTrees' + i" [(ngModel)]="crop.totalTrees" type="number" min="0" step="1" placeholder="e.g. 200">
+        </label>
+        <label class="field">
+          <span>Spacing</span>
+          <input [name]="'cropSpacing' + i" [(ngModel)]="crop.spacing" type="text" placeholder="e.g. 5x5 ft">
         </label>
       </div>
     </div>

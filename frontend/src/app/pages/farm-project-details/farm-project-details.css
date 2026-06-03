@@ -4789,3 +4789,342 @@ h1 {
   opacity: 0.7;
   cursor: wait;
 }
+
+/* ========================
+   Manual report uploads (Reports tab)
+   ======================== */
+
+.manual-report-type-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: #F0FDF4;
+  border: 1px solid #DCFCE7;
+  border-radius: 10px;
+}
+
+.manual-report-type-bar .type-label {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  color: #14532D;
+  font-size: 13px;
+  margin-right: 4px;
+}
+
+.report-item.manual-report {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+}
+
+.report-item.manual-report .report-type-tag {
+  background: #FBBF24;
+  color: #78350F;
+}
+
+.report-notes {
+  margin: 6px 0 0;
+  color: #6B7280;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* "(optional)" hint next to non-required field labels */
+.quotation-field span .optional,
+label.quotation-field > span .optional {
+  font-style: italic;
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* ========================
+   BOP attachments (create form + detail view)
+   ======================== */
+
+.bop-attachments-block {
+  margin: 16px 0 8px;
+  padding: 14px;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.bop-attachments-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bop-attachments-head > span,
+.bop-attachments-head > h4 {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  color: #14532D;
+  font-size: 14px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bop-attachments-head .optional {
+  font-style: italic;
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.bop-draft-list,
+.bop-attachment-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.bop-draft-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+}
+
+.bop-draft-item i.fas {
+  color: #15803d;
+  font-size: 16px;
+}
+
+.bop-draft-name {
+  flex: 1 1 auto;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bop-draft-size {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.bop-draft-remove {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.bop-draft-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Detail view attachment row — clickable file card + remove button */
+.bop-attachment-item {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bop-attachment-open {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Raleway', sans-serif;
+}
+
+.bop-attachment-open:hover {
+  background: #f0fdf4;
+}
+
+.bop-attachment-open > i.fas {
+  font-size: 22px;
+  color: #15803d;
+}
+
+.bop-attachment-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bop-attachment-meta strong {
+  color: #14532d;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bop-attachment-meta span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.bop-attachment-remove {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  padding: 0 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.bop-attachment-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bop-attachment-empty {
+  margin: 10px 0 0;
+  color: #6b7280;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.bop-detail-attachments {
+  margin-top: 18px;
+}
+
+/* ========================
+   Full-screen Edit Project overlay
+   ======================== */
+
+.edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 0;
+}
+
+.edit-overlay-inner {
+  background: #ffffff;
+  width: 100%;
+  max-width: 1100px;
+  margin: 24px auto;
+  border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 48px);
+}
+
+.edit-overlay-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  border-bottom: 1px solid #dcfce7;
+  gap: 16px;
+}
+
+.edit-overlay-title {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.edit-overlay-title > i.fas {
+  font-size: 22px;
+  color: #15803d;
+  margin-top: 2px;
+}
+
+.edit-overlay-title h2 {
+  margin: 0 0 4px;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: #14532d;
+}
+
+.edit-overlay-title p {
+  margin: 0;
+  color: #4b5563;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+}
+
+.edit-overlay-close {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.edit-overlay-close:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+.edit-overlay-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-overlay-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 24px 28px 32px;
+}
+
+@media (max-width: 767.98px) {
+  .edit-overlay-inner {
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .edit-overlay-head {
+    padding: 16px 18px;
+  }
+
+  .edit-overlay-title h2 {
+    font-size: 18px;
+  }
+
+  .edit-overlay-body {
+    padding: 16px 18px 24px;
+  }
+}

@@ -31,6 +31,22 @@ const bopLineItemSchema = new mongoose.Schema({
   total: { type: Number, min: 0, default: 0 }
 }, { _id: false });
 
+/**
+ * Photo / PDF attachments for BOP quotations (reference drawings, vendor
+ * quotes, signed approvals, etc.). Stored via the Media Service like other
+ * media-backed subdocs in this project.
+ */
+const bopAttachmentSchema = new mongoose.Schema({
+  mediaId: { type: String, required: true },
+  url: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  sizeBytes: { type: Number },
+  fileName: { type: String, trim: true },
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  uploadedByName: { type: String, trim: true },
+  uploadedAt: { type: Date, default: Date.now }
+});
+
 const quotationSchema = new mongoose.Schema({
   project: {
     type: mongoose.Schema.Types.ObjectId,
@@ -54,11 +70,13 @@ const quotationSchema = new mongoose.Schema({
     index: true
   },
 
-  // Rich text HTML content composed by the admin/manager in the quotation editor
+  // Rich text HTML content composed by the admin/manager in the quotation editor.
+  // Optional — managers may skip the prose and let the amount + installment
+  // schedule (or BOP line items) speak for themselves. Empty string OK.
   content: {
     type: String,
-    required: true,
-    trim: true
+    trim: true,
+    default: ''
   },
 
   /**
@@ -76,6 +94,14 @@ const quotationSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 200
+  },
+
+  /**
+   * Photo / PDF attachments for BOP quotations. Empty for annual quotations.
+   */
+  attachments: {
+    type: [bopAttachmentSchema],
+    default: []
   },
 
   // Plain-text fallback derived from content (for previews / search)
