@@ -77,6 +77,11 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
 
   // Auto-save timeout
   private saveTimeout: any = null;
+  // Guards against overlapping auto-saves. While a save is in flight the grid
+  // rows have not yet received their generated _id, so firing a second save
+  // would re-insert them as duplicates. Re-run once when a change arrives mid-save.
+  private isAutoSaving: boolean = false;
+  private autoSavePending: boolean = false;
 
   // Column Definitions
   colDefs: ColDef<WaterTestingData>[] = [
@@ -1088,11 +1093,20 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // If a save is already in flight, defer this one until it completes.
+    // Otherwise rows still missing their _id would be inserted twice.
+    if (this.isAutoSaving) {
+      this.autoSavePending = true;
+      return;
+    }
+
     const allGridData: WaterTestingData[] = this.extractGridDataWithCalculatedValues();
 
     if (allGridData.length === 0) {
       return;
     }
+
+    this.isAutoSaving = true;
 
     this.waterTestingService.bulkUpdateSamples(this.currentSession._id, allGridData).subscribe({
       next: (response: any) => {
@@ -1108,12 +1122,26 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
           });
         }
         this.toastService.success('Changes saved', 1000);
+        this.finishAutoSave();
       },
       error: (error) => {
         console.error('Auto-save failed:', error);
         this.toastService.error('Auto-save failed. Please try again.');
+        this.finishAutoSave();
       }
     });
+  }
+
+  /**
+   * Clear the in-flight flag and run a deferred save if changes arrived
+   * while the previous save was in progress.
+   */
+  private finishAutoSave(): void {
+    this.isAutoSaving = false;
+    if (this.autoSavePending) {
+      this.autoSavePending = false;
+      this.autoSaveSession();
+    }
   }
 
   onSelectionChanged() {
