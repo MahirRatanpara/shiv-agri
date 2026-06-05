@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const multer = require('multer');
 const ExcelJS = require('exceljs');
 const WaterSession = require('../models/WaterSession');
@@ -637,34 +638,44 @@ router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.u
 
     logger.info(`Bulk updating ${samples.length} water samples for session ${sessionId}`);
 
-    const operations = samples.map(sampleData => {
+    // Build operations AND a parallel result array (same order as the input).
+    // The result array carries the persisted _id for every row so the client
+    // can reconcile newly-inserted rows. Without this, inserts would never get
+    // their generated _id back and each subsequent auto-save would re-insert
+    // them, producing duplicate entries.
+    const operations = [];
+    const resultSamples = [];
+
+    for (const sampleData of samples) {
       // Calculate classifications
       const sampleWithClassifications = addClassifications(sampleData);
 
       if (sampleData._id) {
         // Update existing - strip _id from $set to avoid MongoDB immutable field error
         const { _id, ...updateFields } = sampleWithClassifications;
-        return {
+        operations.push({
           updateOne: {
             filter: { _id: sampleData._id, sessionId },
             update: { $set: { ...updateFields, sessionId } }
           }
-        };
+        });
+        resultSamples.push({ ...updateFields, _id: sampleData._id, sessionId });
       } else {
-        // Insert new - strip _id to let MongoDB generate one
+        // Insert new - pre-generate the _id so we can return it to the client
+        // in the same position as the request (enables grid reconciliation).
         const { _id, ...insertFields } = sampleWithClassifications;
-        return {
-          insertOne: {
-            document: {
-              ...insertFields,
-              sessionId,
-              sessionDate: session.date,
-              sessionVersion: session.version
-            }
-          }
+        const newId = new mongoose.Types.ObjectId();
+        const document = {
+          _id: newId,
+          ...insertFields,
+          sessionId,
+          sessionDate: session.date,
+          sessionVersion: session.version
         };
+        operations.push({ insertOne: { document } });
+        resultSamples.push(document);
       }
-    });
+    }
 
     if (operations.length > 0) {
       await WaterSample.bulkWrite(operations);
@@ -675,7 +686,11 @@ router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.u
     session.lastActivity = new Date();
     await session.save();
 
-    res.json({ message: 'Samples updated successfully', count: samples.length });
+    res.json({
+      message: 'Samples updated successfully',
+      count: samples.length,
+      samples: resultSamples
+    });
   } catch (error) {
     logger.error(`Error bulk updating water samples: ${error.message}`);
     res.status(500).json({ error: 'Failed to update samples' });

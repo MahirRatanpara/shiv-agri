@@ -214,8 +214,8 @@ export class WaterTestingService {
    * @param sessionId - The session ID
    * @param samples - Array of samples to update/insert
    */
-  bulkUpdateSamples(sessionId: string, samples: WaterTestingData[]): Observable<{ message: string; count: number }> {
-    return this.http.patch<{ message: string; count: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+  bulkUpdateSamples(sessionId: string, samples: WaterTestingData[]): Observable<{ message: string; count: number; samples: WaterTestingData[] }> {
+    return this.http.patch<{ message: string; count: number; samples: WaterTestingData[] }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
       samples
     });
   }
