@@ -6,8 +6,6 @@ import { CausesComponent } from './pages/causes/causes';
 import { CausesDetailsComponent } from './pages/causes-details/causes-details';
 import { BlogComponent } from './pages/blog/blog';
 import { BlogDetailsComponent } from './pages/blog-details/blog-details';
-import { ProjectDetailsComponent } from './pages/project-details/project-details';
-import { ProjectWizardComponent } from './pages/project-wizard/project-wizard';
 import { ShopComponent } from './pages/shop/shop';
 import { ShopDetailsComponent } from './pages/shop-details/shop-details';
 import { TeamComponent } from './pages/team/team';
@@ -28,7 +26,6 @@ import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work
 import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
 import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
 import { LettersComponent } from './pages/managerial-work/letters/letters';
-import { FarmDashboardComponent } from './pages/farm-dashboard/farm-dashboard';
 import { FarmManagementComponent } from './pages/farm-management/farm-management';
 import { FarmProjectDetailsComponent } from './pages/farm-project-details/farm-project-details';
 import { FarmRegistrationPageComponent } from './pages/farm-registration/farm-registration';
@@ -48,9 +45,6 @@ export const routes: Routes = [
   { path: 'causes-details/:id', component: CausesDetailsComponent },
   { path: 'blog', component: BlogComponent },
   { path: 'blog-details/:id', component: BlogDetailsComponent },
-  { path: 'projects/new', component: ProjectWizardComponent, canActivate: [authGuard, profileCompleteGuard] },
-  { path: 'projects/edit/:id', component: ProjectWizardComponent, canActivate: [authGuard, profileCompleteGuard] },
-  { path: 'project-details/:id', component: ProjectDetailsComponent },
   { path: 'shop', component: ShopComponent },
   { path: 'shop-details/:id', component: ShopDetailsComponent },
   { path: 'team', component: TeamComponent },
@@ -83,7 +77,6 @@ export const routes: Routes = [
       { path: 'letters', component: LettersComponent },
     ],
   },
-  { path: 'farm-dashboard', component: FarmDashboardComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'farm-management', component: FarmManagementComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'farm-management/new', component: FarmRegistrationPageComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'farm-management/project/:id', component: FarmProjectDetailsComponent, canActivate: [authGuard, profileCompleteGuard] },
