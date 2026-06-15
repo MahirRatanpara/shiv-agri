@@ -225,7 +225,7 @@ export class CompleteProfileComponent implements OnInit, OnDestroy {
   }
 
   private finish(): void {
-    const redirectUrl = localStorage.getItem('redirectUrl') || '/farm-dashboard';
+    const redirectUrl = localStorage.getItem('redirectUrl') || '/farm-management';
     localStorage.removeItem('redirectUrl');
     this.router.navigateByUrl(redirectUrl);
   }
