@@ -235,6 +235,49 @@ exports.markInstallmentPaid = async (req, res) => {
   }
 };
 
+/**
+ * Admin-only: adjust the overpay/credit balance on a quotation. Accepts a
+ * signed `delta` (positive or negative) and an optional `note`. Records a
+ * remembered ledger entry — no invoice is created.
+ */
+exports.adjustOverpay = async (req, res) => {
+  try {
+    const delta = Number(req.body?.delta);
+    if (!Number.isFinite(delta) || delta === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'A non-zero numeric "delta" is required'
+      });
+    }
+
+    const result = await quotationService.adjustOverpay(
+      req.params.id,
+      req.params.quotationId,
+      delta,
+      req.body?.note,
+      req.user
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        quotation: result.quotation,
+        balance: result.balance,
+        delta: result.delta
+      },
+      message: `Overpay balance updated to ${result.balance}.`
+    });
+  } catch (error) {
+    logger.error(`Error adjusting overpay: ${error.message}`);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to adjust overpay balance',
+      message: error.message
+    });
+  }
+};
+
 exports.getActiveQuotation = async (req, res) => {
   try {
     const quotation = await quotationService.getActiveQuotation(req.params.id);

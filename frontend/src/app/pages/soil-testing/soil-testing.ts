@@ -86,7 +86,6 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       checkboxSelection: true,
       headerCheckboxSelection: true,
       width: 50,
-      minWidth: 50,
       maxWidth: 50,
       pinned: 'left',
       lockPosition: true,
@@ -100,7 +99,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Sample No.',
       editable: true,
       filter: true,
-      minWidth: 120,
+      width: 120,
       pinned: 'left',
     },
     {
@@ -108,7 +107,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: "Farmer's Name",
       editable: true,
       filter: true,
-      minWidth: 180,
+      width: 180,
       flex: 0,
       pinned: 'left',
       autoHeight: true,
@@ -119,21 +118,21 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Mobile No.',
       editable: true,
       filter: true,
-      minWidth: 140,
+      width: 140,
     },
     {
       field: 'location',
       headerName: 'Location',
       editable: true,
       filter: true,
-      minWidth: 150,
+      width: 150,
     },
     {
       field: 'farmsName',
       headerName: "Farm's Name",
       editable: true,
       filter: true,
-      minWidth: 150,
+      width: 150,
       // Suggest farm names linked to the phone number entered on the same
       // row. Users can still type any custom value — the datalist is
       // suggestion-only, not restrictive.
@@ -152,7 +151,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Taluka',
       editable: true,
       filter: true,
-      minWidth: 120,
+      width: 120,
     },
     {
       field: 'ph',
@@ -160,7 +159,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 100,
+      width: 100,
       cellClass: 'editable-number',
     },
     {
@@ -169,7 +168,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 100,
+      width: 100,
       cellClass: 'editable-number',
     },
     {
@@ -178,7 +177,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 120,
+      width: 120,
       cellClass: 'editable-number',
     },
     {
@@ -187,7 +186,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 120,
+      width: 120,
       cellClass: 'editable-number',
     },
     {
@@ -196,7 +195,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 120,
+      width: 120,
       cellClass: 'editable-number',
     },
     {
@@ -205,7 +204,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'editable-number',
     },
     {
@@ -214,7 +213,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'editable-number',
     },
     {
@@ -223,7 +222,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 150,
+      width: 150,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const ocEnd = params.data?.ocEnd;
@@ -241,7 +240,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const ocBlank = params.data?.ocBlank;
@@ -265,7 +264,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const p2o5R = params.data?.p2o5R;
@@ -282,7 +281,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const k2oR = params.data?.k2oR;
@@ -299,7 +298,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 160,
+      width: 160,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const ocPercent = params.getValue('ocPercent');
@@ -315,7 +314,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Crop Name',
       editable: true,
       filter: true,
-      minWidth: 160,
+      width: 160,
       // Custom editor: dropdown of known crops + free-text fallback so users
       // can still enter a crop that isn't in the fertilizer config.
       cellEditor: DatalistCellEditor,
@@ -328,7 +327,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       headerName: 'Crop Type',
       editable: true,
       filter: true,
-      minWidth: 150,
+      width: 150,
       cellEditor: 'agSelectCellEditor',
       cellEditorParams: {
         values: ['', 'normal', 'small-fruit', 'large-fruit']
@@ -357,7 +356,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
         button.addEventListener('click', () => this.downloadSinglePdf(params.data));
         return button;
       },
-      minWidth: 120,
+      width: 120,
       maxWidth: 120,
       pinned: 'right',
       sortable: false,
@@ -368,7 +367,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
   // Default column definitions
   defaultColDef: ColDef = {
     sortable: true,
-    resizable: true,
+    resizable: false,
     filter: true,
     floatingFilter: true,
     autoHeaderHeight: true,
@@ -1055,11 +1054,8 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
 
   onGridReady(params: GridReadyEvent) {
     this.gridApi = params.api;
-    // Auto-size all columns based on content
-    params.api.autoSizeAllColumns(false);
-
-    // Ensure grid can scroll horizontally
-    params.api.sizeColumnsToFit();
+    // Column widths are fixed (defined per-column). Do not auto-size or
+    // size-to-fit so the layout stays static and non-resizable.
 
     // Update grid editability based on current state
     this.updateGridEditability();
@@ -1121,8 +1117,7 @@ export class SoilTestingComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Auto-resize the column that was edited
-    event.api.autoSizeColumns([colId], false);
+    // Column widths are fixed — do not auto-resize on edit.
 
     // Trigger auto-save after 2 seconds of inactivity
     if (this.saveTimeout) {

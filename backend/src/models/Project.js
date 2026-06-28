@@ -308,8 +308,11 @@ const projectSchema = new mongoose.Schema({
     mediaId: { type: String, required: true },
     url: { type: String, required: true },
     mimeType: { type: String, required: true },
-    type: { type: String, enum: ['image', 'video'], required: true },
+    // 'file' covers any non-image/non-video upload (PDF, doc, zip, etc.).
+    type: { type: String, enum: ['image', 'video', 'file'], required: true },
     sizeBytes: { type: Number },
+    // Original upload filename — used to label non-image/non-video files.
+    fileName: { type: String, trim: true },
     title: { type: String, trim: true },
     notes: { type: String, trim: true },
     status: { type: String, default: 'ACTIVE' },

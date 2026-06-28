@@ -20,6 +20,22 @@ const installmentSchema = new mongoose.Schema({
 }, { _id: false });
 
 /**
+ * Overpay ledger entry — a single admin-recorded adjustment (+/-) to the
+ * farm's overpay/credit balance. Purely a remembered note: it does NOT create
+ * invoices or change any installment status.
+ */
+const overpayEntrySchema = new mongoose.Schema({
+  // Signed adjustment: positive records an extra payment, negative draws it down.
+  delta: { type: Number, required: true },
+  // Running balance immediately after this entry was applied.
+  balanceAfter: { type: Number, required: true, min: 0 },
+  note: { type: String, trim: true, maxlength: 300 },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdByName: { type: String, trim: true },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: true });
+
+/**
  * BOP (Bill of Project) line item — used only for landscaping BOP quotations.
  * Annual farm quotations don't use this; they're driven entirely by
  * `amountPerYear` + auto-derived installments.
@@ -162,7 +178,18 @@ const quotationSchema = new mongoose.Schema({
   },
 
   rejectedAt: { type: Date },
-  rejectedReason: { type: String, trim: true, maxlength: 500 }
+  rejectedReason: { type: String, trim: true, maxlength: 500 },
+
+  /**
+   * Overpay / credit balance — used when the customer has paid more than the
+   * installment amounts. `balance` is the current running credit; `entries`
+   * is the ledger of admin +/- adjustments. This is a remembered note only —
+   * it does not generate invoices or alter installment statuses.
+   */
+  overpay: {
+    balance: { type: Number, default: 0, min: 0 },
+    entries: { type: [overpayEntrySchema], default: [] }
+  }
 }, {
   timestamps: true
 });

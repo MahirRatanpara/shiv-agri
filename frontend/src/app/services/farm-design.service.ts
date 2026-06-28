@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export type FarmDesignType = 'image' | 'video';
+export type FarmDesignType = 'image' | 'video' | 'file';
 
 export interface FarmDesignRef {
   _id?: string;
@@ -12,6 +12,7 @@ export interface FarmDesignRef {
   mimeType: string;
   type: FarmDesignType;
   sizeBytes?: number;
+  fileName?: string;
   title?: string;
   notes?: string;
   status: string;
