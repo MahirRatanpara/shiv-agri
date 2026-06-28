@@ -31,13 +31,8 @@ const farmDesignUpload = multer({
     fileSize: 25 * 1024 * 1024,
     files: 5
   },
-  fileFilter: (_req, file, cb) => {
-    if (/^(image|video)\//i.test(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
-    }
-  }
+  // Designs accept any file type — no MIME restriction.
+  fileFilter: (_req, _file, cb) => cb(null, true)
 });
 
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|video\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
@@ -712,7 +707,7 @@ router.post('/:id/media',
 );
 
 // ========================
-// Landscaping Designs Routes (manager / admin only; landscaping projects)
+// Designs Routes (manager / admin only; available for all farm types)
 // ========================
 
 router.get('/:id/designs',
@@ -1072,6 +1067,18 @@ router.patch('/:id/quotations/:quotationId/installments/:installmentNumber/rever
   authenticate,
   requireAdmin,
   quotationController.revertInstallmentPayment
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/overpay
+ * @desc    Admin-only: adjust the overpay/credit balance (+/-) for a quotation.
+ *          Records a remembered ledger entry; does not create an invoice.
+ * @access  Private (admin only)
+ */
+router.patch('/:id/quotations/:quotationId/overpay',
+  authenticate,
+  requireAdmin,
+  quotationController.adjustOverpay
 );
 
 // ========================

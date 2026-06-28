@@ -90,7 +90,6 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       checkboxSelection: true,
       headerCheckboxSelection: true,
       width: 50,
-      minWidth: 50,
       maxWidth: 50,
       pinned: 'left',
       lockPosition: true,
@@ -104,7 +103,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: 'Sample No.',
       editable: true,
       filter: true,
-      minWidth: 120,
+      width: 120,
       pinned: 'left',
     },
     {
@@ -112,7 +111,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: "Farmer's Name",
       editable: true,
       filter: true,
-      minWidth: 280,
+      width: 280,
       flex: 0,
       pinned: 'left',
     },
@@ -121,21 +120,21 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: 'Mobile No.',
       editable: true,
       filter: true,
-      minWidth: 140,
+      width: 140,
     },
     {
       field: 'location',
       headerName: 'Location',
       editable: true,
       filter: true,
-      minWidth: 150,
+      width: 150,
     },
     {
       field: 'farmsName',
       headerName: "Farm's Name",
       editable: true,
       filter: true,
-      minWidth: 150,
+      width: 150,
       // Suggest farm names linked to the phone number entered on the same
       // row. Users can still type any custom value — the datalist is
       // suggestion-only, not restrictive.
@@ -154,14 +153,14 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: 'Taluka',
       editable: true,
       filter: true,
-      minWidth: 120,
+      width: 120,
     },
     {
       field: 'boreWellType',
       headerName: 'Bore/Well',
       editable: true,
       filter: true,
-      minWidth: 140,
+      width: 140,
       cellEditor: 'agSelectCellEditor',
       cellEditorParams: {
         values: ['Bore', 'Well', 'Other']
@@ -173,7 +172,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 100,
+      width: 100,
       cellClass: 'editable-number',
     },
     {
@@ -182,7 +181,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 100,
+      width: 100,
       cellClass: 'editable-number',
     },
     {
@@ -191,7 +190,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 140,
+      width: 140,
       cellClass: 'editable-number',
     },
     {
@@ -200,7 +199,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 140,
+      width: 140,
       cellClass: 'editable-number',
     },
     {
@@ -209,7 +208,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 130,
+      width: 130,
       cellClass: 'editable-number',
     },
     {
@@ -217,7 +216,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: 'Ca+Mg Diff',
       editable: false,
       filter: 'agNumberColumnFilter',
-      minWidth: 130,
+      width: 130,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const end = params.data?.caMgEnd;
@@ -234,7 +233,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 120,
+      width: 120,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const end = params.data?.caMgEnd;
@@ -254,7 +253,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 100,
+      width: 100,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const ec = params.data?.ec;
@@ -279,7 +278,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const ec = params.data?.ec;
@@ -308,7 +307,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       headerName: 'CLASS',
       editable: false,
       filter: true,
-      minWidth: 140,
+      width: 140,
     },
     {
       field: 'co3Hco3',
@@ -316,7 +315,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: true,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 140,
+      width: 140,
       cellClass: 'editable-number',
     },
     {
@@ -325,7 +324,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       editable: false,
       filter: 'agNumberColumnFilter',
       cellDataType: 'number',
-      minWidth: 110,
+      width: 110,
       cellClass: 'calculated-cell',
       valueGetter: (params) => {
         const co3Hco3 = params.data?.co3Hco3;
@@ -353,7 +352,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
         button.addEventListener('click', () => this.downloadSinglePdf(params.data));
         return button;
       },
-      minWidth: 120,
+      width: 120,
       maxWidth: 120,
       pinned: 'right',
       sortable: false,
@@ -364,7 +363,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   // Default column definitions
   defaultColDef: ColDef = {
     sortable: true,
-    resizable: true,
+    resizable: false,
     filter: true,
     floatingFilter: true,
     autoHeaderHeight: true,
@@ -1007,11 +1006,8 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
 
   onGridReady(params: GridReadyEvent) {
     this.gridApi = params.api;
-    // Auto-size all columns based on content
-    params.api.autoSizeAllColumns(false);
-
-    // Ensure grid can scroll horizontally
-    params.api.sizeColumnsToFit();
+    // Column widths are fixed (defined per-column). Do not auto-size or
+    // size-to-fit so the layout stays static and non-resizable.
 
     // Update grid editability based on current state
     this.updateGridEditability();
@@ -1073,8 +1069,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Auto-resize the column that was edited
-    event.api.autoSizeColumns([colId], false);
+    // Column widths are fixed — do not auto-resize on edit.
 
     // Trigger auto-save after 2 seconds of inactivity
     if (this.saveTimeout) {

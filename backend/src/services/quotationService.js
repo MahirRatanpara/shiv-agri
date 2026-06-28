@@ -511,6 +511,57 @@ class QuotationService {
     return quotation;
   }
 
+  /**
+   * Admin-only: adjust the overpay/credit balance on a quotation by a signed
+   * `delta` (positive = record extra payment, negative = draw it down). Appends
+   * an entry to the overpay ledger. This is a remembered note only — no invoice
+   * is created and no installment status changes. The running balance is never
+   * allowed to go negative.
+   */
+  async adjustOverpay(projectId, quotationId, delta, note, user) {
+    const amount = Number(delta);
+    if (!Number.isFinite(amount) || amount === 0) {
+      throw new Error('Overpay adjustment must be a non-zero number');
+    }
+
+    const project = await Project.findOne({ _id: projectId, isDeleted: false });
+    if (!project) throw new Error('Project not found');
+
+    const quotation = await Quotation.findOne({ _id: quotationId, project: project._id });
+    if (!quotation) throw new Error('Quotation not found');
+
+    if (!quotation.overpay) quotation.overpay = { balance: 0, entries: [] };
+
+    const current = Number(quotation.overpay.balance) || 0;
+    const newBalance = Math.round((current + amount) * 100) / 100;
+    if (newBalance < 0) {
+      throw new Error(
+        `Adjustment would make the overpay balance negative (current balance ${current}).`
+      );
+    }
+
+    quotation.overpay.balance = newBalance;
+    quotation.overpay.entries.push({
+      delta: amount,
+      balanceAfter: newBalance,
+      note: (note || '').toString().trim(),
+      createdBy: user._id,
+      createdByName: user.name || user.email,
+      createdAt: new Date()
+    });
+
+    await quotation.save();
+
+    const fresh = await Quotation.findById(quotation._id).lean();
+
+    logger.info(
+      `[Quotation] Overpay adjusted by ${amount} for quotation ${quotation._id} ` +
+      `(project ${project._id}) — new balance ${newBalance} by ${user._id}`
+    );
+
+    return { quotation: fresh, balance: newBalance, delta: amount };
+  }
+
   async getActiveQuotation(projectId) {
     return Quotation.findOne({ project: projectId, status: { $in: ['submitted', 'accepted'] } })
       .sort({ createdAt: -1 })

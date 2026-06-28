@@ -654,9 +654,9 @@
     <section class="media-section">
       <header class="media-head">
         <div class="media-head-text">
-          <h2><i class="fas fa-drafting-compass"></i> Landscaping Designs</h2>
-          <p *ngIf="canUploadDesigns">Upload landscape design images or videos for the farm owner to review.</p>
-          <p *ngIf="!canUploadDesigns">Designs shared by the design team for this landscaping project.</p>
+          <h2><i class="fas fa-drafting-compass"></i> Designs</h2>
+          <p *ngIf="canUploadDesigns">Upload design files of any type for the farm owner to review.</p>
+          <p *ngIf="!canUploadDesigns">Designs shared by the design team for this farm.</p>
         </div>
 
         <div class="media-head-actions" *ngIf="canUploadDesigns">
@@ -736,7 +736,7 @@
             type="button"
             class="media-tile-inner"
             (click)="openDesignLightbox(item)"
-            [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : 'View design uploaded ') + (item.uploadedAt | date:'medium')"
+            [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : item.type === 'image' ? 'View design uploaded ' : 'Download design file uploaded ') + (item.uploadedAt | date:'medium')"
           >
             <ng-container *ngIf="item.type === 'image'">
               <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
@@ -745,6 +745,12 @@
               <video [src]="item.url" preload="metadata" muted playsinline></video>
               <span class="play-icon" aria-hidden="true">
                 <i class="fas fa-play"></i>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="item.type !== 'image' && item.type !== 'video'">
+              <span class="design-file-tile">
+                <i class="fas fa-file" aria-hidden="true"></i>
+                <span class="design-file-name">{{ item.fileName || item.title || 'Download file' }}</span>
               </span>
             </ng-container>
             <div class="media-overlay">
@@ -771,7 +777,6 @@
       #designInput
       type="file"
       class="media-input"
-      accept="image/*,video/*"
       multiple
       (change)="onDesignFilesSelected($event)"
     />
@@ -1684,6 +1689,97 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <!-- Admin-only: Overpay / credit balance -->
+        <section class="quotation-overpay-block" *ngIf="canManageOverpay">
+          <header class="block-head">
+            <div>
+              <h3 class="block-title"><i class="fas fa-piggy-bank"></i> Overpay / Credit Balance</h3>
+              <p>Record amounts the customer has paid over and above their installments.</p>
+            </div>
+            <div class="overpay-balance-chip" [class.has-balance]="overpayBalance > 0">
+              <span>Current overpay</span>
+              <strong>{{ formatCurrency(overpayBalance) }}</strong>
+            </div>
+          </header>
+
+          <div class="overpay-form">
+            <div class="overpay-direction" role="group" aria-label="Adjustment direction">
+              <button
+                type="button"
+                class="overpay-dir-btn"
+                [class.active]="overpayForm.direction === 'add'"
+                (click)="setOverpayDirection('add')"
+                [disabled]="isAdjustingOverpay"
+                aria-label="Add to overpay balance"
+              >
+                <i class="fas fa-plus"></i>
+              </button>
+              <button
+                type="button"
+                class="overpay-dir-btn"
+                [class.active]="overpayForm.direction === 'subtract'"
+                (click)="setOverpayDirection('subtract')"
+                [disabled]="isAdjustingOverpay"
+                aria-label="Subtract from overpay balance"
+              >
+                <i class="fas fa-minus"></i>
+              </button>
+            </div>
+
+            <input
+              type="number"
+              class="overpay-amount-input"
+              min="0"
+              step="0.01"
+              placeholder="Amount"
+              [(ngModel)]="overpayForm.amount"
+              [disabled]="isAdjustingOverpay"
+            />
+
+            <input
+              type="text"
+              class="overpay-note-input"
+              maxlength="300"
+              placeholder="Note (optional)"
+              [(ngModel)]="overpayForm.note"
+              [disabled]="isAdjustingOverpay"
+            />
+
+            <button
+              type="button"
+              class="overpay-submit-btn"
+              (click)="submitOverpayAdjustment()"
+              [disabled]="isAdjustingOverpay || !overpayForm.amount"
+            >
+              <i class="fas" [class.fa-check]="!isAdjustingOverpay" [class.fa-circle-notch]="isAdjustingOverpay" [class.fa-spin]="isAdjustingOverpay"></i>
+              {{ isAdjustingOverpay ? 'Saving...' : (overpayForm.direction === 'subtract' ? 'Subtract' : 'Add') }}
+            </button>
+          </div>
+
+          <div class="overpay-ledger" *ngIf="overpayEntries.length">
+            <div class="overpay-ledger-head">
+              <span class="col-date">Date</span>
+              <span class="col-change">Change</span>
+              <span class="col-balance">Balance</span>
+              <span class="col-note">Note</span>
+              <span class="col-by">By</span>
+            </div>
+            <div class="overpay-ledger-row" *ngFor="let entry of overpayEntries">
+              <span class="col-date">{{ entry.createdAt | date:'mediumDate' }}</span>
+              <span class="col-change" [class.positive]="entry.delta > 0" [class.negative]="entry.delta < 0">
+                {{ entry.delta > 0 ? '+' : '−' }}{{ formatCurrency(entry.delta < 0 ? -entry.delta : entry.delta) }}
+              </span>
+              <span class="col-balance">{{ formatCurrency(entry.balanceAfter) }}</span>
+              <span class="col-note">{{ entry.note || '—' }}</span>
+              <span class="col-by">{{ entry.createdByName || '—' }}</span>
+            </div>
+          </div>
+
+          <p class="overpay-empty" *ngIf="!overpayEntries.length">
+            No overpay recorded yet. Add an amount above when the customer pays extra.
+          </p>
         </section>
 
         <!-- Farmer Accept / Reject row -->

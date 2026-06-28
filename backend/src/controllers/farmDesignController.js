@@ -2,26 +2,20 @@ const Project = require('../models/Project');
 const farmDesignService = require('../services/farmDesignService');
 const logger = require('../utils/logger');
 
-const ALLOWED_MIME_PATTERN = /^(image|video)\//i;
-
 exports.uploadDesigns = async (req, res) => {
   const projectId = req.params.id;
   try {
     logger.info(`[FarmDesign] POST /projects/${projectId}/designs by user=${req.user._id}`);
 
     const project = await Project.findById(projectId)
-      .select('_id name submittedBy clientId category projectType needsLandscapingConsultancy status')
+      .select('_id name submittedBy clientId status')
       .lean();
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!isLandscapingProject(project)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Designs can only be uploaded to landscaping projects.'
-      });
-    }
+    // Designs are available for every farm type (normal farm, landscaping,
+    // etc.) — they are no longer an exclusive landscaping feature.
 
     const files = req.files || [];
     if (!files.length) {
@@ -36,14 +30,7 @@ exports.uploadDesigns = async (req, res) => {
       });
     }
 
-    for (const file of files) {
-      if (!ALLOWED_MIME_PATTERN.test(file.mimetype)) {
-        return res.status(415).json({
-          success: false,
-          error: `Unsupported file type: ${file.originalname} (${file.mimetype})`
-        });
-      }
-    }
+    // Any file type is accepted for designs — no MIME restriction.
 
     const meta = {
       title: req.body?.title,
@@ -148,12 +135,3 @@ exports.deleteDesign = async (req, res) => {
   }
 };
 
-function isLandscapingProject(project) {
-  if (!project) return false;
-  if (project.category && project.category.toUpperCase() === 'LANDSCAPING') return true;
-  if (project.projectType && project.projectType.toLowerCase() === 'landscaping') return true;
-  if (project.needsLandscapingConsultancy === true) return true;
-  return false;
-}
-
-exports.isLandscapingProject = isLandscapingProject;

@@ -37,6 +37,21 @@ export interface BopAttachment {
   uploadedAt: string;
 }
 
+export interface OverpayEntry {
+  _id?: string;
+  delta: number;
+  balanceAfter: number;
+  note?: string;
+  createdBy?: string;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface QuotationOverpay {
+  balance: number;
+  entries: OverpayEntry[];
+}
+
 export interface Quotation {
   _id: string;
   project: string;
@@ -46,6 +61,7 @@ export interface Quotation {
   contentText?: string;
   amountPerYear: number;
   installments: QuotationInstallment[];
+  overpay?: QuotationOverpay;
   bopItems?: BopLineItem[];
   attachments?: BopAttachment[];
   startDate: string;
@@ -209,6 +225,31 @@ export class QuotationService {
           revertedInstallment: response.data?.revertedInstallment,
           invoiceNumber: response.data?.invoiceNumber || null,
           invoiceSoftDeleted: !!response.data?.invoiceSoftDeleted
+        }))
+      );
+  }
+
+  /**
+   * Admin-only: adjust the overpay/credit balance for a quotation by a signed
+   * delta (positive to add, negative to draw down). Optional note is stored on
+   * the ledger entry. Returns the updated quotation and new balance.
+   */
+  adjustOverpay(
+    projectId: string,
+    quotationId: string,
+    delta: number,
+    note?: string
+  ): Observable<{ quotation: Quotation; balance: number; delta: number }> {
+    return this.http
+      .patch<any>(
+        `${this.apiUrl}/projects/${projectId}/quotations/${quotationId}/overpay`,
+        { delta, note }
+      )
+      .pipe(
+        map((response) => ({
+          quotation: response.data?.quotation,
+          balance: response.data?.balance ?? 0,
+          delta: response.data?.delta ?? 0
         }))
       );
   }

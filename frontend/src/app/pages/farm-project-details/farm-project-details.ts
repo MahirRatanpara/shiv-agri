@@ -43,6 +43,7 @@ import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-brows
 import {
   BopLineItem,
   BopQuotationPayload,
+  OverpayEntry,
   Quotation,
   QuotationInstallment,
   QuotationPayload,
@@ -63,7 +64,6 @@ const FARMER_POLL_INTERVAL_MS = 25_000;
 
 const PRESCRIPTION_ACCEPT = 'image/*,video/*,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,.txt,.md';
 const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
-const DESIGN_MIME_PATTERN = /^(image|video)\//i;
 
 type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'reports' | 'transactions' | 'quotation';
 
@@ -208,6 +208,16 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   quotationContentSafe: SafeHtml | null = null;
   selectedQuotationDetail: Quotation | null = null;
   selectedQuotationDetailSafe: SafeHtml | null = null;
+
+  // Overpay / credit balance (admin-only). The form lets an admin add or
+  // subtract from the running balance; magnitude is always positive and the
+  // direction is chosen with the +/- toggle.
+  overpayForm: { amount: number | null; note: string; direction: 'add' | 'subtract' } = {
+    amount: null,
+    note: '',
+    direction: 'add'
+  };
+  isAdjustingOverpay = false;
 
   @ViewChild('quotationEditor') quotationEditor?: ElementRef<HTMLDivElement>;
 
@@ -420,8 +430,11 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     if (!this.project) return false;
     if (this.project.isArchived) return false;
     if (this.isPreApproval) return false;
-    // Photos & Videos: ONLY the farm owner who registered the farm.
-    return this.isFarmOwner;
+    // Photos & Videos: the farm owner who registered the farm, plus any
+    // admin/manager. Admin rights are not tied to who created the farm —
+    // any admin can upload photos to any farm. The backend enforces the
+    // same gate (admin OR farm.projects.update OR farm owner).
+    return this.isFarmOwner || this.isManagerOrAdmin;
   }
 
   get isAdmin(): boolean {
@@ -503,7 +516,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   get showDesignsTab(): boolean {
-    return this.isLandscapingProject;
+    // Designs are no longer exclusive to landscaping projects — every farm
+    // type (normal farm, landscaping, etc.) can have designs uploaded.
+    return true;
   }
 
   get showTransactionsTab(): boolean {
@@ -1173,6 +1188,78 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ========================
+  // Overpay / credit balance (admin only)
+  // ========================
+
+  /** Only admins can view and adjust the overpay balance. */
+  get canManageOverpay(): boolean {
+    return this.isAdmin && !!this.project && !this.project.isArchived;
+  }
+
+  /** Current overpay balance on the active quotation (0 when unset). */
+  get overpayBalance(): number {
+    return this.activeQuotation?.overpay?.balance ?? 0;
+  }
+
+  /** Ledger entries for the active quotation, newest first. */
+  get overpayEntries(): OverpayEntry[] {
+    const entries = this.activeQuotation?.overpay?.entries ?? [];
+    return [...entries].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  setOverpayDirection(direction: 'add' | 'subtract'): void {
+    this.overpayForm.direction = direction;
+  }
+
+  submitOverpayAdjustment(): void {
+    if (!this.projectId || !this.activeQuotation || !this.canManageOverpay) return;
+    if (this.isAdjustingOverpay) return;
+
+    const magnitude = Number(this.overpayForm.amount);
+    if (!Number.isFinite(magnitude) || magnitude <= 0) {
+      this.toastService.error('Enter an amount greater than zero.');
+      return;
+    }
+
+    const delta = this.overpayForm.direction === 'subtract' ? -magnitude : magnitude;
+
+    // Guard against driving the balance negative before hitting the server.
+    if (this.overpayBalance + delta < 0) {
+      this.toastService.error(
+        `Cannot subtract ${this.formatCurrency(magnitude)} — overpay balance is only ${this.formatCurrency(this.overpayBalance)}.`
+      );
+      return;
+    }
+
+    this.isAdjustingOverpay = true;
+    this.quotationService.adjustOverpay(
+      this.projectId,
+      this.activeQuotation._id,
+      delta,
+      this.overpayForm.note?.trim() || undefined
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.isAdjustingOverpay = false;
+          if (result.quotation) {
+            this.activeQuotation = result.quotation;
+          }
+          this.overpayForm = { amount: null, note: '', direction: 'add' };
+          this.toastService.success(
+            `Overpay balance updated to ${this.formatCurrency(result.balance)}.`
+          );
+        },
+        error: (err: HttpErrorResponse) => {
+          this.isAdjustingOverpay = false;
+          this.toastService.error(err?.error?.message || 'Unable to update overpay balance.');
+        }
+      });
+  }
+
   /**
    * When true, submitQuotation() sends `attachInitial: true` so the new
    * quotation lands as already-accepted without flipping the project status
@@ -1825,11 +1912,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const invalid = files.find((f) => !DESIGN_MIME_PATTERN.test(f.type));
-    if (invalid) {
-      this.toastService.error(`${invalid.name} is not a supported image or video.`);
-      return;
-    }
+    // Designs accept any file type — no MIME validation.
 
     this.uploadDesignFiles(files);
   }
@@ -1903,6 +1986,12 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   openDesignLightbox(item: FarmDesignRef): void {
+    // Non-media files (PDF, doc, zip, etc.) can't be shown in the lightbox —
+    // open them in a new tab so the browser downloads/previews them.
+    if (item.type !== 'image' && item.type !== 'video') {
+      window.open(item.url, '_blank', 'noopener');
+      return;
+    }
     this.designLightboxItem = item;
     document.body.style.overflow = 'hidden';
   }

@@ -50,7 +50,12 @@ class FarmDesignService {
     const completed = await uploadRes.json();
     logger.info(`[FarmDesign] Upload complete: id=${completed.id}, durationMs=${Date.now() - start}`);
 
-    const type = file.mimetype.startsWith('video/') ? 'video' : 'image';
+    const mime = file.mimetype || '';
+    const type = mime.startsWith('video/')
+      ? 'video'
+      : mime.startsWith('image/')
+        ? 'image'
+        : 'file';
     const fullUrl = completed.contentUrl?.startsWith('http')
       ? completed.contentUrl
       : `${MEDIA_SERVICE_PUBLIC_URL}${completed.contentUrl}`;
@@ -61,6 +66,7 @@ class FarmDesignService {
       mimeType: completed.mimeType,
       type,
       sizeBytes: completed.sizeBytes,
+      fileName: file.originalname || '',
       title: meta.title?.trim() || '',
       notes: meta.notes?.trim() || '',
       status: 'ACTIVE',
