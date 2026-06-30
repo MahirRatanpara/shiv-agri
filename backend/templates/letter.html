@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Noto Sans', Arial, sans-serif;
+            font-family: 'Noto Sans', 'Noto Sans Gujarati', Arial, sans-serif;
             padding: 10px 20px;
             background: white;
             line-height: 1.6;
@@ -103,6 +103,18 @@
             line-height: 1.8;
         }
 
+        .letter-body p.center {
+            text-align: center;
+        }
+
+        .letter-body .page-break {
+            page-break-after: always;
+            break-after: page;
+            height: 0;
+            margin: 0;
+            border: 0;
+        }
+
         .letter-body ol {
             margin: 0 0 15px 0;
             padding: 0 0 0 25px;
@@ -127,6 +139,28 @@
             font-weight: 700;
         }
 
+        .letter-body table.content-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 0 15px 0;
+            font-size: 11px;
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+
+        .letter-body table.content-table th,
+        .letter-body table.content-table td {
+            border: 1px solid #333;
+            padding: 5px 6px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .letter-body table.content-table th {
+            font-weight: 700;
+            background: #f2f2f2;
+        }
+
         .letter-body br {
             display: block;
             margin: 10px 0;
@@ -134,12 +168,25 @@
         }
 
         .signature-section {
-            margin-top: 60px;
+            margin-top: 24px;
             text-align: right;
+            position: relative;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .company-stamp {
+            width: 140px;
+            height: 140px;
+            margin: 0 0 6px auto;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            opacity: 0.9;
         }
 
         .closing {
-            margin-bottom: 50px;
+            margin-bottom: 30px;
         }
 
         .signature-name {
@@ -196,6 +243,7 @@
 
         <!-- Signature Section -->
         <div class="signature-section">
+            <div class="company-stamp" style="background-image: url('{{stampImage}}');"></div>
             <div class="closing">Yours faithfully,</div>
             <div class="signature-name">{{consultantName}}</div>
             <div class="signature-credentials">{{consultantCredentials}}</div>

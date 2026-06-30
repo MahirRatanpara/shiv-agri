@@ -35,6 +35,18 @@ class PDFGeneratorService {
             fontDataUri = 'https://fonts.gstatic.com/s/notosansgujarati/v25/wlpWgx_HC1ti5ViekvcxnhMlCVo3f5pv17ivlzsUB14gg1TMR21M-Wp73A.woff2';
         }
 
+        // Load company stamp as base64 data URI (works offline in Docker).
+        // Used on all managerial documents: letter, quotation, receipt, invoice.
+        const stampPath = path.join(__dirname, '../../assets/stamp.png');
+        try {
+            const stampBuffer = fsSync.readFileSync(stampPath);
+            this.stampDataUri = `data:image/png;base64,${stampBuffer.toString('base64')}`;
+            logger.info('Loaded company stamp from local file');
+        } catch (err) {
+            logger.warn(`Could not load company stamp file: ${err.message}`);
+            this.stampDataUri = '';
+        }
+
         // Font CSS to inject (cached)
         this.fontCSS = `
             @font-face {
@@ -1188,7 +1200,8 @@ class PDFGeneratorService {
             '{{paymentType}}': paymentTypeLabels[data.paymentType] || data.paymentType || '',
             '{{billNumber}}': data.billReference || '',
             '{{billDate}}': formatDate(data.billDate) || '',
-            '{{remarks}}': data.remarks || ''
+            '{{remarks}}': data.remarks || '',
+            '{{stampImage}}': this.stampDataUri || ''
         };
 
         let html = template;
@@ -1312,7 +1325,8 @@ class PDFGeneratorService {
             '{{grandTotal}}': formatCurrency(data.grandTotal),
             '{{grandTotalInWords}}': data.grandTotalInWords || '',
             '{{consultantName}}': data.consultantName || 'અનિલકુમાર હદવાણી',
-            '{{consultantCredentials}}': data.consultantCredentials || 'M.Sc. (Agri.)'
+            '{{consultantCredentials}}': data.consultantCredentials || 'M.Sc. (Agri.)',
+            '{{stampImage}}': this.stampDataUri || ''
         };
 
         let html = template;
@@ -1334,7 +1348,11 @@ class PDFGeneratorService {
             logger.info(`Generating letter PDF for: ${letterData.letterNumber || 'unknown'}`);
 
             const template = this.templateCache.letter || await fs.readFile(this.letterTemplatePath, 'utf-8');
-            const html = this.fillLetterTemplate(template, letterData);
+            let html = this.fillLetterTemplate(template, letterData);
+
+            // Inject Gujarati font so Gujarati letter content (e.g. Analysis
+            // Quotation template) renders instead of falling back to tofu boxes.
+            html = html.replace('</head>', `<style>${this.fontCSS}</style></head>`);
 
             await page.setContent(html, {
                 waitUntil: 'domcontentloaded'
@@ -1513,7 +1531,8 @@ class PDFGeneratorService {
             '{{recipientName}}': data.recipientName || '',
             '{{recipientAddress}}': data.recipientAddress || '',
             '{{subject}}': data.subject || '',
-            '{{content}}': data.content || ''
+            '{{content}}': data.content || '',
+            '{{stampImage}}': this.stampDataUri || ''
         };
 
         let html = template;

@@ -551,6 +551,10 @@ textarea.letter-body::placeholder {
   width: 100%;
 }
 
+.btn.btn-block + .btn.btn-block {
+  margin-top: 8px;
+}
+
 .btn-icon {
   background: none;
   border: none;

@@ -167,7 +167,21 @@ export class LettersComponent implements OnInit {
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element;
 
-        if (element.tagName === 'OL') {
+        if (
+          element.tagName === 'DIV' &&
+          element.classList.contains('page-break')
+        ) {
+          text += '[PAGEBREAK]\n';
+        } else if (element.tagName === 'TABLE') {
+          // Convert each row back to a Markdown-style pipe line.
+          const rows = element.querySelectorAll('tr');
+          rows.forEach(tr => {
+            const cells = Array.from(tr.children).map(
+              cell => cell.textContent?.trim() || ''
+            );
+            text += `| ${cells.join(' | ')} |\n`;
+          });
+        } else if (element.tagName === 'OL') {
           listCounter = 1;
           Array.from(element.children).forEach(child => {
             if (child.tagName === 'LI') {
@@ -179,7 +193,14 @@ export class LettersComponent implements OnInit {
             }
           });
         } else if (element.tagName === 'P') {
-          const pText = element.textContent?.trim();
+          // Preserve bold runs as **markers** so they round-trip on edit.
+          let inner = (element as HTMLElement).innerHTML || '';
+          inner = inner
+            .replace(/<\s*strong\s*>/gi, '**')
+            .replace(/<\s*\/\s*strong\s*>/gi, '**');
+          const tmp = document.createElement('div');
+          tmp.innerHTML = inner;
+          const pText = (tmp.textContent || '').trim();
           if (pText) {
             text += `${pText}\n`;
           }
@@ -223,6 +244,23 @@ export class LettersComponent implements OnInit {
       error: (error) => {
         console.error('Error loading template:', error);
         this.toastService.error('Failed to load service list template');
+      },
+    });
+  }
+
+  loadAnalysisQuotationTemplate(lang: 'english' | 'gujarati'): void {
+    this.managerialService.getAnalysisQuotationTemplate(lang).subscribe({
+      next: (response) => {
+        const template = response.template || '';
+        const existing = this.currentLetter.content || '';
+        // Append to any existing content, mirroring the service-list behaviour.
+        this.currentLetter.content = existing
+          ? `${existing}\n\n${template}`
+          : template;
+      },
+      error: (error) => {
+        console.error('Error loading analysis quotation template:', error);
+        this.toastService.error('Failed to load analysis quotation template');
       },
     });
   }
@@ -294,9 +332,46 @@ export class LettersComponent implements OnInit {
     let html = '';
     let inList = false;
     let listItems: string[] = [];
+    let inTable = false;
+    let tableRows: string[] = [];
+
+    const flushList = () => {
+      if (inList) {
+        html += `<ol>${listItems.join('')}</ol>`;
+        inList = false;
+        listItems = [];
+      }
+    };
+
+    const flushTable = () => {
+      if (inTable) {
+        html += this.buildTableHtml(tableRows);
+        inTable = false;
+        tableRows = [];
+      }
+    };
 
     lines.forEach(line => {
       const trimmedLine = line.trim();
+
+      // Page break marker — forces the following content onto a new PDF page.
+      if (trimmedLine.toUpperCase() === '[PAGEBREAK]') {
+        flushList();
+        flushTable();
+        html += '<div class="page-break"></div>';
+        return;
+      }
+
+      // Table row (Markdown-style pipe-delimited, e.g. "| a | b | c |")
+      if (trimmedLine.startsWith('|') && trimmedLine.length > 1) {
+        flushList();
+        inTable = true;
+        tableRows.push(trimmedLine);
+        return;
+      }
+
+      // Any non-table line ends the current table
+      flushTable();
 
       // Check if line is a numbered list item (e.g., "1. ", "2. ", etc.)
       const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
@@ -310,26 +385,74 @@ export class LettersComponent implements OnInit {
         listItems.push(`<li>${numberedMatch[2]}</li>`);
       } else {
         // Not a list item
-        if (inList) {
-          // Close the previous list
-          html += `<ol>${listItems.join('')}</ol>`;
-          inList = false;
-          listItems = [];
-        }
+        flushList();
 
         // Add as paragraph if not empty
         if (trimmedLine) {
-          html += `<p>${trimmedLine}</p>`;
+          html += this.formatParagraph(trimmedLine);
         }
       }
     });
 
-    // Close list if still open
-    if (inList) {
-      html += `<ol>${listItems.join('')}</ol>`;
-    }
+    // Close any open list/table
+    flushList();
+    flushTable();
 
     return html;
+  }
+
+  // Convert a single text line into a paragraph. Inline **bold** markers
+  // become <strong>; a line that is entirely bold becomes a centered,
+  // heading-style paragraph (used for the letter subject).
+  private formatParagraph(line: string): string {
+    const wholeBold =
+      line.startsWith('**') &&
+      line.endsWith('**') &&
+      line.length > 4 &&
+      line.slice(2, -2).indexOf('**') === -1;
+
+    if (wholeBold) {
+      return `<p class="center"><strong>${line.slice(2, -2).trim()}</strong></p>`;
+    }
+
+    const formatted = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return `<p>${formatted}</p>`;
+  }
+
+  // Parse a Markdown-style pipe row into trimmed cell values.
+  private parsePipeRow(row: string): string[] {
+    let r = row.trim();
+    if (r.startsWith('|')) r = r.slice(1);
+    if (r.endsWith('|')) r = r.slice(0, -1);
+    return r.split('|').map(c => c.trim());
+  }
+
+  // Build an HTML table from collected pipe-delimited rows.
+  // The first non-separator row becomes the header.
+  private buildTableHtml(rows: string[]): string {
+    const isSeparator = (cells: string[]): boolean =>
+      cells.length > 0 && cells.every(c => /^:?-+:?$/.test(c));
+
+    let headerHtml = '';
+    let bodyHtml = '';
+    let headerDone = false;
+
+    rows.forEach(row => {
+      const cells = this.parsePipeRow(row);
+      if (isSeparator(cells)) {
+        return;
+      }
+      if (!headerDone) {
+        headerHtml = `<tr>${cells.map(c => `<th>${c}</th>`).join('')}</tr>`;
+        headerDone = true;
+      } else {
+        bodyHtml += `<tr>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
+      }
+    });
+
+    if (!headerDone) return '';
+
+    return `<table class="content-table"><thead>${headerHtml}</thead><tbody>${bodyHtml}</tbody></table>`;
   }
 
   validateLetter(): boolean {
