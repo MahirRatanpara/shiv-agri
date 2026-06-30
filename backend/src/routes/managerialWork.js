@@ -268,6 +268,18 @@ router.get(
 );
 
 /**
+ * @route   GET /api/managerial-work/letters/template/analysis-quotation?lang=english|gujarati
+ * @desc    Get analysis quotation template (English or Gujarati)
+ * @access  Manager, Admin
+ */
+router.get(
+  '/letters/template/analysis-quotation',
+  authenticate,
+  requirePermission(PERMISSIONS.LETTERS_VIEW),
+  letterController.getAnalysisQuotationTemplate
+);
+
+/**
  * @route   GET /api/managerial-work/letters/tags
  * @desc    Get all unique tags
  * @access  Manager, Admin

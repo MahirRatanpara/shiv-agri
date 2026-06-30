@@ -27,7 +27,7 @@ notification:
   otp:
     channel: ${OTP_CHANNEL:whatsapp}
     whatsapp:
-      template-name: ${WHATSAPP_OTP_TEMPLATE_NAME:shiv_agri_login}
+      template-name: ${WHATSAPP_OTP_TEMPLATE_NAME:default_reachout}
       language-code: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:en}
       has-button: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:false}
   # MSG91 SMS (India) — used when otp.channel = sms. Requires a DLT-approved flow template.

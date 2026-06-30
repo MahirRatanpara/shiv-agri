@@ -294,6 +294,16 @@ export class ManagerialWorkService {
     );
   }
 
+  getAnalysisQuotationTemplate(
+    lang: 'english' | 'gujarati'
+  ): Observable<{ template: string }> {
+    const params = new HttpParams().set('lang', lang);
+    return this.http.get<{ template: string }>(
+      `${this.apiUrl}/letters/template/analysis-quotation`,
+      { params }
+    );
+  }
+
   getAllTags(): Observable<{ tags: string[] }> {
     return this.http.get<{ tags: string[] }>(`${this.apiUrl}/letters/tags`);
   }
