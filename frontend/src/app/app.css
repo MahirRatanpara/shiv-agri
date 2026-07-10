@@ -1,0 +1,10 @@
+/* Safe-area handling for native (iOS notch / Dynamic Island / home indicator,
+   Android gesture bar). On web and desktop these env() insets resolve to 0,
+   so the existing web layout is unchanged. Requires viewport-fit=cover on the
+   viewport meta tag (set in index.html). */
+.wrapper {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
