@@ -97,4 +97,20 @@ export class UserService {
   deleteUser(userId: string): Observable<DeleteUserResponse> {
     return this.http.delete<DeleteUserResponse>(`${this.apiUrl}/${userId}`);
   }
+
+  /**
+   * Admin-only: change a user's identity (name / email / phone). Backend
+   * enforces strict uniqueness — the call fails with 409 if the new
+   * email/phone is already linked to another account. Pass an empty string
+   * to clear a field.
+   */
+  updateUserIdentity(
+    userId: string,
+    payload: { name?: string; email?: string | null; phone?: string | null; phoneCountryCode?: string }
+  ): Observable<{ success: boolean; user: any; message?: string; projectsUpdated?: number }> {
+    return this.http.patch<{ success: boolean; user: any; message?: string; projectsUpdated?: number }>(
+      `${this.apiUrl}/${userId}/identity`,
+      payload
+    );
+  }
 }

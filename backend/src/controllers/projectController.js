@@ -2,6 +2,7 @@ const projectService = require('../services/projectService');
 const draftService = require('../services/draftService');
 const {log} = require("winston");
 const logger = require('../utils/logger');
+const { hasPermission } = require('../middleware/auth');
 
 /**
  * Project Controller - Request Handling Layer
@@ -26,8 +27,10 @@ exports.getProjects = async (req, res) => {
       projectType,
       status,
       city,
+      district,
       state,
       clientId,
+      submittedBy,
       assignedTo,
       assignedTeam,
       budgetMin,
@@ -37,6 +40,7 @@ exports.getProjects = async (req, res) => {
       startAfter,
       startBefore,
       isFavorite,
+      includeArchived,
       sortBy,
       sortOrder
     } = req.query;
@@ -57,6 +61,7 @@ exports.getProjects = async (req, res) => {
       projectType: projectType ? (typeof projectType === 'string' ? [projectType] : projectType) : undefined,
       status: status ? (typeof status === 'string' ? status.split(',') : status) : undefined,
       city,
+      district,
       state,
       clientId,
       assignedTo: assignedTo ? (typeof assignedTo === 'string' ? assignedTo.split(',') : assignedTo) : undefined,
@@ -67,8 +72,15 @@ exports.getProjects = async (req, res) => {
       createdBefore,
       startAfter,
       startBefore,
-      isFavorite: isFavorite === 'true'
+      isFavorite: isFavorite === 'true',
+      includeArchived: includeArchived === 'true',
+      submittedBy: submittedBy === 'me' ? req.user._id : submittedBy
     };
+
+    if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
+      filters.submittedBy = req.user._id;
+      filters.categoryInclude = ['FARM'];
+    }
 
     const sort = {
       sortBy: sortBy || 'updatedAt',
@@ -120,6 +132,57 @@ exports.getProjectStats = async (req, res) => {
 };
 
 /**
+ * @route   GET /api/projects/farm-names-by-phone
+ * @desc    Suggest farm names linked to a phone number. Used by the testing
+ *          grids (soil/water/fertilizer) so entering a phone surfaces all
+ *          farms the farmer already has. Matching uses the same last-10-digits
+ *          normalization as farmReportLinker.
+ * @access  Private (any authenticated user)
+ */
+exports.getFarmNamesByPhone = async (req, res) => {
+  try {
+    const Project = require('../models/Project');
+    const { normalizePhone } = require('../services/farmReportLinker');
+    const rawPhone = (req.query.phone || '').toString();
+    const phoneKey = normalizePhone(rawPhone);
+
+    if (!phoneKey || phoneKey.length < 10) {
+      return res.status(200).json({ success: true, farmNames: [] });
+    }
+
+    // Match by last 10 digits — clientPhone may include country code or spaces.
+    // Use a regex anchored to end so "+91 9876543210", "919876543210", and
+    // "9876543210" all match the same phoneKey.
+    const phoneRegex = new RegExp(`${phoneKey}$`);
+    const candidates = await Project.find({
+      isDeleted: false,
+      isArchived: { $ne: true },
+      clientPhone: { $regex: phoneRegex }
+    })
+      .select('name clientPhone')
+      .limit(50)
+      .lean();
+
+    // De-dupe by case-insensitive farm name while preserving order.
+    const seen = new Set();
+    const farmNames = [];
+    for (const p of candidates) {
+      const name = (p.name || '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      farmNames.push(name);
+    }
+
+    res.status(200).json({ success: true, farmNames });
+  } catch (error) {
+    logger.error('Error fetching farm names by phone: ' + error.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch farm names' });
+  }
+};
+
+/**
  * @route   GET /api/projects/:id
  * @desc    Get project by ID
  * @access  Private
@@ -127,6 +190,32 @@ exports.getProjectStats = async (req, res) => {
 exports.getProjectById = async (req, res) => {
   try {
     const project = await projectService.getProjectById(req.params.id);
+
+    if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
+      const userId = String(req.user._id);
+      const stakeholderIds = new Set();
+      const push = (val) => {
+        if (!val) return;
+        if (Array.isArray(val)) return val.forEach(push);
+        const id = (typeof val === 'object' && (val._id || val.id)) || val;
+        if (id) stakeholderIds.add(String(id));
+      };
+      push(project.submittedBy);
+      push(project.clientId);
+      push(project.createdBy);
+      push(project.assignedTo);
+      push(project.projectManager);
+      push(project.fieldWorkers);
+      push(project.consultants);
+      push(project.assignedTeam);
+
+      if (!stakeholderIds.has(userId)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied'
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -149,12 +238,27 @@ exports.getProjectById = async (req, res) => {
  */
 exports.createProject = async (req, res) => {
   try {
-    const project = await projectService.createProject(req.body, req.user._id);
+    const canCreateFarm = hasPermission(req.user, 'project.create') ||
+      hasPermission(req.user, 'farm.projects.create') ||
+      req.user.role === 'user' ||
+      req.user.role === 'end_user';
+
+    if (!canCreateFarm) {
+      return res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+        message: 'You do not have permission to create or register farms.'
+      });
+    }
+
+    const project = await projectService.createProject(req.body, req.user);
 
     res.status(201).json({
       success: true,
       data: project,
-      message: 'Project created successfully'
+      message: project.status === 'pending_approval'
+        ? 'Farm registration submitted for approval'
+        : 'Project created successfully'
     });
   } catch (error) {
     console.error('Error creating project:', error);
@@ -163,6 +267,137 @@ exports.createProject = async (req, res) => {
       error: 'Failed to create project',
       message: error.message,
       details: error.errors ? Object.values(error.errors).map(e => e.message) : []
+    });
+  }
+};
+
+exports.approveProject = async (req, res) => {
+  try {
+    const project = await projectService.approveProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm approved successfully'
+    });
+  } catch (error) {
+    logger.error(`Error approving project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to approve farm',
+      message: error.message
+    });
+  }
+};
+
+exports.rejectProject = async (req, res) => {
+  try {
+    const project = await projectService.rejectProject(
+      req.params.id,
+      req.user._id,
+      req.body?.reason
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm rejected successfully'
+    });
+  } catch (error) {
+    logger.error(`Error rejecting project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to reject farm',
+      message: error.message
+    });
+  }
+};
+
+exports.startFarmProject = async (req, res) => {
+  try {
+    const project = await projectService.startFarmProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project started successfully'
+    });
+  } catch (error) {
+    logger.error(`Error starting farm project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to start farm project',
+      message: error.message
+    });
+  }
+};
+
+exports.completeFarmProject = async (req, res) => {
+  try {
+    const project = await projectService.completeFarmProject(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project completed successfully'
+    });
+  } catch (error) {
+    logger.error(`Error completing farm project ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to complete farm project',
+      message: error.message
+    });
+  }
+};
+
+exports.updateFarmProjectStatus = async (req, res) => {
+  try {
+    const project = await projectService.updateFarmProjectStatus(
+      req.params.id,
+      req.body?.status,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Farm project status updated successfully'
+    });
+  } catch (error) {
+    logger.error(`Error updating farm project status ${req.params.id}: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update farm project status',
+      message: error.message
+    });
+  }
+};
+
+exports.requestProjectEdit = async (req, res) => {
+  try {
+    const project = await projectService.requestProjectEdit(req.params.id, req.body, req.user);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      message: 'Project update submitted for approval'
+    });
+  } catch (error) {
+    logger.error(`Error submitting edit request for project ${req.params.id}: ${error.message}`);
+    const statusCode =
+      error.message === 'Project not found' ? 404 :
+      error.message.includes('not allowed') ? 403 : 400;
+
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to request project update',
+      message: error.message
     });
   }
 };
@@ -248,6 +483,72 @@ exports.hardDeleteProject = async (req, res) => {
     res.status(statusCode).json({
       success: false,
       error: 'Failed to permanently delete project',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/archive
+ * @desc    Archive a project (admin only). Archived projects become read-only.
+ * @access  Private (Admin)
+ */
+exports.archiveProject = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required to archive projects.'
+      });
+    }
+
+    const project = await projectService.archiveProject(req.params.id, req.user._id);
+    logger.info(`Project ${req.params.id} archived by admin ${req.user._id}`);
+
+    res.status(200).json({
+      success: true,
+      data: { ...project.toObject(), id: project._id },
+      message: 'Project archived'
+    });
+  } catch (error) {
+    logger.error(`Error archiving project: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to archive project',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/unarchive
+ * @desc    Restore an archived project (admin only).
+ * @access  Private (Admin)
+ */
+exports.unarchiveProject = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const project = await projectService.unarchiveProject(req.params.id);
+    logger.info(`Project ${req.params.id} unarchived by admin ${req.user._id}`);
+
+    res.status(200).json({
+      success: true,
+      data: { ...project.toObject(), id: project._id },
+      message: 'Project restored'
+    });
+  } catch (error) {
+    logger.error(`Error unarchiving project: ${error.message}`);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to restore project',
       message: error.message
     });
   }
@@ -738,6 +1039,193 @@ exports.addMilestone = async (req, res) => {
     res.status(statusCode).json({
       success: false,
       error: 'Failed to add milestone',
+      message: error.message
+    });
+  }
+};
+
+// ========================
+// Transaction Management
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/transactions
+ * @desc    Get project transactions with pagination
+ * @access  Private
+ */
+exports.getProjectTransactions = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = 'date',
+      sortOrder = 'desc'
+    } = req.query;
+
+    logger.info(`Fetching transactions for project ${req.params.id}, page ${page}, limit ${limit}`);
+
+    const result = await projectService.getProjectTransactions(
+      req.params.id,
+      parseInt(page),
+      parseInt(limit),
+      sortBy,
+      sortOrder
+    );
+
+    res.status(200).json({
+      success: true,
+      transactions: result.transactions,
+      pagination: result.pagination,
+      summary: result.summary
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to fetch transactions',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   POST /api/projects/:id/transactions
+ * @desc    Add transaction to project
+ * @access  Private
+ */
+exports.addTransaction = async (req, res) => {
+  try {
+    const { description, amount, type, category, date, notes } = req.body;
+
+    // Validation
+    if (!description || !amount || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        details: 'description, amount, and type are required'
+      });
+    }
+
+    if (!['debit', 'credit'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type',
+        details: 'type must be either "debit" or "credit"'
+      });
+    }
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount',
+        details: 'amount must be greater than 0'
+      });
+    }
+
+    logger.info(`Adding transaction to project ${req.params.id}: ${type} ₹${amount}`);
+
+    const result = await projectService.addTransaction(
+      req.params.id,
+      { description, amount, type, category, date, notes },
+      req.user._id
+    );
+
+    res.status(201).json({
+      success: true,
+      data: result.project,
+      transaction: result.transaction,
+      message: 'Transaction added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding transaction:', error);
+    const statusCode = error.message === 'Project not found' ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to add transaction',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   PATCH /api/projects/:id/transactions/:transactionId
+ * @desc    Update transaction in project
+ * @access  Private
+ */
+exports.updateTransaction = async (req, res) => {
+  try {
+    const { description, amount, type, category, date, notes } = req.body;
+
+    // Validation
+    if (type && !['debit', 'credit'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transaction type',
+        details: 'type must be either "debit" or "credit"'
+      });
+    }
+
+    if (amount !== undefined && amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount',
+        details: 'amount must be greater than 0'
+      });
+    }
+
+    logger.info(`Updating transaction ${req.params.transactionId} in project ${req.params.id}`);
+
+    const result = await projectService.updateTransaction(
+      req.params.id,
+      req.params.transactionId,
+      { description, amount, type, category, date, notes },
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result.project,
+      transaction: result.transaction,
+      message: 'Transaction updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to update transaction',
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @route   DELETE /api/projects/:id/transactions/:transactionId
+ * @desc    Remove transaction from project
+ * @access  Private
+ */
+exports.removeTransaction = async (req, res) => {
+  try {
+    logger.info(`Removing transaction ${req.params.transactionId} from project ${req.params.id}`);
+
+    const result = await projectService.removeTransaction(
+      req.params.id,
+      req.params.transactionId,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result.project,
+      message: 'Transaction removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing transaction:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: 'Failed to remove transaction',
       message: error.message
     });
   }

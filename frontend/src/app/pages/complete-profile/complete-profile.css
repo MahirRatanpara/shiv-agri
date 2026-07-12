@@ -1,0 +1,155 @@
+/* Complete-profile gate — visually aligned with the login card. */
+:host {
+  --c-primary: #6366f1;
+  --c-primary-deep: #4f46e5;
+  --c-bg-page: #f5f6fb;
+  --c-bg-card: #ffffff;
+  --c-text-strong: #0f172a;
+  --c-text: #334155;
+  --c-text-muted: #64748b;
+  --c-border: #e2e8f0;
+  --c-border-strong: #cbd5e1;
+  --c-error-bg: #fef2f2;
+  --c-error-text: #b91c1c;
+  --radius-card: 24px;
+  --radius-field: 14px;
+  --shadow-card: 0 18px 48px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-button: 0 6px 16px rgba(79, 70, 229, 0.30);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  display: block;
+  font-family: var(--font-sans);
+  color: var(--c-text);
+}
+
+.cp-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, #e0e7ff 0%, transparent 60%),
+    linear-gradient(180deg, #eef2ff 0%, var(--c-bg-page) 100%);
+}
+
+.cp-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--c-bg-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 36px 32px 24px;
+}
+
+.cp-header { text-align: center; margin-bottom: 24px; }
+
+.cp-logo {
+  width: 52px; height: 52px;
+  margin: 0 auto 14px;
+  display: grid; place-items: center;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-deep) 100%);
+  box-shadow: var(--shadow-button);
+}
+
+.cp-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--c-text-strong); margin: 0 0 6px; }
+.cp-header p { font-size: 0.95rem; color: var(--c-text-muted); margin: 0; }
+
+.cp-form { display: flex; flex-direction: column; gap: 6px; }
+.cp-label { font-size: 0.85rem; font-weight: 600; color: var(--c-text-strong); margin-top: 8px; }
+
+.cp-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  font-size: 1rem;
+  border: 1.5px solid var(--c-border-strong);
+  border-radius: var(--radius-field);
+  transition: border-color 140ms, box-shadow 140ms;
+  background: #fff;
+}
+.cp-input:focus {
+  outline: none;
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+.cp-otp { letter-spacing: 0.4em; text-align: center; font-weight: 600; }
+
+.cp-phone-row { display: flex; gap: 8px; }
+.cp-country {
+  flex: 0 0 auto;
+  padding: 13px 10px;
+  border: 1.5px solid var(--c-border-strong);
+  border-radius: var(--radius-field);
+  background: #fff;
+  font-size: 0.95rem;
+}
+.cp-phone-row .cp-input { flex: 1 1 auto; }
+
+.cp-help { font-size: 0.8rem; color: var(--c-text-muted); margin: 2px 0 4px; }
+.cp-subtitle { font-size: 0.9rem; color: var(--c-text-muted); margin: 0 0 4px; }
+
+.cp-primary-btn {
+  margin-top: 14px;
+  padding: 13px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-field);
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-deep) 100%);
+  box-shadow: var(--shadow-button);
+  transition: transform 140ms, box-shadow 140ms, opacity 140ms;
+}
+.cp-primary-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.cp-primary-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.cp-secondary-btn {
+  margin-top: 10px;
+  padding: 11px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-primary-deep);
+  background: #fff;
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-field);
+  cursor: pointer;
+}
+.cp-secondary-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.cp-loading { display: inline-flex; align-items: center; gap: 8px; }
+.cp-spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cp-spin 0.7s linear infinite;
+}
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+
+.cp-link {
+  background: none;
+  border: none;
+  color: var(--c-primary-deep);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.cp-alert {
+  margin-top: 16px;
+  padding: 11px 14px;
+  font-size: 0.9rem;
+  border-radius: var(--radius-field);
+  background: var(--c-error-bg);
+  color: var(--c-error-text);
+}
+
+.cp-footer { margin-top: 20px; text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-primary-btn, .cp-input { transition: none; }
+  .cp-spinner { animation: none; }
+}

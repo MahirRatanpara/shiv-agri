@@ -1,0 +1,111 @@
+<div class="notification-root">
+  <button
+    type="button"
+    class="bell-button"
+    (click)="toggleOpen()"
+    [class.is-active]="isOpen"
+    [attr.aria-expanded]="isOpen"
+    aria-label="Open notifications"
+  >
+    <i class="fas fa-bell"></i>
+    <span class="bell-count" *ngIf="unreadCount" aria-live="polite">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+    <span class="bell-pulse" *ngIf="unreadCount" aria-hidden="true"></span>
+  </button>
+
+  <section class="notification-menu" *ngIf="isOpen" role="dialog" aria-label="Notifications">
+    <header class="notification-head">
+      <div class="head-left">
+        <span class="head-title">Notifications</span>
+        <span class="head-meta" *ngIf="unreadCount; else allRead">{{ unreadCount }} new</span>
+        <ng-template #allRead>
+          <span class="head-meta muted">All caught up</span>
+        </ng-template>
+      </div>
+      <div class="head-actions">
+        <button
+          type="button"
+          class="head-btn"
+          (click)="markAllAsRead()"
+          [disabled]="!unreadCount || isMarkingAll"
+          title="Mark all as read"
+          aria-label="Mark all as read"
+        >
+          <i class="fas fa-check-double"></i>
+        </button>
+        <button
+          type="button"
+          class="head-btn"
+          (click)="loadNotifications()"
+          [disabled]="isLoading"
+          title="Refresh"
+          aria-label="Refresh notifications"
+        >
+          <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="notification-loading" *ngIf="isLoading && !notifications.length">
+      <div class="skeleton-row" *ngFor="let i of [1,2,3]"></div>
+    </div>
+
+    <div class="notification-empty" *ngIf="!isLoading && !notifications.length">
+      <div class="empty-illustration"><i class="fas fa-bell-slash"></i></div>
+      <p class="empty-title">You're all caught up</p>
+      <span class="empty-sub">New farm activity will appear here.</span>
+    </div>
+
+    <div class="notification-list" *ngIf="notifications.length">
+      <article
+        class="notification-item"
+        *ngFor="let notification of notifications; trackBy: trackById"
+        [class.unread]="!notification.isRead"
+      >
+        <div [class]="iconClassFor(notification)">
+          <i class="fas" [ngClass]="iconFor(notification)"></i>
+        </div>
+
+        <div class="item-main">
+          <div class="item-head">
+            <strong>{{ notification.title }}</strong>
+            <span class="item-time" *ngIf="notification.createdAt">{{ relativeTime(notification.createdAt) }}</span>
+          </div>
+          <p>{{ notification.message }}</p>
+          <small *ngIf="notification.type === 'farm_registration'">
+            <i class="fas fa-leaf"></i>
+            {{ notification.metadata?.farmName || notification.project?.name }}
+            <span class="dot">•</span>
+            {{ notification.metadata?.submitterName || notification.submittingUser?.name || 'Farmer' }}
+          </small>
+
+          <small *ngIf="notification.type === 'farm_media_upload'" class="media-meta">
+            <span class="farm-chip">
+              <i class="fas fa-leaf"></i>
+              {{ notification.metadata?.farmName || notification.project?.name }}
+            </span>
+            <span class="new-badge" *ngIf="!notification.isRead">New uploads</span>
+            <span class="dot">•</span>
+            <span>by {{ notification.metadata?.uploaderName || notification.submittingUser?.name || 'Manager' }}</span>
+          </small>
+
+          <div class="review-actions" *ngIf="hasCta(notification)">
+            <button type="button" class="view-request" (click)="openRequest(notification)">
+              <i class="fas" [ngClass]="notification.type === 'farm_media_upload' ? 'fa-image' : 'fa-arrow-right'"></i>
+              {{ ctaLabelFor(notification) }}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="dismiss"
+          (click)="archive(notification)"
+          aria-label="Dismiss notification"
+          title="Dismiss"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </article>
+    </div>
+  </section>
+</div>

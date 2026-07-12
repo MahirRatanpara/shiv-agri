@@ -1,7 +1,7 @@
 # Shivagri Development Skill
 
 ## Overview
-This skill provides comprehensive guidelines for developing the Shivagri farm management and soil testing application. It ensures consistent development practices, prevents production issues, and maintains top-tier UX/UI standards.
+This skill provides comprehensive guidelines for developing the Shivagri farm management and soil testing application. It ensures consistent development practices, prevents production issues, and delivers a **modern, minimalist, and user-friendly** experience. Every new feature must align with the existing application's design language — always study what's already built before creating anything new.
 
 ## Technology Stack
 - **Frontend**: Angular 20.3.0
@@ -9,6 +9,56 @@ This skill provides comprehensive guidelines for developing the Shivagri farm ma
 - **Database**: MongoDB
 - **Infrastructure**: Docker, Hostinger VPS, Google Cloud Services
 - **Project Management**: Linear
+
+---
+
+## MANDATORY CONTEXT REFERENCES (READ BEFORE EVERY TASK)
+
+Before starting ANY task — implementation, refactor, bug fix, design, or analysis — you MUST consult the following sources for context. Do not rely on memory or assumptions; always re-read these to ground your work in the current state of the project.
+
+### 1. `graphify-out/` — Knowledge Graph of the Codebase
+- **Path**: `/Users/mahirratanpara/IdeaProjects/shiv-agri/graphify-out/`
+- **Primary files to consult**:
+  - `GRAPH_REPORT.md` — high-level summary of the codebase structure, modules, and relationships
+  - `graph.json` — full machine-readable knowledge graph (modules, components, services, dependencies)
+  - `manifest.json` — index of what the graph covers
+- **Use it to**: understand existing components, services, controllers, models, and how they relate before adding or modifying code. This is the authoritative map of the codebase — consult it before guessing where something lives.
+
+### 2. `context.md` — Project Context Document
+- **Path**: `/Users/mahirratanpara/IdeaProjects/shiv-agri/context.md`
+- **Use it to**: understand the project's domain, goals, current priorities, conventions, and any in-flight initiatives. This is the source of truth for "why" the project is built the way it is.
+
+### Workflow Requirement
+At the start of every new task:
+1. Read `context.md` to refresh project-level context
+2. Consult `graphify-out/GRAPH_REPORT.md` (and `graph.json` for deeper lookups) to understand the relevant slice of the codebase
+3. Only then begin implementation, design, or analysis
+
+If either source appears stale or contradicts what you observe in the live code, **trust the live code** and flag the discrepancy to the developer.
+
+---
+
+## UI/UX SKILL — USE `ui-ux-pro-max`
+
+For ALL UI/UX work — design decisions, component styling, layout planning, color/typography choices, accessibility checks, design reviews, or any task involving visual or interactive design — you MUST use the project-local `ui-ux-pro-max` skill.
+
+- **Skill path**: `/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/`
+- **Entry point**: `.agent/skills/ui-ux-pro-max/SKILL.md` — read this first to understand available actions, styles, palettes, and guidelines
+- **Supporting assets**: `data/` (palettes, font pairings, UX guidelines, chart types) and `scripts/` (utilities)
+
+### When to invoke
+- Planning, building, designing, implementing, reviewing, fixing, improving, optimizing, enhancing, or refactoring any UI
+- Choosing colors, typography, spacing, shadows, gradients, or interaction states
+- Building components: buttons, modals, navbars, sidebars, cards, tables, forms, charts
+- Working on any page type: dashboards, admin panels, landing pages, forms, etc.
+- Accessibility, animation, and responsive layout decisions
+
+### How to use
+1. Read `/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/SKILL.md` to load the skill's guidance
+2. Reference the `data/` directory for palettes, font pairs, and UX guidelines that match the task
+3. Apply the skill's recommendations alongside the existing UI/UX patterns already in the codebase (consistency with current implementation still wins — see UX/UI Excellence section below)
+
+**Do not freelance UI decisions when this skill is available.** It encodes the project's preferred design intelligence and must be the starting point for every visual/interaction task.
 
 ---
 
@@ -418,12 +468,18 @@ exports.checkPermission = (permission) => {
 
 ### What to Include in Every Implementation
 
-**When implementing a ticket, ALWAYS create:**
+**When implementing a ticket, ALWAYS:**
+
+0. ✅ **Study Existing Implementation First**
+   - Browse existing components, SCSS files, and layouts in the codebase
+   - Identify the established design patterns, colors, spacing, and typography
+   - Ensure new work is visually and structurally consistent with what already exists
 
 1. ✅ **Frontend Components** (Angular)
    - Component TypeScript, HTML, SCSS
    - Service for API calls
    - Models/interfaces
+   - Modern, minimalist, clean UI — no unnecessary elements
 
 2. ✅ **Backend APIs** (Node.js/Express)
    - Routes with proper middleware
@@ -450,6 +506,9 @@ exports.checkPermission = (permission) => {
 ❌ **DON'T**: Return entire documents when only few fields needed
 ❌ **DON'T**: Skip input validation
 ❌ **DON'T**: Use inefficient queries (N+1 problems)
+❌ **DON'T**: Introduce new UI patterns without checking existing ones first
+❌ **DON'T**: Build cluttered, busy, or visually noisy interfaces
+❌ **DON'T**: Add unnecessary UI elements — if it doesn't serve a clear purpose, remove it
 
 ✅ **DO**: Implement complete full-stack feature
 ✅ **DO**: Add proper RBAC checks
@@ -457,20 +516,26 @@ exports.checkPermission = (permission) => {
 ✅ **DO**: Validate all inputs
 ✅ **DO**: Return consistent API responses
 ✅ **DO**: Think about performance from the start
+✅ **DO**: Study existing components/styles before building new UI
+✅ **DO**: Keep interfaces clean, minimal, and focused on the task at hand
 
 ---
 
 ## UX/UI EXCELLENCE - NON-NEGOTIABLE STANDARDS
 
 ### Design Philosophy
-Shivagri's UX must be **top-of-the-game** with **ZERO compromise** on quality.
+Shivagri's UX must be **top-of-the-game** with **ZERO compromise** on quality. The design language is **modern, minimalist, and ultra user-friendly**. Every screen should feel clean, uncluttered, and purposeful — no visual noise, no unnecessary elements, no bloated layouts.
+
+**CRITICAL: ALWAYS refer to the currently implemented UI/UX patterns before building any new feature.** Study existing components, layouts, color schemes, spacing, typography, and interaction patterns already in the codebase. New features must visually and structurally align with the current application — consistency is paramount. Do not introduce new design patterns, color palettes, or layout approaches without first checking what already exists.
 
 ### Core Principles
-1. **User-Friendly**: Intuitive navigation, clear CTAs, minimal cognitive load
-2. **Fully Responsive**: Perfect rendering on ALL devices
-3. **Modern Aesthetics**: Contemporary design language
-4. **Smooth Animations**: Professional, purposeful motion
-5. **Accessibility**: WCAG 2.1 AA compliant
+1. **Minimalist Design**: Less is more — clean layouts, generous whitespace, only essential elements on screen. Remove clutter, reduce visual noise, and let content breathe.
+2. **User-Friendly**: Intuitive navigation, clear CTAs, minimal cognitive load. Every interaction should feel effortless and obvious.
+3. **Fully Responsive**: Perfect rendering on ALL devices
+4. **Modern Aesthetics**: Contemporary, sleek design language with refined typography and subtle depth
+5. **Smooth Animations**: Professional, purposeful motion — never flashy or distracting
+6. **Accessibility**: WCAG 2.1 AA compliant
+7. **Consistency First**: Always match the existing application's look and feel. Before creating any new UI, explore and reference the current implementation.
 
 ### Responsive Breakpoints
 ```css
@@ -750,11 +815,15 @@ export const fadeSlideIn = trigger('fadeSlideIn', [
 1. User says: "start working on ticket SHI-XX"
 2. Check/switch to correct branch (feature/shiXX)
 3. Review ticket requirements in Linear
-4. Break down into implementation steps (BOTH frontend AND backend)
-5. Confirm approach with user
-6. Implement with UX standards and backend architecture
-7. Show changes summary
-8. Wait for user review and commit
+4. **Read `context.md`** for project-level context
+5. **Consult `graphify-out/GRAPH_REPORT.md`** (and `graph.json` as needed) to understand the relevant codebase slice
+6. **Load the `ui-ux-pro-max` skill** at `.agent/skills/ui-ux-pro-max/SKILL.md` for any UI/UX work
+7. **Study existing UI/UX patterns** — Browse current components, layouts, and styles to understand the established design language
+8. Break down into implementation steps (BOTH frontend AND backend)
+9. Confirm approach with user
+10. Implement with minimalist UX standards, matching existing patterns, and backend architecture
+11. Show changes summary
+12. Wait for user review and commit
 
 ### Code Quality Standards
 - **TypeScript**: Strict mode enabled, no `any` types
@@ -818,15 +887,18 @@ Show loading indicators for all async operations:
 4. ❌ **NO Testing/Running** - Don't run npm commands, build, or test unless explicitly asked
 5. ❌ **NO Commits** - Don't commit or push; leave for developer review
 6. ❌ **NO Production Access** - Never log into production servers
+7. ❌ **NO Inconsistent UI** - Never introduce new design patterns without studying existing implementation first
+8. ❌ **NO Cluttered Interfaces** - Never build busy, bloated, or visually noisy screens
 
 ### What TO Do
 1. ✅ **Implement FULL-STACK** - Always create both frontend AND backend components
 2. ✅ **Apply backend architecture** - Routes, controllers, services, models with indexes
 3. ✅ **Add RBAC & security** - JWT validation and permission checks
 4. ✅ **Optimize for performance** - Database indexes, efficient queries, <200ms response
-5. ✅ **Apply UX standards** - Follow the responsive design and modern UI guidelines
-6. ✅ **Show brief summary** - List both frontend and backend files modified
-7. ✅ **Wait for review** - Let developer test, commit, and push
+5. ✅ **Apply UX standards** - Modern, minimalist, user-friendly design aligned with existing implementation
+6. ✅ **Reference existing patterns** - Always study current codebase UI/UX before building new features
+7. ✅ **Show brief summary** - List both frontend and backend files modified
+8. ✅ **Wait for review** - Let developer test, commit, and push
 
 ---
 
@@ -936,7 +1008,8 @@ Before marking any ticket complete:
 **Frontend:**
 - [ ] Component/UI implementation complete
 - [ ] Service for API calls created
-- [ ] UX is modern, responsive, and accessible
+- [ ] UX is modern, minimalist, user-friendly, responsive, and accessible
+- [ ] New UI aligns with existing application patterns and structure
 - [ ] Models/interfaces defined
 
 **Backend:**
@@ -964,15 +1037,21 @@ Before marking any ticket complete:
 
 **This skill ensures Shivagri maintains professional development standards while delivering an exceptional user experience. Every line of code should reflect our commitment to quality, safety, and user satisfaction.**
 
-**CRITICAL - SEVEN ABSOLUTE RULES:**
-1. ✅ ALWAYS implement BOTH frontend AND backend (full-stack)
-2. ❌ NO production server access (EVER)
-3. ❌ NO automatic commits or pushes
-4. ❌ NO documentation creation (unless explicitly requested)
-5. ❌ NO test case writing (unless explicitly requested)
-6. ❌ NO testing or running (unless explicitly requested)
-7. ✅ ALWAYS provide brief summaries and wait for developer review
+**CRITICAL - ELEVEN ABSOLUTE RULES:**
+1. ✅ ALWAYS read `context.md` and consult `graphify-out/` (GRAPH_REPORT.md, graph.json) before starting any task
+2. ✅ ALWAYS use the `.agent/skills/ui-ux-pro-max` skill for any UI/UX work
+3. ✅ ALWAYS implement BOTH frontend AND backend (full-stack)
+4. ✅ ALWAYS reference existing UI/UX patterns before building anything new — consistency is mandatory
+5. ✅ ALWAYS deliver modern, minimalist, user-friendly interfaces — clean, uncluttered, purposeful
+6. ❌ NO production server access (EVER)
+7. ❌ NO automatic commits or pushes
+8. ❌ NO documentation creation (unless explicitly requested)
+9. ❌ NO test case writing (unless explicitly requested)
+10. ❌ NO testing or running (unless explicitly requested)
+11. ✅ ALWAYS provide brief summaries and wait for developer review
 
 **FULL-STACK IMPLEMENTATION IS MANDATORY.**
-**NO COMPROMISE on UX. NO EXCEPTIONS on production access. NO WASTED TOKENS on docs/tests.**
+**UX MUST BE MODERN, MINIMALIST, AND USER-FRIENDLY — NO COMPROMISE.**
+**ALWAYS ALIGN WITH EXISTING IMPLEMENTATION — STUDY BEFORE YOU BUILD.**
+**NO EXCEPTIONS on production access. NO WASTED TOKENS on docs/tests.**
 **BACKEND ARCHITECTURE MUST BE OPTIMIZED FOR QUICK RESPONSES (<200ms).**

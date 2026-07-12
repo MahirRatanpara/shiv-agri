@@ -286,6 +286,23 @@ exports.getServiceListTemplate = async (req, res) => {
 };
 
 /**
+ * Get analysis quotation template (English or Gujarati)
+ */
+exports.getAnalysisQuotationTemplate = async (req, res) => {
+  try {
+    const lang = (req.query.lang || 'english').toString().toLowerCase();
+    const template =
+      lang === 'gujarati'
+        ? Letter.getAnalysisQuotationTemplateGujarati()
+        : Letter.getAnalysisQuotationTemplateEnglish();
+    res.json({ template });
+  } catch (error) {
+    logger.error('Error fetching analysis quotation template:', error);
+    res.status(500).json({ error: 'Failed to fetch analysis quotation template' });
+  }
+};
+
+/**
  * Update PDF reference after generation
  */
 exports.updatePdfReference = async (req, res) => {

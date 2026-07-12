@@ -18,6 +18,11 @@ export interface User {
     displayName: string;
   };
   createdAt: Date;
+  metadata?: {
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    phoneNumberNormalized?: string;
+  };
 }
 
 @Component({
@@ -40,6 +45,24 @@ export class UserManagementComponent implements OnInit {
   currentPage = 1;
   totalPages = 1;
   totalUsers = 0;
+
+  // Inline identity edit (admin-only). Tracks the currently-expanded row
+  // and a draft of its fields so canceling discards changes cleanly.
+  editingUserId: string | null = null;
+  identityDraft: {
+    name: string;
+    email: string;
+    phone: string;
+    phoneCountryCode: string;
+  } = { name: '', email: '', phone: '', phoneCountryCode: '+91' };
+  isSavingIdentity = false;
+  readonly countryCodeOptions: Array<{ label: string; value: string }> = [
+    { label: 'India (+91)', value: '+91' },
+    { label: 'US/Canada (+1)', value: '+1' },
+    { label: 'UK (+44)', value: '+44' },
+    { label: 'UAE (+971)', value: '+971' },
+    { label: 'Australia (+61)', value: '+61' }
+  ];
 
   constructor(
     private userService: UserService,
@@ -186,5 +209,123 @@ export class UserManagementComponent implements OnInit {
       this.currentPage++;
       this.loadUsers();
     }
+  }
+
+  // ========================
+  // Inline identity edit (admin-only)
+  // ========================
+
+  /** Open the inline edit row for a user. Pre-fills the draft with the
+   *  user's current name / email / phone. Closes any other open edit. */
+  startIdentityEdit(user: User): void {
+    this.editingUserId = user._id;
+    const phoneRaw = (user.metadata?.phoneNumber || '').trim();
+    const { countryCode, localNumber } = this.splitPhoneNumber(
+      phoneRaw,
+      user.metadata?.phoneCountryCode
+    );
+    this.identityDraft = {
+      name: user.name || '',
+      email: user.email || '',
+      phone: localNumber,
+      phoneCountryCode: countryCode
+    };
+  }
+
+  cancelIdentityEdit(): void {
+    this.editingUserId = null;
+    this.isSavingIdentity = false;
+  }
+
+  isEditingIdentity(user: User): boolean {
+    return this.editingUserId === user._id;
+  }
+
+  saveIdentity(user: User): void {
+    if (this.isSavingIdentity) return;
+    const draft = this.identityDraft;
+
+    const trimmedEmail = draft.email.trim();
+    const trimmedPhone = draft.phone.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      this.toastService.show('Enter a valid email address (or leave blank).', 'warning');
+      return;
+    }
+    if (trimmedPhone && trimmedPhone.replace(/\D/g, '').length < 10) {
+      this.toastService.show('Phone number must have at least 10 digits.', 'warning');
+      return;
+    }
+
+    // Build payload — only send fields that actually changed, so an admin
+    // editing just the email doesn't accidentally clear the phone.
+    const payload: { name?: string; email?: string | null; phone?: string | null; phoneCountryCode?: string } = {};
+    if (draft.name.trim() !== (user.name || '').trim()) {
+      payload.name = draft.name.trim();
+    }
+    if (trimmedEmail !== (user.email || '').trim()) {
+      payload.email = trimmedEmail; // '' clears, server understands.
+    }
+    const currentPhone = (user.metadata?.phoneNumber || '').trim();
+    const currentCc = (user.metadata?.phoneCountryCode || '').trim();
+    if (trimmedPhone !== currentPhone || draft.phoneCountryCode !== currentCc) {
+      payload.phone = trimmedPhone;
+      payload.phoneCountryCode = draft.phoneCountryCode;
+    }
+
+    if (!Object.keys(payload).length) {
+      this.toastService.show('No changes to save.', 'info');
+      this.cancelIdentityEdit();
+      return;
+    }
+
+    this.isSavingIdentity = true;
+    this.userService.updateUserIdentity(user._id, payload).subscribe({
+      next: (response) => {
+        const updated = response.projectsUpdated || 0;
+        const suffix = updated > 0
+          ? ` ${updated} project${updated === 1 ? '' : 's'} re-synced.`
+          : '';
+        this.toastService.show(`Updated identity for ${user.name}.${suffix}`, 'success');
+        this.isSavingIdentity = false;
+        this.editingUserId = null;
+        this.loadUsers();
+      },
+      error: (error) => {
+        this.isSavingIdentity = false;
+        const status = error?.status;
+        const msg = error?.error?.error || error?.error?.message;
+        if (status === 409) {
+          this.toastService.show(msg || 'That email or phone is already linked to another account.', 'error');
+        } else {
+          this.toastService.show(msg || 'Failed to update user identity.', 'error');
+        }
+      }
+    });
+  }
+
+  /** Split a stored phone string into country code + local number, used
+   *  to populate the inline edit form. */
+  private splitPhoneNumber(phoneNumber: string, savedCountryCode?: string): { countryCode: string; localNumber: string } {
+    const trimmed = (phoneNumber || '').trim();
+    if (!trimmed) {
+      return { countryCode: savedCountryCode || '+91', localNumber: '' };
+    }
+    const matchedCode = savedCountryCode ||
+      this.countryCodeOptions
+        .map((option) => option.value)
+        .sort((a, b) => b.length - a.length)
+        .find((code) => trimmed.startsWith(code));
+    const countryCode = matchedCode || '+91';
+    const localNumber = trimmed.startsWith(countryCode)
+      ? trimmed.slice(countryCode.length).trim()
+      : trimmed;
+    return { countryCode, localNumber };
+  }
+
+  /** Format the user's phone for the table column. */
+  formatUserPhone(user: User): string {
+    const phone = user.metadata?.phoneNumber;
+    if (!phone) return '—';
+    return phone;
   }
 }

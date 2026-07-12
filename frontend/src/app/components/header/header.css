@@ -43,27 +43,39 @@
 }
 
 .user-avatar {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  margin-right: 8px;
+  margin-right: 0;
   vertical-align: middle;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
 }
 
 .user-avatar-placeholder {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  margin-right: 8px;
+  margin-right: 0;
   vertical-align: middle;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-avatar-placeholder:hover {
+  transform: scale(1.1);
 }
 
 .logout-link {
@@ -72,6 +84,22 @@
 
 .logout-link:hover {
   opacity: 0.8;
+}
+
+/* Desktop/Expanded Navbar Styles */
+@media (min-width: 992px) {
+  .navbar-nav {
+    align-items: center;
+  }
+
+  .navbar-nav .nav-item {
+    padding: 0 10px;
+  }
+
+  .navbar-nav .nav-link {
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
 }
 
 /* ===== RESPONSIVE STYLES ===== */

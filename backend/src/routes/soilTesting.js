@@ -1,32 +1,101 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 const SoilSession = require('../models/SoilSession');
 const SoilSample = require('../models/SoilSample');
+const fertilizerCropConfig = require('../config/fertilizerCropConfig');
 const { addClassifications } = require('../utils/soilClassification');
+const { extractCellText } = require('../utils/excelCellText');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel' // .xls
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
+    }
+  }
+});
+
 logger.info('Soil Testing routes initialized - Using referenced mode with separate collections');
 logger.info('Soil classification system enabled');
+
+// Helper function to sort samples by sample number naturally
+const sortSamplesByNumber = (samples) => {
+  return samples.sort((a, b) => {
+    const sampleA = (a.sampleNumber || '').toLowerCase();
+    const sampleB = (b.sampleNumber || '').toLowerCase();
+    return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};
 
 // All routes require authentication
 router.use(authenticate);
 
 // Get all sessions with their samples
+/**
+ * Paginated session list for the testing landing page.
+ *
+ * Query params:
+ *   - page   (default 1)
+ *   - limit  (default 10, max 100)
+ *   - status (optional): 'active' (= not completed), 'completed', or a specific
+ *             enum value ('started', 'details', 'ready', 'completed')
+ *
+ * Samples are NOT embedded in the response — the landing page only needs
+ * session metadata (date, version, status, sampleCount). Use GET /sessions/:id
+ * to load a session with its samples. Dropping the embedded samples turns this
+ * from an N+1 sample fetch into a single indexed query and speeds up the
+ * landing page dramatically.
+ */
 router.get('/sessions', requirePermission('soil.sessions.view'), async (req, res) => {
   try {
-    const sessions = await SoilSession.find().sort({ date: -1, version: -1 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const statusParam = (req.query.status || '').toString();
 
-    const sessionsWithSamples = [];
-    for (const session of sessions) {
-      const sessionObj = session.toObject();
-      const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
-      sessionObj.data = samples;
-      sessionsWithSamples.push(sessionObj);
+    // Build filter from status param
+    const filter = {};
+    if (statusParam === 'active') {
+      filter.status = { $ne: 'completed' };
+    } else if (statusParam) {
+      filter.status = statusParam;
     }
 
-    logger.info(`Retrieved ${sessionsWithSamples.length} sessions with samples`);
-    res.json(sessionsWithSamples);
+    const skip = (page - 1) * limit;
+
+    const [sessions, total] = await Promise.all([
+      SoilSession.find(filter)
+        .sort({ date: -1, version: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SoilSession.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    logger.info(
+      `Retrieved soil sessions page ${page}/${totalPages || 1} ` +
+        `(status=${statusParam || 'all'}, count=${sessions.length}, total=${total})`
+    );
+
+    res.json({
+      sessions,
+      pagination: { page, limit, total, totalPages }
+    });
   } catch (error) {
     logger.error(`Error fetching sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
@@ -42,7 +111,8 @@ router.get('/sessions/date/:date', requirePermission('soil.sessions.view'), asyn
     const sessionsWithSamples = [];
     for (const session of sessions) {
       const sessionObj = session.toObject();
-      const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+      let samples = await SoilSample.find({ sessionId: session._id });
+      samples = sortSamplesByNumber(samples);
       sessionObj.data = samples;
       sessionsWithSamples.push(sessionObj);
     }
@@ -77,7 +147,8 @@ router.get('/sessions/:id', requirePermission('soil.sessions.view'), async (req,
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     logger.debug(`Retrieved session ${req.params.id} with ${samples.length} samples`);
 
     const sessionObj = session.toObject();
@@ -105,7 +176,7 @@ router.post('/sessions', requirePermission('soil.sessions.create'), async (req, 
       date,
       version,
       startTime: startTime || new Date(),
-      status: 'active',
+      status: 'started',
       sampleCount: 0,
       lastActivity: new Date()
     });
@@ -139,8 +210,8 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
     // Handle endTime update
     if ('endTime' in req.body) {
       session.endTime = endTime;
-      session.status = endTime ? 'completed' : 'active';
-      logger.debug(`Session ${req.params.id} status changed to ${session.status}`);
+      // Note: Status is now managed separately via PATCH /sessions/:id/status endpoint
+      logger.debug(`Session ${req.params.id} endTime updated to ${endTime}`);
     }
 
     // Handle sample updates
@@ -180,8 +251,9 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
     const updatedSession = await session.save();
     logger.info(`Session ${req.params.id} updated successfully`);
 
-    // Fetch samples and return
-    const samples = await SoilSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    // Fetch samples and return (sorted by sample number)
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     const sessionObj = updatedSession.toObject();
     sessionObj.data = samples;
 
@@ -189,6 +261,47 @@ router.put('/sessions/:id', requirePermission('soil.sessions.update'), async (re
   } catch (error) {
     logger.error(`Error updating session ${req.params.id}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: 'Failed to update session' });
+  }
+});
+
+// Update session status (state transitions)
+router.patch('/sessions/:id/status', requirePermission('soil.sessions.update'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['started', 'details', 'ready', 'completed'];
+
+    if (!status || !validStatuses.includes(status)) {
+      logger.warn(`Invalid status provided: ${status}`);
+      return res.status(400).json({ error: 'Invalid status. Must be one of: started, details, ready, completed' });
+    }
+
+    const session = await SoilSession.findById(req.params.id);
+    if (!session) {
+      logger.warn(`Session not found for status update: ${req.params.id}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const oldStatus = session.status;
+    session.status = status;
+
+    // Update endTime when completing
+    if (status === 'completed' && !session.endTime) {
+      session.endTime = new Date();
+    }
+
+    const updatedSession = await session.save();
+    logger.info(`Session ${req.params.id} status changed: ${oldStatus} → ${status}`);
+
+    // Fetch samples and return
+    let samples = await SoilSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
+    const sessionObj = updatedSession.toObject();
+    sessionObj.data = samples;
+
+    res.json(sessionObj);
+  } catch (error) {
+    logger.error(`Error updating session status ${req.params.id}: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update session status' });
   }
 });
 
@@ -226,6 +339,536 @@ router.get('/sessions/today/count', async (req, res) => {
   } catch (error) {
     logger.error(`Error counting today's sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to count sessions' });
+  }
+});
+
+// Get paginated samples for a session
+router.get('/sessions/:sessionId/samples', requirePermission('soil.sessions.view'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const samples = await SoilSample.find({ sessionId })
+      .sort({ createdAt: 1 }) // Use natural creation order or handle numeric sort here?
+      // Note: sortSamplesByNumber is expensive for pagination as it requires fetching all.
+      // We'll stick to DB sort for efficiency in pagination.
+      // Alternatively, we used to sort manually. For infinite scroll, consistent order is key.
+      .collation({ locale: 'en_US', numericOrdering: true }) // Natural sort on MongoDB if sampleNumber indexed/available?
+      // sampleNumber might not be unique or set initially. createdAt is safer for stability.
+      .skip(skip)
+      .limit(limit);
+
+    const total = await SoilSample.countDocuments({ sessionId });
+
+    res.json({
+      samples,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error(`Error fetching paginated samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch samples' });
+  }
+});
+
+// Bulk update/upsert samples (Safe Update for Infinite Scroll)
+router.patch('/sessions/:sessionId/samples', requirePermission('soil.sessions.update'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { samples } = req.body;
+
+    if (!samples || !Array.isArray(samples)) {
+      return res.status(400).json({ error: 'Samples array is required' });
+    }
+
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    logger.info(`Bulk updating ${samples.length} samples for session ${sessionId}`);
+
+    const FertilizerSample = require('../models/FertilizerSample');
+    const FertilizerSession = require('../models/FertilizerSession');
+
+    // Process each sample and handle fertilizer linking
+    const updatedSamples = [];
+    for (const sampleData of samples) {
+      // Calculate classifications
+      const sampleWithClassifications = addClassifications(sampleData);
+
+      let savedSample;
+      if (sampleData._id) {
+        // Get existing sample to check cropType change
+        const existingSample = await SoilSample.findById(sampleData._id);
+
+        // Update existing - strip _id from $set to avoid MongoDB immutable field error
+        const { _id, ...updateFields } = sampleWithClassifications;
+        savedSample = await SoilSample.findOneAndUpdate(
+          { _id: sampleData._id, sessionId },
+          { $set: { ...updateFields, sessionId } },
+          { new: true }
+        );
+
+        // Handle crop type changes
+        if (existingSample && savedSample) {
+          await handleCropTypeChange(existingSample, savedSample, session);
+          // Reload sample to get updated fertilizerSampleId
+          savedSample = await SoilSample.findById(savedSample._id);
+        }
+      } else {
+        // Insert new - strip _id to let MongoDB generate one
+        const { _id: _unusedId, ...insertFields } = sampleWithClassifications;
+        savedSample = await SoilSample.create({
+          ...insertFields,
+          sessionId,
+          sessionDate: session.date,
+          sessionVersion: session.version
+        });
+
+        // If new sample has cropType, create fertilizer sample
+        if (savedSample.cropType && savedSample.cropType !== '') {
+          await createLinkedFertilizerSample(savedSample, session);
+          // Reload sample to get updated fertilizerSampleId
+          savedSample = await SoilSample.findById(savedSample._id);
+        }
+      }
+
+      updatedSamples.push(savedSample);
+    }
+
+    // Update session metadata
+    session.sampleCount = await SoilSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples updated successfully',
+      count: samples.length,
+      samples: updatedSamples
+    });
+  } catch (error) {
+    logger.error(`Error bulk updating samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update samples' });
+  }
+});
+
+/**
+ * Handle crop type changes for soil-fertilizer linking
+ */
+async function handleCropTypeChange(existingSample, updatedSample, soilSession) {
+  const FertilizerSample = require('../models/FertilizerSample');
+  const FertilizerSession = require('../models/FertilizerSession');
+
+  const oldCropType = existingSample.cropType || '';
+  const newCropType = updatedSample.cropType || '';
+
+  // Case 1: Crop type removed - delete linked fertilizer sample
+  if (oldCropType !== '' && newCropType === '') {
+    if (existingSample.fertilizerSampleId) {
+      await FertilizerSample.findByIdAndDelete(existingSample.fertilizerSampleId);
+      updatedSample.fertilizerSampleId = null;
+      await updatedSample.save();
+      logger.info(`Deleted linked fertilizer sample ${existingSample.fertilizerSampleId}`);
+    }
+  }
+  // Case 2: Crop type added - create fertilizer sample
+  else if (oldCropType === '' && newCropType !== '') {
+    await createLinkedFertilizerSample(updatedSample, soilSession);
+  }
+  // Case 3: Crop type changed - update existing or create new
+  else if (oldCropType !== '' && newCropType !== '' && oldCropType !== newCropType) {
+    if (existingSample.fertilizerSampleId) {
+      // Update existing fertilizer sample with new type + fresh defaults from config
+      const defaults = fertilizerCropConfig.getDefaultsForCrop(updatedSample.cropName, newCropType);
+      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, {
+        ...defaults,
+        type: newCropType,
+        farmerName: updatedSample.farmersName,
+        farmsName: updatedSample.farmsName,
+        sampleNumber: updatedSample.sampleNumber,
+        cropName: updatedSample.cropName
+      });
+      logger.info(
+        `Updated fertilizer sample type to ${newCropType} with ${Object.keys(defaults).length} config defaults for crop "${updatedSample.cropName}"`
+      );
+    } else {
+      // Create new fertilizer sample
+      await createLinkedFertilizerSample(updatedSample, soilSession);
+    }
+  }
+  // Case 4: Crop type unchanged but other fields changed - sync data
+  else if (oldCropType !== '' && newCropType !== '' && oldCropType === newCropType) {
+    if (existingSample.fertilizerSampleId) {
+      const oldCropName = existingSample.cropName || '';
+      const newCropName = updatedSample.cropName || '';
+      const cropNameChanged = oldCropName.trim().toLowerCase() !== newCropName.trim().toLowerCase();
+
+      const syncPayload = {
+        farmerName: updatedSample.farmersName,
+        farmsName: updatedSample.farmsName,
+        sampleNumber: updatedSample.sampleNumber,
+        cropName: updatedSample.cropName
+      };
+
+      // If cropName changed, re-apply defaults for the new crop so the
+      // fertilizer sample reflects the new crop's recommended values.
+      if (cropNameChanged) {
+        const defaults = fertilizerCropConfig.getDefaultsForCrop(newCropName, newCropType);
+        if (Object.keys(defaults).length > 0) {
+          Object.assign(syncPayload, defaults);
+          logger.info(
+            `Re-applied ${Object.keys(defaults).length} config defaults for crop "${newCropName}" (${newCropType})`
+          );
+        }
+      }
+
+      await FertilizerSample.findByIdAndUpdate(existingSample.fertilizerSampleId, syncPayload);
+    }
+  }
+}
+
+/**
+ * Create a linked fertilizer sample
+ */
+async function createLinkedFertilizerSample(soilSample, soilSession) {
+  const FertilizerSample = require('../models/FertilizerSample');
+  const FertilizerSession = require('../models/FertilizerSession');
+
+  // Find or create fertilizer session for the same date/version
+  let fertilizerSession = await FertilizerSession.findOne({
+    date: soilSession.date,
+    version: soilSession.version
+  });
+
+  if (!fertilizerSession) {
+    fertilizerSession = await FertilizerSession.create({
+      date: soilSession.date,
+      version: soilSession.version,
+      startTime: soilSession.startTime || new Date(),
+      status: 'started',
+      sampleCount: 0,
+      lastActivity: new Date()
+    });
+    logger.info(`Created fertilizer session ${fertilizerSession._id} for ${soilSession.date} v${soilSession.version}`);
+  }
+
+  // Resolve default recommendation values from the fertilizer crop config by
+  // matching the soil sample's cropName (case-insensitive) to the config key.
+  const cropDefaults = fertilizerCropConfig.getDefaultsForCrop(
+    soilSample.cropName,
+    soilSample.cropType
+  );
+  if (Object.keys(cropDefaults).length > 0) {
+    logger.info(
+      `Applying ${Object.keys(cropDefaults).length} default values from config for crop "${soilSample.cropName}" (${soilSample.cropType})`
+    );
+  } else if (soilSample.cropName) {
+    logger.debug(
+      `No config defaults found for crop "${soilSample.cropName}" (${soilSample.cropType}) — creating blank fertilizer sample`
+    );
+  }
+
+  // Create fertilizer sample (defaults first so identity fields always win)
+  const fertilizerSample = await FertilizerSample.create({
+    ...cropDefaults,
+    sessionId: fertilizerSession._id,
+    sessionDate: soilSession.date,
+    sessionVersion: soilSession.version,
+    type: soilSample.cropType,
+    sampleNumber: soilSample.sampleNumber,
+    farmerName: soilSample.farmersName,
+    farmsName: soilSample.farmsName,
+    cropName: soilSample.cropName,
+    soilSampleId: soilSample._id
+  });
+
+  // Link back to soil sample
+  soilSample.fertilizerSampleId = fertilizerSample._id;
+  await soilSample.save();
+
+  // Update fertilizer session count
+  fertilizerSession.sampleCount = await FertilizerSample.countDocuments({ sessionId: fertilizerSession._id });
+  await fertilizerSession.save();
+
+  logger.info(`Created linked fertilizer sample ${fertilizerSample._id} for soil sample ${soilSample._id}`);
+}
+
+// Bulk delete samples
+router.delete('/sessions/:sessionId/samples', requirePermission('soil.samples.delete'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { sampleIds } = req.body;
+
+    if (!sampleIds || !Array.isArray(sampleIds) || sampleIds.length === 0) {
+      return res.status(400).json({ error: 'Sample IDs array is required' });
+    }
+
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Get samples to delete and their linked fertilizer samples
+    const samplesToDelete = await SoilSample.find({
+      _id: { $in: sampleIds },
+      sessionId
+    });
+
+    // Collect fertilizer sample IDs to delete
+    const FertilizerSample = require('../models/FertilizerSample');
+    const fertilizerIdsToDelete = samplesToDelete
+      .map(s => s.fertilizerSampleId)
+      .filter(id => id != null);
+
+    // Delete linked fertilizer samples
+    if (fertilizerIdsToDelete.length > 0) {
+      await FertilizerSample.deleteMany({ _id: { $in: fertilizerIdsToDelete } });
+      logger.info(`Deleted ${fertilizerIdsToDelete.length} linked fertilizer samples`);
+    }
+
+    // Delete soil samples
+    const result = await SoilSample.deleteMany({
+      _id: { $in: sampleIds },
+      sessionId
+    });
+
+    // Update session metadata
+    session.sampleCount = await SoilSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples deleted successfully',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    logger.error(`Error deleting samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to delete samples' });
+  }
+});
+
+// Upload Excel file to update/append samples in a session
+router.post('/sessions/:id/upload-excel',
+  requirePermission('soil.sessions.update'),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const sessionId = req.params.id;
+
+      // Check if file was uploaded
+      if (!req.file) {
+        logger.warn('Excel upload attempted without file');
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      logger.info(`Processing Excel upload for session ${sessionId}, file size: ${req.file.size} bytes`);
+
+      // Check if session exists
+      const session = await SoilSession.findById(sessionId);
+      if (!session) {
+        logger.warn(`Session not found for Excel upload: ${sessionId}`);
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Parse Excel file
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+
+      if (!worksheet) {
+        logger.error('No worksheet found in Excel file');
+        return res.status(400).json({ error: 'No worksheet found in Excel file' });
+      }
+
+      // Get existing samples for this session
+      const existingSamples = await SoilSample.find({ sessionId });
+      const existingSamplesMap = new Map();
+      existingSamples.forEach(sample => {
+        if (sample.sampleNumber) {
+          existingSamplesMap.set(sample.sampleNumber.trim(), sample);
+        }
+      });
+
+      logger.debug(`Found ${existingSamples.length} existing samples in session`);
+
+      // Parse Excel rows (skip header row)
+      const excelData = [];
+      const errors = [];
+      let rowIndex = 0;
+
+      worksheet.eachRow((row, rowNumber) => {
+        // Skip header row
+        if (rowNumber === 1) {
+          return;
+        }
+
+        rowIndex++;
+
+        try {
+          // Extract data from Excel columns
+          // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Crop Name
+          // extractCellText unwraps rich-text / formula / hyperlink shapes so
+          // formatted cells don't end up persisted as the literal "[object Object]".
+          const sampleNumber = extractCellText(row.getCell(1));
+          const farmersName = extractCellText(row.getCell(2));
+          const mobileNo = extractCellText(row.getCell(3));
+          const location = extractCellText(row.getCell(4));
+          const farmsName = extractCellText(row.getCell(5));
+          const taluka = extractCellText(row.getCell(6));
+          const cropName = extractCellText(row.getCell(7));
+
+          // Validate required fields
+          if (!sampleNumber) {
+            errors.push(`Row ${rowNumber}: Sample Number is required`);
+            return;
+          }
+
+          if (!farmersName) {
+            errors.push(`Row ${rowNumber}: Farmer's Name is required`);
+            return;
+          }
+
+          excelData.push({
+            sampleNumber,
+            farmersName,
+            mobileNo,
+            location,
+            farmsName,
+            taluka,
+            cropName,
+            rowNumber
+          });
+        } catch (error) {
+          logger.error(`Error parsing row ${rowNumber}: ${error.message}`);
+          errors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      });
+
+      logger.info(`Parsed ${excelData.length} rows from Excel file`);
+
+      if (errors.length > 0) {
+        logger.warn(`Excel parsing completed with ${errors.length} errors`);
+        return res.status(400).json({
+          error: 'Some rows could not be processed',
+          details: errors,
+          processedCount: excelData.length
+        });
+      }
+
+      if (excelData.length === 0) {
+        logger.warn('No valid data found in Excel file');
+        return res.status(400).json({ error: 'No valid data found in Excel file' });
+      }
+
+      // Process each row: update existing or create new
+      let updatedCount = 0;
+      let addedCount = 0;
+
+      for (const excelRow of excelData) {
+        const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
+
+        if (existingSample) {
+          // Only update farmer details, keep test values unchanged
+          existingSample.farmersName = excelRow.farmersName;
+          existingSample.mobileNo = excelRow.mobileNo;
+          existingSample.location = excelRow.location;
+          existingSample.farmsName = excelRow.farmsName;
+          existingSample.taluka = excelRow.taluka;
+          if (excelRow.cropName) existingSample.cropName = excelRow.cropName;
+
+          await existingSample.save();
+          updatedCount++;
+
+          logger.debug(`Updated farmer details for sample: ${excelRow.sampleNumber}`);
+        } else {
+          // Create new sample
+          const newSample = new SoilSample({
+            sessionId: session._id,
+            sessionDate: session.date,
+            sessionVersion: session.version,
+            sampleNumber: excelRow.sampleNumber,
+            farmersName: excelRow.farmersName,
+            mobileNo: excelRow.mobileNo,
+            location: excelRow.location,
+            farmsName: excelRow.farmsName,
+            taluka: excelRow.taluka,
+            cropName: excelRow.cropName || undefined
+          });
+
+          await newSample.save();
+          addedCount++;
+
+          logger.debug(`Added new sample: ${excelRow.sampleNumber}`);
+        }
+      }
+
+      // Update session metadata
+      session.sampleCount = await SoilSample.countDocuments({ sessionId });
+      session.lastActivity = new Date();
+      await session.save();
+
+      logger.info(`Excel upload successful for session ${sessionId} - Updated: ${updatedCount}, Added: ${addedCount}`);
+
+      res.json({
+        success: true,
+        message: 'Excel data processed successfully',
+        updated: updatedCount,
+        added: addedCount,
+        total: updatedCount + addedCount
+      });
+
+    } catch (error) {
+      logger.error(`Error processing Excel upload: ${error.message}`, { stack: error.stack });
+
+      if (error.message.includes('Only Excel files')) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.status(500).json({ error: 'Failed to process Excel file' });
+    }
+  }
+);
+
+// Get soil data for a specific sample (for fertilizer testing popup)
+router.get('/samples/:sampleId/soil-data', async (req, res) => {
+  try {
+    const { sampleId } = req.params;
+
+    const sample = await SoilSample.findById(sampleId);
+    if (!sample) {
+      return res.status(404).json({ error: 'Sample not found' });
+    }
+
+    // Return only the relevant soil data
+    const soilData = {
+      sampleNumber: sample.sampleNumber,
+      farmersName: sample.farmersName,
+      cropName: sample.cropName,
+      ph: sample.ph,
+      ec: sample.ec,
+      ocPercent: sample.ocPercent,
+      p2o5: sample.p2o5,
+      k2o: sample.k2o,
+      organicMatter: sample.organicMatter,
+      // Classification results
+      phResult: sample.phResult,
+      ecResult: sample.ecResult,
+      nitrogenResult: sample.nitrogenResult,
+      phosphorusResult: sample.phosphorusResult,
+      potashResult: sample.potashResult
+    };
+
+    res.json(soilData);
+  } catch (error) {
+    logger.error(`Error fetching soil data: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch soil data' });
   }
 });
 

@@ -4,27 +4,39 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    default: 'New User'
   },
   email: {
+    // Optional — phone-only signups won't have one. Uniqueness is enforced
+    // by an explicit *partial* index further down so the constraint only
+    // applies to non-empty string values. `sparse: true` is NOT enough on
+    // its own: Mongo sparse indexes still include documents where the field
+    // is null or empty string, which would collide as soon as a second
+    // blank-email user is created.
     type: String,
-    required: true,
-    unique: true,
+    required: false,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneVerifiedAt: {
+    type: Date
   },
   googleId: {
-    type: String,
-    unique: true,
-    sparse: true
+    // Uniqueness enforced by an explicit partial index below — same reason
+    // as `email`: Mongo's sparse-unique still collides on null/empty values.
+    type: String
   },
   profilePhoto: {
     type: String
   },
   role: {
     type: String,
-    enum: ['admin', 'user', 'assistant', 'lab_technician', 'manager'],
+    enum: ['admin', 'user', 'end_user', 'assistant', 'lab_technician', 'manager'],
     default: 'user',
     index: true
   },
@@ -34,6 +46,13 @@ const userSchema = new mongoose.Schema({
     ref: 'Role'
   },
   refreshToken: {
+    // SHA-256 hash of the active opaque refresh token (see utils/session.js)
+    type: String
+  },
+  refreshTokenExpiresAt: {
+    type: Date
+  },
+  googleRefreshToken: {
     type: String
   },
   lastLogin: {
@@ -42,7 +61,9 @@ const userSchema = new mongoose.Schema({
   metadata: {
     department: String,
     designation: String,
-    phoneNumber: String
+    phoneCountryCode: String,
+    phoneNumber: String,
+    phoneNumberNormalized: String
   },
   createdAt: {
     type: Date,
@@ -64,6 +85,49 @@ userSchema.pre('save', function(next) {
 // Indexes for performance
 userSchema.index({ role: 1 });
 
+// Identity uniqueness via *partial* indexes — they only cover documents
+// where the field is a non-empty string. This is the only correct way to
+// allow many phone-less / email-less / Google-less accounts without
+// collisions on null or empty values (sparse alone won't do it).
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $type: 'string', $gt: '' } }
+  }
+);
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { googleId: { $type: 'string', $gt: '' } }
+  }
+);
+userSchema.index(
+  { 'metadata.phoneNumberNormalized': 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 'metadata.phoneNumberNormalized': { $type: 'string', $gt: '' } }
+  }
+);
+
+/**
+ * Pre-save hygiene: strip empty strings on identity fields so the document
+ * lands in the partial index's exclusion zone (and so `email === ''` can't
+ * be saved by accident from a careless caller).
+ */
+userSchema.pre('save', function(next) {
+  if (this.email === '' || this.email === null) this.email = undefined;
+  if (this.googleId === '' || this.googleId === null) this.googleId = undefined;
+  if (this.metadata) {
+    if (this.metadata.phoneNumberNormalized === '' || this.metadata.phoneNumberNormalized === null) {
+      this.metadata.phoneNumberNormalized = undefined;
+    }
+    if (this.metadata.phoneNumber === null) this.metadata.phoneNumber = '';
+  }
+  next();
+});
+
 // Instance Methods
 userSchema.methods.toClientJSON = function() {
   return {
@@ -74,6 +138,7 @@ userSchema.methods.toClientJSON = function() {
     profilePhoto: this.profilePhoto,
     department: this.metadata?.department,
     designation: this.metadata?.designation,
+    phoneCountryCode: this.metadata?.phoneCountryCode,
     phoneNumber: this.metadata?.phoneNumber,
     lastLogin: this.lastLogin,
     createdAt: this.createdAt

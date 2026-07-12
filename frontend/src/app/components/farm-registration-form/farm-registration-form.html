@@ -1,0 +1,306 @@
+<form class="farm-form" (ngSubmit)="submit()" novalidate>
+  <div class="identity-chip" *ngIf="mode === 'farmer'">
+    <strong>{{ currentUser?.name }}</strong>
+    <span>{{ currentUser?.phoneNumber || 'Mobile missing in profile' }}</span>
+  </div>
+
+  <div class="section-title">Farmer Linkage</div>
+  <div class="form-grid">
+    <label class="field" *ngIf="mode === 'manager'">
+      <span>Farmer mobile number</span>
+      <div class="phone-combo">
+        <select
+          name="clientCountryCode"
+          [(ngModel)]="clientCountryCode"
+          aria-label="Country code"
+          (ngModelChange)="onClientPhoneChange()"
+        >
+          <option *ngFor="let option of countryCodeOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+        <input
+          name="clientPhone"
+          [(ngModel)]="clientPhone"
+          type="tel"
+          autocomplete="tel"
+          [class.invalid]="!!errors['clientPhone']"
+          (ngModelChange)="onClientPhoneChange()"
+          (blur)="resolveUserByPhone()"
+        >
+      </div>
+      <small *ngIf="errors['clientPhone']">{{ errors['clientPhone'] }}</small>
+      <small class="field-hint" *ngIf="mode === 'manager' && userResolved">Existing farmer loaded from this number.</small>
+      <small class="field-hint" *ngIf="mode === 'manager' && newFarmer">No account for this number — a new farmer will be created.</small>
+    </label>
+
+    <label class="field">
+      <span>Farmer name</span>
+      <input
+        name="clientName"
+        [(ngModel)]="clientName"
+        type="text"
+        placeholder="Farmer's full name"
+        [readonly]="mode === 'manager' ? userResolved : true"
+        [class.invalid]="!!errors['clientName']">
+      <small *ngIf="errors['clientName']">{{ errors['clientName'] }}</small>
+    </label>
+
+    <label class="field">
+      <span>
+        Farmer email
+        <em *ngIf="mode === 'manager' && (newFarmer || !clientEmail)">(optional)</em>
+      </span>
+      <input
+        name="clientEmail"
+        [(ngModel)]="clientEmail"
+        type="email"
+        placeholder="farmer@example.com"
+        [readonly]="isClientEmailLocked">
+      <small class="field-hint" *ngIf="!isClientEmailLocked && userResolved && !initialClientEmail">
+        No email on record for this farmer — add one and it will be linked to their account on save.
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Alternative contact</span>
+      <input name="alternativeContact" [(ngModel)]="alternativeContact" type="tel">
+    </label>
+  </div>
+
+  <div class="section-title">Farm Identity</div>
+  <div class="form-grid">
+    <label class="field">
+      <span>Farm name</span>
+      <input name="farmName" [(ngModel)]="farmName" type="text" autocomplete="organization" [class.invalid]="errors['farmName']">
+      <small *ngIf="errors['farmName']">{{ errors['farmName'] }}</small>
+    </label>
+
+    <label class="field">
+      <span>Soil type</span>
+      <input name="soilType" [(ngModel)]="soilType" type="text" [class.invalid]="errors['soilType']">
+      <small *ngIf="errors['soilType']">{{ errors['soilType'] }}</small>
+    </label>
+
+    <label class="field field-wide">
+      <span>Address</span>
+      <input name="address" [(ngModel)]="address" type="text" autocomplete="street-address" [class.invalid]="errors['address']">
+      <small *ngIf="errors['address']">{{ errors['address'] }}</small>
+    </label>
+
+    <label class="field">
+      <span>Taluka</span>
+      <input name="taluka" [(ngModel)]="taluka" type="text">
+    </label>
+
+    <label class="field">
+      <span>District</span>
+      <input name="district" [(ngModel)]="district" type="text" [class.invalid]="errors['district']">
+      <small *ngIf="errors['district']">{{ errors['district'] }}</small>
+    </label>
+
+    <label class="field">
+      <span>City or village</span>
+      <input name="city" [(ngModel)]="city" type="text">
+    </label>
+
+    <label class="field">
+      <span>State</span>
+      <input name="state" [(ngModel)]="state" type="text">
+    </label>
+
+    <label class="field">
+      <span>Postal code</span>
+      <input name="postalCode" [(ngModel)]="postalCode" type="text">
+    </label>
+
+    <div class="field field-wide">
+      <span>Map URL / Current location</span>
+      <div class="map-url-row">
+        <input name="mapUrl" [(ngModel)]="mapUrl" type="url" placeholder="https://maps.google.com/..." (ngModelChange)="onMapUrlChange()">
+        <button
+          type="button"
+          class="btn-locate"
+          (click)="useCurrentLocation()"
+          [disabled]="detectingLocation"
+        >
+          <i class="fas" [class.fa-location-crosshairs]="!detectingLocation" [class.fa-spinner]="detectingLocation" [class.fa-spin]="detectingLocation"></i>
+          {{ detectingLocation ? 'Detecting...' : 'Use current location' }}
+        </button>
+      </div>
+      <a *ngIf="mapUrl" class="map-preview-link" [href]="mapUrl" target="_blank" rel="noopener">
+        <i class="fas fa-map-location-dot"></i> Open in Maps
+      </a>
+    </div>
+  </div>
+
+  <div class="section-title">Project Tags</div>
+  <label class="checkbox-row">
+    <input name="needsLandscapingConsultancy" type="checkbox" [(ngModel)]="needsLandscapingConsultancy">
+    <span>Needs landscaping consultancy</span>
+  </label>
+
+  <div class="section-title">Land & Water Profile</div>
+  <div class="form-grid">
+    <label class="field">
+      <span>Total area</span>
+      <input name="totalArea" [(ngModel)]="totalArea" type="number" min="0" step="0.01" [class.invalid]="errors['totalArea']">
+      <small *ngIf="errors['totalArea']">{{ errors['totalArea'] }}</small>
+    </label>
+
+    <label class="field">
+      <span>Unit</span>
+      <select name="areaUnit" [(ngModel)]="areaUnit">
+        <option *ngFor="let option of areaUnitOptions" [value]="option.value">{{ option.label }}</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Cultivable area</span>
+      <input name="cultivableArea" [(ngModel)]="cultivableArea" type="number" min="0" step="0.01">
+    </label>
+
+    <div class="field field-wide">
+      <span>Irrigation source <small class="hint">(select one or more)</small></span>
+      <div class="chip-row" [class.invalid]="errors['irrigationSources']">
+        <button
+          type="button"
+          class="chip"
+          *ngFor="let option of irrigationSourceOptions"
+          [class.active]="isIrrigationSourceSelected(option)"
+          (click)="toggleIrrigationSource(option)"
+        >
+          <i class="fas" [class.fa-check]="isIrrigationSourceSelected(option)" [class.fa-plus]="!isIrrigationSourceSelected(option)"></i>
+          {{ option }}
+        </button>
+      </div>
+      <small *ngIf="errors['irrigationSources']">{{ errors['irrigationSources'] }}</small>
+    </div>
+
+    <label class="field">
+      <span>Irrigation method</span>
+      <select name="irrigationMethod" [(ngModel)]="irrigationMethod">
+        <option value="">Select</option>
+        <option *ngFor="let option of irrigationMethodOptions" [value]="option">{{ option }}</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span>Terrain type</span>
+      <select name="terrainType" [(ngModel)]="terrainType">
+        <option value="">Select</option>
+        <option *ngFor="let option of terrainOptions" [value]="option">{{ option }}</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="section-title">Electricity / Power Supply</div>
+  <div class="form-grid">
+    <label class="field">
+      <span>Transformer (TC) horse power</span>
+      <input name="transformerHp" [(ngModel)]="transformerHp" type="number" min="0" step="0.01">
+    </label>
+
+    <label class="field">
+      <span>Number of electric motors</span>
+      <input name="motorCount" [(ngModel)]="motorCount" type="number" min="0" step="1">
+    </label>
+
+    <label class="field">
+      <span>Total HP of electric motors</span>
+      <input name="totalMotorHp" [(ngModel)]="totalMotorHp" type="number" min="0" step="0.01">
+    </label>
+  </div>
+
+  <div class="section-title">Crop Plan</div>
+  <div class="field field-wide">
+    <span>Add crops</span>
+    <div class="tag-input">
+      <input name="cropInput" [(ngModel)]="cropInput" type="text" (keydown.enter)="$event.preventDefault(); addCrop()">
+      <button type="button" (click)="addCrop()" aria-label="Add crop">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="crop-cards" *ngIf="crops.length">
+    <div class="crop-card" *ngFor="let crop of crops; index as i">
+      <div class="crop-top">
+        <strong>{{ crop.name }}</strong>
+        <button type="button" class="remove-btn" (click)="removeCrop(crop.name)" [attr.aria-label]="'Remove ' + crop.name">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="crop-grid">
+        <label class="field">
+          <span>Variety</span>
+          <input [name]="'cropVariety' + i" [(ngModel)]="crop.variety" type="text">
+        </label>
+        <label class="field">
+          <span>Season</span>
+          <select [name]="'cropSeason' + i" [(ngModel)]="crop.season">
+            <option value="">Select</option>
+            <option *ngFor="let season of cropSeasonOptions" [value]="season">{{ season }}</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Area</span>
+          <input [name]="'cropArea' + i" [(ngModel)]="crop.area" type="number" min="0" step="0.01">
+        </label>
+        <label class="field">
+          <span>Crop age (years)</span>
+          <input [name]="'cropAge' + i" [(ngModel)]="crop.cropAge" type="number" min="0" step="0.5" placeholder="e.g. 3">
+        </label>
+        <label class="field">
+          <span>Total trees</span>
+          <input [name]="'cropTrees' + i" [(ngModel)]="crop.totalTrees" type="number" min="0" step="1" placeholder="e.g. 200">
+        </label>
+        <label class="field">
+          <span>Spacing</span>
+          <input [name]="'cropSpacing' + i" [(ngModel)]="crop.spacing" type="text" placeholder="e.g. 5x5 ft">
+        </label>
+      </div>
+    </div>
+  </div>
+  <small class="error-inline" *ngIf="errors['crops']">{{ errors['crops'] }}</small>
+
+  <div class="section-title">Planning Notes</div>
+
+  <label class="checkbox-row checkbox-row--inline">
+    <input name="isOnlineVisit" type="checkbox" [(ngModel)]="isOnlineVisit">
+    <span>Online visit only</span>
+  </label>
+
+  <div class="form-grid">
+    <label class="field">
+      <span>Start date</span>
+      <input name="startDate" [(ngModel)]="startDate" type="date">
+    </label>
+
+    <label class="field">
+      <span>Expected completion</span>
+      <input name="expectedCompletionDate" [(ngModel)]="expectedCompletionDate" type="date">
+    </label>
+
+    <label class="field" *ngIf="!isOnlineVisit">
+      <span>Visit frequency (per year)</span>
+      <input name="visitFrequency" [(ngModel)]="visitFrequency" type="number" min="0">
+    </label>
+
+    <label class="field field-wide">
+      <span>Description</span>
+      <textarea name="description" [(ngModel)]="description" rows="3"></textarea>
+    </label>
+
+    <label class="field field-wide">
+      <span>Internal notes</span>
+      <textarea name="notes" [(ngModel)]="notes" rows="3"></textarea>
+    </label>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" class="btn-secondary" (click)="cancel.emit()" [disabled]="isSubmitting">Cancel</button>
+    <button type="submit" class="btn-primary" [disabled]="isSubmitting || lookupInProgress">
+      <i class="fas" [class.fa-spinner]="isSubmitting" [class.fa-spin]="isSubmitting" [class.fa-check]="!isSubmitting"></i>
+      {{ submitLabel }}
+    </button>
+  </div>
+</form>

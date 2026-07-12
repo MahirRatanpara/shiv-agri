@@ -100,6 +100,113 @@
   font-family: monospace;
 }
 
+.detail-help {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 4px 0 0;
+}
+
+.phone-detail {
+  align-items: flex-start;
+  background: linear-gradient(135deg, #f0fdf4, #ffffff);
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.phone-summary {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.detail-value.missing {
+  color: #b45309;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+.btn-edit-profile,
+.btn-save-profile,
+.btn-cancel-profile {
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-edit-profile,
+.btn-save-profile {
+  background: #047857;
+  border: 1px solid #047857;
+  color: #ffffff;
+}
+
+.btn-cancel-profile {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.btn-edit-profile:hover,
+.btn-save-profile:hover:not(:disabled) {
+  background: #065f46;
+  border-color: #065f46;
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.18);
+}
+
+.phone-editor {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 132px minmax(180px, 1fr) auto auto;
+  max-width: 650px;
+  width: min(100%, 650px);
+}
+
+.phone-editor input,
+.phone-editor select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 14px;
+  min-height: 40px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.phone-editor input:focus,
+.phone-editor select:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+  outline: none;
+}
+
+.phone-editor input.invalid {
+  border-color: #dc2626;
+}
+
+.phone-editor small {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  grid-column: 1 / -1;
+}
+
+.btn-save-profile:disabled,
+.btn-cancel-profile:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .status-approved,
 .status-pending {
   display: flex;
@@ -223,5 +330,21 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
+  }
+
+  .phone-summary,
+  .phone-editor {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .phone-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-edit-profile,
+  .btn-save-profile,
+  .btn-cancel-profile {
+    width: 100%;
   }
 }

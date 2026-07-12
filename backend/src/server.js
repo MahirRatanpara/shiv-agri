@@ -3,6 +3,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const connectDB = require('./config/database');
+const fertilizerCropConfig = require('./config/fertilizerCropConfig');
+const mediaCleanupService = require('./services/mediaCleanupService');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 
@@ -10,6 +12,15 @@ const app = express();
 
 // Connect to database
 connectDB();
+
+// Load static backend configs (in-memory)
+fertilizerCropConfig.loadConfig();
+
+// Start scheduled media cleanup: permanently purges soft-deleted media
+// (farm photos, designs, prescriptions, attached images) older than the
+// retention window (default 30 days) and removes the underlying files
+// from the media service.
+mediaCleanupService.startScheduled();
 
 // Allowed origins: configured web origins + native app WebView origins.
 // Capacitor serves the app from capacitor://localhost (iOS) and http(s)://localhost
@@ -28,7 +39,8 @@ app.use(cors({
     }
     return callback(null, false);
   },
-  credentials: true
+  credentials: true,
+  exposedHeaders: ['X-Total-Count', 'Content-Disposition']
 }));
 app.use(cookieParser());
 app.use(express.json());

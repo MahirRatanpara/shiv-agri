@@ -1,0 +1,144 @@
+<main class="registration-page">
+  <div class="page-shell">
+    <button class="back-btn" type="button" (click)="cancel()">
+      <i class="fas fa-arrow-left"></i>
+      Back to Farms
+    </button>
+
+    <header class="page-hero">
+      <div class="hero-pattern" aria-hidden="true"></div>
+      <div class="hero-orb" aria-hidden="true"></div>
+
+      <span class="eyebrow">
+        <i class="fas fa-seedling"></i>
+        {{ isFarmer ? 'Farm registration' : 'New farm record' }}
+      </span>
+      <h2>{{ isFarmer ? 'Register New Farm' : 'Create Approved Farm' }}</h2>
+      <p>{{ isFarmer ? 'Your registration will go to the team for review. You\'ll be notified once it\'s approved.' : 'Manager-created farms are approved immediately when a mobile-linked user is selected.' }}</p>
+
+      <div class="step-bar" *ngIf="isFarmer" aria-hidden="true">
+        <div class="step-item active">
+          <span class="step-num">1</span>
+          <span class="step-label">Submit details</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step-item">
+          <span class="step-num">2</span>
+          <span class="step-label">Team review</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step-item">
+          <span class="step-num">3</span>
+          <span class="step-label">Get notified</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="profile-alert" *ngIf="needsPhoneNumber" role="alert">
+      <div class="alert-icon"><i class="fas fa-mobile-screen-button"></i></div>
+      <div class="alert-text">
+        <strong>Mobile number required</strong>
+        <span>Add your mobile number in profile before submitting a farm registration. This is how we link your projects.</span>
+      </div>
+      <button type="button" (click)="goToAccount()">
+        <i class="fas fa-user-pen"></i>
+        Update Profile
+      </button>
+    </div>
+
+    <div class="form-container">
+      <app-farm-registration-form
+        [mode]="isFarmer ? 'farmer' : 'manager'"
+        [currentUser]="currentUser"
+        [isSubmitting]="isSubmitting"
+        (formSubmit)="submitFarm($event)"
+        (cancel)="cancel()"
+      ></app-farm-registration-form>
+
+      <!-- ============================
+           Inline quotation block (manager/admin only).
+           Lets the manager attach a quotation in one step and activate
+           the farm to "ready" (Running).
+           ============================ -->
+      <section class="inline-quotation-block" *ngIf="isManagerMode">
+        <header class="inline-quotation-head">
+          <label class="inline-toggle">
+            <input
+              type="checkbox"
+              [checked]="includeQuotation"
+              (change)="toggleIncludeQuotation()"
+              [disabled]="isSubmitting"
+            />
+            <span class="inline-toggle-text">
+              <strong>
+                <i class="fas fa-file-invoice-dollar"></i>
+                Add quotation now
+              </strong>
+              <small>Attach an annual quotation when you save the farm — the farmer won't need to accept separately.</small>
+            </span>
+          </label>
+        </header>
+
+        <div class="inline-quotation-body" *ngIf="includeQuotation">
+          <div class="inline-quotation-grid">
+            <label class="quotation-field">
+              <span><i class="fas fa-rupee-sign"></i> Annual amount (₹)</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [(ngModel)]="quotationAmountPerYear"
+                placeholder="e.g. 60000"
+                [disabled]="isSubmitting"
+              />
+            </label>
+            <label class="quotation-field">
+              <span><i class="fas fa-calendar"></i> First instalment date</span>
+              <input
+                type="date"
+                [(ngModel)]="quotationStartDate"
+                [disabled]="isSubmitting"
+              />
+            </label>
+          </div>
+
+          <label class="quotation-field">
+            <span><i class="fas fa-align-left"></i> Quotation details <em class="optional">(optional)</em></span>
+            <div class="rich-toolbar" role="toolbar" aria-label="Formatting">
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('italic')" title="Italic"><i class="fas fa-italic"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('underline')" title="Underline"><i class="fas fa-underline"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('insertUnorderedList')" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('insertOrderedList')" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+              <button type="button" class="rt-btn" (click)="applyQuotationFormat('removeFormat')" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+            </div>
+            <div
+              #inlineQuotationEditor
+              class="quotation-editor"
+              contenteditable="true"
+              (input)="syncQuotationContent()"
+              placeholder="Describe the scope of the annual consultancy..."
+            ></div>
+          </label>
+
+          <label class="inline-toggle inline-activate">
+            <input
+              type="checkbox"
+              [(ngModel)]="activateAfterCreate"
+              [disabled]="isSubmitting"
+            />
+            <span class="inline-toggle-text">
+              <strong>Activate immediately</strong>
+              <small>Move the farm to <em>Running</em> (ready) right after the quotation is attached.</small>
+            </span>
+          </label>
+
+          <div class="inline-quotation-help" *ngIf="includeQuotation">
+            <i class="fas fa-info-circle"></i>
+            The quotation will be attached as <strong>accepted</strong> and visible in the farm's history. The farmer will not need to accept again.
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>

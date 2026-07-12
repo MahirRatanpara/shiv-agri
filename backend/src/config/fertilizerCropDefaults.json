@@ -1,0 +1,379 @@
+{
+  "Magfali": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "day25Tricho": 1.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "ADAD": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "CHANA": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "Cotton": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "day45As": 12.0,
+      "day60": 11.0,
+      "day75As": 13.0,
+      "day90Urea": 12.0,
+      "day90Mag": 4.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray2_hormoneDose": 10.0
+    }
+  },
+  "Soyabean": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Teti": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "day75As": 13.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Tarbuch": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "day75As": 13.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Tameta": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "day75As": 13.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Kakdi": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Marchi": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "day75As": 13.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray2_hormoneDose": 10.0
+    }
+  },
+  "Ringni": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day45As": 12.0,
+      "day75As": 13.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray2_hormoneDose": 10.0
+    }
+  },
+  "MAG": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "TUVER": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "day75As": 13.0,
+      "spray1_stage": 120.0,
+      "spray1_npkType": "૦૦:૫૨:૩૪",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Wheat": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "day25Npk": 250.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0
+    }
+  },
+  "Jeeru": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "Dhana": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "Kalu Jeeru": {
+    "normal": {
+      "organicManure": 1.0,
+      "castorCake": 50.0,
+      "sardarAmin": 3.0,
+      "micronutrient": 4.0,
+      "spray1_stage": 45.0,
+      "spray1_npkType": "૧૯:૧૯:૧૯",
+      "spray1_npkDose": 100.0,
+      "spray1_hormoneName": "ફેન્ટેકપ્લસ",
+      "spray1_hormoneDose": 10.0,
+      "spray2_stage": 90.0,
+      "spray2_npkType": "૦૦:૫૨:૩૪",
+      "spray2_npkDose": 100.0,
+      "spray2_hormoneName": "પ્રોજીબ",
+      "spray2_hormoneDose": 0.33
+    }
+  },
+  "Chikoo": {
+    "small-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 10.0,
+      "m1_chhaniyu": 2.0,
+      "m1_erandakhol": 1.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    },
+    "large-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 100.0,
+      "m1_chhaniyu": 50.0,
+      "m1_erandakhol": 5.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    }
+  },
+  "JAMBU": {
+    "small-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 10.0,
+      "m1_chhaniyu": 2.0,
+      "m1_erandakhol": 1.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    },
+    "large-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 100.0,
+      "m1_chhaniyu": 50.0,
+      "m1_erandakhol": 5.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    }
+  },
+  "Mango": {
+    "small-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 10.0,
+      "m1_chhaniyu": 2.0,
+      "m1_erandakhol": 1.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ફેબ્રુઆરી"
+    },
+    "large-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 100.0,
+      "m1_chhaniyu": 50.0,
+      "m1_erandakhol": 5.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ફેબ્રુઆરી"
+    }
+  },
+  "Naryeli": {
+    "small-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 10.0,
+      "m1_chhaniyu": 2.0,
+      "m1_erandakhol": 1.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    },
+    "large-fruit": {
+      "m1_month": "જૂન",
+      "m1_sardaramin": 100.0,
+      "m1_chhaniyu": 50.0,
+      "m1_erandakhol": 5.0,
+      "m2_month": "ઓગસ્ટ",
+      "m2_npk": 10.0,
+      "m3_month": "ઓક્ટોબર"
+    }
+  }
+}

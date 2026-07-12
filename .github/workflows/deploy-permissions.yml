@@ -1,7 +1,7 @@
 name: Deploy Database Permissions
 
 on:
-  # Called by deploy-api workflow after successful deployment
+  # Called by deploy-api workflow before API deployment
   workflow_call:
     inputs:
       dry_run:
@@ -83,7 +83,17 @@ jobs:
             }
           "
 
-      - name: Run permissions migration
+      - name: Copy permissions.yml to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "backend/src/config/permissions.yml"
+          target: "/tmp/permissions-deploy"
+          strip_components: 3
+
+      - name: Copy to container and run migration
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -106,19 +116,20 @@ jobs:
               echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
               docker compose -f docker-compose.prod.yml pull api
               docker compose -f docker-compose.prod.yml up -d api
-              sleep 10
+              echo "⏳ Waiting for API container to be ready..."
+              sleep 15
             fi
 
-            # Wait for container to be healthy
-            echo "⏳ Waiting for API container to be ready..."
-            sleep 5
+            # Copy permissions.yml from server into the running container
+            echo "📋 Copying permissions.yml into container..."
+            docker cp /tmp/permissions-deploy/permissions.yml shivagri-api:/app/src/config/permissions.yml
+            echo "✓ permissions.yml copied to container"
 
-            # Verify permissions.yml exists in container (from Docker build)
+            # Verify the file exists in container
             if docker exec shivagri-api test -f /app/src/config/permissions.yml; then
-              echo "✓ permissions.yml found in container (from Docker image)"
+              echo "✓ permissions.yml verified in container"
             else
-              echo "✗ permissions.yml not found in container"
-              echo "Note: permissions.yml should be included in the Docker image build"
+              echo "✗ permissions.yml not found in container after copy"
               exit 1
             fi
 
@@ -139,6 +150,8 @@ jobs:
               docker exec shivagri-api npm run migrate:permissions
             fi
 
+            # Clean up temp file
+            rm -rf /tmp/permissions-deploy
             echo "✅ Permission migration completed successfully!"
 
       - name: Create deployment summary
@@ -149,7 +162,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TRIGGER_SOURCE" == "deploy-api" ]; then
-            echo "**Mode:** Automatic (After API deployment)" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode:** Automatic (Before API deployment)" >> $GITHUB_STEP_SUMMARY
           else
             echo "**Mode:** Manual (Standalone)" >> $GITHUB_STEP_SUMMARY
           fi
@@ -162,7 +175,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Permission migration completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Using permissions.yml from Docker image (built from latest code)" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** permissions.yml copied explicitly from repo to container" >> $GITHUB_STEP_SUMMARY
 
       - name: Notify on failure
         if: failure()

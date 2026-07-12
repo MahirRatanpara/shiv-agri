@@ -1,0 +1,142 @@
+<div class="cp-container">
+  <main class="cp-card" role="dialog" aria-labelledby="cp-title">
+    <header class="cp-header">
+      <div class="cp-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22c4-6 4-12 0-18-4 6-4 12 0 18z"/>
+          <path d="M5 14c2 0 4 1 5 4"/>
+          <path d="M19 14c-2 0-4 1-5 4"/>
+        </svg>
+      </div>
+      <h1 id="cp-title">One more step</h1>
+      <p *ngIf="needsEmail">Add your name and email to finish setting up your account.</p>
+      <p *ngIf="!needsEmail && needsPhone && otpLoginEnabled">Verify your mobile number to finish setting up your account.</p>
+      <p *ngIf="!needsEmail && needsPhone && !otpLoginEnabled">Add your mobile number to finish setting up your account.</p>
+    </header>
+
+    <!-- ================= EMAIL + NAME ================= -->
+    <form *ngIf="needsEmail" class="cp-form" (ngSubmit)="submitEmail()" novalidate>
+      <label for="cp-name" class="cp-label">Full name</label>
+      <input
+        id="cp-name"
+        class="cp-input"
+        type="text"
+        autocomplete="name"
+        placeholder="Your full name"
+        [(ngModel)]="fullName"
+        name="fullName"
+        [disabled]="isLoading"
+        required />
+
+      <label for="cp-email" class="cp-label">Email address</label>
+      <input
+        id="cp-email"
+        class="cp-input"
+        type="email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        [(ngModel)]="email"
+        name="email"
+        [disabled]="isLoading"
+        required />
+      <p class="cp-help">We'll use this to send reports and account updates.</p>
+
+      <button type="submit" class="cp-primary-btn" [disabled]="!isEmailValid || !isNameValid || isLoading">
+        <span *ngIf="!isLoading">Save and continue</span>
+        <span *ngIf="isLoading" class="cp-loading"><span class="cp-spinner" aria-hidden="true"></span> Saving…</span>
+      </button>
+    </form>
+
+    <!-- ================= PHONE (OTP-verified) ================= -->
+    <ng-container *ngIf="!needsEmail && needsPhone && otpLoginEnabled">
+      <!-- Step 1: enter phone -->
+      <form *ngIf="phoneStep === 'enter-phone'" class="cp-form" (ngSubmit)="requestOtp()" novalidate>
+        <label for="cp-phone" class="cp-label">Mobile number</label>
+        <div class="cp-phone-row">
+          <select class="cp-country" [(ngModel)]="selectedCountryCode" name="countryCode" [disabled]="isLoading" aria-label="Country code">
+            <option *ngFor="let c of countryCodes" [value]="c.dial">{{ c.label }}</option>
+          </select>
+          <input
+            id="cp-phone"
+            class="cp-input"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel-national"
+            placeholder="98765 43210"
+            [value]="phoneNumber"
+            (input)="onPhoneInput($event)"
+            [disabled]="isLoading"
+            required />
+        </div>
+        <p class="cp-help">We'll send a {{ OTP_LENGTH }}-digit code on WhatsApp.</p>
+
+        <button type="submit" class="cp-primary-btn" [disabled]="!isPhoneNumberValid || isLoading">
+          <span *ngIf="!isLoading">Send code on WhatsApp</span>
+          <span *ngIf="isLoading" class="cp-loading"><span class="cp-spinner" aria-hidden="true"></span> Sending…</span>
+        </button>
+      </form>
+
+      <!-- Step 2: enter OTP -->
+      <form *ngIf="phoneStep === 'enter-otp'" class="cp-form" (ngSubmit)="verifyOtp()" novalidate>
+        <p class="cp-subtitle">
+          Sent to <strong>{{ selectedCountryCode }} {{ phoneNumber }}</strong>
+          <button type="button" class="cp-link" (click)="changePhoneNumber()" [disabled]="isLoading">Change</button>
+        </p>
+        <label for="cp-otp" class="cp-label">Verification code</label>
+        <input
+          id="cp-otp"
+          class="cp-input cp-otp"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          [attr.maxlength]="OTP_LENGTH"
+          placeholder="Enter {{ OTP_LENGTH }}-digit code"
+          [value]="otpCode"
+          (input)="onOtpInput($event)"
+          [disabled]="isLoading" />
+
+        <button type="submit" class="cp-primary-btn" [disabled]="!isOtpValid || isLoading">
+          <span *ngIf="!isLoading">Verify and continue</span>
+          <span *ngIf="isLoading" class="cp-loading"><span class="cp-spinner" aria-hidden="true"></span> Verifying…</span>
+        </button>
+        <button type="button" class="cp-secondary-btn" (click)="resendOtp()" [disabled]="resendCountdown > 0 || isLoading">
+          <span *ngIf="resendCountdown > 0">Resend code in {{ resendCountdown }}s</span>
+          <span *ngIf="resendCountdown <= 0">Resend code</span>
+        </button>
+      </form>
+    </ng-container>
+
+    <!-- ================= PHONE (manual, Google-only mode) ================= -->
+    <form *ngIf="!needsEmail && needsPhone && !otpLoginEnabled" class="cp-form" (ngSubmit)="saveManualPhone()" novalidate>
+      <label for="cp-phone-manual" class="cp-label">Mobile number</label>
+      <div class="cp-phone-row">
+        <select class="cp-country" [(ngModel)]="selectedCountryCode" name="countryCodeManual" [disabled]="isLoading" aria-label="Country code">
+          <option *ngFor="let c of countryCodes" [value]="c.dial">{{ c.label }}</option>
+        </select>
+        <input
+          id="cp-phone-manual"
+          class="cp-input"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="tel-national"
+          placeholder="98765 43210"
+          [value]="phoneNumber"
+          (input)="onPhoneInput($event)"
+          [disabled]="isLoading"
+          required />
+      </div>
+      <p class="cp-help">We'll use this number to contact you about your reports.</p>
+
+      <button type="submit" class="cp-primary-btn" [disabled]="!isPhoneNumberValid || isLoading">
+        <span *ngIf="!isLoading">Save and continue</span>
+        <span *ngIf="isLoading" class="cp-loading"><span class="cp-spinner" aria-hidden="true"></span> Saving…</span>
+      </button>
+    </form>
+
+    <div *ngIf="errorMessage" class="cp-alert" role="alert">{{ errorMessage }}</div>
+
+    <footer class="cp-footer">
+      <button type="button" class="cp-link" (click)="logout()">Sign out</button>
+    </footer>
+  </main>
+</div>

@@ -16,26 +16,29 @@
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasLabTestingAccess">
           <a class="nav-link" routerLink="/lab-testing">
-            <i class="fas fa-microscope"></i> Lab Testing
+            <i class="fas fa-microscope"></i> Lab
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasFarmDashboardAccess">
-          <a class="nav-link" routerLink="/farm-dashboard">
-            <i class="fas fa-tractor"></i> Farm Dashboard
+          <a class="nav-link" routerLink="/farm-management">
+            <i class="fas fa-tractor"></i> Farms
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && hasManagerialWorkAccess">
           <a class="nav-link" routerLink="/managerial-work">
-            <i class="fas fa-file-invoice"></i> Managerial Work
+            <i class="fas fa-file-invoice"></i> Managerial
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
           <a class="nav-link" routerLink="/admin/users">
-            <i class="fas fa-user-shield"></i> Admin Dashboard
+            <i class="fas fa-user-shield"></i> Admin
           </a>
         </li>
       </ul>
       <ul class="navbar-nav ml-auto auth-nav">
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <app-notification-bell></app-notification-bell>
+        </li>
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a class="nav-link" routerLink="/login">
             <i class="fas fa-sign-in-alt"></i> Login
@@ -52,7 +55,6 @@
             <span *ngIf="!currentUser.profilePhoto || profileImageLoadError" class="user-avatar-placeholder">
               {{ currentUser.name.charAt(0).toUpperCase() }}
             </span>
-            {{ currentUser.name }}
           </a>
         </li>
         <li class="nav-item" *ngIf="isAuthenticated">

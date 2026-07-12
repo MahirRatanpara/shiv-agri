@@ -26,10 +26,59 @@ const projectSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled'],
+    enum: [
+      'Upcoming', 'Running', 'Completed', 'On Hold', 'Cancelled',
+      'pending_approval', 'approved', 'rejected',
+      // Quotation workflow (farmer-submitted farms)
+      'pending_quotation',   // Farmer submitted, awaiting quotation from manager
+      'pending_acceptance'   // Manager submitted quotation, awaiting farmer acceptance
+    ],
     default: 'Upcoming',
     required: true,
     index: true // For filtering
+  },
+
+  // Currently-active quotation for this project (the one shown to the farmer).
+  // Updated whenever a manager submits a new quotation. Older quotations
+  // remain in the Quotation collection with status 'superseded'.
+  activeQuotation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quotation',
+    index: true
+  },
+
+  // First-time approval timestamp via the quotation flow
+  quotationAcceptedAt: { type: Date },
+
+  submittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+
+  submittedAt: {
+    type: Date
+  },
+
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  approvedAt: {
+    type: Date
+  },
+
+  rejectedReason: {
+    type: String,
+    trim: true,
+    maxlength: 500
+  },
+
+  registrationSource: {
+    type: String,
+    enum: ['farmer_self', 'manager_direct'],
+    index: true
   },
 
   // Client Information
@@ -62,6 +111,7 @@ const projectSchema = new mongoose.Schema({
   // Location Information
   location: {
     address: { type: String, trim: true },
+    taluka: { type: String, trim: true, index: true },
     city: { type: String, trim: true, index: true }, // Indexed for filtering
     district: { type: String, trim: true },
     state: { type: String, trim: true, index: true }, // Indexed for filtering
@@ -87,13 +137,45 @@ const projectSchema = new mongoose.Schema({
   // Land Details (for farms)
   landDetails: {
     totalArea: { type: Number },
-    areaUnit: { type: String, enum: ['acres', 'hectares', 'sqmeters'], default: 'acres' },
+    areaUnit: {
+      type: String,
+      enum: ['acres', 'hectares', 'sqmeters', 'vigha-16', 'vigha-24'],
+      default: 'acres'
+    },
     cultivableArea: { type: Number },
     cultivablePercentage: { type: Number }, // Calculated field
     soilType: { type: String },
-    waterSource: [{ type: String }], // Array: bore well, canal, river, rainwater
-    irrigationSystem: { type: String }, // drip, sprinkler, flood, mixed
+    waterSource: [{ type: String }], // Legacy: bore well, canal, river, rainwater
+    // Legacy single-source field. New code writes to irrigationSources[]
+    // below; this stays for back-compat reads and is mirrored on save.
+    irrigationSystem: { type: String },
+    // Multi-select water sources (Bore, Well, Canal, River, Pond, Tank, ...).
+    // Replaces irrigationSystem going forward.
+    irrigationSources: [{ type: String, trim: true }],
+    // How the field is watered (Drip, Flood, Sprinkler, Furrow, ...).
+    irrigationMethod: { type: String, trim: true },
     terrainType: { type: String } // flat, sloped, hilly, mixed
+  },
+
+  // Electricity / Power Supply (for farms)
+  electricity: {
+    transformerHp: { type: Number, min: 0 }, // Transformer TC Horse Power
+    motorCount: { type: Number, min: 0 }, // Number of electric motors
+    totalMotorHp: { type: Number, min: 0 } // Combined HP across all motors
+  },
+
+  // Landscaping consultancy tag — orthogonal to category, identifies a farm
+  // project that also needs landscaping consultancy work
+  needsLandscapingConsultancy: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  // Online (remote) visit projects skip on-site visit count tracking
+  isOnlineVisit: {
+    type: Boolean,
+    default: false
   },
 
   // Budget Information with categories
@@ -194,6 +276,205 @@ const projectSchema = new mongoose.Schema({
     uploadedAt: { type: Date, default: Date.now }
   }],
 
+  // Farm media (photos/videos uploaded by the farm owner via Media Service)
+  farmMedia: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video'], required: true },
+    sizeBytes: { type: Number },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Tracks whether this upload counted toward the farmer's weekly quota.
+    // Farmer uploads default to true; admin/manager uploads bypass the quota
+    // and are stamped countsTowardQuota=false so deletes don't refund anything.
+    countsTowardQuota: { type: Boolean, default: true },
+    // Attended workflow: new uploads land in the "unattended" bucket
+    // (shown as thumbnails). The project's owner/workers can acknowledge
+    // them by marking attended, which moves them to the paginated drawer.
+    attended: { type: Boolean, default: false },
+    attendedAt: { type: Date },
+    attendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    attendedByName: { type: String },
+    // Soft-delete metadata (populated when an admin/manager removes the item)
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
+  // Landscaping designs (images/videos uploaded by managers/admins for landscaping projects)
+  landscapingDesigns: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    // 'file' covers any non-image/non-video upload (PDF, doc, zip, etc.).
+    type: { type: String, enum: ['image', 'video', 'file'], required: true },
+    sizeBytes: { type: Number },
+    // Original upload filename — used to label non-image/non-video files.
+    fileName: { type: String, trim: true },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Soft-delete metadata
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
+  // Lab testing reports linked to this farm (soil / water / fertilizer).
+  // Auto-populated on PDF generation when the sample's farmsName + mobileNo
+  // match this project's name + clientPhone (case-insensitive farmsName,
+  // last-10-digits mobileNo). One entry per (sampleType + sampleId).
+  reports: [{
+    sampleType: {
+      type: String,
+      enum: ['soil', 'water', 'fertilizer'],
+      required: true,
+      index: true
+    },
+    sampleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      refPath: 'reports.sampleModel',
+      index: true
+    },
+    sampleModel: {
+      type: String,
+      enum: ['SoilSample', 'WaterSample', 'FertilizerSample'],
+      required: true
+    },
+    sessionId: { type: mongoose.Schema.Types.ObjectId },
+    sampleNumber: { type: String, trim: true },
+    farmerName: { type: String, trim: true },
+    farmsName: { type: String, trim: true },
+    mobileNo: { type: String, trim: true },
+    cropName: { type: String, trim: true },
+    fertilizerType: { type: String, trim: true },
+    sessionDate: { type: String, trim: true },
+    generatedAt: { type: Date, default: Date.now, index: true },
+    generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    generatedByName: { type: String }
+  }],
+
+  // Manually-uploaded farm reports (images / PDFs attached by admin/manager
+  // to supplement the auto-linked soil/water/fertilizer reports). Auto-linked
+  // reports remain in `reports[]` above and are never written here.
+  manualReports: [{
+    mediaId: { type: String, required: true },
+    url: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    sizeBytes: { type: Number },
+    fileName: { type: String, trim: true },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    // Optional categorization so the UI can show a chip (soil/water/fertilizer/other).
+    sampleType: {
+      type: String,
+      enum: ['soil', 'water', 'fertilizer', 'other'],
+      default: 'other'
+    },
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
+  // Prescriptions and ad-hoc documents (uploaded by managers/admins; farm user reads only)
+  prescriptions: [{
+    // 'file' for uploaded media, 'manual' for free-text prescriptions composed in-app,
+    // 'structured' for the Shiv Agri standard visit-prescription form (matches printed slip)
+    source: { type: String, enum: ['file', 'manual', 'structured'], default: 'file' },
+    docType: {
+      type: String,
+      enum: ['image', 'video', 'pdf', 'docx', 'text', 'manual', 'structured'],
+      required: true
+    },
+    title: { type: String, trim: true },
+    notes: { type: String, trim: true },
+    // Inline text for text-based or manual prescriptions
+    textContent: { type: String, trim: true },
+    // For uploaded files
+    mediaId: { type: String },
+    url: { type: String },
+    mimeType: { type: String },
+    sizeBytes: { type: Number },
+    fileName: { type: String, trim: true },
+
+    // Structured prescription payload (used when docType === 'structured').
+    // Mirrors the printed visit slip used by field consultants.
+    structured: {
+      farmerName: { type: String, trim: true },
+      visitDate: { type: Date },
+      lastVisitReview: { type: String, trim: true },
+      landPreparation: { type: String, trim: true },
+      sowingPlanting: { type: String, trim: true },
+      farmingOperations: {
+        leveling: { type: Boolean, default: false },
+        marking: { type: Boolean, default: false },
+        digging: { type: Boolean, default: false },
+        soilFilling: { type: Boolean, default: false },
+        tractor: { type: Boolean, default: false },
+        supports: { type: Boolean, default: false },
+        fillGaps: { type: Boolean, default: false },
+        pruning: { type: Boolean, default: false },
+        other: { type: String, trim: true }
+      },
+      irrigation: { type: String, trim: true },
+      weedControl: { type: String, trim: true },
+      fertilizers: {
+        farmyardManure: { type: Boolean, default: false },
+        chemical: { type: Boolean, default: false },
+        organic: { type: Boolean, default: false },
+        jivamrut: { type: Boolean, default: false },
+        spray: { type: Boolean, default: false }
+      },
+      pests: {
+        soilBorne: { type: Boolean, default: false },
+        root: { type: Boolean, default: false },
+        stem: { type: Boolean, default: false },
+        leaf: { type: Boolean, default: false },
+        flower: { type: Boolean, default: false },
+        fruit: { type: Boolean, default: false }
+      },
+      diseases: {
+        soilBorne: { type: Boolean, default: false },
+        stem: { type: Boolean, default: false },
+        branch: { type: Boolean, default: false },
+        leaf: { type: Boolean, default: false },
+        flower: { type: Boolean, default: false },
+        fruit: { type: Boolean, default: false },
+        other: { type: Boolean, default: false }
+      },
+      hormoneTreatment: { type: Boolean, default: false },
+      fruitHarvesting: { type: Boolean, default: false },
+      grading: { type: Boolean, default: false },
+      packing: { type: Boolean, default: false },
+      otherNotes: { type: String, trim: true }
+    },
+
+    // Photos appended to a structured prescription (rendered at the end of the PDF)
+    attachedImages: [{
+      mediaId: { type: String },
+      url: { type: String },
+      mimeType: { type: String },
+      sizeBytes: { type: Number },
+      fileName: { type: String, trim: true }
+    }],
+
+    status: { type: String, default: 'ACTIVE' },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    uploadedByName: { type: String },
+    uploadedAt: { type: Date, default: Date.now, index: true },
+    // Soft-delete metadata
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
   // Project Specific Data
   crops: [{
     name: { type: String, trim: true },
@@ -201,7 +482,13 @@ const projectSchema = new mongoose.Schema({
     season: { type: String, enum: ['Kharif', 'Rabi', 'Zaid', 'Perennial', ''] },
     plantingDate: { type: Date },
     expectedHarvestDate: { type: Date },
-    area: { type: Number, min: 0 }
+    area: { type: Number, min: 0 },
+    // Crop age in years (relevant for perennials / orchards).
+    cropAge: { type: Number, min: 0 },
+    // Total number of trees / plants for the crop.
+    totalTrees: { type: Number, min: 0 },
+    // Spacing between plants, free text so users can type "5x5 ft" or "3m x 3m".
+    spacing: { type: String, trim: true }
   }],
 
   soilType: {
@@ -267,18 +554,8 @@ const projectSchema = new mongoose.Schema({
     min: 0
   },
 
-  // Expense Tracking
-  expenseEntries: [{
-    expenseId: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
-    description: { type: String, required: true, trim: true },
-    amount: { type: Number, required: true },
-    type: { type: String, enum: ['expense', 'income'], default: 'expense' }, // expense (subtract), income (add)
-    category: { type: String, trim: true }, // Materials, Labor, Equipment, etc.
-    date: { type: Date, default: Date.now },
-    notes: { type: String, trim: true },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now }
-  }],
+  // Note: Transactions are now stored in a separate Transaction collection
+  // The expenses field below is automatically updated when transactions are created/updated/deleted
 
   // User Preferences
   isFavorite: [{
@@ -342,6 +619,23 @@ const projectSchema = new mongoose.Schema({
   deletedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+
+  // Archive (admin-controlled). Archived projects remain visible but
+  // are read-only — no further uploads or status changes allowed.
+  isArchived: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  archivedAt: {
+    type: Date
+  },
+
+  archivedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true, // Adds createdAt and updatedAt automatically
@@ -363,6 +657,8 @@ projectSchema.index({ category: 1, updatedAt: -1 }); // Category + recency
 // Legacy projectType indexes (for backward compatibility)
 projectSchema.index({ status: 1, projectType: 1 });
 projectSchema.index({ projectType: 1, 'location.city': 1 });
+projectSchema.index({ status: 1, submittedBy: 1 });
+projectSchema.index({ registrationSource: 1, status: 1 });
 
 // General indexes
 projectSchema.index({ status: 1, 'location.city': 1 });
@@ -472,6 +768,9 @@ projectSchema.methods.softDelete = function(userId) {
   return this.save();
 };
 
+// Note: Transaction methods have been moved to the separate Transaction model
+// Transactions are now managed via the TransactionService
+
 // ========================
 // Static Methods
 // ========================
@@ -563,6 +862,26 @@ projectSchema.pre('save', function(next) {
 });
 
 projectSchema.pre('save', function(next) {
+  // Note: Expenses are now automatically updated by the Transaction model
+  // when transactions are created/updated/deleted
+
+  // Mirror legacy single irrigationSystem field <-> new irrigationSources[]
+  // so both API styles remain readable during the migration window.
+  if (this.landDetails) {
+    const sources = Array.isArray(this.landDetails.irrigationSources)
+      ? this.landDetails.irrigationSources.filter(Boolean)
+      : [];
+    if (sources.length) {
+      this.landDetails.irrigationSystem = sources.join(', ');
+    } else if (this.landDetails.irrigationSystem) {
+      // Backfill irrigationSources[] from the legacy single field on first save.
+      this.landDetails.irrigationSources = this.landDetails.irrigationSystem
+        .split(/[,;/]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+
   // Update computed fields
   if (this.isModified('budget') || this.isModified('expenses')) {
     this.budgetUtilizationPercentage = this.calculateBudgetUtilization();

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
@@ -9,6 +9,7 @@ import { environment } from '../environments/environment';
  */
 export interface SoilTestingData {
   _id?: string; // Added for referenced samples
+  sampleNumber?: string; // User-entered sample number for PDF
   farmersName: string;
   mobileNo: string;
   location: string;
@@ -27,7 +28,9 @@ export interface SoilTestingData {
   k2o: number | null;
   organicMatter?: number | null; // Auto-calculated
   cropName: string;
+  cropType?: string; // Crop type for fertilizer linking: 'normal', 'small-fruit', 'large-fruit'
   finalDeduction: string;
+  fertilizerSampleId?: string; // Link to fertilizer sample
   createdAt?: string; // Added for referenced samples
   updatedAt?: string; // Added for referenced samples
 
@@ -56,10 +59,12 @@ export interface Session {
   version: number;
   startTime: string;
   endTime?: string;
-  status?: 'active' | 'completed' | 'archived'; // New field
-  sampleCount?: number; // New field - denormalized count
-  lastActivity?: string; // New field - tracks when session was last modified
-  data: SoilTestingData[]; // Populated from SoilTestSample collection
+  status?: 'started' | 'details' | 'ready' | 'completed'; // Session lifecycle status
+  sampleCount?: number; // Denormalized count — used on landing page list
+  lastActivity?: string; // Tracks when session was last modified
+  // Samples are embedded only when a single session is fetched via
+  // GET /sessions/:id — the paginated list endpoint omits them for speed.
+  data?: SoilTestingData[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -77,18 +82,47 @@ export interface SamplePaginationResponse {
   };
 }
 
+/**
+ * Paginated session-list response returned by GET /soil-testing/sessions.
+ * The backend no longer embeds samples in the list payload; call
+ * `getSession(id)` to load a single session together with its samples.
+ */
+export interface PaginatedSessionsResponse {
+  sessions: Session[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type SessionStatusFilter = 'active' | 'completed' | 'all';
+
 @Injectable({
   providedIn: 'root'
 })
 export class SoilTestingService {
   private apiUrl = `${environment.apiUrl}/soil-testing`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  // Get all sessions
-  getAllSessions(): Observable<Session[]> {
-
-    return this.http.get<Session[]>(`${this.apiUrl}/sessions`);
+  /**
+   * Paginated session list for the landing page. Samples are NOT embedded —
+   * use `getSession(id)` to load a single session with its samples.
+   */
+  getSessions(
+    page: number = 1,
+    limit: number = 10,
+    status: SessionStatusFilter = 'all'
+  ): Observable<PaginatedSessionsResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (status && status !== 'all') {
+      params = params.set('status', status);
+    }
+    return this.http.get<PaginatedSessionsResponse>(`${this.apiUrl}/sessions`, { params });
   }
 
   // Get sessions by date
@@ -122,6 +156,11 @@ export class SoilTestingService {
   updateSession(id: string, updates: { endTime?: string; data?: SoilTestingData[] }): Observable<Session> {
 
     return this.http.put<Session>(`${this.apiUrl}/sessions/${id}`, updates);
+  }
+
+  // Update session status (state transitions)
+  updateSessionStatus(id: string, status: 'started' | 'details' | 'ready' | 'completed'): Observable<Session> {
+    return this.http.patch<Session>(`${this.apiUrl}/sessions/${id}/status`, { status });
   }
 
   // Delete a session
@@ -180,13 +219,38 @@ export class SoilTestingService {
   }
 
   /**
-   * Bulk delete samples
+   * Bulk update samples (upsert)
    * @param sessionId - The session ID
-   * @param sampleIds - Array of sample IDs to delete
+   * @param samples - Array of samples to update/insert
    */
+  bulkUpdateSamples(sessionId: string, samples: SoilTestingData[]): Observable<{ message: string; count: number; samples: SoilTestingData[] }> {
+    return this.http.patch<{ message: string; count: number; samples: SoilTestingData[] }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
+      samples
+    });
+  }
+
   deleteSamplesBulk(sessionId: string, sampleIds: string[]): Observable<{ message: string; deletedCount: number }> {
     return this.http.delete<{ message: string; deletedCount: number }>(`${this.apiUrl}/sessions/${sessionId}/samples`, {
       body: { sampleIds }
     });
+  }
+
+  /**
+   * Upload Excel file for session
+   */
+  uploadExcel(sessionId: string, file: File): Observable<{ message: string; updated: number; added: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ message: string; updated: number; added: number }>(
+      `${this.apiUrl}/sessions/${sessionId}/upload-excel`,
+      formData
+    );
+  }
+
+  /**
+   * Get soil data for a specific sample (for fertilizer testing popup)
+   */
+  getSoilDataForSample(sampleId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/samples/${sampleId}/soil-data`);
   }
 }

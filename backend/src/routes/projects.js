@@ -1,7 +1,168 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const farmMediaController = require('../controllers/farmMediaController');
+const farmDesignController = require('../controllers/farmDesignController');
+const farmPrescriptionController = require('../controllers/farmPrescriptionController');
+const farmTransactionController = require('../controllers/farmTransactionController');
+const farmReportController = require('../controllers/farmReportController');
+const quotationController = require('../controllers/quotationController');
+const { authenticate, requirePermission, requireProjectAccess } = require('../middleware/auth');
+
+const farmMediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25 MB per file
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (/^(image|video)\//i.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+const farmDesignUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  // Designs accept any file type — no MIME restriction.
+  fileFilter: (_req, _file, cb) => cb(null, true)
+});
+
+const PRESCRIPTION_MIME_PATTERN = /^(image\/.*|video\/.*|application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/msword|text\/(plain|markdown))$/i;
+
+const farmPrescriptionUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (PRESCRIPTION_MIME_PATTERN.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+// Manual report uploads accept image or PDF only.
+const MANUAL_REPORT_MIME_PATTERN = /^(image\/.*|application\/pdf)$/i;
+const farmManualReportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (MANUAL_REPORT_MIME_PATTERN.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+// Structured prescriptions only accept image attachments (rendered into the PDF)
+const structuredPrescriptionUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+    files: 5
+  },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\//i.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  }
+});
+
+/**
+ * Owner-only media upload guard.
+ * Photos & videos in the "Photos & Videos" section can ONLY be uploaded by the
+ * farm owner who registered the farm (submittedBy / clientId / createdBy).
+ * Managers and admins are intentionally excluded — they have separate
+ * "Designs" and "Prescriptions" sections.
+ */
+const requireFarmOwner = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const Project = require('../models/Project');
+    const project = await Project.findById(req.params.id)
+      .select('submittedBy clientId createdBy')
+      .lean();
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const userId = req.user._id.toString();
+    const isOwner = [project.submittedBy, project.clientId, project.createdBy]
+      .filter(Boolean)
+      .map((id) => id.toString())
+      .includes(userId);
+
+    if (isOwner) return next();
+
+    return res.status(403).json({
+      error: 'Insufficient permissions',
+      message: 'Only the farm owner can upload photos for this farm.'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
+
+/**
+ * Strict admin-only guard. Used for sensitive farm operations like manually
+ * recording transactions where even managers must be excluded.
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role === 'admin') return next();
+  return res.status(403).json({
+    error: 'Insufficient permissions',
+    message: 'This action is restricted to administrators.'
+  });
+};
+
+/**
+ * Manager/admin-only guard for design and prescription uploads.
+ * Admin role always passes; otherwise requires the farm.projects.update
+ * permission.
+ */
+const requireManagerOrAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (req.user.role === 'admin') return next();
+
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    if (userPermissions.includes('farm.projects.update')) return next();
+
+    return res.status(403).json({
+      error: 'Insufficient permissions',
+      message: 'Only managers or admins can perform this action.'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
 
 /**
  * Project Routes
@@ -39,7 +200,7 @@ const { authenticate, requirePermission } = require('../middleware/auth');
  */
 router.get('/',
   authenticate,
-  requirePermission('farm.projects.view'),
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
   projectController.getProjects
 );
 
@@ -70,13 +231,23 @@ router.get('/export',
 );
 
 /**
+ * @route   GET /api/projects/farm-names-by-phone
+ * @desc    Farm-name suggestions for a phone number (testing grids).
+ * @access  Private (any authenticated user)
+ */
+router.get('/farm-names-by-phone',
+  authenticate,
+  projectController.getFarmNamesByPhone
+);
+
+/**
  * @route   GET /api/projects/:id
  * @desc    Get project by ID with full details
  * @access  Private
  */
 router.get('/:id',
   authenticate,
-  requirePermission('farm.projects.view'),
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
   projectController.getProjectById
 );
 
@@ -147,8 +318,42 @@ router.post('/drafts/:id/complete',
  */
 router.post('/',
   authenticate,
-  requirePermission('project.create'),
   projectController.createProject
+);
+
+router.patch('/:id/approve',
+  authenticate,
+  requirePermission('farm.projects.approve'),
+  projectController.approveProject
+);
+
+router.patch('/:id/reject',
+  authenticate,
+  requirePermission('farm.projects.approve'),
+  projectController.rejectProject
+);
+
+router.patch('/:id/start',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.startFarmProject
+);
+
+router.patch('/:id/complete',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.completeFarmProject
+);
+
+router.patch('/:id/status',
+  authenticate,
+  requirePermission('farm.projects.update'),
+  projectController.updateFarmProjectStatus
+);
+
+router.patch('/:id/request-edit',
+  authenticate,
+  projectController.requestProjectEdit
 );
 
 /**
@@ -182,6 +387,26 @@ router.delete('/:id',
 router.delete('/:id/hard',
   authenticate,
   projectController.hardDeleteProject
+);
+
+/**
+ * @route   PATCH /api/projects/:id/archive
+ * @desc    Archive a project (admin only). Disables uploads & lifecycle changes.
+ * @access  Private (Admin)
+ */
+router.patch('/:id/archive',
+  authenticate,
+  projectController.archiveProject
+);
+
+/**
+ * @route   PATCH /api/projects/:id/unarchive
+ * @desc    Restore an archived project (admin only).
+ * @access  Private (Admin)
+ */
+router.patch('/:id/unarchive',
+  authenticate,
+  projectController.unarchiveProject
 );
 
 /**
@@ -258,6 +483,66 @@ router.post('/:id/milestones',
 );
 
 // ========================
+// Transaction Management Routes
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/transactions
+ * @desc    Get project transactions with pagination
+ * @access  Private
+ * @query   {number} page - Page number (default: 1)
+ * @query   {number} limit - Items per page (default: 20, max: 100)
+ * @query   {string} sortBy - Sort field: date/amount/type (default: date)
+ * @query   {string} sortOrder - Sort order: asc/desc (default: desc)
+ */
+router.get('/:id/transactions',
+  authenticate,
+  requirePermission('farm.projects.view'),
+  projectController.getProjectTransactions
+);
+
+/**
+ * @route   POST /api/projects/:id/transactions
+ * @desc    Add transaction to project
+ * @access  Private
+ * @body    {
+ *            description: string (required),
+ *            amount: number (required),
+ *            type: 'debit' | 'credit' (required),
+ *            category: string (optional),
+ *            date: Date (optional),
+ *            notes: string (optional)
+ *          }
+ */
+router.post('/:id/transactions',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.addTransaction
+);
+
+/**
+ * @route   PATCH /api/projects/:id/transactions/:transactionId
+ * @desc    Update transaction in project
+ * @access  Private
+ */
+router.patch('/:id/transactions/:transactionId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.updateTransaction
+);
+
+/**
+ * @route   DELETE /api/projects/:id/transactions/:transactionId
+ * @desc    Remove transaction from project
+ * @access  Private
+ */
+router.delete('/:id/transactions/:transactionId',
+  authenticate,
+  requirePermission('project.update'),
+  projectController.removeTransaction
+);
+
+// ========================
 // Activity Log Routes
 // ========================
 
@@ -273,6 +558,562 @@ router.get('/:id/activity',
   authenticate,
   requirePermission('farm.projects.view'),
   projectController.getProjectActivity
+);
+
+// ========================
+// Farm Media Routes (Photos & Videos)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/media
+ * @desc    List recent farm media (within recent-days window) plus a count
+ *          of older items so the UI can show "View older photos" without
+ *          loading all thumbnails at once.
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmMediaController.listMedia
+);
+
+/**
+ * @route   GET /api/projects/:id/media/older
+ * @desc    Paginated list of older photos (uploaded before the recent cutoff).
+ *          Loaded lazily when the user opens the older-photos drawer.
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media/older',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmMediaController.listOlderMedia
+);
+
+/**
+ * @route   GET /api/projects/:id/media/quota
+ * @desc    Get current week's media upload quota for the project
+ * @access  Private (farm.projects.view)
+ */
+router.get('/:id/media/quota',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmMediaController.getQuota
+);
+
+/**
+ * Attend actions are limited to admins and farm managers — the people
+ * actually responsible for triaging incoming farm media.
+ */
+const requireAttendAccess = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.user.role === 'admin') return next();
+
+  const userPermissions = (req.user.roleRef?.permissions || [])
+    .map((p) => (typeof p === 'string' ? p : p.name));
+  if (userPermissions.includes('farm.projects.approve')) return next();
+
+  return res.status(403).json({
+    success: false,
+    error: 'Insufficient permissions',
+    message: 'Only an admin or farm manager can mark photos as attended.'
+  });
+};
+
+/**
+ * @route   PATCH /api/projects/:id/media/attend-all
+ * @desc    Mark every unattended media item on the project as attended.
+ * @access  Private (Admin or farm manager)
+ */
+router.patch('/:id/media/attend-all',
+  authenticate,
+  requireAttendAccess,
+  farmMediaController.markAllAttended
+);
+
+/**
+ * @route   PATCH /api/projects/:id/media/:mediaId/attend
+ * @desc    Mark a single unattended media item as attended.
+ * @access  Private (Admin or farm manager)
+ */
+router.patch('/:id/media/:mediaId/attend',
+  authenticate,
+  requireAttendAccess,
+  farmMediaController.markAttended
+);
+
+/**
+ * @route   DELETE /api/projects/:id/media/:mediaId
+ * @desc    Soft-delete a single media item from a project.
+ *          - Admin may delete any item (quota refunds).
+ *          - Manager may delete items they uploaded (quota refunds).
+ *          - Farm owner may delete their own UNATTENDED uploads (NO quota
+ *            refund — the weekly cap is one-way).
+ *          Role detection and per-mode policy are enforced inside the
+ *          controller, so the route just requires authentication.
+ * @access  Private (Admin / Manager / Farm owner)
+ */
+router.delete('/:id/media/:mediaId',
+  authenticate,
+  farmMediaController.deleteMedia
+);
+
+/**
+ * @route   POST /api/projects/:id/media
+ * @desc    Upload up to 5 photos/videos to a farm project (max 25MB each).
+ *          Farm owner uploads count toward weekly quota and start unattended.
+ *          Admin/manager uploads bypass the quota and land already attended.
+ * @access  Private (farm owner OR admin/manager)
+ */
+router.post('/:id/media',
+  authenticate,
+  async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Admins always pass.
+    if (req.user.role === 'admin') {
+      req.mediaUploadContext = { isPrivileged: true };
+      return next();
+    }
+
+    // Managers (or anyone holding farm.projects.update) also pass as privileged.
+    const userPermissions = (req.user.roleRef?.permissions || [])
+      .map((p) => (typeof p === 'string' ? p : p.name));
+    if (userPermissions.includes('farm.projects.update')) {
+      req.mediaUploadContext = { isPrivileged: true };
+      return next();
+    }
+
+    // Otherwise fall back to the farm-owner check.
+    return requireFarmOwner(req, res, next);
+  },
+  (req, res, next) => {
+    farmMediaUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmMediaController.uploadMedia
+);
+
+// ========================
+// Designs Routes (manager / admin only; available for all farm types)
+// ========================
+
+router.get('/:id/designs',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmDesignController.listDesigns
+);
+
+router.post('/:id/designs',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmDesignUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmDesignController.uploadDesigns
+);
+
+/**
+ * @route   DELETE /api/projects/:id/designs/:designId
+ * @desc    Soft-delete a landscaping design. Admin deletes any; manager
+ *          deletes their own uploads.
+ * @access  Private (Admin / Manager)
+ */
+router.delete('/:id/designs/:designId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmDesignController.deleteDesign
+);
+
+// ========================
+// Prescription Routes (manager / admin upload, owner read-only)
+// ========================
+
+router.get('/:id/prescriptions',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmPrescriptionController.listPrescriptions
+);
+
+router.post('/:id/prescriptions',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmPrescriptionUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmPrescriptionController.uploadPrescriptions
+);
+
+router.post('/:id/prescriptions/text',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.addTextPrescription
+);
+
+router.post('/:id/prescriptions/manual',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.addManualPrescription
+);
+
+// Structured visit prescription (Shiv Agri standard form). Accepts JSON payload + optional images.
+router.post('/:id/prescriptions/structured',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    structuredPrescriptionUpload.array('images', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmPrescriptionController.addStructuredPrescription
+);
+
+// PDF rendering for a structured prescription (inline view + download).
+router.get('/:id/prescriptions/:prescriptionId/pdf',
+  authenticate,
+  requirePermission(['farm.projects.view', 'farms.view'], { requireAll: false }),
+  farmPrescriptionController.downloadPrescriptionPdf
+);
+
+/**
+ * @route   DELETE /api/projects/:id/prescriptions/:prescriptionId
+ * @desc    Soft-delete a prescription. Admin deletes any; manager deletes
+ *          only items they uploaded.
+ * @access  Private (Admin / Manager)
+ */
+router.delete('/:id/prescriptions/:prescriptionId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmPrescriptionController.deletePrescription
+);
+
+// ========================
+// Lab Reports (auto-linked from soil/water/fertilizer testing PDFs)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/reports
+ * @desc    List soil/water/fertilizer reports linked to this farm.
+ *          Reports are auto-linked when a sample's farmsName + mobileNo
+ *          match this project's name + clientPhone (case-insensitive name,
+ *          last-10-digits phone) at PDF generation time.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.listReports
+);
+
+/**
+ * @route   GET /api/projects/:id/reports/:reportId/pdf
+ * @desc    Inline PDF for the in-app overlay viewer.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports/:reportId/pdf',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.viewReportPdf
+);
+
+/**
+ * @route   GET /api/projects/:id/reports/:reportId/pdf/download
+ * @desc    Attachment-disposition PDF for explicit download.
+ * @access  Stakeholders + farm.projects.view / farms.view
+ */
+router.get('/:id/reports/:reportId/pdf/download',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.downloadReportPdf
+);
+
+// ========================
+// Manually-uploaded reports (admin/manager attach photos/PDFs)
+// ========================
+
+router.get('/:id/manual-reports',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  farmReportController.listManualReports
+);
+
+router.post('/:id/manual-reports',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  farmReportController.uploadManualReports
+);
+
+router.delete('/:id/manual-reports/:reportId',
+  authenticate,
+  requireManagerOrAdmin,
+  farmReportController.deleteManualReport
+);
+
+// ========================
+// Quotations (manager/admin create; farmer accept/reject)
+// ========================
+
+/**
+ * @route   GET /api/projects/:id/quotations
+ * @desc    List all quotations for a project (history)
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.listQuotations
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/active
+ * @desc    Get the currently-active quotation (submitted or accepted)
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/active',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.getActiveQuotation
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/:quotationId
+ * @desc    Get a specific quotation
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/:quotationId',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.getQuotation
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations
+ * @desc    Create / submit a quotation (manager / admin)
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.createQuotation
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/accept
+ * @desc    Farmer accepts a quotation — moves project to approved.
+ * @access  Private (farm owner only — enforced in service)
+ */
+router.patch('/:id/quotations/:quotationId/accept',
+  authenticate,
+  quotationController.acceptQuotation
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/reject
+ * @desc    Farmer rejects a quotation — moves project back to pending_quotation.
+ * @access  Private (farm owner only — enforced in service)
+ */
+router.patch('/:id/quotations/:quotationId/reject',
+  authenticate,
+  quotationController.rejectQuotation
+);
+
+/**
+ * @route   GET /api/projects/:id/quotations/:quotationId/pdf
+ * @desc    Download the quotation rendered on the company letterhead.
+ * @access  Private (stakeholders + farm.projects.view / farms.view)
+ */
+router.get('/:id/quotations/:quotationId/pdf',
+  authenticate,
+  requireProjectAccess(['farm.projects.view', 'farms.view']),
+  quotationController.downloadQuotationPdf
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations/bop
+ * @desc    Create an adhoc BOP (Bill of Project) quotation for a landscaping
+ *          project. BOP quotations are separate from the annual pending-quotation
+ *          flow and do not change the project status. Accepts optional
+ *          multipart `files` (images / PDFs) as attachments.
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations/bop',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    // Reuse the existing image+PDF multer config — BOP attachments share the
+    // same mime guard and 25 MB / 5 files limits.
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  quotationController.createBopQuotation
+);
+
+/**
+ * @route   POST /api/projects/:id/quotations/:quotationId/attachments
+ * @desc    Add more photo/PDF attachments to an existing BOP quotation.
+ * @access  Private (manager or admin)
+ */
+router.post('/:id/quotations/:quotationId/attachments',
+  authenticate,
+  requireManagerOrAdmin,
+  (req, res, next) => {
+    farmManualReportUpload.array('files', 5)(req, res, (err) => {
+      if (err) {
+        const status = err.code === 'LIMIT_FILE_SIZE'
+          ? 413
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? 400
+            : err.message?.startsWith('Unsupported') ? 415 : 400;
+        return res.status(status).json({ success: false, error: err.message });
+      }
+      next();
+    });
+  },
+  quotationController.addBopAttachments
+);
+
+/**
+ * @route   DELETE /api/projects/:id/quotations/:quotationId/attachments/:attachmentId
+ * @desc    Remove a single attachment from a BOP quotation.
+ * @access  Private (manager or admin)
+ */
+router.delete('/:id/quotations/:quotationId/attachments/:attachmentId',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.removeBopAttachment
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid
+ * @desc    Mark a quotation installment as paid and create an invoice
+ *          idempotently. Returns the (possibly pre-existing) invoice.
+ * @access  Private (manager or admin)
+ */
+router.patch('/:id/quotations/:quotationId/installments/:installmentNumber/mark-paid',
+  authenticate,
+  requireManagerOrAdmin,
+  quotationController.markInstallmentPaid
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/installments/:installmentNumber/revert
+ * @desc    Admin-only: revert a previously-marked-paid installment back to
+ *          pending and soft-delete the linked invoice.
+ * @access  Private (admin only)
+ */
+router.patch('/:id/quotations/:quotationId/installments/:installmentNumber/revert',
+  authenticate,
+  requireAdmin,
+  quotationController.revertInstallmentPayment
+);
+
+/**
+ * @route   PATCH /api/projects/:id/quotations/:quotationId/overpay
+ * @desc    Admin-only: adjust the overpay/credit balance (+/-) for a quotation.
+ *          Records a remembered ledger entry; does not create an invoice.
+ * @access  Private (admin only)
+ */
+router.patch('/:id/quotations/:quotationId/overpay',
+  authenticate,
+  requireAdmin,
+  quotationController.adjustOverpay
+);
+
+// ========================
+// Admin-only Manual Transactions (per farm)
+// Admins record incoming/outgoing payments by hand. Managers are excluded.
+// ========================
+
+router.get('/:id/admin-transactions',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.listTransactions
+);
+
+router.get('/:id/admin-transactions/summary',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.getSummary
+);
+
+router.post('/:id/admin-transactions',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.createTransaction
+);
+
+router.patch('/:id/admin-transactions/:transactionId',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.updateTransaction
+);
+
+router.delete('/:id/admin-transactions/:transactionId',
+  authenticate,
+  requireAdmin,
+  farmTransactionController.deleteTransaction
 );
 
 // ========================

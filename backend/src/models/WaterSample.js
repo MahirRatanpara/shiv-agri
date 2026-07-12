@@ -17,6 +17,12 @@ const sampleSchema = new mongoose.Schema({
     required: true
   },
 
+  // Sample number (user-entered for PDF)
+  sampleNumber: {
+    type: String,
+    trim: true
+  },
+
   // Farmer/Location information
   farmersName: {
     type: String,
@@ -159,6 +165,19 @@ const sampleSchema = new mongoose.Schema({
   finalDeductionEn: {
     type: String,
     default: ''
+  },
+
+  // Link to farm project (auto-set on PDF generation when farmsName + mobileNo
+  // match a Project's name + clientPhone).
+  linkedProjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    default: null,
+    index: true
+  },
+  linkedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

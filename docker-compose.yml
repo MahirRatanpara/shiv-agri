@@ -30,6 +30,18 @@ services:
       PORT: 3000
       MONGODB_URI: mongodb://mongodb:27017/shiv-agri
       NODE_ENV: development
+      # Dev keeps direct container-to-container — no public domain or TLS to terminate.
+      # Prod routes through nginx via a network alias (see docker-compose.prod.yml).
+      MEDIA_SERVICE_URL: ${MEDIA_SERVICE_URL:-http://media-service:8081}
+      MEDIA_SERVICE_PUBLIC_URL: ${MEDIA_SERVICE_PUBLIC_URL:-http://localhost:80}
+      OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
+      NOTIFICATION_SERVICE_URL: http://notification-service:8082
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY:-dev-api-key-change-me}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-otp_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-true}
+      DEFAULT_PHONE_COUNTRY_CODE: ${DEFAULT_PHONE_COUNTRY_CODE:-+91}
+      DEFAULT_PHONE_SIGNUP_ROLE: ${DEFAULT_PHONE_SIGNUP_ROLE:-user}
     ports:
       - "3000:3000"
     volumes:
@@ -38,6 +50,47 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    networks:
+      - app-network
+
+  media-service:
+    build:
+      context: ./media-service
+      dockerfile: Dockerfile
+    container_name: shivagri-media-dev
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: filesystem
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/shiv-agri
+      MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+    ports:
+      - "8081:8081"
+    volumes:
+      - /Users/mahirratanpara/shiv-agri-media:/var/media/uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: shivagri-notification-dev
+    restart: unless-stopped
+    environment:
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY:-dev-api-key-change-me}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_DEFAULT_COUNTRY_CODE: ${WHATSAPP_DEFAULT_COUNTRY_CODE:-91}
+      GMAIL_FROM_ADDRESS: ${GMAIL_FROM_ADDRESS:-}
+      GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:-Shiv-Agri}
+      GMAIL_OAUTH_CLIENT_ID: ${GMAIL_OAUTH_CLIENT_ID:-}
+      GMAIL_OAUTH_CLIENT_SECRET: ${GMAIL_OAUTH_CLIENT_SECRET:-}
+      GMAIL_OAUTH_REFRESH_TOKEN: ${GMAIL_OAUTH_REFRESH_TOKEN:-}
+    ports:
+      - "8082:8082"
     networks:
       - app-network
 

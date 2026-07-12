@@ -69,6 +69,7 @@
         <thead>
           <tr>
             <th>Invoice No.</th>
+            <th>Type</th>
             <th>Date</th>
             <th>Customer</th>
             <th>Amount</th>
@@ -82,6 +83,7 @@
               {{ invoice.invoiceNumber || 'DRAFT' }}
               <span *ngIf="invoice.isDraft" class="badge badge-draft" style="margin-left: 8px;">📝 Draft</span>
             </td>
+            <td class="gujarati">{{ getInvoiceTypeLabel(invoice.invoiceType || 'cash') }}</td>
             <td>{{ formatDate(invoice.date) }}</td>
             <td>{{ invoice.customerName }}</td>
             <td class="amount">{{ formatCurrency(invoice.grandTotal) }}</td>
@@ -157,7 +159,10 @@
             <strong class="gujarati">નં.</strong> <span class="editable">{{ currentInvoice.invoiceNumber }}</span>
           </div>
           <div>
-            <strong class="gujarati">કેશ / ડેબીટ મેમો</strong>
+            <select [(ngModel)]="currentInvoice.invoiceType" class="invoice-type-select gujarati">
+              <option value="cash">કેશ મેમો</option>
+              <option value="debit_memo">ડેબીટ મેમો</option>
+            </select>
           </div>
           <div>
             <strong class="gujarati">તા.</strong>

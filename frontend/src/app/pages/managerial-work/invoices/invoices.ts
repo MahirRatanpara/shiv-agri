@@ -58,6 +58,7 @@ export class InvoicesComponent implements OnInit {
   getEmptyInvoice(): Partial<Invoice> {
     return {
       invoiceNumber: '',
+      invoiceType: 'cash',
       date: new Date().toISOString().split('T')[0],
       customerName: '',
       items: this.getStaticItems(),
@@ -446,5 +447,13 @@ export class InvoicesComponent implements OnInit {
       unpaid: 'Unpaid',
     };
     return labels[status] || status;
+  }
+
+  getInvoiceTypeLabel(type: string): string {
+    const labels: any = {
+      cash: 'કેશ મેમો',
+      debit_memo: 'ડેબીટ મેમો',
+    };
+    return labels[type] || 'કેશ મેમો';
   }
 }

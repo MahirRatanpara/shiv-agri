@@ -39,6 +39,76 @@
                 </span>
               </div>
 
+              <div class="detail-item phone-detail">
+                <div>
+                  <label>Mobile Number</label>
+                  <p class="detail-help">Used to link farm registrations to your account. Verified once and cannot be changed.</p>
+                </div>
+
+                <!-- Phone already set: read-only, locked (no edit) -->
+                <div class="phone-summary" *ngIf="!canAddPhone">
+                  <span class="detail-value">
+                    {{ user.phoneNumber }}
+                    <svg *ngIf="user.phoneVerified" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Verified">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </span>
+                  <span class="phone-locked-note">Locked</span>
+                </div>
+
+                <!-- No phone yet: offer add-via-OTP -->
+                <div class="phone-summary" *ngIf="canAddPhone && phoneOtpStep === 'idle'">
+                  <span class="detail-value missing">Not added</span>
+                  <button type="button" class="btn-edit-profile" (click)="startAddPhone()">Add via OTP</button>
+                </div>
+
+                <!-- Step 1: enter phone -->
+                <form class="phone-editor" *ngIf="phoneOtpStep === 'enter-phone'" (ngSubmit)="requestPhoneOtp()" novalidate>
+                  <select class="phone-code" name="phoneCountryCode" [(ngModel)]="phoneCountryCode" aria-label="Country code">
+                    <option *ngFor="let option of countryCodeOptions" [value]="option.value">{{ option.label }}</option>
+                  </select>
+                  <input
+                    name="phoneNumber"
+                    [value]="phoneNumber"
+                    (input)="onPhoneInput($event)"
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="tel-national"
+                    placeholder="Enter mobile number"
+                    [class.invalid]="!!phoneError"
+                  >
+                  <button type="submit" class="btn-save-profile" [disabled]="!isPhoneNumberValid || isSubmittingPhone">
+                    {{ isSubmittingPhone ? 'Sending...' : 'Send code' }}
+                  </button>
+                  <button type="button" class="btn-cancel-profile" (click)="cancelAddPhone()" [disabled]="isSubmittingPhone">Cancel</button>
+                  <small *ngIf="phoneError">{{ phoneError }}</small>
+                </form>
+
+                <!-- Step 2: enter OTP -->
+                <form class="phone-editor" *ngIf="phoneOtpStep === 'enter-otp'" (ngSubmit)="verifyPhoneOtp()" novalidate>
+                  <input
+                    name="otpCode"
+                    [value]="otpCode"
+                    (input)="onOtpInput($event)"
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    [attr.maxlength]="OTP_LENGTH"
+                    placeholder="Enter {{ OTP_LENGTH }}-digit code"
+                    [class.invalid]="!!phoneError"
+                  >
+                  <button type="submit" class="btn-save-profile" [disabled]="!isOtpValid || isSubmittingPhone">
+                    {{ isSubmittingPhone ? 'Verifying...' : 'Verify & add' }}
+                  </button>
+                  <button type="button" class="btn-cancel-profile" (click)="resendPhoneOtp()" [disabled]="resendCountdown > 0 || isSubmittingPhone">
+                    {{ resendCountdown > 0 ? 'Resend in ' + resendCountdown + 's' : 'Resend' }}
+                  </button>
+                  <button type="button" class="btn-cancel-profile" (click)="cancelAddPhone()" [disabled]="isSubmittingPhone">Cancel</button>
+                  <small *ngIf="phoneError">{{ phoneError }}</small>
+                </form>
+              </div>
+
               <div class="detail-item">
                 <label>User ID</label>
                 <span class="detail-value">{{ user.id }}</span>

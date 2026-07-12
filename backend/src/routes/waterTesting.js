@@ -1,32 +1,91 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
+const multer = require('multer');
+const ExcelJS = require('exceljs');
 const WaterSession = require('../models/WaterSession');
 const WaterSample = require('../models/WaterSample');
 const { addClassifications } = require('../utils/waterClassification');
+const { extractCellText } = require('../utils/excelCellText');
 const { authenticate, requirePermission } = require('../middleware/auth');
+const farmReportLinker = require('../services/farmReportLinker');
 const logger = require('../utils/logger');
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel' // .xls
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
+    }
+  }
+});
 
 logger.info('Water Testing routes initialized - Using referenced mode with separate collections');
 logger.info('Water classification system enabled');
+
+// Helper function to sort samples by sample number naturally
+const sortSamplesByNumber = (samples) => {
+  return samples.sort((a, b) => {
+    const sampleA = (a.sampleNumber || '').toLowerCase();
+    const sampleB = (b.sampleNumber || '').toLowerCase();
+    return sampleA.localeCompare(sampleB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};
 
 // All routes require authentication
 router.use(authenticate);
 
 // Get all sessions with their samples
+/**
+ * Paginated session list for the water testing landing page.
+ * See soilTesting.js for the full param/behavior contract — both routes share
+ * the same query contract: page / limit / status, samples not embedded.
+ */
 router.get('/sessions', requirePermission('water.sessions.view'), async (req, res) => {
   try {
-    const sessions = await WaterSession.find().sort({ date: -1, version: -1 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const statusParam = (req.query.status || '').toString();
 
-    const sessionsWithSamples = [];
-    for (const session of sessions) {
-      const sessionObj = session.toObject();
-      const samples = await WaterSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
-      sessionObj.data = samples;
-      sessionsWithSamples.push(sessionObj);
+    const filter = {};
+    if (statusParam === 'active') {
+      filter.status = { $ne: 'completed' };
+    } else if (statusParam) {
+      filter.status = statusParam;
     }
 
-    logger.info(`Retrieved ${sessionsWithSamples.length} water sessions with samples`);
-    res.json(sessionsWithSamples);
+    const skip = (page - 1) * limit;
+
+    const [sessions, total] = await Promise.all([
+      WaterSession.find(filter)
+        .sort({ date: -1, version: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      WaterSession.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 0;
+
+    logger.info(
+      `Retrieved water sessions page ${page}/${totalPages || 1} ` +
+        `(status=${statusParam || 'all'}, count=${sessions.length}, total=${total})`
+    );
+
+    res.json({
+      sessions,
+      pagination: { page, limit, total, totalPages }
+    });
   } catch (error) {
     logger.error(`Error fetching water sessions: ${error.message}`);
     res.status(500).json({ error: 'Failed to fetch sessions' });
@@ -42,7 +101,8 @@ router.get('/sessions/date/:date', async (req, res) => {
     const sessionsWithSamples = [];
     for (const session of sessions) {
       const sessionObj = session.toObject();
-      const samples = await WaterSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+      let samples = await WaterSample.find({ sessionId: session._id });
+      samples = sortSamplesByNumber(samples);
       sessionObj.data = samples;
       sessionsWithSamples.push(sessionObj);
     }
@@ -77,7 +137,8 @@ router.get('/sessions/:id', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const samples = await WaterSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    let samples = await WaterSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     logger.debug(`Retrieved water session ${req.params.id} with ${samples.length} samples`);
 
     const sessionObj = session.toObject();
@@ -105,7 +166,7 @@ router.post('/sessions', async (req, res) => {
       date,
       version,
       startTime: startTime || new Date(),
-      status: 'active',
+      status: 'started',
       sampleCount: 0,
       lastActivity: new Date()
     });
@@ -139,8 +200,8 @@ router.put('/sessions/:id', async (req, res) => {
     // Handle endTime update
     if ('endTime' in req.body) {
       session.endTime = endTime;
-      session.status = endTime ? 'completed' : 'active';
-      logger.debug(`Water session ${req.params.id} status changed to ${session.status}`);
+      // Note: Status is now managed separately via PATCH /sessions/:id/status endpoint
+      logger.debug(`Water session ${req.params.id} endTime updated to ${endTime}`);
     }
 
     // Handle sample updates
@@ -180,8 +241,9 @@ router.put('/sessions/:id', async (req, res) => {
     const updatedSession = await session.save();
     logger.info(`Water session ${req.params.id} updated successfully`);
 
-    // Fetch samples and return
-    const samples = await WaterSample.find({ sessionId: session._id }).sort({ createdAt: 1 });
+    // Fetch samples and return (sorted by sample number)
+    let samples = await WaterSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
     const sessionObj = updatedSession.toObject();
     sessionObj.data = samples;
 
@@ -189,6 +251,47 @@ router.put('/sessions/:id', async (req, res) => {
   } catch (error) {
     logger.error(`Error updating water session ${req.params.id}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: 'Failed to update session' });
+  }
+});
+
+// Update session status (state transitions)
+router.patch('/sessions/:id/status', requirePermission('water.sessions.update'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['started', 'details', 'ready', 'completed'];
+
+    if (!status || !validStatuses.includes(status)) {
+      logger.warn(`Invalid water session status provided: ${status}`);
+      return res.status(400).json({ error: 'Invalid status. Must be one of: started, details, ready, completed' });
+    }
+
+    const session = await WaterSession.findById(req.params.id);
+    if (!session) {
+      logger.warn(`Water session not found for status update: ${req.params.id}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const oldStatus = session.status;
+    session.status = status;
+
+    // Update endTime when completing
+    if (status === 'completed' && !session.endTime) {
+      session.endTime = new Date();
+    }
+
+    const updatedSession = await session.save();
+    logger.info(`Water session ${req.params.id} status changed: ${oldStatus} → ${status}`);
+
+    // Fetch samples and return
+    let samples = await WaterSample.find({ sessionId: session._id });
+    samples = sortSamplesByNumber(samples);
+    const sessionObj = updatedSession.toObject();
+    sessionObj.data = samples;
+
+    res.json(sessionObj);
+  } catch (error) {
+    logger.error(`Error updating water session status ${req.params.id}: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update session status' });
   }
 });
 
@@ -247,6 +350,13 @@ router.post('/samples/:sampleId/pdf', async (req, res) => {
       return res.status(404).json({ error: 'Sample not found' });
     }
 
+    // Best-effort link to a matching farm project before sending the PDF.
+    await farmReportLinker.linkSampleToFarm({
+      sampleType: 'water',
+      sample,
+      user: req.user
+    });
+
     // Add classifications to sample data
     const sampleWithClassifications = addClassifications(sample.toObject());
 
@@ -298,6 +408,7 @@ router.post('/sessions/:sessionId/pdfs', async (req, res) => {
     // Return as JSON with base64 encoding (same as soil testing)
     const result = pdfs.map(pdf => ({
       sampleId: pdf.sampleId,
+      sampleNumber: pdf.sampleNumber,
       farmerName: pdf.farmerName,
       pdf: Buffer.from(pdf.buffer).toString('base64')
     }));
@@ -311,6 +422,129 @@ router.post('/sessions/:sessionId/pdfs', async (req, res) => {
   } catch (error) {
     logger.error(`Error generating bulk water PDFs for session ${req.params.sessionId}: ${error.message}`, { stack: error.stack });
     res.status(500).json({ error: 'Failed to generate PDFs', details: error.message });
+  }
+});
+
+/**
+ * Stream bulk PDFs for a session - each PDF streamed as multipart
+ * POST /api/water-testing/sessions/:sessionId/pdfs-stream
+ *
+ * Response format: multipart/mixed with each part being a PDF file
+ * Each part has headers: Content-Type, Content-Disposition, X-Farmer-Name, X-Sample-Id, X-Index, X-Total
+ */
+router.post('/sessions/:sessionId/pdfs-stream', async (req, res) => {
+  let clientDisconnected = false;
+
+  try {
+    const { sessionId } = req.params;
+
+    logger.info(`Streaming PDF generation requested for water session: ${sessionId}`);
+
+    // Fetch session and samples
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      logger.warn(`Water session not found: ${sessionId}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const samples = await WaterSample.find({ sessionId }).sort({ createdAt: 1 });
+    if (samples.length === 0) {
+      logger.warn(`No samples found for water session: ${sessionId}`);
+      return res.status(404).json({ error: 'No samples found in this session' });
+    }
+
+    // Add classifications to all samples
+    const samplesWithClassifications = samples.map(s => addClassifications(s.toObject()));
+
+    const total = samplesWithClassifications.length;
+    const boundary = `----PDFBoundary${Date.now()}`;
+
+    // Monitor client connection
+    req.on('close', () => {
+      clientDisconnected = true;
+      logger.warn(`Client disconnected during water PDF streaming for session: ${sessionId}`);
+    });
+
+    // Set multipart response headers with keep-alive
+    res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`);
+    res.setHeader('X-Total-Count', total);
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Keep-Alive', 'timeout=600'); // 10 minutes
+
+    // Disable timeout for this request (large file streaming)
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000); // 10 minutes
+
+    logger.info(`Starting streaming generation for ${total} water PDFs`);
+
+    // Use the streaming generator
+    let index = 0;
+    for await (const pdf of pdfGenerator.generateBulkPDFsStream(samplesWithClassifications, 'water')) {
+      // Check if client disconnected
+      if (clientDisconnected) {
+        logger.warn(`Stopping water PDF generation - client disconnected at ${index}/${total}`);
+        break;
+      }
+
+      const farmerName = pdf.farmerName || 'Unknown';
+      const sampleNumber = pdf.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - પાણી ચકાસણી - ${farmerName}.pdf` : `પાણી ચકાસણી - ${farmerName}.pdf`;
+      const encodedFilename = encodeURIComponent(filename);
+
+      try {
+        logger.info(`[Water Stream] Sending PDF ${index + 1}/${total}: ${farmerName} (${pdf.buffer.length} bytes)`);
+
+        // Write multipart boundary and headers
+        res.write(`\r\n--${boundary}\r\n`);
+        res.write(`Content-Type: application/pdf\r\n`);
+        res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
+        res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+        res.write(`X-Sample-Number: ${encodeURIComponent(sampleNumber)}\r\n`);
+        res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
+        res.write(`X-Index: ${index}\r\n`);
+        res.write(`X-Total: ${total}\r\n`);
+        res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
+        res.write(`\r\n`);
+
+        // Write PDF buffer with backpressure handling
+        const writeSuccess = res.write(pdf.buffer);
+        if (!writeSuccess) {
+          logger.warn(`[Water Stream] Backpressure detected, waiting for drain...`);
+          await new Promise(resolve => res.once('drain', resolve));
+        }
+
+        // Flush to ensure data is sent immediately
+        if (res.flush && typeof res.flush === 'function') {
+          res.flush();
+        }
+
+        index++;
+        logger.info(`[Water Stream] Successfully sent PDF ${index}/${total}`);
+      } catch (writeError) {
+        logger.error(`Error writing water PDF ${index}/${total}: ${writeError.message}`);
+        clientDisconnected = true;
+        break;
+      }
+    }
+
+    // Only write final boundary if not disconnected
+    if (!clientDisconnected) {
+      res.write(`\r\n--${boundary}--\r\n`);
+      res.end();
+      logger.info(`Streaming completed for water session: ${sessionId}, sent ${index}/${total} PDFs`);
+    } else {
+      logger.warn(`Streaming incomplete for water session: ${sessionId}, sent ${index}/${total} PDFs before disconnect`);
+      res.end();
+    }
+
+  } catch (error) {
+    logger.error(`Error streaming water PDFs: ${error.message}`, { stack: error.stack });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to stream PDFs' });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -355,5 +589,330 @@ router.post('/sessions/:sessionId/pdf-combined', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
   }
 });
+
+// Get paginated samples for a session
+router.get('/sessions/:sessionId/samples', requirePermission('water.sessions.view'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const samples = await WaterSample.find({ sessionId })
+      .sort({ createdAt: 1 })
+      .collation({ locale: 'en_US', numericOrdering: true })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await WaterSample.countDocuments({ sessionId });
+
+    res.json({
+      samples,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error(`Error fetching paginated water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to fetch samples' });
+  }
+});
+
+// Bulk update/upsert samples (Safe Update for Infinite Scroll)
+router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.update'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { samples } = req.body;
+
+    if (!samples || !Array.isArray(samples)) {
+      return res.status(400).json({ error: 'Samples array is required' });
+    }
+
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    logger.info(`Bulk updating ${samples.length} water samples for session ${sessionId}`);
+
+    // Build operations AND a parallel result array (same order as the input).
+    // The result array carries the persisted _id for every row so the client
+    // can reconcile newly-inserted rows. Without this, inserts would never get
+    // their generated _id back and each subsequent auto-save would re-insert
+    // them, producing duplicate entries.
+    const operations = [];
+    const resultSamples = [];
+
+    for (const sampleData of samples) {
+      // Calculate classifications
+      const sampleWithClassifications = addClassifications(sampleData);
+
+      if (sampleData._id) {
+        // Update existing - strip _id from $set to avoid MongoDB immutable field error
+        const { _id, ...updateFields } = sampleWithClassifications;
+        operations.push({
+          updateOne: {
+            filter: { _id: sampleData._id, sessionId },
+            update: { $set: { ...updateFields, sessionId } }
+          }
+        });
+        resultSamples.push({ ...updateFields, _id: sampleData._id, sessionId });
+      } else {
+        // Insert new - pre-generate the _id so we can return it to the client
+        // in the same position as the request (enables grid reconciliation).
+        const { _id, ...insertFields } = sampleWithClassifications;
+        const newId = new mongoose.Types.ObjectId();
+        const document = {
+          _id: newId,
+          ...insertFields,
+          sessionId,
+          sessionDate: session.date,
+          sessionVersion: session.version
+        };
+        operations.push({ insertOne: { document } });
+        resultSamples.push(document);
+      }
+    }
+
+    if (operations.length > 0) {
+      await WaterSample.bulkWrite(operations);
+    }
+
+    // Update session metadata
+    session.sampleCount = await WaterSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples updated successfully',
+      count: samples.length,
+      samples: resultSamples
+    });
+  } catch (error) {
+    logger.error(`Error bulk updating water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to update samples' });
+  }
+});
+
+// Bulk delete samples
+router.delete('/sessions/:sessionId/samples', requirePermission('water.samples.delete'), async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { sampleIds } = req.body;
+
+    if (!sampleIds || !Array.isArray(sampleIds) || sampleIds.length === 0) {
+      return res.status(400).json({ error: 'Sample IDs array is required' });
+    }
+
+    const session = await WaterSession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const result = await WaterSample.deleteMany({
+      _id: { $in: sampleIds },
+      sessionId // Ensure we only delete from this session
+    });
+
+    // Update session metadata
+    session.sampleCount = await WaterSample.countDocuments({ sessionId });
+    session.lastActivity = new Date();
+    await session.save();
+
+    res.json({
+      message: 'Samples deleted successfully',
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    logger.error(`Error deleting water samples: ${error.message}`);
+    res.status(500).json({ error: 'Failed to delete samples' });
+  }
+});
+
+// Upload Excel file to update/append samples in a session
+router.post('/sessions/:id/upload-excel',
+  requirePermission('water.sessions.update'),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const sessionId = req.params.id;
+
+      // Check if file was uploaded
+      if (!req.file) {
+        logger.warn('Excel upload attempted without file');
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      logger.info(`Processing Excel upload for water session ${sessionId}, file size: ${req.file.size} bytes`);
+
+      // Check if session exists
+      const session = await WaterSession.findById(sessionId);
+      if (!session) {
+        logger.warn(`Water session not found for Excel upload: ${sessionId}`);
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Parse Excel file
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+
+      if (!worksheet) {
+        logger.error('No worksheet found in Excel file');
+        return res.status(400).json({ error: 'No worksheet found in Excel file' });
+      }
+
+      // Get existing samples for this session
+      const existingSamples = await WaterSample.find({ sessionId });
+      const existingSamplesMap = new Map();
+      existingSamples.forEach(sample => {
+        if (sample.sampleNumber) {
+          existingSamplesMap.set(sample.sampleNumber.trim(), sample);
+        }
+      });
+
+      logger.debug(`Found ${existingSamples.length} existing water samples in session`);
+
+      // Parse Excel rows (skip header row)
+      const excelData = [];
+      const errors = [];
+      let rowIndex = 0;
+
+      worksheet.eachRow((row, rowNumber) => {
+        // Skip header row
+        if (rowNumber === 1) {
+          return;
+        }
+
+        rowIndex++;
+
+        try {
+          // Extract data from Excel columns
+          // Expected columns: Sample Number, Farmer's Name, Mobile No., Location, Farm's Name, Taluka, Bore/Well
+          // extractCellText unwraps rich-text / formula / hyperlink shapes
+          // so formatted cells don't end up persisted as the literal
+          // "[object Object]".
+          const sampleNumber = extractCellText(row.getCell(1));
+          const farmersName = extractCellText(row.getCell(2));
+          const mobileNo = extractCellText(row.getCell(3));
+          const location = extractCellText(row.getCell(4));
+          const farmsName = extractCellText(row.getCell(5));
+          const taluka = extractCellText(row.getCell(6));
+          const boreWellType = extractCellText(row.getCell(7));
+
+          // Validate required fields
+          if (!sampleNumber) {
+            errors.push(`Row ${rowNumber}: Sample Number is required`);
+            return;
+          }
+
+          if (!farmersName) {
+            errors.push(`Row ${rowNumber}: Farmer's Name is required`);
+            return;
+          }
+
+          excelData.push({
+            sampleNumber,
+            farmersName,
+            mobileNo,
+            location,
+            farmsName,
+            taluka,
+            boreWellType,
+            rowNumber
+          });
+        } catch (error) {
+          logger.error(`Error parsing row ${rowNumber}: ${error.message}`);
+          errors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      });
+
+      logger.info(`Parsed ${excelData.length} rows from Excel file`);
+
+      if (errors.length > 0) {
+        logger.warn(`Excel parsing completed with ${errors.length} errors`);
+        return res.status(400).json({
+          error: 'Some rows could not be processed',
+          details: errors,
+          processedCount: excelData.length
+        });
+      }
+
+      if (excelData.length === 0) {
+        logger.warn('No valid data found in Excel file');
+        return res.status(400).json({ error: 'No valid data found in Excel file' });
+      }
+
+      // Process each row: update existing or create new
+      let updatedCount = 0;
+      let addedCount = 0;
+
+      for (const excelRow of excelData) {
+        const existingSample = existingSamplesMap.get(excelRow.sampleNumber);
+
+        if (existingSample) {
+          // Only update farmer details, keep test values unchanged
+          existingSample.farmersName = excelRow.farmersName;
+          existingSample.mobileNo = excelRow.mobileNo;
+          existingSample.location = excelRow.location;
+          existingSample.farmsName = excelRow.farmsName;
+          existingSample.taluka = excelRow.taluka;
+          existingSample.boreWellType = excelRow.boreWellType;
+
+          await existingSample.save();
+          updatedCount++;
+
+          logger.debug(`Updated farmer details for water sample: ${excelRow.sampleNumber}`);
+        } else {
+          // Create new sample
+          const newSample = new WaterSample({
+            sessionId: session._id,
+            sessionDate: session.date,
+            sessionVersion: session.version,
+            sampleNumber: excelRow.sampleNumber,
+            farmersName: excelRow.farmersName,
+            mobileNo: excelRow.mobileNo,
+            location: excelRow.location,
+            farmsName: excelRow.farmsName,
+            taluka: excelRow.taluka,
+            boreWellType: excelRow.boreWellType
+          });
+
+          await newSample.save();
+          addedCount++;
+
+          logger.debug(`Added new water sample: ${excelRow.sampleNumber}`);
+        }
+      }
+
+      // Update session metadata
+      session.sampleCount = await WaterSample.countDocuments({ sessionId });
+      session.lastActivity = new Date();
+      await session.save();
+
+      logger.info(`Excel upload successful for water session ${sessionId} - Updated: ${updatedCount}, Added: ${addedCount}`);
+
+      res.json({
+        success: true,
+        message: 'Excel data processed successfully',
+        updated: updatedCount,
+        added: addedCount,
+        total: updatedCount + addedCount
+      });
+
+    } catch (error) {
+      logger.error(`Error processing water Excel upload: ${error.message}`, { stack: error.stack });
+
+      if (error.message.includes('Only Excel files')) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.status(500).json({ error: 'Failed to process Excel file' });
+    }
+  }
+);
 
 module.exports = router;

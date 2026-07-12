@@ -1,0 +1,1852 @@
+{
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/MediaServiceApplication.java": {
+    "mtime": 1772279641.5098655,
+    "ast_hash": "35af161dd0f935505df975748227b561",
+    "semantic_hash": "35af161dd0f935505df975748227b561"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/repository/MediaRepository.java": {
+    "mtime": 1772279641.516886,
+    "ast_hash": "a94f7d8145f894691b215dc6aad087c6",
+    "semantic_hash": "a94f7d8145f894691b215dc6aad087c6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/config/StorageProperties.java": {
+    "mtime": 1780167181.7886786,
+    "ast_hash": "0315518388338fa935e426e0acf4da9d",
+    "semantic_hash": "0315518388338fa935e426e0acf4da9d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/config/SecurityConfig.java": {
+    "mtime": 1772279641.5102036,
+    "ast_hash": "00645b0a677611b5148a1b6934affc46",
+    "semantic_hash": "00645b0a677611b5148a1b6934affc46"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/config/StorageConfig.java": {
+    "mtime": 1772279641.5105174,
+    "ast_hash": "08fc9a5d4819eb1255293f074750491b",
+    "semantic_hash": "08fc9a5d4819eb1255293f074750491b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/config/WebConfig.java": {
+    "mtime": 1772279641.5115259,
+    "ast_hash": "6fd367bc4e4fe7b6991211c4e27c9f68",
+    "semantic_hash": "6fd367bc4e4fe7b6991211c4e27c9f68"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/storage/FileSystemStorageService.java": {
+    "mtime": 1780167131.4475236,
+    "ast_hash": "d51dee1668d5d6cb61daf49931f680fe",
+    "semantic_hash": "d51dee1668d5d6cb61daf49931f680fe"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/storage/StorageResult.java": {
+    "mtime": 1772279641.5176392,
+    "ast_hash": "ae43aeeb03e3535f1b6b6ba0672a66e7",
+    "semantic_hash": "ae43aeeb03e3535f1b6b6ba0672a66e7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/storage/StorageService.java": {
+    "mtime": 1779517325.300408,
+    "ast_hash": "821ac9884df7add6efaec3e466b63645",
+    "semantic_hash": "821ac9884df7add6efaec3e466b63645"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/MediaController.java": {
+    "mtime": 1772279641.5118043,
+    "ast_hash": "5a7073ddb6c479eb98893a317f612e80",
+    "semantic_hash": "5a7073ddb6c479eb98893a317f612e80"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/MediaMetadataResponse.java": {
+    "mtime": 1772279641.5143867,
+    "ast_hash": "8651b21a9333574be8c807f95516b74b",
+    "semantic_hash": "8651b21a9333574be8c807f95516b74b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/UploadResponse.java": {
+    "mtime": 1772279641.51483,
+    "ast_hash": "406b34c2cf837f251d7969bb906da362",
+    "semantic_hash": "406b34c2cf837f251d7969bb906da362"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/InitiateUploadRequest.java": {
+    "mtime": 1772279641.513856,
+    "ast_hash": "3939447bfe959028ea2946a9dc801980",
+    "semantic_hash": "3939447bfe959028ea2946a9dc801980"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/BatchResolveResponse.java": {
+    "mtime": 1772279641.5133219,
+    "ast_hash": "d4e6861fb8a363306d9e4de84362e1be",
+    "semantic_hash": "d4e6861fb8a363306d9e4de84362e1be"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/InitiateUploadResponse.java": {
+    "mtime": 1772279641.514148,
+    "ast_hash": "0cf16590803faf9a96d19abf165ed3c6",
+    "semantic_hash": "0cf16590803faf9a96d19abf165ed3c6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/BatchResolveRequest.java": {
+    "mtime": 1772279641.5129468,
+    "ast_hash": "5500a24bc69f7b869d901a8ce8c2db0e",
+    "semantic_hash": "5500a24bc69f7b869d901a8ce8c2db0e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/ErrorResponse.java": {
+    "mtime": 1772279641.5136106,
+    "ast_hash": "9827e14d31b5f8d873553dab8bf2bb84",
+    "semantic_hash": "9827e14d31b5f8d873553dab8bf2bb84"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/controller/dto/StatusUpdateRequest.java": {
+    "mtime": 1772279641.5146072,
+    "ast_hash": "e9da6e7d704aa36266c5559541fba8ba",
+    "semantic_hash": "e9da6e7d704aa36266c5559541fba8ba"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/model/StatusChange.java": {
+    "mtime": 1772279641.5165837,
+    "ast_hash": "5cc59cc083b27bf3f116fcf79a742334",
+    "semantic_hash": "5cc59cc083b27bf3f116fcf79a742334"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/model/MediaDocument.java": {
+    "mtime": 1772279641.5155907,
+    "ast_hash": "ab423f7fefec681820800be2b0505bbb",
+    "semantic_hash": "ab423f7fefec681820800be2b0505bbb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/model/MediaStatus.java": {
+    "mtime": 1772279641.515914,
+    "ast_hash": "be231b43c4f586cdb4f2ae6994aa06e9",
+    "semantic_hash": "be231b43c4f586cdb4f2ae6994aa06e9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/service/FileValidationService.java": {
+    "mtime": 1772279641.5170946,
+    "ast_hash": "93e5ccc29c5dfeaea0471aea35ff2cac",
+    "semantic_hash": "93e5ccc29c5dfeaea0471aea35ff2cac"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/service/MediaService.java": {
+    "mtime": 1777878515.7416394,
+    "ast_hash": "96b1f15905564b752b91223459c14f81",
+    "semantic_hash": "96b1f15905564b752b91223459c14f81"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/exception/FileValidationException.java": {
+    "mtime": 1772279641.5150614,
+    "ast_hash": "bb0b7fd3f2ea25585a697ee39f278dad",
+    "semantic_hash": "bb0b7fd3f2ea25585a697ee39f278dad"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/exception/StorageException.java": {
+    "mtime": 1772279641.5154154,
+    "ast_hash": "7576843f4dc059772aff4d7d44ef5dcf",
+    "semantic_hash": "7576843f4dc059772aff4d7d44ef5dcf"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/exception/MediaNotFoundException.java": {
+    "mtime": 1772279641.5152993,
+    "ast_hash": "cb64b686fad86dfebb36dee4958b6891",
+    "semantic_hash": "cb64b686fad86dfebb36dee4958b6891"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/java/com/shivagri/media/exception/GlobalExceptionHandler.java": {
+    "mtime": 1772279641.515181,
+    "ast_hash": "ef44ae9b198442af45225a67ae9f9bcb",
+    "semantic_hash": "ef44ae9b198442af45225a67ae9f9bcb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/main.ts": {
+    "mtime": 1766427534.8162525,
+    "ast_hash": "cd4591c877cade9ea4162c98c345600d",
+    "semantic_hash": "cd4591c877cade9ea4162c98c345600d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/app.spec.ts": {
+    "mtime": 1761370395.9861565,
+    "ast_hash": "2a35beb97e57ce708f2857e3cb6a7219",
+    "semantic_hash": "2a35beb97e57ce708f2857e3cb6a7219"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/app.routes.ts": {
+    "mtime": 1780167253.7172213,
+    "ast_hash": "b4cc95f55608e46e0aabc7ff769a5a66",
+    "semantic_hash": "b4cc95f55608e46e0aabc7ff769a5a66"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/app.ts": {
+    "mtime": 1770661734.2838283,
+    "ast_hash": "3915f8d47862d1f1d7f0a028f6ea4cd7",
+    "semantic_hash": "3915f8d47862d1f1d7f0a028f6ea4cd7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/app.config.ts": {
+    "mtime": 1766829376.4358423,
+    "ast_hash": "fc24a2d0b301221cffdd02a6063255c6",
+    "semantic_hash": "fc24a2d0b301221cffdd02a6063255c6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/directives/has-permission.directive.ts": {
+    "mtime": 1766846728.9257827,
+    "ast_hash": "e0b7cac854b11c5d983e1e88e1fc2563",
+    "semantic_hash": "e0b7cac854b11c5d983e1e88e1fc2563"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/directives/has-role.directive.ts": {
+    "mtime": 1766846728.9260755,
+    "ast_hash": "f349e14aeb2dbc0916468d38fd7b924c",
+    "semantic_hash": "f349e14aeb2dbc0916468d38fd7b924c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/interceptors/error.interceptor.ts": {
+    "mtime": 1766846728.9280274,
+    "ast_hash": "32aa02bb40e1e9f04414d9b9c409d830",
+    "semantic_hash": "32aa02bb40e1e9f04414d9b9c409d830"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/interceptors/auth.interceptor.ts": {
+    "mtime": 1780167315.3467422,
+    "ast_hash": "47da29b72074179de1d6139388515f8b",
+    "semantic_hash": "47da29b72074179de1d6139388515f8b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/environments/environment.prod.ts": {
+    "mtime": 1766846728.927416,
+    "ast_hash": "52f2b4d58f1bb557e8a08af62a35edcc",
+    "semantic_hash": "52f2b4d58f1bb557e8a08af62a35edcc"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/environments/environment.ts": {
+    "mtime": 1766829376.439834,
+    "ast_hash": "2f4495b65a224a4cc36c18daad698e8c",
+    "semantic_hash": "2f4495b65a224a4cc36c18daad698e8c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/models/session-state.model.ts": {
+    "mtime": 1770661734.286385,
+    "ast_hash": "66a8900c67ed9dc4ba55d273a1f54ec7",
+    "semantic_hash": "66a8900c67ed9dc4ba55d273a1f54ec7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/models/fertilizer-session-state.model.ts": {
+    "mtime": 1770661734.285553,
+    "ast_hash": "88acaf519596779910b9b8b5db3d0b1c",
+    "semantic_hash": "88acaf519596779910b9b8b5db3d0b1c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/footer/footer.ts": {
+    "mtime": 1766829376.4372888,
+    "ast_hash": "2b4ffc0d73a33cba8ff0d6ff96d3ea8d",
+    "semantic_hash": "2b4ffc0d73a33cba8ff0d6ff96d3ea8d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/project-list/project-list.ts": {
+    "mtime": 1777407727.65015,
+    "ast_hash": "c016c27a93eaf5321ff80571c6329294",
+    "semantic_hash": "c016c27a93eaf5321ff80571c6329294"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/dashboard-overview/dashboard-overview.ts": {
+    "mtime": 1777407727.6486425,
+    "ast_hash": "93c256052f34e2bc5235dde8a10f5d95",
+    "semantic_hash": "93c256052f34e2bc5235dde8a10f5d95"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/project-detail-popup/project-detail-popup.ts": {
+    "mtime": 1777407727.6495557,
+    "ast_hash": "031959751ff8c32b0906c86bd6ba69a1",
+    "semantic_hash": "031959751ff8c32b0906c86bd6ba69a1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/confirmation-modal/confirmation-modal.component.ts": {
+    "mtime": 1766846728.9231255,
+    "ast_hash": "e44c2e67b1a28a476bb526cbdab1478b",
+    "semantic_hash": "e44c2e67b1a28a476bb526cbdab1478b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/toast/toast.component.ts": {
+    "mtime": 1767419317.9396112,
+    "ast_hash": "3b1105eb4f1a66d3545aa045c9233383",
+    "semantic_hash": "3b1105eb4f1a66d3545aa045c9233383"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/farm-weather/farm-weather.ts": {
+    "mtime": 1780167181.6813455,
+    "ast_hash": "418c252ba3bccbcd3edab4db36f99189",
+    "semantic_hash": "418c252ba3bccbcd3edab4db36f99189"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/role-selection-modal/role-selection-modal.component.ts": {
+    "mtime": 1766846728.9250655,
+    "ast_hash": "348d277462a8d09af4e0f0b492ee6970",
+    "semantic_hash": "348d277462a8d09af4e0f0b492ee6970"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/farm-registration-form/farm-registration-form.ts": {
+    "mtime": 1780167253.7177434,
+    "ast_hash": "3b8bf9eeae192e0ebdbaedfaa2d92bea",
+    "semantic_hash": "3b8bf9eeae192e0ebdbaedfaa2d92bea"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/ag-grid-editors/datalist-cell-editor.ts": {
+    "mtime": 1777407731.8560722,
+    "ast_hash": "742ee660887c736ceb28d290d0515bbb",
+    "semantic_hash": "742ee660887c736ceb28d290d0515bbb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/download-progress/download-progress.component.ts": {
+    "mtime": 1770661734.2848737,
+    "ast_hash": "7ccd45585747b2c3141b9fa5b80b81d1",
+    "semantic_hash": "7ccd45585747b2c3141b9fa5b80b81d1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/header/header.ts": {
+    "mtime": 1777724663.2032633,
+    "ast_hash": "a9487a4f666e35b8ae43e2d361d5238c",
+    "semantic_hash": "a9487a4f666e35b8ae43e2d361d5238c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/header/notification-bell/notification-bell.ts": {
+    "mtime": 1780167181.686187,
+    "ast_hash": "955afb4df96daa0d40e89c3bcb1fbe29",
+    "semantic_hash": "955afb4df96daa0d40e89c3bcb1fbe29"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/causes-details/causes-details.ts": {
+    "mtime": 1766829376.4422157,
+    "ast_hash": "602f6d16d07bd5636b1518cd5f9bf9e4",
+    "semantic_hash": "602f6d16d07bd5636b1518cd5f9bf9e4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/donation/donation.ts": {
+    "mtime": 1766829376.4425101,
+    "ast_hash": "e5a9fe3b02646bd3d5da30cc4692c34b",
+    "semantic_hash": "e5a9fe3b02646bd3d5da30cc4692c34b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/home/home.ts": {
+    "mtime": 1766846728.930352,
+    "ast_hash": "ae6c1558b6265489e5003381d7ea1b41",
+    "semantic_hash": "ae6c1558b6265489e5003381d7ea1b41"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/shop-details/shop-details.ts": {
+    "mtime": 1766829376.4442606,
+    "ast_hash": "49e60c0c4bddc6a6da918804c65b2538",
+    "semantic_hash": "49e60c0c4bddc6a6da918804c65b2538"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/contact/contact.ts": {
+    "mtime": 1766829376.442368,
+    "ast_hash": "23482d5d16d7d373c5177003acdac8cb",
+    "semantic_hash": "23482d5d16d7d373c5177003acdac8cb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/testimonials/testimonials.ts": {
+    "mtime": 1766829376.445353,
+    "ast_hash": "8eab223e28502be5fe2a7d54be711130",
+    "semantic_hash": "8eab223e28502be5fe2a7d54be711130"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/event-details/event-details.ts": {
+    "mtime": 1766829376.4426787,
+    "ast_hash": "47ebd331c2a04c78fbdf582dfa60a057",
+    "semantic_hash": "47ebd331c2a04c78fbdf582dfa60a057"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-dashboard/farm-dashboard.ts": {
+    "mtime": 1777407727.650695,
+    "ast_hash": "113bd1203afb824c18504aa4f3c612c0",
+    "semantic_hash": "113bd1203afb824c18504aa4f3c612c0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/not-found/not-found.ts": {
+    "mtime": 1766829376.4436572,
+    "ast_hash": "d797042c36915aa09b3bc45498d503e6",
+    "semantic_hash": "d797042c36915aa09b3bc45498d503e6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/payment/payment.ts": {
+    "mtime": 1766829376.4437633,
+    "ast_hash": "44f21f76c35a82251a016a6826941667",
+    "semantic_hash": "44f21f76c35a82251a016a6826941667"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/gallery/gallery.ts": {
+    "mtime": 1766829376.4429913,
+    "ast_hash": "5eaf0159844b27192107bd5539bceafd",
+    "semantic_hash": "5eaf0159844b27192107bd5539bceafd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/shop/shop.ts": {
+    "mtime": 1766829376.4441397,
+    "ast_hash": "c631caa47f1b1f38d1c9b7d3f1e8ad04",
+    "semantic_hash": "c631caa47f1b1f38d1c9b7d3f1e8ad04"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/admin/role-management/role-management.component.ts": {
+    "mtime": 1766846728.9290507,
+    "ast_hash": "d0b1c48ad81c930a652195442cf110b6",
+    "semantic_hash": "d0b1c48ad81c930a652195442cf110b6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/admin/user-management/user-management.component.ts": {
+    "mtime": 1766846728.9300816,
+    "ast_hash": "089f2a8b3e20d8e6c6f4c349e66bf5b3",
+    "semantic_hash": "089f2a8b3e20d8e6c6f4c349e66bf5b3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-management/farm-management.ts": {
+    "mtime": 1780167181.6955233,
+    "ast_hash": "cb459e4d40ab7d30453a817268f0adb6",
+    "semantic_hash": "cb459e4d40ab7d30453a817268f0adb6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/about/about.ts": {
+    "mtime": 1766829376.4408731,
+    "ast_hash": "57dc52227da88ab484ecfff1a9652c3a",
+    "semantic_hash": "57dc52227da88ab484ecfff1a9652c3a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-project-details/farm-project-details.ts": {
+    "mtime": 1780167181.7010422,
+    "ast_hash": "d717ca30b603b1da9afbfad618acd2ff",
+    "semantic_hash": "d717ca30b603b1da9afbfad618acd2ff"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/blog/blog.ts": {
+    "mtime": 1766829376.441439,
+    "ast_hash": "a6c0fe0bb96cde0196bd3a85ac8cfc1a",
+    "semantic_hash": "a6c0fe0bb96cde0196bd3a85ac8cfc1a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/blog-details/blog-details.ts": {
+    "mtime": 1766829376.4416459,
+    "ast_hash": "1474f7eded405d8eeffe90b355347296",
+    "semantic_hash": "1474f7eded405d8eeffe90b355347296"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/my-account/my-account.ts": {
+    "mtime": 1780167253.7220888,
+    "ast_hash": "8328b2bd30cd1e8e22a727a36270f5b5",
+    "semantic_hash": "8328b2bd30cd1e8e22a727a36270f5b5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/team/team.ts": {
+    "mtime": 1766829376.4449956,
+    "ast_hash": "84093b96bb97903beffeff4bdd07c231",
+    "semantic_hash": "84093b96bb97903beffeff4bdd07c231"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/managerial-work.ts": {
+    "mtime": 1767419317.9432435,
+    "ast_hash": "0902162a336706940653b7b4551a2058",
+    "semantic_hash": "0902162a336706940653b7b4551a2058"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/receipts/receipts.ts": {
+    "mtime": 1767419317.944934,
+    "ast_hash": "a7f0a8b5c977802a3951df3270b2c2be",
+    "semantic_hash": "a7f0a8b5c977802a3951df3270b2c2be"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/letters/letters.ts": {
+    "mtime": 1767419317.9425778,
+    "ast_hash": "67331220551ba5d1d6f7e9f3d345bc28",
+    "semantic_hash": "67331220551ba5d1d6f7e9f3d345bc28"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/invoices/invoices.ts": {
+    "mtime": 1770010177.924489,
+    "ast_hash": "551a4e2c89066700d40584a96cb2452d",
+    "semantic_hash": "551a4e2c89066700d40584a96cb2452d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/team-details/team-details.ts": {
+    "mtime": 1766829376.4452033,
+    "ast_hash": "6de56b50ffd6080e9a510bad7df4c187",
+    "semantic_hash": "6de56b50ffd6080e9a510bad7df4c187"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/project-details/project-details.ts": {
+    "mtime": 1777407727.654118,
+    "ast_hash": "86188c8ae673cccea9fb1cdfaf90273f",
+    "semantic_hash": "86188c8ae673cccea9fb1cdfaf90273f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/project-wizard/project-wizard.ts": {
+    "mtime": 1777407727.6548846,
+    "ast_hash": "a9224d2e08de8ba4194c6109e158f332",
+    "semantic_hash": "a9224d2e08de8ba4194c6109e158f332"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/causes/causes.ts": {
+    "mtime": 1766829376.442048,
+    "ast_hash": "09c9e4c3e0f3c40fa76d65f3547773b6",
+    "semantic_hash": "09c9e4c3e0f3c40fa76d65f3547773b6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/events/events.ts": {
+    "mtime": 1766829376.4428344,
+    "ast_hash": "5599803a2b647745701bf38dd0a91923",
+    "semantic_hash": "5599803a2b647745701bf38dd0a91923"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/water-testing/water-testing.ts": {
+    "mtime": 1777407731.858396,
+    "ast_hash": "2be9962802d343d121e09d9d5126c273",
+    "semantic_hash": "2be9962802d343d121e09d9d5126c273"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/lab-testing/lab-testing.ts": {
+    "mtime": 1770661734.290129,
+    "ast_hash": "7f31164a6c7ca1ee4af0c40dafeca55e",
+    "semantic_hash": "7f31164a6c7ca1ee4af0c40dafeca55e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-registration/farm-registration.ts": {
+    "mtime": 1777724663.2055886,
+    "ast_hash": "e90859688e01370bfb0cf93062d0db11",
+    "semantic_hash": "e90859688e01370bfb0cf93062d0db11"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/fertilizer-testing/fertilizer-testing.ts": {
+    "mtime": 1777407731.8568058,
+    "ast_hash": "f8ebe73292f9db3a4da4fe91d26ced7a",
+    "semantic_hash": "f8ebe73292f9db3a4da4fe91d26ced7a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/soil-testing/soil-testing.ts": {
+    "mtime": 1777407731.8576646,
+    "ast_hash": "86cc259b735b3c533166687eda2b773a",
+    "semantic_hash": "86cc259b735b3c533166687eda2b773a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/login/login.ts": {
+    "mtime": 1780167253.7214766,
+    "ast_hash": "a86c31842a2591741b4e869fabcabd13",
+    "semantic_hash": "a86c31842a2591741b4e869fabcabd13"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/pdf.service.ts": {
+    "mtime": 1773238709.1724353,
+    "ast_hash": "3ab325784b81480ab03e749e75294542",
+    "semantic_hash": "3ab325784b81480ab03e749e75294542"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/toast.service.ts": {
+    "mtime": 1766829376.4473925,
+    "ast_hash": "14d03b60eab67460774fd091419149e6",
+    "semantic_hash": "14d03b60eab67460774fd091419149e6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-management.service.ts": {
+    "mtime": 1780167181.7176156,
+    "ast_hash": "bd43656e0b19bf6b12afb7be7449a5f0",
+    "semantic_hash": "bd43656e0b19bf6b12afb7be7449a5f0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/download-progress.service.ts": {
+    "mtime": 1770661734.292837,
+    "ast_hash": "c83fbcfddbcf1a92d5c0136b33126892",
+    "semantic_hash": "c83fbcfddbcf1a92d5c0136b33126892"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/auth.service.ts": {
+    "mtime": 1780167253.7229786,
+    "ast_hash": "0e38504db6cceecabd42a421233fdb46",
+    "semantic_hash": "0e38504db6cceecabd42a421233fdb46"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/dashboard.service.ts": {
+    "mtime": 1777621442.2740731,
+    "ast_hash": "40aeefc9cc956e9556fd22e7f3aa701d",
+    "semantic_hash": "40aeefc9cc956e9556fd22e7f3aa701d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/permission.service.ts": {
+    "mtime": 1766846728.9346137,
+    "ast_hash": "f1c95a3ad8fd219543c9cf227c8501a4",
+    "semantic_hash": "f1c95a3ad8fd219543c9cf227c8501a4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/managerial-work.service.ts": {
+    "mtime": 1767419317.9462004,
+    "ast_hash": "aafe7fd09307fdf4511bb1645710219d",
+    "semantic_hash": "aafe7fd09307fdf4511bb1645710219d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/confirmation-modal.service.ts": {
+    "mtime": 1766846728.9341378,
+    "ast_hash": "fa20ce98f9c86574f13568e845ec5faa",
+    "semantic_hash": "fa20ce98f9c86574f13568e845ec5faa"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/notification.service.ts": {
+    "mtime": 1780167181.7368164,
+    "ast_hash": "3deaa00038b9597995c8749c4b9a38a9",
+    "semantic_hash": "3deaa00038b9597995c8749c4b9a38a9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/user.service.ts": {
+    "mtime": 1766846728.9349759,
+    "ast_hash": "48a191e4661fa713306e22a5d1642744",
+    "semantic_hash": "48a191e4661fa713306e22a5d1642744"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/fertilizer-testing.service.ts": {
+    "mtime": 1777407731.8586552,
+    "ast_hash": "b7307293e65cf31792449dfd9959400e",
+    "semantic_hash": "b7307293e65cf31792449dfd9959400e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-media.service.ts": {
+    "mtime": 1780167181.7231917,
+    "ast_hash": "4bdcb96a651a7444ae29a904eabbc7d5",
+    "semantic_hash": "4bdcb96a651a7444ae29a904eabbc7d5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/water-testing.service.ts": {
+    "mtime": 1777407731.8593454,
+    "ast_hash": "9cd4fd11a2043290b80933112f140eff",
+    "semantic_hash": "9cd4fd11a2043290b80933112f140eff"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/soil-testing.service.ts": {
+    "mtime": 1777407731.858938,
+    "ast_hash": "8c8a3da89307c290870577657e671c3d",
+    "semantic_hash": "8c8a3da89307c290870577657e671c3d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/guards/auth.guard.ts": {
+    "mtime": 1766829376.4400105,
+    "ast_hash": "7221640a35085fdd560c581975999550",
+    "semantic_hash": "7221640a35085fdd560c581975999550"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/isotope.pkgd.min.js": {
+    "mtime": 1761497116.5322134,
+    "ast_hash": "8f61348c3f1f6c12dd5621f1c84ca062",
+    "semantic_hash": "8f61348c3f1f6c12dd5621f1c84ca062"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/jquery-3.3.1.min.js": {
+    "mtime": 1761497116.5331178,
+    "ast_hash": "a09e13ee94d51c524b7e2a728c7d4039",
+    "semantic_hash": "a09e13ee94d51c524b7e2a728c7d4039"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/custom.js": {
+    "mtime": 1761497116.5316298,
+    "ast_hash": "f4f4e529d2bc358b72676c1c3a418036",
+    "semantic_hash": "f4f4e529d2bc358b72676c1c3a418036"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/jquery-migrate-1.4.1.min.js": {
+    "mtime": 1761497116.5334337,
+    "ast_hash": "7121994eec5320fbe6586463bf9651c2",
+    "semantic_hash": "7121994eec5320fbe6586463bf9651c2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/jquery.plugin.min.js": {
+    "mtime": 1761497116.5337029,
+    "ast_hash": "9ad4c5bb153e885ca2c0c25119e41c45",
+    "semantic_hash": "9ad4c5bb153e885ca2c0c25119e41c45"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/owl.carousel.min.js": {
+    "mtime": 1761497116.5353558,
+    "ast_hash": "f416f9031fef25ae25ba9756e3eb6978",
+    "semantic_hash": "f416f9031fef25ae25ba9756e3eb6978"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/bootstrap.min.js": {
+    "mtime": 1761497116.5306606,
+    "ast_hash": "67176c242e1bdc20603c878dee836df3",
+    "semantic_hash": "67176c242e1bdc20603c878dee836df3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/jquery.prettyPhoto.js": {
+    "mtime": 1761497116.5340354,
+    "ast_hash": "f81c3c778084503cad39095830c6b3f1",
+    "semantic_hash": "f81c3c778084503cad39095830c6b3f1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/popper.min.js": {
+    "mtime": 1761497116.5356054,
+    "ast_hash": "83fb8c4d9199dce0224da0206423106f",
+    "semantic_hash": "83fb8c4d9199dce0224da0206423106f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/slick.min.js": {
+    "mtime": 1761497116.5358944,
+    "ast_hash": "d5a61c749e44e47159af8a6579dda121",
+    "semantic_hash": "d5a61c749e44e47159af8a6579dda121"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/js/isotope.min.js": {
+    "mtime": 1761497116.5319042,
+    "ast_hash": "39258d5d7a1a2c1df44cb3a40e494e9a",
+    "semantic_hash": "39258d5d7a1a2c1df44cb3a40e494e9a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/server.js": {
+    "mtime": 1777407731.855275,
+    "ast_hash": "bdf117d2219c8c41e13aac2b3fbd1a6a",
+    "semantic_hash": "bdf117d2219c8c41e13aac2b3fbd1a6a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/middleware/auth.js": {
+    "mtime": 1780167181.6495318,
+    "ast_hash": "7d41b89edbdc1a3cf9c426115b1cd652",
+    "semantic_hash": "7d41b89edbdc1a3cf9c426115b1cd652"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/config/database.js": {
+    "mtime": 1761364717.4052467,
+    "ast_hash": "1cc870cb64860002bdcfd1913ab832c9",
+    "semantic_hash": "1cc870cb64860002bdcfd1913ab832c9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/config/fertilizerCropConfig.js": {
+    "mtime": 1777407731.8525343,
+    "ast_hash": "29f5866dcc6d728807594586635ddecc",
+    "semantic_hash": "29f5866dcc6d728807594586635ddecc"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/waterClassification.js": {
+    "mtime": 1773238709.1666381,
+    "ast_hash": "0faa2aa2614d92a9d1afc38ac564832a",
+    "semantic_hash": "0faa2aa2614d92a9d1afc38ac564832a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/logger.js": {
+    "mtime": 1766427534.798535,
+    "ast_hash": "a9b56b85b97b479e810d6d28b03eef69",
+    "semantic_hash": "a9b56b85b97b479e810d6d28b03eef69"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/mapUrlParser.js": {
+    "mtime": 1780167181.6674497,
+    "ast_hash": "9dd268e87711cdd434c2b9cac549d1d7",
+    "semantic_hash": "9dd268e87711cdd434c2b9cac549d1d7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/jwt.js": {
+    "mtime": 1773238709.1652055,
+    "ast_hash": "66a0a2d02ca44ab0d39a6ea1231b35b3",
+    "semantic_hash": "66a0a2d02ca44ab0d39a6ea1231b35b3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/soilClassification.js": {
+    "mtime": 1773238709.1660316,
+    "ast_hash": "0f1c4676a0d17bf72532f8743513a39e",
+    "semantic_hash": "0f1c4676a0d17bf72532f8743513a39e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Notification.js": {
+    "mtime": 1780167181.6511502,
+    "ast_hash": "7ae96f67ac5a22df35b0afff3e656ed9",
+    "semantic_hash": "7ae96f67ac5a22df35b0afff3e656ed9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/FarmMediaQuota.js": {
+    "mtime": 1780167181.6499355,
+    "ast_hash": "5591ad33d5d4b870d443a095d69ee7d8",
+    "semantic_hash": "5591ad33d5d4b870d443a095d69ee7d8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Transaction.js": {
+    "mtime": 1777407727.6453462,
+    "ast_hash": "a4de15e29daa890e944453cd4ced3167",
+    "semantic_hash": "a4de15e29daa890e944453cd4ced3167"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Role.js": {
+    "mtime": 1766846728.9180338,
+    "ast_hash": "84075d35df33cb3a1fb0a1fe2c5f16ac",
+    "semantic_hash": "84075d35df33cb3a1fb0a1fe2c5f16ac"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/User.js": {
+    "mtime": 1780167253.713948,
+    "ast_hash": "8831c1497fc0072d187ff07abe417b36",
+    "semantic_hash": "8831c1497fc0072d187ff07abe417b36"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/FertilizerSample.js": {
+    "mtime": 1780167181.650578,
+    "ast_hash": "117420f52c364328740c239a7dbb1043",
+    "semantic_hash": "117420f52c364328740c239a7dbb1043"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/SoilSample.js": {
+    "mtime": 1780167181.6526132,
+    "ast_hash": "7075236a9435af7211f811eb7104db3d",
+    "semantic_hash": "7075236a9435af7211f811eb7104db3d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Permission.js": {
+    "mtime": 1767431692.0024803,
+    "ast_hash": "f908315ccd3ad5dd23db1bc5ddcdb464",
+    "semantic_hash": "f908315ccd3ad5dd23db1bc5ddcdb464"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/WaterSession.js": {
+    "mtime": 1770661734.2765632,
+    "ast_hash": "613bafa3f678622a917da519d42ac89b",
+    "semantic_hash": "613bafa3f678622a917da519d42ac89b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/FertilizerSession.js": {
+    "mtime": 1770661734.2759411,
+    "ast_hash": "ca241e71ea57f595b3c3d024c5a4ad4b",
+    "semantic_hash": "ca241e71ea57f595b3c3d024c5a4ad4b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Invoice.js": {
+    "mtime": 1767419317.9347572,
+    "ast_hash": "5ba76044aee1dffc0c79ddd2c50f985b",
+    "semantic_hash": "5ba76044aee1dffc0c79ddd2c50f985b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Project.js": {
+    "mtime": 1780167181.6515884,
+    "ast_hash": "d724d3cc4849539215bba32d66781bef",
+    "semantic_hash": "d724d3cc4849539215bba32d66781bef"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/SoilSession.js": {
+    "mtime": 1770661734.2763453,
+    "ast_hash": "b68e042f31c99b7bb19637f4ac76c4cd",
+    "semantic_hash": "b68e042f31c99b7bb19637f4ac76c4cd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Draft.js": {
+    "mtime": 1777407727.6446059,
+    "ast_hash": "7c33cccfbb0dc0706c4b66e802c30d22",
+    "semantic_hash": "7c33cccfbb0dc0706c4b66e802c30d22"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/ActivityLog.js": {
+    "mtime": 1777407727.644446,
+    "ast_hash": "28300bc4ba8736546eb92b9538a7b8ab",
+    "semantic_hash": "28300bc4ba8736546eb92b9538a7b8ab"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/WaterSample.js": {
+    "mtime": 1780167181.6533978,
+    "ast_hash": "46d17da33af2f19ed950f5ad3c430e3e",
+    "semantic_hash": "46d17da33af2f19ed950f5ad3c430e3e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Product.js": {
+    "mtime": 1761364717.4054933,
+    "ast_hash": "f58343b68becf43f5a35411201b8170c",
+    "semantic_hash": "f58343b68becf43f5a35411201b8170c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Receipt.js": {
+    "mtime": 1767419317.935236,
+    "ast_hash": "48d8371dfe12a3a89660eb53d91096c2",
+    "semantic_hash": "48d8371dfe12a3a89660eb53d91096c2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Letter.js": {
+    "mtime": 1767419317.9351149,
+    "ast_hash": "cb20d2796fcfb3d548f5aa79a41ca958",
+    "semantic_hash": "cb20d2796fcfb3d548f5aa79a41ca958"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/scripts/create-sample-excel-templates.js": {
+    "mtime": 1777407731.854822,
+    "ast_hash": "49e4610c7136c130de0bd2795bacd2db",
+    "semantic_hash": "49e4610c7136c130de0bd2795bacd2db"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/scripts/migrate-permissions.js": {
+    "mtime": 1766846728.9208825,
+    "ast_hash": "872fec5bce75ad9826ec96e7b55d4383",
+    "semantic_hash": "872fec5bce75ad9826ec96e7b55d4383"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/projectController.js": {
+    "mtime": 1780167181.648636,
+    "ast_hash": "e68937751863701f51c36b0da17653ed",
+    "semantic_hash": "e68937751863701f51c36b0da17653ed"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/farmMediaController.js": {
+    "mtime": 1780167181.6464906,
+    "ast_hash": "cf0a3500b520e16db79ab430880e58bb",
+    "semantic_hash": "cf0a3500b520e16db79ab430880e58bb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/notificationController.js": {
+    "mtime": 1777724663.1970458,
+    "ast_hash": "46635a0fd34c77574284aab1d6415799",
+    "semantic_hash": "46635a0fd34c77574284aab1d6415799"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/receiptController.js": {
+    "mtime": 1767419317.9344444,
+    "ast_hash": "66ba184b61c8c674e26a938e0e82aad6",
+    "semantic_hash": "66ba184b61c8c674e26a938e0e82aad6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/userController.js": {
+    "mtime": 1777724663.1977708,
+    "ast_hash": "54e1a593b455ae86a0daa1ad0e46cf0e",
+    "semantic_hash": "54e1a593b455ae86a0daa1ad0e46cf0e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/roleController.js": {
+    "mtime": 1766846728.9169786,
+    "ast_hash": "b558103d3c5bf7e397653df8983240a2",
+    "semantic_hash": "b558103d3c5bf7e397653df8983240a2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/letterController.js": {
+    "mtime": 1767419317.9341486,
+    "ast_hash": "e0042706c9556b750a9003334998fe5c",
+    "semantic_hash": "e0042706c9556b750a9003334998fe5c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/invoiceController.js": {
+    "mtime": 1767419317.933977,
+    "ast_hash": "89f33e09c5be317012f341811405df11",
+    "semantic_hash": "89f33e09c5be317012f341811405df11"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/authController.js": {
+    "mtime": 1780167253.7132626,
+    "ast_hash": "4ed74aba70687223ed629ffbb721e259",
+    "semantic_hash": "4ed74aba70687223ed629ffbb721e259"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/transactionController.js": {
+    "mtime": 1777407727.6442678,
+    "ast_hash": "6a8b565296ca4d1f9f49652e93a8145e",
+    "semantic_hash": "6a8b565296ca4d1f9f49652e93a8145e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/transactions.js": {
+    "mtime": 1777407727.6458435,
+    "ast_hash": "9903abfb7e60de2f0ad314e558767c72",
+    "semantic_hash": "9903abfb7e60de2f0ad314e558767c72"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/soilTesting.js": {
+    "mtime": 1777407731.8537908,
+    "ast_hash": "5e62e4eeaa7cec2d1ea070fbdc7bd287",
+    "semantic_hash": "5e62e4eeaa7cec2d1ea070fbdc7bd287"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/fertilizerTesting.js": {
+    "mtime": 1780167181.6552222,
+    "ast_hash": "64ab3705c1c45ebfe8832aaae32135eb",
+    "semantic_hash": "64ab3705c1c45ebfe8832aaae32135eb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/waterTesting.js": {
+    "mtime": 1780167181.65842,
+    "ast_hash": "803b3e04deeecd29a6f60a2e9494b67b",
+    "semantic_hash": "803b3e04deeecd29a6f60a2e9494b67b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/auth.js": {
+    "mtime": 1780167253.7141593,
+    "ast_hash": "ee0f1be94fe4f61d1cf5fc85116f3b3d",
+    "semantic_hash": "ee0f1be94fe4f61d1cf5fc85116f3b3d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/roles.js": {
+    "mtime": 1766846728.9197464,
+    "ast_hash": "0b62b65a2818ad52deb1bc164d716f58",
+    "semantic_hash": "0b62b65a2818ad52deb1bc164d716f58"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/users.js": {
+    "mtime": 1777724663.2007651,
+    "ast_hash": "20cf3d3e45265fadc8c8f1d171e8b9f8",
+    "semantic_hash": "20cf3d3e45265fadc8c8f1d171e8b9f8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/projects.js": {
+    "mtime": 1780167181.6581008,
+    "ast_hash": "ec66b2398ec6a403866e6c5f4487185a",
+    "semantic_hash": "ec66b2398ec6a403866e6c5f4487185a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/managerialWork.js": {
+    "mtime": 1767419317.9357648,
+    "ast_hash": "cee20959b490645170a071d05f7cb84d",
+    "semantic_hash": "cee20959b490645170a071d05f7cb84d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/api.js": {
+    "mtime": 1777724663.1991978,
+    "ast_hash": "59e4b7d4950514c40be5b81a3fad1f30",
+    "semantic_hash": "59e4b7d4950514c40be5b81a3fad1f30"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/notifications.js": {
+    "mtime": 1777724663.1994882,
+    "ast_hash": "5a73d76ff05eb9a9b5cd5ca42161750f",
+    "semantic_hash": "5a73d76ff05eb9a9b5cd5ca42161750f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/routes/pdfGeneration.js": {
+    "mtime": 1780167181.6572423,
+    "ast_hash": "3638bfbe8e8cb662a237a66fdcf102e5",
+    "semantic_hash": "3638bfbe8e8cb662a237a66fdcf102e5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/farmMediaService.js": {
+    "mtime": 1780167181.6592932,
+    "ast_hash": "c746f3b48f95b4efc4c628db724aa76e",
+    "semantic_hash": "c746f3b48f95b4efc4c628db724aa76e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/pdfGenerator.js": {
+    "mtime": 1780167181.6650934,
+    "ast_hash": "5fd027c7da06a5c5815a4ea3ad55836e",
+    "semantic_hash": "5fd027c7da06a5c5815a4ea3ad55836e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/transactionService.js": {
+    "mtime": 1777407727.6471572,
+    "ast_hash": "36964273d1b076e7bc6ddde0413a5e31",
+    "semantic_hash": "36964273d1b076e7bc6ddde0413a5e31"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/activityLogService.js": {
+    "mtime": 1777407727.6460018,
+    "ast_hash": "6adce1597d0de43a7c95302f17e54fac",
+    "semantic_hash": "6adce1597d0de43a7c95302f17e54fac"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/draftService.js": {
+    "mtime": 1777407727.6463478,
+    "ast_hash": "b37c5d000b383f17e8c1c1208ca71bb3",
+    "semantic_hash": "b37c5d000b383f17e8c1c1208ca71bb3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/notificationService.js": {
+    "mtime": 1777724663.2010868,
+    "ast_hash": "da27b2905fc7912eee415d5d4b467103",
+    "semantic_hash": "da27b2905fc7912eee415d5d4b467103"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/projectService.js": {
+    "mtime": 1780167253.7153356,
+    "ast_hash": "c77587f2d6fe2261ca8f5665c21e97b7",
+    "semantic_hash": "c77587f2d6fe2261ca8f5665c21e97b7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/mongodb/init-mongo.js": {
+    "mtime": 1762919464.9039023,
+    "ast_hash": "539e0ec5809a95a4445f6829dadbf531",
+    "semantic_hash": "539e0ec5809a95a4445f6829dadbf531"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/Application_Requirements.md": {
+    "mtime": 1761364717.4038558,
+    "ast_hash": "6c269dfbe1dbaf0bca5337a62e81a7fd",
+    "semantic_hash": "6c269dfbe1dbaf0bca5337a62e81a7fd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/SETUP.md": {
+    "mtime": 1761364717.4040155,
+    "ast_hash": "39c4d7e8760d8a377fdee9c5ae056a7e",
+    "semantic_hash": "39c4d7e8760d8a377fdee9c5ae056a7e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/README.md": {
+    "mtime": 1761714129.6895907,
+    "ast_hash": "bf28523e94134bdafee570814b65189c",
+    "semantic_hash": "bf28523e94134bdafee570814b65189c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/DEPLOYMENT_GUIDE.md": {
+    "mtime": 1762919464.8938243,
+    "ast_hash": "ae9a727cfada1de5013d9115fc4d9eb7",
+    "semantic_hash": "ae9a727cfada1de5013d9115fc4d9eb7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/Media Service Arch.md": {
+    "mtime": 1772279641.5069475,
+    "ast_hash": "e1fa69242ffe346d2d0600ee5e7c70cb",
+    "semantic_hash": "e1fa69242ffe346d2d0600ee5e7c70cb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/docker-compose.yml": {
+    "mtime": 1780167253.7166092,
+    "ast_hash": "3f4855931148c8bfffc122d82e18f08f",
+    "semantic_hash": "3f4855931148c8bfffc122d82e18f08f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/docker-compose.prod.yml": {
+    "mtime": 1780167253.7162902,
+    "ast_hash": "ace8feaffb22219c26edac79895f4d26",
+    "semantic_hash": "ace8feaffb22219c26edac79895f4d26"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/infra/mongodb-deployment.yaml": {
+    "mtime": 1761364717.4115288,
+    "ast_hash": "86eba1b60ddf71f96b7e02ebe966df9b",
+    "semantic_hash": "86eba1b60ddf71f96b7e02ebe966df9b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/infra/namespace.yaml": {
+    "mtime": 1761364717.411668,
+    "ast_hash": "fd155479389ce6d24c39ce1f22f8ccfd",
+    "semantic_hash": "fd155479389ce6d24c39ce1f22f8ccfd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/infra/frontend-deployment.yaml": {
+    "mtime": 1761364717.4113965,
+    "ast_hash": "ce1c59afd8eff159eafbf775baef9ff8",
+    "semantic_hash": "ce1c59afd8eff159eafbf775baef9ff8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/infra/backend-deployment.yaml": {
+    "mtime": 1761364717.411244,
+    "ast_hash": "16587ca7a129a2c0a841e8c0c38d7ffe",
+    "semantic_hash": "16587ca7a129a2c0a841e8c0c38d7ffe"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/src/main/resources/application.yml": {
+    "mtime": 1780167181.7910922,
+    "ast_hash": "08ddadd7986f0ee0a8af7af30e784472",
+    "semantic_hash": "08ddadd7986f0ee0a8af7af30e784472"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/FIREBASE_DEPLOYMENT.md": {
+    "mtime": 1761497116.0825627,
+    "ast_hash": "d82ba2a56fae9b2490c07e40b3d47162",
+    "semantic_hash": "d82ba2a56fae9b2490c07e40b3d47162"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/README.md": {
+    "mtime": 1761364717.4075866,
+    "ast_hash": "991199b3c79f8db0afc0f5345b9ad67d",
+    "semantic_hash": "991199b3c79f8db0afc0f5345b9ad67d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/index.html": {
+    "mtime": 1762919464.9037395,
+    "ast_hash": "e341133405add23a827df84817f5a3a9",
+    "semantic_hash": "e341133405add23a827df84817f5a3a9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/app.html": {
+    "mtime": 1770661734.2829316,
+    "ast_hash": "1e9f81cd38990a893f9b98eacc2f9d9b",
+    "semantic_hash": "1e9f81cd38990a893f9b98eacc2f9d9b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/footer/footer.html": {
+    "mtime": 1761497116.0863695,
+    "ast_hash": "3630c402e5541ef970792fe87a613aad",
+    "semantic_hash": "3630c402e5541ef970792fe87a613aad"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/project-list/project-list.html": {
+    "mtime": 1777407727.6499515,
+    "ast_hash": "3a19236c26129e19772f9ce1e74d11e0",
+    "semantic_hash": "3a19236c26129e19772f9ce1e74d11e0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/dashboard-overview/dashboard-overview.html": {
+    "mtime": 1777407727.6484435,
+    "ast_hash": "7f161d59ff04bbd20f32cb765cb0bc30",
+    "semantic_hash": "7f161d59ff04bbd20f32cb765cb0bc30"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/project-detail-popup/project-detail-popup.html": {
+    "mtime": 1777407727.6494472,
+    "ast_hash": "249336b0597c093cc2c3cd03b1a9e57e",
+    "semantic_hash": "249336b0597c093cc2c3cd03b1a9e57e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/confirmation-modal/confirmation-modal.component.html": {
+    "mtime": 1766846728.9228966,
+    "ast_hash": "ba5f50ce3875a206b4cecf1e13377e4a",
+    "semantic_hash": "ba5f50ce3875a206b4cecf1e13377e4a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/farm-weather/farm-weather.html": {
+    "mtime": 1780167181.6791842,
+    "ast_hash": "454fda7a862440916c832234905fa598",
+    "semantic_hash": "454fda7a862440916c832234905fa598"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/role-selection-modal/role-selection-modal.component.html": {
+    "mtime": 1766846728.924857,
+    "ast_hash": "3a8c61414e05917925e4ea638cc38595",
+    "semantic_hash": "3a8c61414e05917925e4ea638cc38595"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/farm-registration-form/farm-registration-form.html": {
+    "mtime": 1780167253.717466,
+    "ast_hash": "30b07594573ea040c1dd6cec25dd4cd4",
+    "semantic_hash": "30b07594573ea040c1dd6cec25dd4cd4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/header/header.html": {
+    "mtime": 1777724663.2030716,
+    "ast_hash": "7bd88a057929580460671f136b1daf70",
+    "semantic_hash": "7bd88a057929580460671f136b1daf70"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/components/header/notification-bell/notification-bell.html": {
+    "mtime": 1780167181.6841297,
+    "ast_hash": "5c12fd8ce14635df9dc71236eb4ec25d",
+    "semantic_hash": "5c12fd8ce14635df9dc71236eb4ec25d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/causes-details/causes-details.html": {
+    "mtime": 1761497116.0914872,
+    "ast_hash": "d5a04124ab7734ee3c2610a240c89246",
+    "semantic_hash": "d5a04124ab7734ee3c2610a240c89246"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/donation/donation.html": {
+    "mtime": 1761497116.0945587,
+    "ast_hash": "7eab7c42510378dcd4507c5f28944ce1",
+    "semantic_hash": "7eab7c42510378dcd4507c5f28944ce1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/home/home.html": {
+    "mtime": 1764404105.026644,
+    "ast_hash": "dfa392b9179b0862373f1ab50e20373b",
+    "semantic_hash": "dfa392b9179b0862373f1ab50e20373b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/shop-details/shop-details.html": {
+    "mtime": 1761497116.101972,
+    "ast_hash": "e028765dd13b3b99d3d4817203cb80aa",
+    "semantic_hash": "e028765dd13b3b99d3d4817203cb80aa"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/contact/contact.html": {
+    "mtime": 1762028073.2403204,
+    "ast_hash": "7d7a1d9ea5a8c49c8d31ab452c6405cd",
+    "semantic_hash": "7d7a1d9ea5a8c49c8d31ab452c6405cd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/testimonials/testimonials.html": {
+    "mtime": 1761497116.1055944,
+    "ast_hash": "6226094db69bb3686a434017071eba27",
+    "semantic_hash": "6226094db69bb3686a434017071eba27"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/event-details/event-details.html": {
+    "mtime": 1761497116.0949335,
+    "ast_hash": "49f79d7cbf923152b6579672d171f617",
+    "semantic_hash": "49f79d7cbf923152b6579672d171f617"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-dashboard/farm-dashboard.html": {
+    "mtime": 1777407727.6505256,
+    "ast_hash": "5b3b285641afa35b8e06199629aca262",
+    "semantic_hash": "5b3b285641afa35b8e06199629aca262"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/not-found/not-found.html": {
+    "mtime": 1761497116.0997105,
+    "ast_hash": "6800a0d402314c4b2a789ff35f111e9f",
+    "semantic_hash": "6800a0d402314c4b2a789ff35f111e9f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/payment/payment.html": {
+    "mtime": 1764404105.0270972,
+    "ast_hash": "055c1f79a72108691c9f9a7d81c81771",
+    "semantic_hash": "055c1f79a72108691c9f9a7d81c81771"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/gallery/gallery.html": {
+    "mtime": 1761497116.0960994,
+    "ast_hash": "866825a210adc397569127d73c3de1ac",
+    "semantic_hash": "866825a210adc397569127d73c3de1ac"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/shop/shop.html": {
+    "mtime": 1761497116.102675,
+    "ast_hash": "d8880ada2cd3cd60814c02e968ed0c37",
+    "semantic_hash": "d8880ada2cd3cd60814c02e968ed0c37"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/admin/role-management/role-management.component.html": {
+    "mtime": 1766846728.92884,
+    "ast_hash": "7cb165a1e5ea02d4adf7d3deb076cf5b",
+    "semantic_hash": "7cb165a1e5ea02d4adf7d3deb076cf5b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/admin/user-management/user-management.component.html": {
+    "mtime": 1766846728.9296713,
+    "ast_hash": "fed7c26856e5f8bb74f19e40f8407df5",
+    "semantic_hash": "fed7c26856e5f8bb74f19e40f8407df5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-management/farm-management.html": {
+    "mtime": 1780167181.6915236,
+    "ast_hash": "af527a58d5350d1539d235270cc90be8",
+    "semantic_hash": "af527a58d5350d1539d235270cc90be8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/about/about.html": {
+    "mtime": 1761497116.0881815,
+    "ast_hash": "7ca997900eafdd6668352ad814a823ee",
+    "semantic_hash": "7ca997900eafdd6668352ad814a823ee"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-project-details/farm-project-details.html": {
+    "mtime": 1780167181.6996841,
+    "ast_hash": "af85333f219e11920fec48fa265803fb",
+    "semantic_hash": "af85333f219e11920fec48fa265803fb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/blog/blog.html": {
+    "mtime": 1761497116.0895488,
+    "ast_hash": "02812c598c851538651f7d96dbb5c627",
+    "semantic_hash": "02812c598c851538651f7d96dbb5c627"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/blog-details/blog-details.html": {
+    "mtime": 1761497116.0889602,
+    "ast_hash": "69ce06dbe5f52ca02ed62aaea03d25b3",
+    "semantic_hash": "69ce06dbe5f52ca02ed62aaea03d25b3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/my-account/my-account.html": {
+    "mtime": 1780167253.7218075,
+    "ast_hash": "a3a29d55d3433eed07c5e5eacecfc309",
+    "semantic_hash": "a3a29d55d3433eed07c5e5eacecfc309"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/team/team.html": {
+    "mtime": 1761497116.1048055,
+    "ast_hash": "fa7a6693b93934dd395e74a546dee066",
+    "semantic_hash": "fa7a6693b93934dd395e74a546dee066"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/managerial-work.html": {
+    "mtime": 1767419317.942968,
+    "ast_hash": "16c3966703f8a9869b88c652e6630f42",
+    "semantic_hash": "16c3966703f8a9869b88c652e6630f42"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/receipts/receipts.html": {
+    "mtime": 1767419317.9443588,
+    "ast_hash": "6090a2a5388cec7fc5a6196a4e51c071",
+    "semantic_hash": "6090a2a5388cec7fc5a6196a4e51c071"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/letters/letters.html": {
+    "mtime": 1770010177.9253662,
+    "ast_hash": "8ce24288387d07363373f37e2066dfbe",
+    "semantic_hash": "8ce24288387d07363373f37e2066dfbe"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/managerial-work/invoices/invoices.html": {
+    "mtime": 1770010177.9240294,
+    "ast_hash": "caeb6916d0bbae133dc45774a9d982f7",
+    "semantic_hash": "caeb6916d0bbae133dc45774a9d982f7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/team-details/team-details.html": {
+    "mtime": 1761497116.1033626,
+    "ast_hash": "d49703ba6c447292f05ff986a8e6f89e",
+    "semantic_hash": "d49703ba6c447292f05ff986a8e6f89e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/project-details/project-details.html": {
+    "mtime": 1777407727.653821,
+    "ast_hash": "fae056c7e226e580cbe198fad8476cbb",
+    "semantic_hash": "fae056c7e226e580cbe198fad8476cbb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/project-wizard/project-wizard.html": {
+    "mtime": 1777407727.654677,
+    "ast_hash": "045133dee27adc84774002ef01dd2b1b",
+    "semantic_hash": "045133dee27adc84774002ef01dd2b1b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/causes/causes.html": {
+    "mtime": 1761497116.0921397,
+    "ast_hash": "3482a84dce42ab20d4e8cf3489154be9",
+    "semantic_hash": "3482a84dce42ab20d4e8cf3489154be9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/events/events.html": {
+    "mtime": 1761497116.0954926,
+    "ast_hash": "5ec06a9ae78f79bcb0e2ee3e9cb0a8b8",
+    "semantic_hash": "5ec06a9ae78f79bcb0e2ee3e9cb0a8b8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/water-testing/water-testing.html": {
+    "mtime": 1777407731.8579473,
+    "ast_hash": "9888766a232a0c1004364ad5a014aaed",
+    "semantic_hash": "9888766a232a0c1004364ad5a014aaed"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/lab-testing/lab-testing.html": {
+    "mtime": 1772216501.1862423,
+    "ast_hash": "6107461d4a07c15f5e3b7d264fd8a4a8",
+    "semantic_hash": "6107461d4a07c15f5e3b7d264fd8a4a8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/farm-registration/farm-registration.html": {
+    "mtime": 1777724663.2054617,
+    "ast_hash": "47a551b1d596d01a496bb00f602344eb",
+    "semantic_hash": "47a551b1d596d01a496bb00f602344eb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/fertilizer-testing/fertilizer-testing.html": {
+    "mtime": 1777407731.856474,
+    "ast_hash": "b866b7c64f97d360012b7a237cc72883",
+    "semantic_hash": "b866b7c64f97d360012b7a237cc72883"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/soil-testing/soil-testing.html": {
+    "mtime": 1777407731.85726,
+    "ast_hash": "bfd737c8e710f1a81bbfee36c07e2f54",
+    "semantic_hash": "bfd737c8e710f1a81bbfee36c07e2f54"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/login/login.html": {
+    "mtime": 1780167253.7210402,
+    "ast_hash": "2446d1a999b8a37d00559204e9672f70",
+    "semantic_hash": "2446d1a999b8a37d00559204e9672f70"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-Bold-webfont-2.html": {
+    "mtime": 1761497116.59532,
+    "ast_hash": "dddcf55b613b5f25a3c7679481f86317",
+    "semantic_hash": "dddcf55b613b5f25a3c7679481f86317"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-Bold-webfont.html": {
+    "mtime": 1761497116.5963192,
+    "ast_hash": "1322fa49e84e48fb3c8006723075952e",
+    "semantic_hash": "1322fa49e84e48fb3c8006723075952e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/templates/CREATE_TEMPLATE_GUIDE.md": {
+    "mtime": 1766427534.8132885,
+    "ast_hash": "7729c06611c806bd954addca05da6f21",
+    "semantic_hash": "7729c06611c806bd954addca05da6f21"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/graphify-out/converted/Soil_Testing_Upload_Template_ff913ec9.md": {
+    "mtime": 1778078765.4079008,
+    "ast_hash": "",
+    "semantic_hash": ""
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/graphify-out/converted/Water_Testing_Upload_Template_3f066a5b.md": {
+    "mtime": 1778078765.4106228,
+    "ast_hash": "",
+    "semantic_hash": ""
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/receipt.html": {
+    "mtime": 1769797324.880764,
+    "ast_hash": "3f95ebb3c37518b0acc7a6576eb63e4c",
+    "semantic_hash": "3f95ebb3c37518b0acc7a6576eb63e4c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/receipt-safe.html": {
+    "mtime": 1767419317.937132,
+    "ast_hash": "c3f880e44544788c33f053aa5cfe6319",
+    "semantic_hash": "c3f880e44544788c33f053aa5cfe6319"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/normal-fertilizer-report.html": {
+    "mtime": 1777407727.6474624,
+    "ast_hash": "0d67e3cc70c05cb4dc21aceca7018f8b",
+    "semantic_hash": "0d67e3cc70c05cb4dc21aceca7018f8b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/soil-report.html": {
+    "mtime": 1770010177.9230502,
+    "ast_hash": "26d4436ea0ed88ad0f9bb43f504347a1",
+    "semantic_hash": "26d4436ea0ed88ad0f9bb43f504347a1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/letter.html": {
+    "mtime": 1770010177.922621,
+    "ast_hash": "1b45b8ae5a2ea050e30b735ea47eb2fc",
+    "semantic_hash": "1b45b8ae5a2ea050e30b735ea47eb2fc"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/invoice.html": {
+    "mtime": 1770010177.9222357,
+    "ast_hash": "aa9e2fc5962688855c0db3a1978c3053",
+    "semantic_hash": "aa9e2fc5962688855c0db3a1978c3053"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/large-fruit-crop-report.html": {
+    "mtime": 1774155340.1809037,
+    "ast_hash": "6aaded32c56562f7b5137ddd07c80c04",
+    "semantic_hash": "6aaded32c56562f7b5137ddd07c80c04"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/small-fruit-tree-report-simple.html": {
+    "mtime": 1774155340.1822953,
+    "ast_hash": "6a28ff0c84dd5a9f69a5c18e3446cb86",
+    "semantic_hash": "6a28ff0c84dd5a9f69a5c18e3446cb86"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/water-report.html": {
+    "mtime": 1770010177.9233987,
+    "ast_hash": "c3f565ba718046727881dfd85746afc2",
+    "semantic_hash": "c3f565ba718046727881dfd85746afc2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/config/permissions.yml": {
+    "mtime": 1777724663.196623,
+    "ast_hash": "220c0624bce137f70563691044a6bcae",
+    "semantic_hash": "220c0624bce137f70563691044a6bcae"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/docs/MONGODB_MIGRATION_GUIDE.md": {
+    "mtime": 1766561673.0667944,
+    "ast_hash": "d436689aca3c1126f61586f6220bece4",
+    "semantic_hash": "d436689aca3c1126f61586f6220bece4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/docs/RBAC_IMPLEMENTATION_GUIDE.md": {
+    "mtime": 1766846728.9213758,
+    "ast_hash": "0aa5e958d8cc754ee0be767789b866dd",
+    "semantic_hash": "0aa5e958d8cc754ee0be767789b866dd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/claude-skills/SKILLS.md": {
+    "mtime": 1780167181.6686847,
+    "ast_hash": "92ec957df644ec4711f8a1c3940e88ee",
+    "semantic_hash": "92ec957df644ec4711f8a1c3940e88ee"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/design-system/shiv-agri-farm-management/MASTER.md": {
+    "mtime": 1777724663.2018156,
+    "ast_hash": "734ad5220f65471c76c2d4bc33ca0b61",
+    "semantic_hash": "734ad5220f65471c76c2d4bc33ca0b61"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/templates/soil-report-template.pdf": {
+    "mtime": 1766427534.8160403,
+    "ast_hash": "e12fdd4bb504a7ebcac1b9a2eb1c70d3",
+    "semantic_hash": "e12fdd4bb504a7ebcac1b9a2eb1c70d3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-regular-400.svg": {
+    "mtime": 1761497116.6070569,
+    "ast_hash": "b5a61b229c9c92a6ac21f5b0e3c6e9f1",
+    "semantic_hash": "b5a61b229c9c92a6ac21f5b0e3c6e9f1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg": {
+    "mtime": 1761497116.5969658,
+    "ast_hash": "677ba34477f36e04a8e7ab8b63a5d494",
+    "semantic_hash": "677ba34477f36e04a8e7ab8b63a5d494"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-webfont.svg": {
+    "mtime": 1761497116.5988874,
+    "ast_hash": "489d660748c63085b07e9a8af032d559",
+    "semantic_hash": "489d660748c63085b07e9a8af032d559"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-brands-400.svg": {
+    "mtime": 1761497116.6030614,
+    "ast_hash": "c862e94cbef741d18838774587e3c49d",
+    "semantic_hash": "c862e94cbef741d18838774587e3c49d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-solid-900.svg": {
+    "mtime": 1761497116.612284,
+    "ast_hash": "1d220cf9da36861171fa90d3c164f4d3",
+    "semantic_hash": "1d220cf9da36861171fa90d3c164f4d3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.githooks/setup.sh": {
+    "mtime": 1774099814.0865357,
+    "ast_hash": "c9ff95a262c3e81f14dfe737aeac0f24",
+    "semantic_hash": "c9ff95a262c3e81f14dfe737aeac0f24"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.githooks/pre-commit": {
+    "mtime": 1780167181.644129,
+    "ast_hash": "bead4ee99a0e41365852c505dbf8862e",
+    "semantic_hash": "bead4ee99a0e41365852c505dbf8862e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/mvnw": {
+    "mtime": 1772279641.5091379,
+    "ast_hash": "93fb5b59a55c6d6b47ff2be5d84251a9",
+    "semantic_hash": "93fb5b59a55c6d6b47ff2be5d84251a9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/test-api.sh": {
+    "mtime": 1772279641.5184462,
+    "ast_hash": "13d02327071558fe20eba77e99236baf",
+    "semantic_hash": "13d02327071558fe20eba77e99236baf"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/tsconfig.app.json": {
+    "mtime": 1761364717.4108045,
+    "ast_hash": "67a3f20f3c9369570c8dc70e3d5bb7ce",
+    "semantic_hash": "67a3f20f3c9369570c8dc70e3d5bb7ce"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/angular.json": {
+    "mtime": 1766567024.0492327,
+    "ast_hash": "22737df5feef80b963c9a9bcdf4c5ebb",
+    "semantic_hash": "22737df5feef80b963c9a9bcdf4c5ebb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/package.json": {
+    "mtime": 1770661734.2821615,
+    "ast_hash": "9ff46232d0209c9cae73a4bc33e49609",
+    "semantic_hash": "9ff46232d0209c9cae73a4bc33e49609"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/tsconfig.json": {
+    "mtime": 1761364717.4109418,
+    "ast_hash": "c46d4d2cca83a20c5b6fba7db3c83ee5",
+    "semantic_hash": "c46d4d2cca83a20c5b6fba7db3c83ee5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/firebase.json": {
+    "mtime": 1761499717.4061244,
+    "ast_hash": "e35d5f46e0c6bd0b3be4f4287668e71e",
+    "semantic_hash": "e35d5f46e0c6bd0b3be4f4287668e71e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/tsconfig.spec.json": {
+    "mtime": 1761364717.4110696,
+    "ast_hash": "443d78e8bca187cce047f83dd9915ea0",
+    "semantic_hash": "443d78e8bca187cce047f83dd9915ea0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/.claude/settings.local.json": {
+    "mtime": 1765604389.9996138,
+    "ast_hash": "4674d81624cd01b1dda22dbd80eda88b",
+    "semantic_hash": "4674d81624cd01b1dda22dbd80eda88b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/.vscode/extensions.json": {
+    "mtime": 1761364717.4070356,
+    "ast_hash": "d3b118b41884c371c18cbd55e392eb07",
+    "semantic_hash": "d3b118b41884c371c18cbd55e392eb07"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/.vscode/launch.json": {
+    "mtime": 1761364717.4071834,
+    "ast_hash": "c6799d2f7ae6f5d7a740d1023654bb8d",
+    "semantic_hash": "c6799d2f7ae6f5d7a740d1023654bb8d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/.vscode/tasks.json": {
+    "mtime": 1761364717.4073188,
+    "ast_hash": "5a70b3d3763f6628c8083d7b033b98b8",
+    "semantic_hash": "5a70b3d3763f6628c8083d7b033b98b8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/complete-profile/complete-profile.ts": {
+    "mtime": 1780167253.7199342,
+    "ast_hash": "2bbe8c3037127c46e867da6123121983",
+    "semantic_hash": "2bbe8c3037127c46e867da6123121983"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-design.service.ts": {
+    "mtime": 1780167181.7172391,
+    "ast_hash": "1e7b4b9a8b5503c76340b9ca3561fd3a",
+    "semantic_hash": "1e7b4b9a8b5503c76340b9ca3561fd3a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/quotation.service.ts": {
+    "mtime": 1780167181.7425907,
+    "ast_hash": "267304729f81018ae7d935f684484977",
+    "semantic_hash": "267304729f81018ae7d935f684484977"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-admin-transaction.service.ts": {
+    "mtime": 1780167181.7169917,
+    "ast_hash": "6170420b48289aca1d1c55407f7cf68a",
+    "semantic_hash": "6170420b48289aca1d1c55407f7cf68a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-report.service.ts": {
+    "mtime": 1780167181.73206,
+    "ast_hash": "e8e6195234449b2dd1cfd5ae8db6b0ca",
+    "semantic_hash": "e8e6195234449b2dd1cfd5ae8db6b0ca"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/services/farm-prescription.service.ts": {
+    "mtime": 1780167181.7292979,
+    "ast_hash": "030dc040837cd27a6e7c9054f7e12998",
+    "semantic_hash": "030dc040837cd27a6e7c9054f7e12998"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/guards/profile-complete.guard.ts": {
+    "mtime": 1780167253.7186553,
+    "ast_hash": "a06ee558cc56e6e8afb7f28b29e9d885",
+    "semantic_hash": "a06ee558cc56e6e8afb7f28b29e9d885"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/data/projects.json": {
+    "mtime": 1761936409.1888275,
+    "ast_hash": "86e847cadbeef7f74257a4e05edcf0f2",
+    "semantic_hash": "86e847cadbeef7f74257a4e05edcf0f2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/data/mini-photos.json": {
+    "mtime": 1777626578.4577186,
+    "ast_hash": "0a0b2196486a4e94b126944e728f4782",
+    "semantic_hash": "0a0b2196486a4e94b126944e728f4782"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/data/carousel-slides.json": {
+    "mtime": 1764404105.0279315,
+    "ast_hash": "2f7127d774910e3aa09dbef57386818b",
+    "semantic_hash": "2f7127d774910e3aa09dbef57386818b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/mvnw": {
+    "mtime": 1780167253.7279441,
+    "ast_hash": "93fb5b59a55c6d6b47ff2be5d84251a9",
+    "semantic_hash": "93fb5b59a55c6d6b47ff2be5d84251a9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/NotificationServiceApplication.java": {
+    "mtime": 1780167253.7286093,
+    "ast_hash": "319eeedb12445ccd60d423145998ba64",
+    "semantic_hash": "319eeedb12445ccd60d423145998ba64"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/Msg91Properties.java": {
+    "mtime": 1780167253.7300918,
+    "ast_hash": "02f4f8039ab93a7e6b946f6785c81d63",
+    "semantic_hash": "02f4f8039ab93a7e6b946f6785c81d63"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/AsyncConfig.java": {
+    "mtime": 1780167253.728878,
+    "ast_hash": "6ab286be3799a38fa22bea2d7ce79909",
+    "semantic_hash": "6ab286be3799a38fa22bea2d7ce79909"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/OtpProperties.java": {
+    "mtime": 1780167253.7302032,
+    "ast_hash": "a2b6bca351054c3f138faf93f9c127e0",
+    "semantic_hash": "a2b6bca351054c3f138faf93f9c127e0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/AsyncProperties.java": {
+    "mtime": 1780167253.7291164,
+    "ast_hash": "bda50dd07d6c6f174c7ec8d00847cfc5",
+    "semantic_hash": "bda50dd07d6c6f174c7ec8d00847cfc5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/SecurityProperties.java": {
+    "mtime": 1780167253.7306614,
+    "ast_hash": "1ca39481816a503303df3f0bb23e447e",
+    "semantic_hash": "1ca39481816a503303df3f0bb23e447e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/EmailProperties.java": {
+    "mtime": 1780167253.729979,
+    "ast_hash": "0345c73b71ebf446f857be86a843dccb",
+    "semantic_hash": "0345c73b71ebf446f857be86a843dccb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/RestTemplateConfig.java": {
+    "mtime": 1780167253.7304177,
+    "ast_hash": "dd32c5bb7e08062ebace4af2daf94599",
+    "semantic_hash": "dd32c5bb7e08062ebace4af2daf94599"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/config/WhatsAppProperties.java": {
+    "mtime": 1780167253.7313402,
+    "ast_hash": "5eb76b79d662ea023c089cf3afb0bdca",
+    "semantic_hash": "5eb76b79d662ea023c089cf3afb0bdca"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/security/ApiKeyAuthFilter.java": {
+    "mtime": 1780167253.7347088,
+    "ast_hash": "265349402c3289d003be52a8379e544c",
+    "semantic_hash": "265349402c3289d003be52a8379e544c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/OtpController.java": {
+    "mtime": 1780167253.731751,
+    "ast_hash": "7aaad79ec3d58dc717fe4cfd8250a6da",
+    "semantic_hash": "7aaad79ec3d58dc717fe4cfd8250a6da"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/EmailController.java": {
+    "mtime": 1780167253.7315333,
+    "ast_hash": "87235fb3edb143c853e52ffd075c5030",
+    "semantic_hash": "87235fb3edb143c853e52ffd075c5030"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/WhatsAppController.java": {
+    "mtime": 1780167253.732,
+    "ast_hash": "387722f3dc25a0642f36c725cde3e7b2",
+    "semantic_hash": "387722f3dc25a0642f36c725cde3e7b2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/EmailRequest.java": {
+    "mtime": 1780167253.732369,
+    "ast_hash": "29d8a17dd2a8558282cb82f27bed3436",
+    "semantic_hash": "29d8a17dd2a8558282cb82f27bed3436"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/WhatsAppTemplateRequest.java": {
+    "mtime": 1780167253.7330396,
+    "ast_hash": "80dafc04c889a3c236977253d090529d",
+    "semantic_hash": "80dafc04c889a3c236977253d090529d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/WhatsAppMediaRequest.java": {
+    "mtime": 1780167253.732839,
+    "ast_hash": "ef208410cc168d0c7007f9ae6770da3b",
+    "semantic_hash": "ef208410cc168d0c7007f9ae6770da3b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/OtpRequest.java": {
+    "mtime": 1780167253.732622,
+    "ast_hash": "0b7d2d4b32596905cde2cb228dfb004c",
+    "semantic_hash": "0b7d2d4b32596905cde2cb228dfb004c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/ErrorResponse.java": {
+    "mtime": 1780167253.7324882,
+    "ast_hash": "49f96177f5bc4a4c988a3cb090f03108",
+    "semantic_hash": "49f96177f5bc4a4c988a3cb090f03108"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/SendResponse.java": {
+    "mtime": 1780167253.7327306,
+    "ast_hash": "0d39e9a03a8f4b7beeb9d620db5f5a07",
+    "semantic_hash": "0d39e9a03a8f4b7beeb9d620db5f5a07"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/WhatsAppTextRequest.java": {
+    "mtime": 1780167253.7332246,
+    "ast_hash": "9c6dc01a8571381c5834ab06005bf3ef",
+    "semantic_hash": "9c6dc01a8571381c5834ab06005bf3ef"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/controller/dto/AuthTemplateCreateRequest.java": {
+    "mtime": 1780167253.732239,
+    "ast_hash": "f4a739230f7156f631802054d763b2c5",
+    "semantic_hash": "f4a739230f7156f631802054d763b2c5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/service/OtpDispatchService.java": {
+    "mtime": 1780167253.7358217,
+    "ast_hash": "bdd4f47d5e6a1889b2829da8f182485c",
+    "semantic_hash": "bdd4f47d5e6a1889b2829da8f182485c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/service/SmsService.java": {
+    "mtime": 1780167253.736014,
+    "ast_hash": "3b0734561b8f82c9de35a17d56cf130f",
+    "semantic_hash": "3b0734561b8f82c9de35a17d56cf130f"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/service/WhatsAppService.java": {
+    "mtime": 1780167253.736145,
+    "ast_hash": "eb8a92ad12490a993bf4842265b02765",
+    "semantic_hash": "eb8a92ad12490a993bf4842265b02765"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/service/EmailService.java": {
+    "mtime": 1780167253.7348957,
+    "ast_hash": "ba657dc11564651db84466d7bd5befd8",
+    "semantic_hash": "ba657dc11564651db84466d7bd5befd8"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/service/GmailOAuthTokenService.java": {
+    "mtime": 1780167253.7351305,
+    "ast_hash": "9cf986d5d7db94b21b6b9756cf0c553b",
+    "semantic_hash": "9cf986d5d7db94b21b6b9756cf0c553b"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/exception/NotificationException.java": {
+    "mtime": 1780167253.734311,
+    "ast_hash": "fa1369c9fde2f21650f8581fe4f990fc",
+    "semantic_hash": "fa1369c9fde2f21650f8581fe4f990fc"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/exception/GlobalExceptionHandler.java": {
+    "mtime": 1780167253.7341645,
+    "ast_hash": "e71d40a7bc1954b1b8b7706913509533",
+    "semantic_hash": "e71d40a7bc1954b1b8b7706913509533"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/java/com/shivagri/notification/exception/ProviderException.java": {
+    "mtime": 1780167253.7344375,
+    "ast_hash": "a5e82cb71fd583e1343f3cf932d65ad7",
+    "semantic_hash": "a5e82cb71fd583e1343f3cf932d65ad7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.claude/settings.local.json": {
+    "mtime": 1774097909.3045888,
+    "ast_hash": "9d1d6ac703e5f97d0047d477a6790db9",
+    "semantic_hash": "9d1d6ac703e5f97d0047d477a6790db9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/test-soil-testing-api.sh": {
+    "mtime": 1766427534.800463,
+    "ast_hash": "7ec671aba2eb748b0110b8f0ac11b045",
+    "semantic_hash": "7ec671aba2eb748b0110b8f0ac11b045"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/package.json": {
+    "mtime": 1770661734.2754285,
+    "ast_hash": "b9e3e7da248a6d6c4f57d8142e232d44",
+    "semantic_hash": "b9e3e7da248a6d6c4f57d8142e232d44"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/middleware/featureFlags.js": {
+    "mtime": 1780167253.7137437,
+    "ast_hash": "6c7523745c4d4e937fcdb8e7301c52fb",
+    "semantic_hash": "6c7523745c4d4e937fcdb8e7301c52fb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/config/features.js": {
+    "mtime": 1780167253.7126124,
+    "ast_hash": "507580cd897e3acf5425fcd1f64c55c0",
+    "semantic_hash": "507580cd897e3acf5425fcd1f64c55c0"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/config/fertilizerCropDefaults.json": {
+    "mtime": 1780167253.7129085,
+    "ast_hash": "daaa72b367c47d7b9028ecf2f7edbb09",
+    "semantic_hash": "daaa72b367c47d7b9028ecf2f7edbb09"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/utils/session.js": {
+    "mtime": 1780167253.7155166,
+    "ast_hash": "3400fae686d2350a5088f341fb0c8904",
+    "semantic_hash": "3400fae686d2350a5088f341fb0c8904"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/models/Quotation.js": {
+    "mtime": 1780167181.651972,
+    "ast_hash": "cf751bc9e3c260f43767df92c8e7c52e",
+    "semantic_hash": "cf751bc9e3c260f43767df92c8e7c52e"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/scripts/migrate-phone-email-unique.js": {
+    "mtime": 1780167253.7145033,
+    "ast_hash": "bfc130a3634bb62c2f1c49da95582abb",
+    "semantic_hash": "bfc130a3634bb62c2f1c49da95582abb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/otpAuthController.js": {
+    "mtime": 1780167253.7135425,
+    "ast_hash": "830f385d8d3bc6f8cc27018ac5a328ab",
+    "semantic_hash": "830f385d8d3bc6f8cc27018ac5a328ab"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/quotationController.js": {
+    "mtime": 1780167181.6492093,
+    "ast_hash": "3cc0aefd24c8a74178788b73fd336c50",
+    "semantic_hash": "3cc0aefd24c8a74178788b73fd336c50"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/farmReportController.js": {
+    "mtime": 1780167181.6475778,
+    "ast_hash": "625b004a4c9ff308c63178544836c3fc",
+    "semantic_hash": "625b004a4c9ff308c63178544836c3fc"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/farmTransactionController.js": {
+    "mtime": 1780167181.6481593,
+    "ast_hash": "5ce0d22ac226155d4ed2efbd0816e4c3",
+    "semantic_hash": "5ce0d22ac226155d4ed2efbd0816e4c3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/farmPrescriptionController.js": {
+    "mtime": 1780167181.6469195,
+    "ast_hash": "0b6044c2a4531950efa1de3479daa945",
+    "semantic_hash": "0b6044c2a4531950efa1de3479daa945"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/controllers/farmDesignController.js": {
+    "mtime": 1780167181.6459217,
+    "ast_hash": "d678bdb806918dc5ad9709ae1fd97c8c",
+    "semantic_hash": "d678bdb806918dc5ad9709ae1fd97c8c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/otpDelivery.js": {
+    "mtime": 1780167253.7147896,
+    "ast_hash": "5fe70b6bb42f4cfc24369791afc50307",
+    "semantic_hash": "5fe70b6bb42f4cfc24369791afc50307"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/farmPrescriptionService.js": {
+    "mtime": 1780167181.6605895,
+    "ast_hash": "6073acbd408556235257b0960191cb44",
+    "semantic_hash": "6073acbd408556235257b0960191cb44"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/otpService.js": {
+    "mtime": 1780167253.7150848,
+    "ast_hash": "96b22afab83287481b436ef40888c38d",
+    "semantic_hash": "96b22afab83287481b436ef40888c38d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/farmReportLinker.js": {
+    "mtime": 1780167181.6620445,
+    "ast_hash": "9da9b6912cf39798001f10e87139a198",
+    "semantic_hash": "9da9b6912cf39798001f10e87139a198"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/farmDesignService.js": {
+    "mtime": 1780167181.6588485,
+    "ast_hash": "8e56609835ca22cda21ec6e8a7db0d96",
+    "semantic_hash": "8e56609835ca22cda21ec6e8a7db0d96"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/quotationService.js": {
+    "mtime": 1780167181.666982,
+    "ast_hash": "80f849ec43d8a67b707f9c08bc59204d",
+    "semantic_hash": "80f849ec43d8a67b707f9c08bc59204d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/src/services/notificationClient.js": {
+    "mtime": 1780167253.7146451,
+    "ast_hash": "3b22e69fa974e8b0b850174862ace7d2",
+    "semantic_hash": "3b22e69fa974e8b0b850174862ace7d2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/scripts/mongodb-backup.sh": {
+    "mtime": 1766561673.0672922,
+    "ast_hash": "2097c6fc8afa0a365eceab843ad41c1a",
+    "semantic_hash": "2097c6fc8afa0a365eceab843ad41c1a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/scripts/init-letsencrypt.sh": {
+    "mtime": 1764396909.8541744,
+    "ast_hash": "970450f8d6355ce5f53f8e2953293192",
+    "semantic_hash": "970450f8d6355ce5f53f8e2953293192"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/scripts/backup-mongodb.sh": {
+    "mtime": 1762919464.904379,
+    "ast_hash": "a99ca865e37e16a3d68826ed516645e4",
+    "semantic_hash": "a99ca865e37e16a3d68826ed516645e4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/scripts/vps-setup.sh": {
+    "mtime": 1762919464.9046319,
+    "ast_hash": "2f56da26015c209a522d9ec1bbc793f7",
+    "semantic_hash": "2f56da26015c209a522d9ec1bbc793f7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/modernize/java-upgrade/hooks/scripts/recordToolUse.sh": {
+    "mtime": 1779962411.0053506,
+    "ast_hash": "e25ae501603ce6bf738198f5ce32ba83",
+    "semantic_hash": "e25ae501603ce6bf738198f5ce32ba83"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/modernize/java-upgrade/hooks/scripts/recordToolUse.ps1": {
+    "mtime": 1779962411.005625,
+    "ast_hash": "9ecf230451dfd20ff4e0a2a01e80a4e6",
+    "semantic_hash": "9ecf230451dfd20ff4e0a2a01e80a4e6"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/java-upgrade/hooks/943d1a97-b5a9-461e-90fa-1ca549ec0db3.json": {
+    "mtime": 1777483379.8271437,
+    "ast_hash": "091892a102213ce164c614fc2f5a11e7",
+    "semantic_hash": "091892a102213ce164c614fc2f5a11e7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/java-upgrade/hooks/scripts/recordToolUse.sh": {
+    "mtime": 1779422319.7519622,
+    "ast_hash": "392b480c0ee4898af9652e8fc429f7cd",
+    "semantic_hash": "392b480c0ee4898af9652e8fc429f7cd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/java-upgrade/hooks/scripts/recordToolUse.ps1": {
+    "mtime": 1779422319.7521865,
+    "ast_hash": "a76b05925b01d5e7a642eda1824e8fa7",
+    "semantic_hash": "a76b05925b01d5e7a642eda1824e8fa7"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/scripts/design_system.py": {
+    "mtime": 1777627761.187948,
+    "ast_hash": "08f84d04608a19049c90fc2b1ef314f9",
+    "semantic_hash": "08f84d04608a19049c90fc2b1ef314f9"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/scripts/core.py": {
+    "mtime": 1777627761.1871367,
+    "ast_hash": "3df4734a785963a8242a56c1b926adfd",
+    "semantic_hash": "3df4734a785963a8242a56c1b926adfd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/scripts/search.py": {
+    "mtime": 1777627761.1881905,
+    "ast_hash": "8c7e35426fe8f6f3ed91e9dce0ed7af1",
+    "semantic_hash": "8c7e35426fe8f6f3ed91e9dce0ed7af1"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.vscode/settings.json": {
+    "mtime": 1779516685.3863409,
+    "ast_hash": "c2acb2002aa004cba2b19fef31b55e5c",
+    "semantic_hash": "c2acb2002aa004cba2b19fef31b55e5c"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.vscode/launch.json": {
+    "mtime": 1779516199.493275,
+    "ast_hash": "5bb74918a65c708fb4c3637c9a42ef15",
+    "semantic_hash": "5bb74918a65c708fb4c3637c9a42ef15"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/media-service/.github/java-upgrade/20260429172244/plan.md": {
+    "mtime": 1777483364.781464,
+    "ast_hash": "b2396f28acf019b4a0e00eb24377ae64",
+    "semantic_hash": "b2396f28acf019b4a0e00eb24377ae64"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/app/pages/complete-profile/complete-profile.html": {
+    "mtime": 1780167253.7196553,
+    "ast_hash": "c1af73e6567de8a91f09df39b42ef1ba",
+    "semantic_hash": "c1af73e6567de8a91f09df39b42ef1ba"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/README.md": {
+    "mtime": 1780167253.7276764,
+    "ast_hash": "2d5082c408d77fa8bf338371d4758fe4",
+    "semantic_hash": "2d5082c408d77fa8bf338371d4758fe4"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/notification-service/src/main/resources/application.yml": {
+    "mtime": 1780167253.736671,
+    "ast_hash": "4bf361c2c08980ea209d6d7f197c0455",
+    "semantic_hash": "4bf361c2c08980ea209d6d7f197c0455"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/backend/templates/prescription.html": {
+    "mtime": 1780167181.667802,
+    "ast_hash": "6d95deeefca87af1bb3531e16c178ccd",
+    "semantic_hash": "6d95deeefca87af1bb3531e16c178ccd"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/docs/PHONE_OTP_LOGIN_GUIDE.md": {
+    "mtime": 1780167253.716809,
+    "ast_hash": "9e886d53bf0964335c26cf6081403710",
+    "semantic_hash": "9e886d53bf0964335c26cf6081403710"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/sync-docker-compose.yml": {
+    "mtime": 1762919464.893418,
+    "ast_hash": "ce4c74f2bdd9d11cff857a6b4816ba1d",
+    "semantic_hash": "ce4c74f2bdd9d11cff857a6b4816ba1d"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-nginx.yml": {
+    "mtime": 1772279641.5052443,
+    "ast_hash": "9a6ff8c2b54a7c74072ebc50dff0c45a",
+    "semantic_hash": "9a6ff8c2b54a7c74072ebc50dff0c45a"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-service.yml": {
+    "mtime": 1772811524.9314256,
+    "ast_hash": "dc1fd2a76813801ffe41f5741718ad04",
+    "semantic_hash": "dc1fd2a76813801ffe41f5741718ad04"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-notification.yml": {
+    "mtime": 1780167253.7119262,
+    "ast_hash": "b00d5a23f2fc695fb7d6792eb61e15c2",
+    "semantic_hash": "b00d5a23f2fc695fb7d6792eb61e15c2"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-media.yml": {
+    "mtime": 1772279641.5049658,
+    "ast_hash": "82fcb820ebb4a814eca6dc36646adfa3",
+    "semantic_hash": "82fcb820ebb4a814eca6dc36646adfa3"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-permissions.yml": {
+    "mtime": 1772216501.1808913,
+    "ast_hash": "d0d55118b9f55a9fbc60ee4b6ef053bb",
+    "semantic_hash": "d0d55118b9f55a9fbc60ee4b6ef053bb"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/README.md": {
+    "mtime": 1762919464.8927784,
+    "ast_hash": "4e07a7f304acdf349874fd1b32320856",
+    "semantic_hash": "4e07a7f304acdf349874fd1b32320856"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-frontend.yml": {
+    "mtime": 1772279641.5047982,
+    "ast_hash": "e66fde729dd6200f745bb2fb01360231",
+    "semantic_hash": "e66fde729dd6200f745bb2fb01360231"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/sync-and-restart.yml": {
+    "mtime": 1777626048.555203,
+    "ast_hash": "ba2f5023db98db4100a66c7191ce3389",
+    "semantic_hash": "ba2f5023db98db4100a66c7191ce3389"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.github/workflows/deploy-api.yml": {
+    "mtime": 1773238709.1598785,
+    "ast_hash": "8484dc21e06e6a8c99b195cfc0117ed5",
+    "semantic_hash": "8484dc21e06e6a8c99b195cfc0117ed5"
+  },
+  "/Users/mahirratanpara/IdeaProjects/shiv-agri/.agent/skills/ui-ux-pro-max/SKILL.md": {
+    "mtime": 1777627761.185805,
+    "ast_hash": "b33a6a2bede0b68b6919ec33248476f8",
+    "semantic_hash": "b33a6a2bede0b68b6919ec33248476f8"
+  }
+}

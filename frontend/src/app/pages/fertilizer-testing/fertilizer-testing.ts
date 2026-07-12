@@ -1,0 +1,1512 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef, GridApi, GridReadyEvent, CellValueChangedEvent } from 'ag-grid-community';
+import { FertilizerTestingService, FertilizerSession, FertilizerSampleData } from '../../services/fertilizer-testing.service';
+import { SoilTestingService } from '../../services/soil-testing.service';
+import { FarmManagementService } from '../../services/farm-management.service';
+import { PdfService } from '../../services/pdf.service';
+import { ToastService } from '../../services/toast.service';
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { FertilizerSessionStateManager, FertilizerSessionStatus } from '../../models/fertilizer-session-state.model';
+import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
+import { firstValueFrom } from 'rxjs';
+
+type CropType = 'normal' | 'small-fruit' | 'large-fruit';
+
+@Component({
+  selector: 'app-fertilizer-testing',
+  standalone: true,
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
+  providers: [FertilizerTestingService, SoilTestingService, FarmManagementService, PdfService],
+  templateUrl: './fertilizer-testing.html',
+  styleUrls: ['./fertilizer-testing.css'],
+})
+export class FertilizerTestingComponent implements OnInit, OnDestroy {
+  gridApi!: GridApi;
+  private destroy$ = new Subject<void>();
+
+  // URL-based session tracking
+  sessionIdFromUrl: string | null = null;
+  isLoadingSession: boolean = false;
+  sessionLoadError: string | null = null;
+
+  // Session Management
+  currentSession: FertilizerSession | null = null;
+  sessionActive: boolean = false;
+  activeSessions: FertilizerSession[] = [];
+  completedSessions: FertilizerSession[] = [];
+  activeSessionsTotal: number = 0;
+  completedSessionsTotal: number = 0;
+  sessionsLoaded: boolean = false;
+  currentDate = new Date();
+  todaySessionCount: number = 0;
+  isBackendConnected: boolean = false;
+  isLoading: boolean = true;
+  hasSelectedRows: boolean = false;
+
+  // State Management
+  stateManager: FertilizerSessionStateManager = new FertilizerSessionStateManager('started');
+  readonly allStates = FertilizerSessionStateManager.getAllStates();
+
+  // Current crop type tab
+  activeCropType: CropType = 'normal';
+
+  // Pagination for session history
+  historyPage: number = 1;
+  historyPageSize: number = 10;
+  totalPages: number = 0;
+
+  // Infinite Scroll State
+  gridCurrentPage: number = 1;
+  gridPageSize: number = 20;
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
+
+  // Completed sessions pagination
+  completedPage: number = 1;
+  completedPageSize: number = 10;
+  completedTotalPages: number = 0;
+  showCompletedSessions: boolean = false;
+  completedSessionsLoaded: boolean = false;
+
+  // Column Definitions for different crop types
+  normalColDefs: ColDef<FertilizerSampleData>[] = [];
+  smallFruitColDefs: ColDef<FertilizerSampleData>[] = [];
+  largeFruitColDefs: ColDef<FertilizerSampleData>[] = [];
+
+  get colDefs(): ColDef<FertilizerSampleData>[] {
+    switch (this.activeCropType) {
+      case 'normal': return this.normalColDefs;
+      case 'small-fruit': return this.smallFruitColDefs;
+      case 'large-fruit': return this.largeFruitColDefs;
+      default: return this.normalColDefs;
+    }
+  }
+
+  // Default column definitions
+  defaultColDef: ColDef = {
+    sortable: true,
+    resizable: false,
+    filter: true,
+    floatingFilter: true,
+    autoHeaderHeight: true,
+    wrapHeaderText: true,
+    suppressMovable: true,
+    lockPosition: true,
+  };
+
+  // Row Data
+  rowData: FertilizerSampleData[] = [];
+
+  // Soil Data Popup
+  showSoilDataPopup: boolean = false;
+  currentSoilData: any = null;
+  private soilDataCache: Map<string, any> = new Map();
+  private currentEditingRowId: string | null = null;
+
+  // Auto-save timeout
+  private saveTimeout: any = null;
+
+  constructor(
+    private fertilizerTestingService: FertilizerTestingService,
+    private soilTestingService: SoilTestingService,
+    private farmService: FarmManagementService,
+    private pdfService: PdfService,
+    private toastService: ToastService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
+
+  /**
+   * Resolve farm-name suggestions for a fertilizer row by way of its linked
+   * soil sample (fertilizer rows don't carry a phone of their own).
+   */
+  private async getFarmNameSuggestionsForRow(row: any): Promise<string[]> {
+    if (!row?.soilSampleId) return [];
+    try {
+      // Reuse the soilDataCache so we don't hit the soil API repeatedly.
+      let soilData: any = this.soilDataCache.get(row.soilSampleId);
+      if (!soilData) {
+        soilData = await firstValueFrom(
+          this.soilTestingService.getSoilDataForSample(row.soilSampleId)
+        );
+        if (soilData) this.soilDataCache.set(row.soilSampleId, soilData);
+      }
+      const phone = soilData?.mobileNo;
+      if (!phone) return [];
+      return await firstValueFrom(this.farmService.getFarmNamesByPhone(String(phone)));
+    } catch {
+      return [];
+    }
+  }
+
+  ngOnInit(): void {
+    this.initializeColumnDefinitions();
+
+    // Preload fertilizer crop config so sample defaults can be merged into
+    // any rows whose cropName matches a configured crop.
+    this.fertilizerTestingService.getCropConfig().pipe(takeUntil(this.destroy$)).subscribe({
+      error: err => console.warn('Failed to load fertilizer crop config', err)
+    });
+
+    this.checkBackendConnection();
+
+    // Subscribe to route params for session ID
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const sessionId = params['sessionId'];
+      if (sessionId && sessionId !== this.sessionIdFromUrl) {
+        this.sessionIdFromUrl = sessionId;
+        // Only load session from URL after backend is connected and sessions are loaded
+        if (this.isBackendConnected && this.sessionsLoaded) {
+          this.loadSessionFromUrl(sessionId);
+        }
+      } else if (!sessionId && this.sessionActive) {
+        // If navigating back to dashboard from an active session
+        this.sessionActive = false;
+        this.currentSession = null;
+        this.rowData = [];
+        this.sessionIdFromUrl = null;
+      }
+    });
+
+    // Add document click listener to close soil popup when clicking outside grid
+    document.addEventListener('click', this.handleDocumentClick.bind(this));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+
+    // Remove document click listener
+    document.removeEventListener('click', this.handleDocumentClick.bind(this));
+  }
+
+  /**
+   * Handle clicks outside the grid to close soil popup
+   */
+  private handleDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    // Only close if clicking completely outside the main content area
+    if (!target.closest('.main-content') &&
+        !target.closest('.soil-data-bar') &&
+        !target.closest('.ag-grid-angular')) {
+      this.closeSoilPopup();
+    }
+  }
+
+  initializeColumnDefinitions() {
+    // Common columns for all types
+    const commonCols: ColDef<FertilizerSampleData>[] = [
+      {
+        headerName: '',
+        checkboxSelection: true,
+        headerCheckboxSelection: true,
+        width: 50,
+        maxWidth: 50,
+        pinned: 'left',
+        lockPosition: true,
+        suppressMovable: true,
+        sortable: false,
+        filter: false,
+        resizable: false,
+      },
+      {
+        field: 'sampleNumber',
+        headerName: 'Sample No.',
+        editable: true,
+        filter: true,
+        width: 120,
+        pinned: 'left',
+      },
+      {
+        field: 'farmerName',
+        headerName: "Farmer Name",
+        editable: true,
+        filter: true,
+        width: 180,
+        pinned: 'left',
+      },
+      {
+        field: 'farmsName',
+        headerName: "Farm Name",
+        editable: true,
+        filter: true,
+        width: 160,
+        // Suggest farm names linked to the soil sample's phone number. Users
+        // can still type any custom value — the datalist is suggestion-only.
+        cellEditor: DatalistCellEditor,
+        cellEditorParams: {
+          values: (cellParams: any) => this.getFarmNameSuggestionsForRow(cellParams?.data)
+        }
+      },
+      {
+        field: 'cropName',
+        headerName: 'Crop Name',
+        editable: true,
+        filter: true,
+        width: 140,
+      }
+    ];
+
+    // Normal crop columns - organized by sections
+    this.normalColDefs = [
+      ...commonCols,
+      { field: 'nValue', headerName: 'N Value', editable: true, cellDataType: 'number', width: 85 },
+      { field: 'pValue', headerName: 'P Value', editable: true, cellDataType: 'number', width: 85 },
+      { field: 'kValue', headerName: 'K Value', editable: true, cellDataType: 'number', width: 85 },
+      // Organic fertilizers
+      { field: 'organicManure', headerName: 'Organic Manure', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-organic' },
+      { field: 'castorCake', headerName: 'Castor Cake', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-organic' },
+      { field: 'gypsum', headerName: 'Gypsum', editable: true, cellDataType: 'number', width: 100, headerClass: 'header-section-organic' },
+      { field: 'sardarAmin', headerName: 'Sardar Amin', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-organic' },
+      { field: 'micronutrient', headerName: 'Micronutrient', editable: true, cellDataType: 'number', width: 120, headerClass: 'header-section-organic' },
+      { field: 'borocol', headerName: 'Borocol', editable: true, cellDataType: 'number', width: 100, headerClass: 'header-section-organic' },
+      { field: 'ferrous', headerName: 'Ferrous', editable: true, cellDataType: 'number', width: 100, headerClass: 'header-section-organic' },
+      // Chemical fertilizers
+      { field: 'dap', headerName: 'DAP', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-chemical' },
+      { field: 'npk12', headerName: 'NPK 12:32:16', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-chemical' },
+      { field: 'asp', headerName: 'ASP', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-chemical' },
+      { field: 'narmadaPhos', headerName: 'Narmada Phos', editable: true, cellDataType: 'number', width: 120, headerClass: 'header-section-chemical' },
+      { field: 'ssp', headerName: 'SSP', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-chemical' },
+      { field: 'ammoniumSulphate', headerName: 'Ammonium Sulphate', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-chemical' },
+      { field: 'mop', headerName: 'MOP', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-chemical' },
+      { field: 'ureaBase', headerName: 'Urea (Base)', editable: true, cellDataType: 'number', width: 105, headerClass: 'header-section-chemical' },
+      // Dose fertilizers
+      { field: 'day15', headerName: 'Day 15', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-dose' },
+      { field: 'day25Npk', headerName: 'Day 25 NPK', editable: true, cellDataType: 'number', width: 105, headerClass: 'header-section-dose' },
+      { field: 'day25Tricho', headerName: 'Day 25 Tricho', editable: true, cellDataType: 'number', width: 120, headerClass: 'header-section-dose' },
+      { field: 'day30', headerName: 'Day 30', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-dose' },
+      { field: 'day45', headerName: 'Day 45 (Urea)', editable: true, cellDataType: 'number', width: 120, headerClass: 'header-section-dose' },
+      { field: 'day45As', headerName: 'Day 45 (AS)', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-dose' },
+      { field: 'day60', headerName: 'Day 60', editable: true, cellDataType: 'number', width: 85, headerClass: 'header-section-dose' },
+      { field: 'day75', headerName: 'Day 75 (Urea)', editable: true, cellDataType: 'number', width: 120, headerClass: 'header-section-dose' },
+      { field: 'day75As', headerName: 'Day 75 (AS)', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-dose' },
+      { field: 'day90Urea', headerName: 'Day 90 Urea', editable: true, cellDataType: 'number', width: 105, headerClass: 'header-section-dose' },
+      { field: 'day90Mag', headerName: 'Day 90 Mag', editable: true, cellDataType: 'number', width: 105, headerClass: 'header-section-dose' },
+      { field: 'day105', headerName: 'Day 105', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-dose' },
+      { field: 'day115', headerName: 'Day 115', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-dose' },
+      { field: 'day130', headerName: 'Day 130', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-dose' },
+      { field: 'day145', headerName: 'Day 145', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-dose' },
+      { field: 'day160', headerName: 'Day 160', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-dose' },
+      // Spray fertilizers (3 sprays with uniform structure)
+      { field: 'spray1_stage', headerName: 'Spray 1 - Stage', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray', valueFormatter: (params: any) => params.value ? `${params.value} દિવસ` : '' },
+      {
+        field: 'spray1_npkType',
+        headerName: 'Spray 1 - NPK Type',
+        editable: true,
+        width: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray1_npkDose', headerName: 'Spray 1 - NPK Dose', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray1_hormoneName',
+        headerName: 'Spray 1 - Hormone',
+        editable: true,
+        width: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray1_hormoneDose', headerName: 'Spray 1 - Hormone Dose', editable: true, cellDataType: 'number', width: 180, headerClass: 'header-section-spray' },
+
+      { field: 'spray2_stage', headerName: 'Spray 2 - Stage', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray', valueFormatter: (params: any) => params.value ? `${params.value} દિવસ` : '' },
+      {
+        field: 'spray2_npkType',
+        headerName: 'Spray 2 - NPK Type',
+        editable: true,
+        width: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray2_npkDose', headerName: 'Spray 2 - NPK Dose', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray2_hormoneName',
+        headerName: 'Spray 2 - Hormone',
+        editable: true,
+        width: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray2_hormoneDose', headerName: 'Spray 2 - Hormone Dose', editable: true, cellDataType: 'number', width: 180, headerClass: 'header-section-spray' },
+
+      { field: 'spray3_stage', headerName: 'Spray 3 - Stage', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray', valueFormatter: (params: any) => params.value ? `${params.value} દિવસ` : '' },
+      {
+        field: 'spray3_npkType',
+        headerName: 'Spray 3 - NPK Type',
+        editable: true,
+        width: 180,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', '૧૯:૧૯:૧૯', '૦૦:૫૨:૩૪', '૧૨:૬૧:૦૦', '૨૩:૨૩:૨૩', '૧૩:૦૦:૪૫', 'બોરોન ૨૦%', 'માઇક્રોમિક્સ', 'હિરાકસી+ લિંબુના ફૂલ', 'ફાસ્ટ (અંકુર)']
+        }
+      },
+      { field: 'spray3_npkDose', headerName: 'Spray 3 - NPK Dose', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-spray' },
+      {
+        field: 'spray3_hormoneName',
+        headerName: 'Spray 3 - Hormone',
+        editable: true,
+        width: 160,
+        headerClass: 'header-section-spray',
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: {
+          values: ['', 'ફેન્ટેકપ્લસ', 'પ્રોજીબ']
+        }
+      },
+      { field: 'spray3_hormoneDose', headerName: 'Spray 3 - Hormone Dose', editable: true, cellDataType: 'number', width: 180, headerClass: 'header-section-spray' },
+      // Actions column
+      {
+        headerName: 'Actions',
+        cellRenderer: (params: any) => {
+          const button = document.createElement('button');
+          button.className = 'btn btn-sm btn-pdf-action';
+          button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+          button.addEventListener('click', (e: Event) => {
+            e.stopPropagation();
+            this.downloadSinglePdf(params.data);
+          });
+          return button;
+        },
+        editable: false,
+        width: 120,
+        maxWidth: 120,
+        pinned: 'right',
+        sortable: false,
+        filter: false,
+      },
+    ];
+
+    const gujaratiMonths = [
+      '', 'જાન્યુઆરી', 'ફેબ્રુઆરી', 'માર્ચ', 'એપ્રિલ', 'મે', 'જૂન',
+      'જુલાઈ', 'ઓગસ્ટ', 'સપ્ટેમ્બર', 'ઓક્ટોબર', 'નવેમ્બર', 'ડિસેમ્બર'
+    ];
+
+    const monthDropdown = (field: string, label: string, hClass: string): ColDef<FertilizerSampleData> => ({
+      field: field as any,
+      headerName: label,
+      editable: true,
+      width: 140,
+      headerClass: hClass,
+      cellEditor: 'agSelectCellEditor',
+      cellEditorParams: { values: gujaratiMonths },
+    });
+
+    const fruitActionsCol: ColDef<FertilizerSampleData> = {
+      headerName: 'Actions',
+      cellRenderer: (params: any) => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm btn-pdf-action';
+        button.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+        button.addEventListener('click', (e: Event) => {
+          e.stopPropagation();
+          this.downloadSinglePdf(params.data);
+        });
+        return button;
+      },
+      editable: false,
+      width: 120,
+      maxWidth: 120,
+      pinned: 'right',
+      sortable: false,
+      filter: false,
+    };
+
+    // Small fruit tree columns - M1 through M5
+    this.smallFruitColDefs = [
+      ...commonCols,
+      // M1 section
+      monthDropdown('m1_month', 'M1 Month', 'header-section-m1'),
+      { field: 'm1_dap', headerName: 'M1 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_npk', headerName: 'M1 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_asp', headerName: 'M1 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_narmada', headerName: 'M1 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m1' },
+      { field: 'm1_ssp', headerName: 'M1 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_as', headerName: 'M1 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_mop', headerName: 'M1 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_urea', headerName: 'M1 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_borocol', headerName: 'M1 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m1' },
+      { field: 'm1_sardaramin', headerName: 'M1 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m1' },
+      { field: 'm1_chhaniyu', headerName: 'M1 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m1' },
+      { field: 'm1_erandakhol', headerName: 'M1 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m1' },
+      // M2 section (NPK culture only)
+      monthDropdown('m2_month', 'M2 Month', 'header-section-m2'),
+      { field: 'm2_npk', headerName: 'M2 NPK Culture (મિલી)', editable: true, cellDataType: 'number', width: 160, headerClass: 'header-section-m2' },
+      // M3 section
+      monthDropdown('m3_month', 'M3 Month', 'header-section-m3'),
+      { field: 'm3_dap', headerName: 'M3 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_npk', headerName: 'M3 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_asp', headerName: 'M3 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_narmada', headerName: 'M3 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m3' },
+      { field: 'm3_ssp', headerName: 'M3 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_as', headerName: 'M3 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_mop', headerName: 'M3 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_urea', headerName: 'M3 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_borocol', headerName: 'M3 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m3' },
+      { field: 'm3_sardaramin', headerName: 'M3 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m3' },
+      { field: 'm3_chhaniyu', headerName: 'M3 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m3' },
+      { field: 'm3_erandakhol', headerName: 'M3 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m3' },
+      // M4 section
+      monthDropdown('m4_month', 'M4 Month', 'header-section-m4'),
+      { field: 'm4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_npk', headerName: 'M4 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_asp', headerName: 'M4 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_narmada', headerName: 'M4 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m4' },
+      { field: 'm4_ssp', headerName: 'M4 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_borocol', headerName: 'M4 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m4' },
+      { field: 'm4_sardaramin', headerName: 'M4 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m4' },
+      { field: 'm4_chhaniyu', headerName: 'M4 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
+      { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
+      // M5 - Spray section
+      { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', width: 170, headerClass: 'header-section-m5' },
+      fruitActionsCol,
+    ];
+
+    // Large fruit tree columns - same M1–M5 structure
+    this.largeFruitColDefs = [
+      ...commonCols,
+      // M1 section
+      monthDropdown('m1_month', 'M1 Month', 'header-section-m1'),
+      { field: 'm1_dap', headerName: 'M1 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_npk', headerName: 'M1 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_asp', headerName: 'M1 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_narmada', headerName: 'M1 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m1' },
+      { field: 'm1_ssp', headerName: 'M1 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_as', headerName: 'M1 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_mop', headerName: 'M1 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_urea', headerName: 'M1 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m1' },
+      { field: 'm1_borocol', headerName: 'M1 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m1' },
+      { field: 'm1_sardaramin', headerName: 'M1 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m1' },
+      { field: 'm1_chhaniyu', headerName: 'M1 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m1' },
+      { field: 'm1_erandakhol', headerName: 'M1 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m1' },
+      // M2 section (NPK culture only)
+      monthDropdown('m2_month', 'M2 Month', 'header-section-m2'),
+      { field: 'm2_npk', headerName: 'M2 NPK Culture (મિલી)', editable: true, cellDataType: 'number', width: 160, headerClass: 'header-section-m2' },
+      // M3 section
+      monthDropdown('m3_month', 'M3 Month', 'header-section-m3'),
+      { field: 'm3_dap', headerName: 'M3 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_npk', headerName: 'M3 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_asp', headerName: 'M3 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_narmada', headerName: 'M3 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m3' },
+      { field: 'm3_ssp', headerName: 'M3 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_as', headerName: 'M3 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_mop', headerName: 'M3 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_urea', headerName: 'M3 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m3' },
+      { field: 'm3_borocol', headerName: 'M3 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m3' },
+      { field: 'm3_sardaramin', headerName: 'M3 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m3' },
+      { field: 'm3_chhaniyu', headerName: 'M3 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m3' },
+      { field: 'm3_erandakhol', headerName: 'M3 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m3' },
+      // M4 section
+      monthDropdown('m4_month', 'M4 Month', 'header-section-m4'),
+      { field: 'm4_dap', headerName: 'M4 DAP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_npk', headerName: 'M4 NPK', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_asp', headerName: 'M4 ASP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_narmada', headerName: 'M4 Narmada', editable: true, cellDataType: 'number', width: 115, headerClass: 'header-section-m4' },
+      { field: 'm4_ssp', headerName: 'M4 SSP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_as', headerName: 'M4 AS', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_mop', headerName: 'M4 MOP', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_urea', headerName: 'M4 Urea', editable: true, cellDataType: 'number', width: 95, headerClass: 'header-section-m4' },
+      { field: 'm4_borocol', headerName: 'M4 Borocol (ગ્રા)', editable: true, cellDataType: 'number', width: 130, headerClass: 'header-section-m4' },
+      { field: 'm4_sardaramin', headerName: 'M4 Sardar Amin (ગ્રા)', editable: true, cellDataType: 'number', width: 150, headerClass: 'header-section-m4' },
+      { field: 'm4_chhaniyu', headerName: 'M4 છાણીયું ખ. (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
+      { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
+      // M5 - Spray section
+      { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', width: 170, headerClass: 'header-section-m5' },
+      fruitActionsCol,
+    ];
+  }
+
+  checkBackendConnection() {
+    this.isLoading = true;
+
+    this.fertilizerTestingService.getTodaySessionCount().subscribe({
+      next: (response) => {
+        this.isBackendConnected = true;
+        this.todaySessionCount = response.count;
+        this.isLoading = false;
+        // Load all sessions after confirming connection
+        this.loadSessions();
+      },
+      error: (error) => {
+        this.isBackendConnected = false;
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadSessions() {
+    this.loadActiveSessionsPage();
+    // Completed sessions are lazy-loaded on first dropdown open.
+    // Reset so they re-fetch after state-changing actions.
+    this.completedSessionsLoaded = false;
+    this.completedPage = 1;
+    if (this.showCompletedSessions) {
+      this.loadCompletedSessionsPage();
+    }
+  }
+
+  private loadActiveSessionsPage() {
+    this.fertilizerTestingService
+      .getSessions(this.historyPage, this.historyPageSize, 'active')
+      .subscribe({
+        next: (response) => {
+          this.activeSessions = response.sessions;
+          this.activeSessionsTotal = response.pagination.total;
+          this.totalPages = response.pagination.totalPages;
+          this.sessionsLoaded = true;
+
+          // If we have a session ID from URL, load it now
+          if (this.sessionIdFromUrl && !this.sessionActive) {
+            this.loadSessionFromUrl(this.sessionIdFromUrl);
+          }
+        },
+        error: () => {
+          this.isBackendConnected = false;
+        }
+      });
+  }
+
+  private loadCompletedSessionsPage() {
+    this.fertilizerTestingService
+      .getSessions(this.completedPage, this.completedPageSize, 'completed')
+      .subscribe({
+        next: (response) => {
+          this.completedSessions = response.sessions;
+          this.completedSessionsTotal = response.pagination.total;
+          this.completedTotalPages = response.pagination.totalPages;
+          this.completedSessionsLoaded = true;
+        },
+        error: () => {
+          this.isBackendConnected = false;
+        }
+      });
+  }
+
+  toggleCompletedSessions() {
+    this.showCompletedSessions = !this.showCompletedSessions;
+    if (this.showCompletedSessions && !this.completedSessionsLoaded) {
+      this.loadCompletedSessionsPage();
+    }
+  }
+
+  nextCompletedPage() {
+    if (this.completedPage < this.completedTotalPages) {
+      this.completedPage++;
+      this.loadCompletedSessionsPage();
+    }
+  }
+
+  prevCompletedPage() {
+    if (this.completedPage > 1) {
+      this.completedPage--;
+      this.loadCompletedSessionsPage();
+    }
+  }
+
+  getStatusLabel(status: string | undefined): string {
+    if (!status) return 'Unknown';
+    const stateConfig = this.stateManager.getStateConfig(status as FertilizerSessionStatus);
+    return stateConfig.label;
+  }
+
+  getStatusColor(status: string | undefined): string {
+    if (!status) return '#999';
+    const stateConfig = this.stateManager.getStateConfig(status as FertilizerSessionStatus);
+    return stateConfig.color;
+  }
+
+  getStatusIcon(status: string | undefined): string {
+    if (!status) return 'fa-question';
+    const stateConfig = this.stateManager.getStateConfig(status as FertilizerSessionStatus);
+    return stateConfig.icon;
+  }
+
+  nextPage() {
+    if (this.historyPage < this.totalPages) {
+      this.historyPage++;
+      this.loadActiveSessionsPage();
+    }
+  }
+
+  prevPage() {
+    if (this.historyPage > 1) {
+      this.historyPage--;
+      this.loadActiveSessionsPage();
+    }
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.historyPage = page;
+      this.loadActiveSessionsPage();
+    }
+  }
+
+  startNewSession() {
+    if (!this.isBackendConnected) {
+      this.toastService.show('Cannot start session: Backend server is not connected', 'error');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const version = this.todaySessionCount + 1;
+
+    const newSession = {
+      date: today,
+      version: version,
+      startTime: new Date().toISOString()
+    };
+
+    this.fertilizerTestingService.createSession(newSession).subscribe({
+      next: (session) => {
+        this.currentSession = session;
+        this.sessionActive = true;
+        this.rowData = [];
+        this.todaySessionCount = version;
+
+        // Initialize state manager
+        this.initializeStateManager();
+
+        // Navigate to the session URL
+        if (session._id) {
+          this.sessionIdFromUrl = session._id;
+          this.router.navigate(['/lab-testing/fertilizer-testing/session', session._id], {
+            replaceUrl: true
+          });
+        }
+      },
+      error: (error) => {
+        this.toastService.show('Failed to create session: ' + (error.error?.error || error.message || 'Unknown error'), 'error');
+        this.isBackendConnected = false;
+      }
+    });
+  }
+
+  // ===== STATE MANAGEMENT METHODS =====
+
+  /**
+   * Initialize state manager when session loads
+   */
+  private initializeStateManager() {
+    if (this.currentSession?.status) {
+      this.stateManager = new FertilizerSessionStateManager(this.currentSession.status);
+    } else {
+      this.stateManager = new FertilizerSessionStateManager('started');
+    }
+  }
+
+  /**
+   * Check if can perform an action based on current state
+   */
+  canPerformAction(action: 'downloadPDFs' | 'editData'): boolean {
+    return this.stateManager.canPerformAction(action);
+  }
+
+  /**
+   * Get current state label for display
+   */
+  getCurrentStateLabel(): string {
+    return this.stateManager.getCurrentState().label;
+  }
+
+  /**
+   * Get current state icon
+   */
+  getCurrentStateIcon(): string {
+    return this.stateManager.getCurrentState().icon;
+  }
+
+  /**
+   * Get current state color
+   */
+  getCurrentStateColor(): string {
+    return this.stateManager.getCurrentState().color;
+  }
+
+  /**
+   * Get current state description
+   */
+  getCurrentStateDescription(): string {
+    return this.stateManager.getCurrentState().description;
+  }
+
+  /**
+   * Check if can move to next state
+   */
+  canMoveToNextState(): boolean {
+    return this.stateManager.getNextState() !== null;
+  }
+
+  /**
+   * Check if can move to previous state
+   */
+  canMoveToPreviousState(): boolean {
+    return this.stateManager.getPreviousState() !== null;
+  }
+
+  /**
+   * Get progress percentage for progress bar
+   */
+  getStateProgress(): number {
+    return this.stateManager.getStateProgress();
+  }
+
+  /**
+   * Check if current state is active (for styling)
+   */
+  isStateActive(status: FertilizerSessionStatus): boolean {
+    return this.currentSession?.status === status;
+  }
+
+  /**
+   * Check if state is completed (for styling)
+   */
+  isStateCompleted(status: FertilizerSessionStatus): boolean {
+    const states: FertilizerSessionStatus[] = ['started', 'generate-reports', 'completed'];
+    const currentIndex = states.indexOf(this.currentSession?.status || 'started');
+    const targetIndex = states.indexOf(status);
+    return targetIndex < currentIndex;
+  }
+
+  /**
+   * Transition to next state
+   */
+  async nextState() {
+    if (!this.currentSession?._id) {
+      this.toastService.warning('⚠️ No active session');
+      return;
+    }
+
+    const nextStatus = this.stateManager.getNextState();
+    if (!nextStatus) {
+      this.toastService.warning('⚠️ Already at final state');
+      return;
+    }
+
+    try {
+      // Save current data first
+      await this.saveCurrentSession();
+
+      // Transition to next state
+      this.fertilizerTestingService.updateSessionStatus(this.currentSession._id, nextStatus).subscribe({
+        next: (session) => {
+          this.currentSession = session;
+          this.stateManager.transitionTo(nextStatus);
+          this.updateGridEditability(); // Lock/unlock grid based on new state
+          this.toastService.success(`✅ Moved to ${this.stateManager.getCurrentState().label} state`, 3000);
+        },
+        error: (err) => {
+          this.toastService.error('❌ Failed to update state');
+        }
+      });
+    } catch (error) {
+      this.toastService.error('❌ Failed to save session data');
+    }
+  }
+
+  /**
+   * Transition to previous state
+   */
+  previousState() {
+    if (!this.currentSession?._id) {
+      this.toastService.warning('⚠️ No active session');
+      return;
+    }
+
+    const prevStatus = this.stateManager.getPreviousState();
+    if (!prevStatus) {
+      this.toastService.warning('⚠️ Already at first state');
+      return;
+    }
+
+    this.fertilizerTestingService.updateSessionStatus(this.currentSession._id, prevStatus).subscribe({
+      next: (session) => {
+        this.currentSession = session;
+        this.stateManager.transitionTo(prevStatus);
+        this.updateGridEditability(); // Lock/unlock grid based on new state
+        this.toastService.success(`✅ Moved to ${this.stateManager.getCurrentState().label} state`, 3000);
+      },
+      error: (err) => {
+        this.toastService.error('❌ Failed to update state');
+      }
+    });
+  }
+
+  /**
+   * Get available state transitions from current state
+   */
+  getAvailableTransitions(): { status: FertilizerSessionStatus; config: any }[] {
+    const currentState = this.stateManager.getCurrentState();
+    return this.allStates.filter(state =>
+      currentState.canTransitionTo.includes(state.status)
+    );
+  }
+
+  /**
+   * Transition to a specific state
+   */
+  async transitionToState(targetStatus: FertilizerSessionStatus) {
+    if (!this.currentSession || !this.currentSession._id) {
+      this.toastService.warning('⚠️ No active session');
+      return;
+    }
+
+    if (!this.stateManager.canTransitionTo(targetStatus)) {
+      this.toastService.warning('⚠️ Cannot transition to this state', 3000);
+      return;
+    }
+
+    try {
+      // Save current data first
+      await this.saveCurrentSession();
+
+      // Then transition to new state
+      this.fertilizerTestingService.updateSessionStatus(this.currentSession._id, targetStatus).subscribe({
+        next: (session) => {
+          this.currentSession = session;
+          this.stateManager.transitionTo(targetStatus);
+          this.updateGridEditability(); // Lock/unlock grid based on new state
+          this.toastService.success(`✅ Moved to ${this.getCurrentStateLabel()} state`, 3000);
+        },
+        error: (error) => {
+          this.toastService.error('❌ Failed to update session state', 4000);
+        }
+      });
+    } catch (error) {
+      this.toastService.error('❌ Failed to save session data');
+    }
+  }
+
+  /**
+   * Close session and save as draft
+   */
+  async closeSession() {
+    if (!this.currentSession?._id) {
+      return;
+    }
+
+    try {
+      // Save current data as draft
+      await this.saveCurrentSession();
+
+      // Close session UI
+      this.sessionActive = false;
+      const sessionDate = this.currentSession.date;
+      const sessionVersion = this.currentSession.version;
+      this.currentSession = null;
+      this.rowData = [];
+      this.hasSelectedRows = false;
+      this.sessionIdFromUrl = null;
+
+      // Navigate back to dashboard
+      this.router.navigate(['/lab-testing/fertilizer-testing']);
+
+      // Reload sessions
+      this.loadSessions();
+      this.toastService.success(`Session ${sessionDate} v${sessionVersion} saved and closed`, 4000);
+    } catch (error) {
+      this.toastService.error('Failed to save session');
+    }
+  }
+
+  /**
+   * Navigate to dashboard
+   */
+  goToDashboard() {
+    this.sessionIdFromUrl = null;
+    this.sessionLoadError = null;
+    this.router.navigate(['/lab-testing/fertilizer-testing']);
+  }
+
+  /**
+   * Load a session from URL parameter
+   */
+  loadSessionFromUrl(sessionId: string) {
+    this.isLoadingSession = true;
+    this.sessionLoadError = null;
+
+    this.fertilizerTestingService.getSession(sessionId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (session) => {
+        this.isLoadingSession = false;
+        if (session) {
+          this.resumeSession(session);
+        } else {
+          this.handleSessionNotFound(sessionId);
+        }
+      },
+      error: (error) => {
+        this.isLoadingSession = false;
+        this.handleSessionLoadError(sessionId, error);
+      }
+    });
+  }
+
+  /**
+   * Handle session not found error
+   */
+  private handleSessionNotFound(sessionId: string) {
+    this.sessionLoadError = `Session not found: ${sessionId}`;
+    this.toastService.error('Session not found. It may have been deleted.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/fertilizer-testing']);
+  }
+
+  /**
+   * Handle session load error
+   */
+  private handleSessionLoadError(sessionId: string, error: any) {
+    console.error('Error loading session:', error);
+    this.sessionLoadError = `Failed to load session: ${error.message || 'Unknown error'}`;
+    this.toastService.error('Failed to load session. Please try again.', 5000);
+    // Navigate back to dashboard
+    this.sessionIdFromUrl = null;
+    this.router.navigate(['/lab-testing/fertilizer-testing']);
+  }
+
+  /**
+   * Copy the session link to clipboard
+   */
+  copySessionLink(session?: FertilizerSession) {
+    const targetSession = session || this.currentSession;
+    if (!targetSession?._id) {
+      this.toastService.warning('No session to share');
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const sessionUrl = `${baseUrl}/lab-testing/fertilizer-testing/session/${targetSession._id}`;
+
+    navigator.clipboard.writeText(sessionUrl).then(() => {
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    }).catch((err) => {
+      console.error('Failed to copy link:', err);
+      // Fallback for older browsers
+      this.fallbackCopyToClipboard(sessionUrl);
+    });
+  }
+
+  /**
+   * Fallback method for copying to clipboard (older browsers)
+   */
+  private fallbackCopyToClipboard(text: string) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      this.toastService.success('Session link copied to clipboard!', 3000);
+    } catch (err) {
+      this.toastService.error('Failed to copy link. Please copy manually.');
+    }
+    document.body.removeChild(textArea);
+  }
+
+  /**
+   * Resume a session and initialize state manager
+   */
+  resumeSession(session: FertilizerSession) {
+    this.currentSession = session;
+    this.sessionActive = true;
+    this.rowData = []; // Start empty, load paginated
+    this.hasSelectedRows = false;
+
+    // Reset infinite scroll state
+    this.gridCurrentPage = 1;
+    this.hasMoreData = true;
+    this.isLoadingMore = false;
+
+    // Initialize state manager with current status
+    this.initializeStateManager();
+
+    // Update URL to include session ID (only if not already there)
+    if (session._id && this.sessionIdFromUrl !== session._id) {
+      this.sessionIdFromUrl = session._id;
+      this.router.navigate(['/lab-testing/fertilizer-testing/session', session._id], {
+        replaceUrl: true
+      });
+    }
+
+    // Load first page of data
+    if (session._id) {
+      this.loadMoreSamples();
+    }
+
+    // Update grid editability after grid is ready
+    setTimeout(() => {
+      this.updateGridEditability();
+    }, 100);
+
+    this.toastService.success(`Resumed session: ${session.date} v${session.version} - ${this.getCurrentStateLabel()}`, 4000);
+  }
+
+  /**
+   * Switch crop type tab
+   */
+  async switchCropType(type: CropType) {
+    if (type === this.activeCropType) return;
+
+    // Auto-save current data before switching
+    if (this.currentSession?._id && this.gridApi) {
+      try {
+        await this.saveCurrentSession();
+      } catch (err) {
+        // Log but don't block the switch
+        console.warn('Auto-save before type switch failed:', err);
+      }
+    }
+
+    this.activeCropType = type;
+    // Reload grid with new column definitions
+    if (this.gridApi) {
+      this.gridApi.setGridOption('columnDefs', this.colDefs);
+      // Filter data to show only samples of this type
+      this.loadSamplesForCropType(type);
+    }
+  }
+
+  /**
+   * Load samples for specific crop type
+   */
+  loadSamplesForCropType(type: CropType) {
+    if (!this.currentSession?._id) return;
+
+    // Reset pagination
+    this.gridCurrentPage = 1;
+    this.hasMoreData = true;
+    this.isLoadingMore = false;
+    this.rowData = [];
+
+    // Load samples
+    this.loadMoreSamples();
+  }
+
+  /**
+   * Merge default fertilizer values from the crop config into a sample. Only
+   * empty/null fields on the sample are filled — anything already set by the
+   * user (or by the backend at creation) is preserved.
+   *
+   * This acts as a safety net for samples created before the crop config
+   * existed, or for samples whose cropName was later corrected to match a
+   * configured crop.
+   */
+  private applyCropDefaults(sample: FertilizerSampleData): FertilizerSampleData {
+    if (!sample.cropName || !sample.type) return sample;
+    const defaults = this.fertilizerTestingService.getDefaultsForCrop(sample.cropName, sample.type);
+    if (!defaults || Object.keys(defaults).length === 0) return sample;
+
+    const merged: any = { ...sample };
+    for (const [key, value] of Object.entries(defaults)) {
+      const current = (merged as any)[key];
+      if (current === null || current === undefined || current === '') {
+        merged[key] = value;
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Load next page of samples
+   */
+  loadMoreSamples() {
+    if (this.isLoadingMore || !this.hasMoreData || !this.currentSession?._id) return;
+
+    this.isLoadingMore = true;
+
+    this.fertilizerTestingService.getSamplesForSession(
+      this.currentSession._id,
+      this.gridCurrentPage,
+      this.gridPageSize
+    ).subscribe({
+      next: (response) => {
+        // Filter by crop type
+        const newSamples = response.samples
+          .filter(s => s.type === this.activeCropType)
+          .map(s => this.applyCropDefaults(s));
+
+        if (newSamples.length < this.gridPageSize) {
+          this.hasMoreData = false;
+        }
+
+        if (this.gridCurrentPage === 1) {
+          this.rowData = newSamples;
+          if (this.gridApi) {
+            this.gridApi.setGridOption('rowData', this.rowData);
+          }
+        } else {
+          // Append new samples
+          this.rowData = [...this.rowData, ...newSamples];
+          if (this.gridApi) {
+            this.gridApi.applyTransaction({ add: newSamples });
+          }
+        }
+
+        this.gridCurrentPage++;
+        this.isLoadingMore = false;
+      },
+      error: (err) => {
+        console.error('Error loading samples', err);
+        this.isLoadingMore = false;
+        this.toastService.error('Failed to load more samples');
+      }
+    });
+  }
+
+  /**
+   * Handle grid body scroll for infinite loading
+   */
+  onBodyScroll(event: any) {
+    if (event.direction === 'vertical') {
+      const api = event.api;
+      const lastDisplayedRow = api.getLastDisplayedRow();
+      const totalRows = api.getDisplayedRowCount();
+
+      // If user scrolled near the bottom (last 5 rows), load more
+      if (lastDisplayedRow >= totalRows - 5) {
+        this.loadMoreSamples();
+      }
+    }
+  }
+
+  getFormattedDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  onGridReady(params: GridReadyEvent) {
+    this.gridApi = params.api;
+    // Column widths are fixed (defined per-column). Do not auto-size or
+    // size-to-fit so the layout stays static and non-resizable.
+
+    // Update grid editability based on current state
+    this.updateGridEditability();
+  }
+
+  /**
+   * Update grid editability based on current state
+   */
+  updateGridEditability() {
+    if (!this.gridApi) return;
+
+    const canEdit = this.stateManager.canPerformAction('editData');
+
+    // Update all column definitions to enable/disable editing
+    const updatedColDefs = this.colDefs.map(col => {
+      // Skip columns that should never be editable (checkboxes, actions)
+      if (col.checkboxSelection || col.headerName === 'Actions') {
+        return col;
+      }
+
+      // For all user input columns, set editable based on current state
+      return { ...col, editable: canEdit };
+    });
+
+    // Update the appropriate column definition array
+    switch (this.activeCropType) {
+      case 'normal':
+        this.normalColDefs = updatedColDefs;
+        break;
+      case 'small-fruit':
+        this.smallFruitColDefs = updatedColDefs;
+        break;
+      case 'large-fruit':
+        this.largeFruitColDefs = updatedColDefs;
+        break;
+    }
+
+    this.gridApi.setGridOption('columnDefs', updatedColDefs);
+  }
+
+  onCellValueChanged(event: CellValueChangedEvent) {
+    // Sync changes back to rowData array
+    const rowIndex = event.node.rowIndex;
+    if (rowIndex !== null && rowIndex !== undefined) {
+      this.rowData[rowIndex] = event.data;
+    }
+
+    // Column widths are fixed — do not auto-resize on edit.
+
+    // Trigger auto-save after 2 seconds of inactivity
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+    this.saveTimeout = setTimeout(() => {
+      this.autoSaveSession();
+    }, 2000);
+  }
+
+  /**
+   * Auto-save session data without refreshing the grid
+   */
+  private autoSaveSession(): void {
+    if (!this.currentSession || !this.currentSession._id) {
+      return;
+    }
+
+    const allGridData: FertilizerSampleData[] = this.extractGridData();
+
+    if (allGridData.length === 0) {
+      return;
+    }
+
+    this.fertilizerTestingService.bulkUpdateSamples(this.currentSession._id, allGridData).subscribe({
+      next: (response: any) => {
+        // Update IDs without refreshing the grid
+        if (response && Array.isArray(response.samples)) {
+          this.gridApi.forEachNode((node, index) => {
+            if (node.data && response.samples[index]) {
+              const updatedSample = response.samples[index];
+              if (!node.data._id && updatedSample._id) {
+                node.data._id = updatedSample._id;
+              }
+            }
+          });
+        }
+        this.toastService.success('Changes saved', 1000);
+      },
+      error: (error) => {
+        console.error('Auto-save failed:', error);
+        this.toastService.error('Auto-save failed. Please try again.');
+      }
+    });
+  }
+
+  onSelectionChanged() {
+    const selectedRows = this.gridApi.getSelectedRows();
+    this.hasSelectedRows = selectedRows.length > 0;
+  }
+
+  // NOTE: Fertilizer entries are now auto-created from Soil Testing only
+  // Manual add/delete is disabled to maintain data integrity
+
+  // addNewRow() - DISABLED: Entries are linked from Soil Testing
+  // deleteSelectedRows() - DISABLED: Entries are linked from Soil Testing
+
+  /**
+   * Extract all row data from grid
+   */
+  private extractGridData(): FertilizerSampleData[] {
+    const allGridData: FertilizerSampleData[] = [];
+    this.gridApi.forEachNode(node => {
+      if (node.data) {
+        allGridData.push(node.data);
+      }
+    });
+    return allGridData;
+  }
+
+  /**
+   * Save current session data silently (or with refresh)
+   */
+  private async saveCurrentSession(): Promise<void> {
+    if (!this.currentSession || !this.currentSession._id) {
+      return Promise.reject('No active session to save');
+    }
+
+    const allGridData: FertilizerSampleData[] = this.extractGridData();
+
+    if (allGridData.length === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      this.fertilizerTestingService.bulkUpdateSamples(this.currentSession!._id!, allGridData).subscribe({
+        next: () => {
+          resolve();
+        },
+        error: (error) => {
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // ===== EXCEL UPLOAD METHODS =====
+
+  // ===== PDF GENERATION METHODS =====
+
+  /**
+   * Download PDF for a single sample
+   */
+  async downloadSinglePdf(data: FertilizerSampleData) {
+    try {
+      // Show downloading toast
+      this.toastService.info('📄 Preparing your fertilizer report... Please wait', 0);
+
+      // STEP 1: Save session to database and wait for completion
+      await this.saveCurrentSession();
+
+      // STEP 2: Find the saved sample with its database ID
+      const savedRow = this.rowData.find(row =>
+        row.farmerName === data.farmerName && row.sampleNumber === data.sampleNumber
+      ) || data;
+
+      if (!savedRow._id) {
+        throw new Error('Sample ID not found. Please save the data first.');
+      }
+
+      // STEP 3: Generate PDF from backend using sample ID
+      const farmerName = savedRow.farmerName || 'Unknown';
+      const sampleNumber = savedRow.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - ખાતર ભલામણ - ${farmerName}.pdf` : `ખાતર ભલામણ - ${farmerName}.pdf`;
+
+      await this.pdfService.downloadFertilizerSamplePDF(savedRow._id, filename);
+
+      // Clear all toasts and show success message
+      this.toastService.clear();
+      this.toastService.success(`✅ Fertilizer report for ${farmerName} downloaded successfully!`, 4000);
+    } catch (error) {
+      this.toastService.clear();
+      this.toastService.error('❌ Failed to generate PDF report. Please try again.', 5000);
+    }
+  }
+
+  /**
+   * Download all PDFs (individual files) using streaming with progress widget
+   */
+  async downloadAllPdfs() {
+    if (this.rowData.length === 0) {
+      this.toastService.warning('⚠️ No data available to generate reports');
+      return;
+    }
+
+    try {
+      // STEP 1: Save session to database and wait for completion
+      await this.saveCurrentSession();
+
+      // STEP 2: Verify we have a session ID
+      if (!this.currentSession?._id) {
+        throw new Error('Session ID not found. Please save the session first.');
+      }
+
+      // STEP 3: Generate bulk PDFs using streaming endpoint
+      // Progress is now handled by the download progress widget
+      await this.pdfService.streamBulkFertilizerPDFs(this.currentSession._id);
+
+    } catch (error) {
+      console.error('Error downloading PDFs:', error);
+      // Error is already handled by the progress widget
+    }
+  }
+
+  // ===== SOIL DATA POPUP METHODS =====
+
+  /**
+   * Show soil data popup for linked sample
+   */
+  async showSoilDataForSample(sampleData: FertilizerSampleData) {
+    // Only show if sample is linked to soil sample
+    if (!sampleData.soilSampleId) {
+      // If no soil data, hide the popup
+      this.showSoilDataPopup = false;
+      this.currentSoilData = null;
+      return;
+    }
+
+    // Check cache first
+    if (this.soilDataCache.has(sampleData.soilSampleId)) {
+      const cachedData = this.soilDataCache.get(sampleData.soilSampleId);
+      // Always update the data, even if popup is already visible
+      this.currentSoilData = cachedData;
+      this.showSoilDataPopup = true;
+      return;
+    }
+
+    // Fetch soil data
+    try {
+      this.soilTestingService.getSoilDataForSample(sampleData.soilSampleId).subscribe({
+        next: (soilData) => {
+          this.currentSoilData = soilData;
+          this.soilDataCache.set(sampleData.soilSampleId!, soilData);
+          this.showSoilDataPopup = true;
+        },
+        error: (error) => {
+          console.error('Error fetching soil data:', error);
+          this.toastService.error('Failed to load soil data');
+        }
+      });
+    } catch (error) {
+      console.error('Error showing soil data:', error);
+    }
+  }
+
+  /**
+   * Close soil data popup
+   */
+  closeSoilPopup() {
+    this.showSoilDataPopup = false;
+    this.currentSoilData = null;
+    this.currentEditingRowId = null;
+  }
+
+  /**
+   * Handle cell click to show/update soil data
+   */
+  onCellClicked(event: any) {
+    // Show/update soil data when clicking on any cell in a row with soil data
+    if (event.data && event.data.soilSampleId) {
+      const rowId = event.data._id || event.node.id;
+
+      // Update to this row's soil data
+      this.currentEditingRowId = rowId;
+      this.showSoilDataForSample(event.data);
+    }
+  }
+
+  /**
+   * Handle row click - show/update soil data for the row
+   */
+  onRowClicked(event: any) {
+    // Update soil data when clicking anywhere on a row with soil data
+    if (event.data && event.data.soilSampleId) {
+      const rowId = event.data._id || event.node.id;
+      this.currentEditingRowId = rowId;
+      this.showSoilDataForSample(event.data);
+    }
+  }
+
+  /**
+   * Handle cell editing started - ensure soil data is showing
+   */
+  onCellEditingStarted(event: any) {
+    if (event.data && event.data.soilSampleId) {
+      const rowId = event.data._id || event.node.id;
+      this.currentEditingRowId = rowId;
+      this.showSoilDataForSample(event.data);
+    }
+  }
+
+  /**
+   * Handle cell editing stopped - keep popup visible
+   */
+  onCellEditingStopped(event: any) {
+    // Don't close - let user keep seeing the data
+  }
+}

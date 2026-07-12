@@ -17,6 +17,12 @@ const sampleSchema = new mongoose.Schema({
     required: true
   },
 
+  // Sample number (user-entered for PDF)
+  sampleNumber: {
+    type: String,
+    trim: true
+  },
+
   // Farmer information
   farmersName: {
     type: String,
@@ -97,9 +103,37 @@ const sampleSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  cropType: {
+    type: String,
+    enum: ['normal', 'small-fruit', 'large-fruit', ''],
+    default: '',
+    trim: true
+  },
   finalDeduction: {
     type: String,
     trim: true
+  },
+
+  // Link to fertilizer sample
+  fertilizerSampleId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FertilizerSample',
+    default: null,
+    index: true
+  },
+
+  // Link to farm project (auto-set on PDF generation when farmsName + mobileNo
+  // match a Project's name + clientPhone). Allows the project's Reports tab
+  // to find this sample without re-running the match query each time.
+  linkedProjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+    default: null,
+    index: true
+  },
+  linkedAt: {
+    type: Date,
+    default: null
   },
 
   // Classification Results (Gujarati)

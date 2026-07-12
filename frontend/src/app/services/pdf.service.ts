@@ -2,11 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
+import { DownloadProgressService } from './download-progress.service';
 
 export interface BulkPDFResponse {
   count: number;
   pdfs: {
     sampleId: string;
+    sampleNumber?: string;
     farmerName: string;
     pdf: string; // base64 encoded
   }[];
@@ -18,7 +20,10 @@ export interface BulkPDFResponse {
 export class PdfService {
   private apiUrl = `${environment.apiUrl}/pdf`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private downloadProgress: DownloadProgressService
+  ) {}
 
   /**
    * Generate and download PDF for a single sample
@@ -136,7 +141,8 @@ export class PdfService {
         // Download with delay to avoid browser blocking
         setTimeout(() => {
           const farmerName = pdfData.farmerName || 'Unknown';
-          const filename = `જમીન ચકાસણી - ${farmerName}.pdf`;
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - જમીન ચકાસણી - ${farmerName}.pdf` : `જમીન ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -212,6 +218,220 @@ export class PdfService {
    */
   checkHealth(): Observable<{ status: string; service: string }> {
     return this.http.get<{ status: string; service: string }>(`${this.apiUrl}/health`);
+  }
+
+  // =============== STREAMING PDF METHODS ===============
+
+  /**
+   * Get auth headers for fetch requests
+   */
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('accessToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }
+
+  /**
+   * Stream and download bulk PDFs for a soil testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkSessionPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${this.apiUrl}/session/${sessionId}/stream`;
+    await this.processStreamingPDFs(url, 'જમીન ચકાસણી', 'Downloading Soil Reports', onProgress);
+  }
+
+  /**
+   * Stream and download bulk PDFs for a water testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkWaterPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/water-testing/sessions/${sessionId}/pdfs-stream`;
+    await this.processStreamingPDFs(url, 'પાણી ચકાસણી', 'Downloading Water Reports', onProgress);
+  }
+
+  /**
+   * Process multipart streaming PDF response with progress tracking.
+   * Phase 1: Receive ALL PDFs from the stream (no file downloads during streaming).
+   * Phase 2: Download all collected PDFs one by one after stream is complete.
+   * This prevents the browser from aborting the fetch connection when download links are clicked.
+   */
+  private async processStreamingPDFs(
+    url: string,
+    filePrefix: string,
+    progressTitle: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    try {
+      this.downloadProgress.start(progressTitle + ' - Generating...', 0);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders()
+        }
+      });
+
+      if (!response.ok) {
+        this.downloadProgress.error(`Server error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('Content-Type') || '';
+      const totalCount = parseInt(response.headers.get('X-Total-Count') || '0', 10);
+
+      // Update progress with actual total
+      this.downloadProgress.start(progressTitle + ' - Generating...', totalCount);
+
+      // Extract boundary from Content-Type header
+      const boundaryMatch = contentType.match(/boundary=(.+)/);
+      if (!boundaryMatch) {
+        this.downloadProgress.error('Invalid response format');
+        throw new Error('No boundary found in multipart response');
+      }
+      const boundary = boundaryMatch[1];
+
+      // ---- Phase 1: Receive all PDFs from server (no downloads yet) ----
+      const arrayBuffer = await response.arrayBuffer();
+      const collectedPDFs = this.parseMultipartResponse(arrayBuffer, boundary);
+
+      console.log(`[PDF] Received ${collectedPDFs.length}/${totalCount} PDFs from server`);
+
+      if (collectedPDFs.length === 0) {
+        this.downloadProgress.error('No PDFs received from server');
+        throw new Error('No PDFs received from server');
+      }
+
+      // ---- Phase 2: Download all PDFs one by one ----
+      this.downloadProgress.start(progressTitle, collectedPDFs.length);
+
+      for (let i = 0; i < collectedPDFs.length; i++) {
+        const pdf = collectedPDFs[i];
+        const filename = pdf.sampleNumber ? `${pdf.sampleNumber} - ${filePrefix} - ${pdf.farmerName}.pdf` : `${filePrefix} - ${pdf.farmerName}.pdf`;
+
+        // Create blob and trigger download
+        const buffer = new ArrayBuffer(pdf.data.length);
+        new Uint8Array(buffer).set(pdf.data);
+        const blob = new Blob([buffer], { type: 'application/pdf' });
+        this.downloadPDF(blob, filename);
+
+        // Update progress
+        this.downloadProgress.update(i + 1, pdf.farmerName);
+        if (onProgress) {
+          onProgress(i + 1, collectedPDFs.length, pdf.farmerName);
+        }
+
+        // Delay between downloads to avoid browser blocking
+        if (i < collectedPDFs.length - 1) {
+          await this.delay(500);
+        }
+      }
+
+      // Mark as completed
+      this.downloadProgress.complete();
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Download failed';
+      this.downloadProgress.error(errorMessage);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse multipart response into individual PDF parts
+   */
+  private parseMultipartResponse(
+    arrayBuffer: ArrayBuffer,
+    boundary: string
+  ): { farmerName: string; sampleNumber: string; data: Uint8Array }[] {
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const results: { farmerName: string; sampleNumber: string; data: Uint8Array }[] = [];
+    const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
+
+    // Find all boundary positions by scanning raw bytes
+    const boundaryPositions: number[] = [];
+    for (let i = 0; i <= uint8Array.length - boundaryBytes.length; i++) {
+      let match = true;
+      for (let j = 0; j < boundaryBytes.length; j++) {
+        if (uint8Array[i + j] !== boundaryBytes[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        boundaryPositions.push(i);
+        i += boundaryBytes.length - 1; // skip past this boundary
+      }
+    }
+
+    console.log(`[PDF] Found ${boundaryPositions.length} boundaries`);
+
+    // Process each part between consecutive boundaries
+    for (let i = 0; i < boundaryPositions.length - 1; i++) {
+      const partStart = boundaryPositions[i] + boundaryBytes.length;
+      const partEnd = boundaryPositions[i + 1];
+
+      // Find the header/body separator (\r\n\r\n) in this part
+      let headerEnd = -1;
+      for (let j = partStart; j < partEnd - 3; j++) {
+        if (uint8Array[j] === 13 && uint8Array[j+1] === 10 &&
+            uint8Array[j+2] === 13 && uint8Array[j+3] === 10) {
+          headerEnd = j;
+          break;
+        }
+      }
+
+      if (headerEnd === -1) continue;
+
+      // Parse headers (text portion only)
+      const headerText = new TextDecoder().decode(uint8Array.slice(partStart, headerEnd));
+      const headers: Record<string, string> = {};
+      headerText.split('\r\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const colonIdx = trimmed.indexOf(':');
+        if (colonIdx > 0) {
+          headers[trimmed.substring(0, colonIdx).trim().toLowerCase()] =
+            trimmed.substring(colonIdx + 1).trim();
+        }
+      });
+
+      // Extract binary PDF data (after \r\n\r\n, before next boundary's preceding \r\n)
+      const dataStart = headerEnd + 4;
+      let dataEnd = partEnd;
+      // Trim trailing \r\n before the next boundary
+      while (dataEnd > dataStart && (uint8Array[dataEnd - 1] === 10 || uint8Array[dataEnd - 1] === 13)) {
+        dataEnd--;
+      }
+
+      const data = uint8Array.slice(dataStart, dataEnd);
+      if (data.length === 0) continue;
+
+      const farmerName = headers['x-farmer-name']
+        ? decodeURIComponent(headers['x-farmer-name'])
+        : 'Unknown';
+
+      const sampleNumber = headers['x-sample-number']
+        ? decodeURIComponent(headers['x-sample-number'])
+        : '';
+
+      results.push({ farmerName, sampleNumber, data });
+    }
+
+    return results;
+  }
+
+
+  /**
+   * Helper to create a delay
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // =============== WATER TESTING PDF METHODS ===============
@@ -300,7 +520,8 @@ export class PdfService {
         // Download with delay to avoid browser blocking
         setTimeout(() => {
           const farmerName = pdfData.farmerName || 'Unknown';
-          const filename = `પાણી ચકાસણી - ${farmerName}.pdf`;
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - પાણી ચકાસણી - ${farmerName}.pdf` : `પાણી ચકાસણી - ${farmerName}.pdf`;
           this.downloadPDF(blob, filename);
         }, index * 500); // 500ms delay between downloads
       } catch (error) {
@@ -317,6 +538,130 @@ export class PdfService {
       const blob = await this.generateCombinedWaterPDF(sessionId).toPromise();
       if (blob) {
         const defaultFilename = filename || `પાણી ચકાસણી - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  // =============== FERTILIZER TESTING PDF METHODS ===============
+
+  /**
+   * Stream and download bulk PDFs for a fertilizer testing session
+   * Downloads each PDF as it arrives from the server with progress tracking
+   */
+  async streamBulkFertilizerPDFs(
+    sessionId: string,
+    onProgress?: (current: number, total: number, farmerName: string) => void
+  ): Promise<void> {
+    const url = `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdfs-stream`;
+    await this.processStreamingPDFs(url, 'ખાતર ભલામણ', 'Downloading Fertilizer Reports', onProgress);
+  }
+
+  /**
+   * Generate and download PDF for a single fertilizer sample
+   */
+  generateFertilizerSamplePDF(sampleId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/fertilizer-testing/samples/${sampleId}/pdf`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Generate and download all PDFs for a fertilizer testing session (returns base64 encoded PDFs)
+   */
+  generateBulkFertilizerPDFs(sessionId: string): Observable<BulkPDFResponse> {
+    return this.http.post<BulkPDFResponse>(
+      `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdfs`,
+      {}
+    );
+  }
+
+  /**
+   * Generate and download combined PDF for all fertilizer samples in a session
+   */
+  generateCombinedFertilizerPDF(sessionId: string): Observable<Blob> {
+    return this.http.post(
+      `${environment.apiUrl}/fertilizer-testing/sessions/${sessionId}/pdf-combined`,
+      {},
+      { responseType: 'blob' }
+    );
+  }
+
+  /**
+   * Download fertilizer sample PDF
+   */
+  async downloadFertilizerSamplePDF(sampleId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateFertilizerSamplePDF(sampleId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `ખાતર ભલામણ - ${new Date().toISOString().split('T')[0]}.pdf`;
+        this.downloadPDF(blob, defaultFilename);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  /**
+   * Download all fertilizer PDFs for a session (individual downloads with delay)
+   */
+  async downloadBulkFertilizerPDFs(sessionId: string): Promise<void> {
+    try {
+      const response = await this.generateBulkFertilizerPDFs(sessionId).toPromise();
+      if (response) {
+        this.downloadBulkFertilizerPDFsHelper(response);
+      }
+    } catch (error) {
+
+      throw error;
+    }
+  }
+
+  /**
+   * Download bulk fertilizer PDFs from base64 response
+   */
+  private downloadBulkFertilizerPDFsHelper(response: BulkPDFResponse): void {
+    response.pdfs.forEach((pdfData, index) => {
+      try {
+        // Clean the base64 string (remove whitespace and newlines)
+        const cleanBase64 = pdfData.pdf.replace(/\s/g, '');
+
+        // Convert base64 to blob
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        // Download with delay to avoid browser blocking
+        setTimeout(() => {
+          const farmerName = pdfData.farmerName || 'Unknown';
+          const sampleNumber = pdfData.sampleNumber || '';
+          const filename = sampleNumber ? `${sampleNumber} - ખાતર ભલામણ - ${farmerName}.pdf` : `ખાતર ભલામણ - ${farmerName}.pdf`;
+          this.downloadPDF(blob, filename);
+        }, index * 500); // 500ms delay between downloads
+      } catch (error) {
+
+      }
+    });
+  }
+
+  /**
+   * Download combined fertilizer PDF for a session
+   */
+  async downloadCombinedFertilizerSessionPDF(sessionId: string, filename?: string): Promise<void> {
+    try {
+      const blob = await this.generateCombinedFertilizerPDF(sessionId).toPromise();
+      if (blob) {
+        const defaultFilename = filename || `ખાતર ભલામણ - Combined_${new Date().toISOString().split('T')[0]}.pdf`;
         this.downloadPDF(blob, defaultFilename);
       }
     } catch (error) {

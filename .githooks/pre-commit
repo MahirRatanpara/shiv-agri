@@ -1,0 +1,19 @@
+#!/bin/bash
+# Auto-update context.md via Claude CLI before commit
+# Skip with: SKIP_CONTEXT_UPDATE=1 git commit
+# Or:        git commit --no-verify
+
+if [ "$SKIP_CONTEXT_UPDATE" = "1" ]; then
+  echo "[pre-commit] Skipping context.md update (SKIP_CONTEXT_UPDATE=1)"
+  exit 0
+fi
+
+echo "[pre-commit] Updating context.md with staged changes..."
+
+if [ $? -eq 0 ]; then
+  echo "[pre-commit] context.md updated and staged"
+else
+  echo "[pre-commit] context.md update failed — commit will continue anyway"
+fi
+
+exit 0

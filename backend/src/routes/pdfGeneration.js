@@ -3,13 +3,15 @@ const router = express.Router();
 const SoilSample = require('../models/SoilSample');
 const SoilSession = require('../models/SoilSession');
 const pdfGeneratorService = require('../services/pdfGenerator');
+const farmReportLinker = require('../services/farmReportLinker');
+const { authenticate } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 /**
  * Generate PDF for a single soil sample
  * POST /api/pdf/sample/:sampleId
  */
-router.post('/sample/:sampleId', async (req, res) => {
+router.post('/sample/:sampleId', authenticate, async (req, res) => {
   try {
     const { sampleId } = req.params;
 
@@ -21,6 +23,15 @@ router.post('/sample/:sampleId', async (req, res) => {
       logger.warn(`Sample not found: ${sampleId}`);
       return res.status(404).json({ error: 'Sample not found' });
     }
+
+    // Best-effort link to a matching farm project (case-insensitive farm name
+    // + last-10-digits mobile number). Errors are swallowed inside the linker
+    // so they cannot break the PDF response.
+    await farmReportLinker.linkSampleToFarm({
+      sampleType: 'soil',
+      sample,
+      user: req.user
+    });
 
     // Generate PDF
     const pdfBuffer = await pdfGeneratorService.generateSinglePDF(sample);
@@ -74,7 +85,7 @@ router.get('/sample/:sampleId/preview', async (req, res) => {
 });
 
 /**
- * Generate bulk PDFs for a session (returns individual PDFs as ZIP)
+ * Generate bulk PDFs for a session (returns individual PDFs as JSON with base64 - LEGACY)
  * POST /api/pdf/session/:sessionId/bulk
  */
 router.post('/session/:sessionId/bulk', async (req, res) => {
@@ -96,13 +107,13 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
       return res.status(404).json({ error: 'No samples found in this session' });
     }
 
-    // Generate PDFs
+    // Generate PDFs (now uses parallel processing)
     const pdfs = await pdfGeneratorService.generateBulkPDFs(samples);
 
-    // For now, return the array of PDFs as JSON with base64 encoding
-    // In production, you might want to create a ZIP file
+    // Return the array of PDFs as JSON with base64 encoding
     const result = pdfs.map(pdf => ({
       sampleId: pdf.sampleId,
+      sampleNumber: pdf.sampleNumber,
       farmerName: pdf.farmerName,
       pdf: Buffer.from(pdf.buffer).toString('base64')
     }));
@@ -117,6 +128,126 @@ router.post('/session/:sessionId/bulk', async (req, res) => {
   } catch (error) {
     logger.error(`Error generating bulk PDFs: ${error.message}`);
     res.status(500).json({ error: 'Failed to generate bulk PDFs' });
+  }
+});
+
+/**
+ * Stream bulk PDFs for a session - each PDF streamed as multipart
+ * POST /api/pdf/session/:sessionId/stream
+ *
+ * Response format: multipart/mixed with each part being a PDF file
+ * Each part has headers: Content-Type, Content-Disposition, X-Farmer-Name, X-Sample-Id, X-Index, X-Total
+ */
+router.post('/session/:sessionId/stream', async (req, res) => {
+  let clientDisconnected = false;
+
+  try {
+    const { sessionId } = req.params;
+
+    logger.info(`Streaming PDF generation requested for session: ${sessionId}`);
+
+    // Fetch session and samples
+    const session = await SoilSession.findById(sessionId);
+    if (!session) {
+      logger.warn(`Session not found: ${sessionId}`);
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const samples = await SoilSample.find({ sessionId }).sort({ createdAt: 1 });
+    if (samples.length === 0) {
+      logger.warn(`No samples found for session: ${sessionId}`);
+      return res.status(404).json({ error: 'No samples found in this session' });
+    }
+
+    const total = samples.length;
+    const boundary = `----PDFBoundary${Date.now()}`;
+
+    // Monitor client connection
+    req.on('close', () => {
+      clientDisconnected = true;
+      logger.warn(`Client disconnected during PDF streaming for session: ${sessionId}`);
+    });
+
+    // Set multipart response headers with keep-alive
+    res.setHeader('Content-Type', `multipart/mixed; boundary=${boundary}`);
+    res.setHeader('X-Total-Count', total);
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Keep-Alive', 'timeout=600'); // 10 minutes
+
+    // Disable timeout for this request (large file streaming)
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000); // 10 minutes
+
+    logger.info(`Starting streaming generation for ${total} PDFs`);
+
+    // Use the streaming generator
+    let index = 0;
+    for await (const pdf of pdfGeneratorService.generateBulkPDFsStream(samples, 'soil')) {
+      // Check if client disconnected
+      if (clientDisconnected) {
+        logger.warn(`Stopping PDF generation - client disconnected at ${index}/${total}`);
+        break;
+      }
+
+      const farmerName = pdf.farmerName || 'Unknown';
+      const sampleNumber = pdf.sampleNumber || '';
+      const filename = sampleNumber ? `${sampleNumber} - જમીન ચકાસણી - ${farmerName}.pdf` : `જમીન ચકાસણી - ${farmerName}.pdf`;
+      const encodedFilename = encodeURIComponent(filename);
+
+      try {
+        logger.info(`[PDF Stream] Sending PDF ${index + 1}/${total}: ${farmerName} (${pdf.buffer.length} bytes)`);
+
+        // Write multipart boundary and headers
+        res.write(`\r\n--${boundary}\r\n`);
+        res.write(`Content-Type: application/pdf\r\n`);
+        res.write(`Content-Disposition: attachment; filename="${encodedFilename}"\r\n`);
+        res.write(`X-Farmer-Name: ${encodeURIComponent(farmerName)}\r\n`);
+        res.write(`X-Sample-Number: ${encodeURIComponent(sampleNumber)}\r\n`);
+        res.write(`X-Sample-Id: ${pdf.sampleId}\r\n`);
+        res.write(`X-Index: ${index}\r\n`);
+        res.write(`X-Total: ${total}\r\n`);
+        res.write(`Content-Length: ${pdf.buffer.length}\r\n`);
+        res.write(`\r\n`);
+
+        // Write PDF buffer
+        const writeSuccess = res.write(pdf.buffer);
+        if (!writeSuccess) {
+          logger.warn(`[PDF Stream] Backpressure detected, waiting for drain...`);
+          await new Promise(resolve => res.once('drain', resolve));
+        }
+
+        // Flush to ensure data is sent immediately
+        if (res.flush && typeof res.flush === 'function') {
+          res.flush();
+        }
+
+        index++;
+        logger.info(`[PDF Stream] Successfully sent PDF ${index}/${total}`);
+      } catch (writeError) {
+        logger.error(`Error writing PDF ${index}/${total}: ${writeError.message}`);
+        clientDisconnected = true;
+        break;
+      }
+    }
+
+    // Only write final boundary if not disconnected
+    if (!clientDisconnected) {
+      res.write(`\r\n--${boundary}--\r\n`);
+      res.end();
+      logger.info(`Streaming completed for session: ${sessionId}, sent ${index}/${total} PDFs`);
+    } else {
+      logger.warn(`Streaming incomplete for session: ${sessionId}, sent ${index}/${total} PDFs before disconnect`);
+      res.end();
+    }
+
+  } catch (error) {
+    logger.error(`Error streaming PDFs: ${error.message}`, { stack: error.stack });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to stream PDFs' });
+    } else {
+      res.end();
+    }
   }
 });
 
@@ -205,6 +336,7 @@ router.post('/samples/multiple', async (req, res) => {
 
       const result = pdfs.map(pdf => ({
         sampleId: pdf.sampleId,
+        sampleNumber: pdf.sampleNumber,
         farmerName: pdf.farmerName,
         pdf: Buffer.from(pdf.buffer).toString('base64')
       }));

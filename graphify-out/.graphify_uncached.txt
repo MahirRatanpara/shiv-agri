@@ -1,0 +1,10 @@
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/images/Projects/miyawaki-forest.webp
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/images/Projects/farm-management.webp
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/images/Projects/net-house.webp
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/images/Projects/mango-plant.webp
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/images/home-crousal/farm-management.webp
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-regular-400.svg
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-Bold-webfont.svg
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/DroidSans-webfont.svg
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-brands-400.svg
+/Users/mahirratanpara/IdeaProjects/shiv-agri/frontend/src/assets/webfonts/fa-solid-900.svg

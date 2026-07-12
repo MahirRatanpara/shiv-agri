@@ -1,65 +1,276 @@
 <div class="login-container">
-  <div class="login-card">
-    <div class="login-header">
-      <h1>Welcome to Shiv Agri</h1>
-      <p>Sign in with your Google account to continue</p>
+  <!-- =========================================================
+       BRAND PANEL (desktop only — hidden on tablet/mobile)
+       ========================================================= -->
+  <aside class="brand-panel" aria-hidden="true">
+    <div class="brand-art">
+      <!-- Decorative agricultural artwork: soft organic shapes + a leaf + sun -->
+      <svg viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#10b981" stop-opacity="0.5"/>
+            <stop offset="1" stop-color="#6366f1" stop-opacity="0.5"/>
+          </linearGradient>
+          <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#fff" stop-opacity="0.5"/>
+            <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- soft sun -->
+        <circle cx="660" cy="160" r="180" fill="url(#sun)"/>
+        <!-- big leaf -->
+        <path d="M 120 760 C 180 540, 340 420, 540 460 C 540 660, 380 820, 120 840 Z"
+              fill="url(#leaf)"/>
+        <!-- leaf vein -->
+        <path d="M 540 460 C 380 540, 240 660, 120 820" stroke="#fff" stroke-opacity="0.35" stroke-width="2" fill="none"/>
+        <!-- small bubble shapes -->
+        <circle cx="200" cy="220" r="80" fill="#fff" fill-opacity="0.06"/>
+        <circle cx="100" cy="340" r="36" fill="#fff" fill-opacity="0.08"/>
+        <circle cx="720" cy="780" r="120" fill="#fff" fill-opacity="0.05"/>
+      </svg>
     </div>
 
-    <div class="login-content">
-      <!-- Web: Google Identity Services renders its own button here -->
-      <div *ngIf="!isNative" id="googleSignInButton" class="google-button-container"></div>
+    <div class="brand-content">
+      <div class="brand-logo">
+        <span class="logo-dot">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22c4-6 4-12 0-18-4 6-4 12 0 18z"/>
+            <path d="M5 14c2 0 4 1 5 4"/>
+            <path d="M19 14c-2 0-4 1-5 4"/>
+          </svg>
+        </span>
+        <span>Shiv-Agri</span>
+      </div>
+    </div>
 
-      <!-- Native (iOS/Android): custom button triggers the native account picker -->
-      <button
-        *ngIf="isNative"
-        type="button"
-        class="native-google-btn"
-        [disabled]="isLoading"
-        (click)="signInWithGoogleNative()">
-        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        <span>Sign in with Google</span>
-      </button>
+    <div class="brand-tagline">
+      <h2>Smarter farming starts with better data.</h2>
+      <p>Manage your farms, run soil tests, and deliver reports to customers — all in one place.</p>
+      <ul class="brand-features">
+        <li>
+          <span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          Sign in with phone or Google — no passwords
+        </li>
+        <li>
+          <span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          Verification code delivered on WhatsApp
+        </li>
+        <li>
+          <span class="check">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          Built for tablets, optimized for the field
+        </li>
+      </ul>
+    </div>
 
-      <!-- Loading State -->
-      <div *ngIf="isLoading" class="loading">
-        <div class="spinner"></div>
-        <p>Signing in...</p>
+    <p class="brand-footnote">© Shiv-Agri · Trusted by farms across Gujarat</p>
+  </aside>
+
+  <!-- =========================================================
+       FORM PANEL
+       ========================================================= -->
+  <main class="form-panel">
+    <div class="login-card" role="dialog" aria-labelledby="login-title">
+
+      <header class="card-header">
+        <div class="mini-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22c4-6 4-12 0-18-4 6-4 12 0 18z"/>
+            <path d="M5 14c2 0 4 1 5 4"/>
+            <path d="M19 14c-2 0-4 1-5 4"/>
+          </svg>
+        </div>
+        <h1 id="login-title">Sign in to Shiv-Agri</h1>
+        <p>Choose how you'd like to continue.</p>
+      </header>
+
+      <!-- Tab switcher — hidden in Google-only mode (OTP login disabled) -->
+      <div class="tab-switcher" role="tablist" aria-label="Sign-in method" *ngIf="otpLoginEnabled">
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'google'"
+          [class.active]="activeTab === 'google'"
+          (click)="switchTab('google')">
+          <svg viewBox="0 0 48 48" width="16" height="16" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Google
+        </button>
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="activeTab === 'phone'"
+          [class.active]="activeTab === 'phone'"
+          (click)="switchTab('phone')">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="6" y="2" width="12" height="20" rx="3"/>
+            <line x1="12" y1="18" x2="12" y2="18"/>
+          </svg>
+          Phone OTP
+        </button>
       </div>
 
-      <!-- Error Message -->
-      <div *ngIf="errorMessage" class="alert alert-error">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      <!-- =================================================
+           PHONE PANEL
+           ================================================= -->
+      <section class="panel" *ngIf="activeTab === 'phone'" role="tabpanel">
+
+        <!-- Step 1: enter phone -->
+        <form *ngIf="phoneStep === 'enter-phone'" (ngSubmit)="requestOtp()" class="phone-form" novalidate>
+          <label for="phone-input" class="field-label">Mobile number</label>
+          <div class="phone-input-row">
+            <select
+              class="country-select"
+              [(ngModel)]="selectedCountryCode"
+              name="countryCode"
+              [disabled]="isLoading"
+              aria-label="Country code">
+              <option *ngFor="let c of countryCodes" [value]="c.dial">{{ c.label }}</option>
+            </select>
+            <input
+              id="phone-input"
+              class="phone-input"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel-national"
+              placeholder="98765 43210"
+              [value]="phoneNumber"
+              (input)="onPhoneNumberInput($event)"
+              [disabled]="isLoading"
+              required />
+          </div>
+          <p class="field-help">We'll send a {{ OTP_LENGTH }}-digit code to this number on WhatsApp.</p>
+
+          <button
+            type="submit"
+            class="primary-btn"
+            [disabled]="!isPhoneNumberValid || isLoading">
+            <ng-container *ngIf="!isLoading">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-3.5-7.1L21 3v6h-6"/>
+              </svg>
+              Send code on WhatsApp
+            </ng-container>
+            <span *ngIf="isLoading" class="btn-loading">
+              <span class="spinner-sm" aria-hidden="true"></span> Sending…
+            </span>
+          </button>
+        </form>
+
+        <!-- Step 2: enter OTP -->
+        <div *ngIf="phoneStep === 'enter-otp'" class="otp-form">
+          <div class="otp-header">
+            <h2>Enter the verification code</h2>
+            <p class="otp-subtitle">
+              Sent to <strong>{{ selectedCountryCode }} {{ phoneNumber }}</strong>
+              <button type="button" class="link-btn" (click)="changePhoneNumber()" [disabled]="isLoading">Change</button>
+            </p>
+          </div>
+
+          <div
+            class="otp-digits"
+            role="group"
+            aria-label="One-time password"
+            (paste)="onOtpPaste($event)">
+            <input
+              *ngFor="let digit of otpDigits; let i = index"
+              #otpInput
+              class="otp-digit"
+              type="tel"
+              inputmode="numeric"
+              maxlength="1"
+              autocomplete="one-time-code"
+              [value]="otpDigits[i]"
+              (input)="onOtpInput(i, $event)"
+              (keydown)="onOtpKeydown(i, $event)"
+              [disabled]="isLoading"
+              [attr.aria-label]="'Digit ' + (i + 1) + ' of ' + OTP_LENGTH" />
+          </div>
+
+          <div class="otp-meta">
+            <span *ngIf="expiryCountdown > 0" class="meta-item">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Expires in <strong>{{ expiryDisplay }}</strong>
+            </span>
+            <span *ngIf="expiryCountdown <= 0" class="meta-item meta-warning">Code expired — please request a new one</span>
+            <span *ngIf="attemptsRemaining !== null" class="meta-item">
+              {{ attemptsRemaining }} attempt{{ attemptsRemaining === 1 ? '' : 's' }} left
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="primary-btn"
+            [disabled]="!isOtpComplete || isLoading"
+            (click)="verifyOtp()">
+            <span *ngIf="!isLoading">Verify and sign in</span>
+            <span *ngIf="isLoading" class="btn-loading">
+              <span class="spinner-sm" aria-hidden="true"></span> Verifying…
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="secondary-btn"
+            (click)="resendOtp()"
+            [disabled]="resendCountdown > 0 || isLoading">
+            <span *ngIf="resendCountdown > 0">Resend code in {{ resendCountdown }}s</span>
+            <span *ngIf="resendCountdown <= 0">Resend code</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- =================================================
+           GOOGLE PANEL
+           ================================================= -->
+      <section class="panel google-panel" *ngIf="activeTab === 'google'" role="tabpanel">
+        <button
+          type="button"
+          class="google-btn"
+          (click)="triggerGoogleSignIn()"
+          [disabled]="isLoading">
+          <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Continue with Google
+        </button>
+        <p class="field-help">Use your work Google account to sign in.</p>
+      </section>
+
+      <!-- =================================================
+           ALERTS
+           ================================================= -->
+      <div *ngIf="errorMessage" class="alert alert-error" role="alert">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
         <span>{{ errorMessage }}</span>
       </div>
 
-      <!-- Success Message -->
-      <div *ngIf="successMessage" class="alert alert-success">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      <div *ngIf="successMessage" class="alert alert-success" role="status">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"/>
         </svg>
         <span>{{ successMessage }}</span>
       </div>
 
-      <div class="login-info">
-        <p class="info-text">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          New accounts require admin approval before full access is granted.
-        </p>
-      </div>
+      <footer class="login-footer">
+        <p>By continuing, you agree to receive a verification code on the number you enter.</p>
+      </footer>
     </div>
-  </div>
+  </main>
 </div>

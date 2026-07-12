@@ -14,8 +14,71 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      # Media microservice — backend talks to it through nginx (same URL as the browser sees).
+      # This is a "hairpin": api → nginx (public) → media-service. Trades a bit of latency
+      # for a single URL surface. To switch back to direct container-to-container calls,
+      # set MEDIA_SERVICE_URL=http://media-service:8081 in the prod .env.
+      MEDIA_SERVICE_URL: ${MEDIA_SERVICE_URL:-https://shivagri.com}
+      MEDIA_SERVICE_PUBLIC_URL: ${MEDIA_SERVICE_PUBLIC_URL:-https://shivagri.com}
+      OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
+      OTP_DELIVERY_MODE: ${OTP_DELIVERY_MODE:-template}
+      OTP_BRAND_NAME: ${OTP_BRAND_NAME:-Shiv-Agri}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_URL:-http://notification-service:8082}
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-otp_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-true}
+      DEFAULT_PHONE_COUNTRY_CODE: ${DEFAULT_PHONE_COUNTRY_CODE:-+91}
+      DEFAULT_PHONE_SIGNUP_ROLE: ${DEFAULT_PHONE_SIGNUP_ROLE:-user}
     volumes:
       - api_uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+  media-service:
+    image: ${DOCKERHUB_USERNAME}/shiv-agri-media:latest
+    container_name: shivagri-media
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: filesystem
+      SPRING_DATA_MONGODB_URI: ${MONGODB_URI}
+      MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+    volumes:
+      - /var/media/uploads:/var/media/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+
+  notification-service:
+    image: ${DOCKERHUB_USERNAME}/shiv-agri-notification:latest
+    container_name: shivagri-notification
+    restart: unless-stopped
+    environment:
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v21.0}
+      WHATSAPP_DEFAULT_COUNTRY_CODE: ${WHATSAPP_DEFAULT_COUNTRY_CODE:-91}
+      # OTP routing: "whatsapp" or "sms"
+      OTP_CHANNEL: ${OTP_CHANNEL:-whatsapp}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-shiv_agri_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-false}
+      # MSG91 SMS (used when OTP_CHANNEL=sms)
+      MSG91_AUTH_KEY: ${MSG91_AUTH_KEY:-}
+      MSG91_BASE_URL: ${MSG91_BASE_URL:-https://control.msg91.com/api/v5}
+      MSG91_TEMPLATE_ID: ${MSG91_TEMPLATE_ID:-}
+      MSG91_SENDER_ID: ${MSG91_SENDER_ID:-}
+      MSG91_OTP_VARIABLE: ${MSG91_OTP_VARIABLE:-OTP}
+      MSG91_DEFAULT_COUNTRY_CODE: ${MSG91_DEFAULT_COUNTRY_CODE:-91}
+      GMAIL_FROM_ADDRESS: ${GMAIL_FROM_ADDRESS}
+      GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:-Shiv-Agri}
+      GMAIL_OAUTH_CLIENT_ID: ${GMAIL_OAUTH_CLIENT_ID}
+      GMAIL_OAUTH_CLIENT_SECRET: ${GMAIL_OAUTH_CLIENT_SECRET}
+      GMAIL_OAUTH_REFRESH_TOKEN: ${GMAIL_OAUTH_REFRESH_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -42,15 +105,26 @@ services:
       - api
       - frontend
     networks:
-      - app-network
+      app-network:
+        # Aliases let other containers resolve shivagri.com to nginx's internal IP,
+        # so api → media-service via nginx stays on the docker network (no hairpin
+        # out to the public internet, no DNS round-trip, TLS still valid because
+        # the cert is genuinely for shivagri.com).
+        aliases:
+          - shivagri.com
+          - www.shivagri.com
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
     image: certbot/certbot
     container_name: shivagri-certbot
+    restart: unless-stopped
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_conf:/etc/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - app-network
 
 volumes:
   api_uploads:

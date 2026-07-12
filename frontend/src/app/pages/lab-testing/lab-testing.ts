@@ -17,6 +17,7 @@ export class LabTestingComponent implements OnInit {
   // Permission flags
   hasSoilTestingAccess = false;
   hasWaterTestingAccess = false;
+  hasFertilizerTestingAccess = false;
 
   constructor(
     private router: Router,
@@ -63,11 +64,22 @@ export class LabTestingComponent implements OnInit {
       'water.samples.create',
       'water.reports.download'
     ]);
+
+    // Check Fertilizer Testing permissions
+    this.hasFertilizerTestingAccess = this.permissionService.hasAnyPermission([
+      'soil.sessions.view',
+      'soil.sessions.create',
+      'soil.sessions.update',
+      'soil.samples.view',
+      'soil.samples.create'
+    ]);
   }
 
   setActiveSubModuleFromRoute(url: string) {
     if (url.includes('/lab-testing/soil-testing')) {
       this.activeSubModule = 'soil-testing';
+    } else if (url.includes('/lab-testing/fertilizer-testing')) {
+      this.activeSubModule = 'fertilizer-testing';
     } else if (url.includes('/lab-testing/water-testing')) {
       this.activeSubModule = 'water-testing';
     }
@@ -76,6 +88,8 @@ export class LabTestingComponent implements OnInit {
   redirectToFirstAvailableModule() {
     if (this.hasSoilTestingAccess) {
       this.router.navigate(['/lab-testing/soil-testing']);
+    } else if (this.hasFertilizerTestingAccess) {
+      this.router.navigate(['/lab-testing/fertilizer-testing']);
     } else if (this.hasWaterTestingAccess) {
       this.router.navigate(['/lab-testing/water-testing']);
     }
