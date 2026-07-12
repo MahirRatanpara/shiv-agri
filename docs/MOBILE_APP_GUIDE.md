@@ -244,3 +244,125 @@ npx cap run ios        # build + launch on a chosen simulator (terminal only)
 npx cap run android    # build + launch on a chosen emulator (terminal only)
 npx cap doctor         # sanity-check the Capacitor setup
 ```
+
+---
+
+## 10. Google login on native (iOS & Android)
+
+The website uses Google Identity Services (a browser SDK) which **does not work inside a native
+WebView**. So the apps use **native** Google Sign-In via
+[`@capgo/capacitor-social-login`](https://github.com/Cap-go/capacitor-social-login), which opens
+the OS account picker and returns a Google **ID token**. That token is sent to the **same**
+backend endpoint the web uses (`POST /auth/google`), so **no backend change is required**.
+
+### How it's wired (already in code)
+- `login.ts` branches on `Capacitor.isNativePlatform()`:
+  - **Web** → unchanged Google Identity Services button.
+  - **Native** → `SocialLogin.login({ provider: 'google' })` → `result.idToken` → `authService.googleLogin(idToken)`.
+- The plugin is initialized with:
+  - `webClientId` = `environment.googleClientId` (your existing **Web** client — also the token audience the backend checks).
+  - `iOSClientId` = `environment.googleIosClientId` (**you must fill this in**).
+  - `iOSServerClientId` = `environment.googleClientId` (so the iOS token's audience matches the backend).
+- Future **OTP login** slots in cleanly: add a method alongside `signInWithGoogleNative()` that
+  calls your OTP endpoint and reuses the same post-login redirect handling.
+
+### ⚠️ What you must do before it authenticates on a device
+Native Google Sign-In needs OAuth clients that only you can create. **Until these are done,
+the button appears but login will fail.** All clients must live in the **same Google Cloud
+project** as the existing Web client.
+
+**1. Android OAuth client** (Google Cloud Console → APIs & Services → Credentials → Create → OAuth client → **Android**)
+- Package name: `com.shivagri.app`
+- SHA-1 fingerprint of **each** signing key you test/ship with. Get them:
+  ```bash
+  cd frontend/android && ./gradlew signingReport      # debug + release SHA-1
+  ```
+  - Register the **debug** SHA-1 (local runs), the **release** SHA-1, and — once on the Play Store —
+    the **Play App Signing** SHA-1 (Play Console → App integrity → App signing key certificate).
+- You do **not** paste the Android client ID anywhere in code — Android uses `googleClientId`
+  (the Web client) at runtime. The Android client just authorizes your package + SHA-1.
+
+**2. iOS OAuth client** (Credentials → Create → OAuth client → **iOS**)
+- Bundle ID: `com.shivagri.app`
+- Copy the generated **iOS client ID** into `environment.ts` **and** `environment.prod.ts` as
+  `googleIosClientId`.
+- Copy its **reversed** form (`com.googleusercontent.apps.<IOS_CLIENT_ID>`) into
+  `ios/App/App/Info.plist` under `CFBundleURLTypes` (a placeholder is already there).
+
+**3. OAuth consent screen**
+- If it's in **Testing** mode, add every Google account you sign in with as a **Test user**.
+  Publishing to Production is not required for `email`/`profile` scopes.
+
+**4. Device requirement**
+- The Android device/emulator must have **at least one Google account** signed in.
+
+### After filling in the credentials
+```bash
+cd frontend
+npm run cap:sync      # picks up env + Info.plist changes
+npm run cap:ios       # or cap:android → run and test the Google button on a device
+```
+
+### Troubleshooting
+- **Android `[28444] Developer console is not set up correctly`** → SHA-1 / package / client-ID
+  mismatch. Filter Logcat for `GoogleProvider` to see the exact `signingSha1=` and `package=` the
+  device sent, and confirm they're registered on the Android OAuth client.
+- **iOS immediately dismisses** → check the reversed client ID scheme in `Info.plist` and that
+  `googleIosClientId` is set.
+- **Backend rejects the token (`Invalid token`)** → the token audience must equal
+  `GOOGLE_CLIENT_ID`. Ensure `webClientId`/`iOSServerClientId` are the **Web** client, not the
+  native ones. (Alternatively, broaden the backend to accept an array of audiences.)
+
+---
+
+## 11. Local vs production backend (native)
+
+The native apps can target either your **local** backend (for development) or the **production**
+API, chosen by which script you run:
+
+| Script | Angular config | API base URL | Use for |
+|--------|----------------|--------------|---------|
+| `npm run cap:android` / `cap:ios` | `production` | `https://shivagri.com/api` | Release / testing against prod |
+| `npm run cap:android:dev` | `native-dev` | `http://10.0.2.2:3000/api` | Android emulator → backend on your machine |
+| `npm run cap:ios:dev` | `native-dev` | `http://localhost:3000/api` | iOS simulator → backend on your machine |
+
+Why two hosts: an **Android emulator** reaches the host machine's `localhost` via the special
+address **`10.0.2.2`**, whereas the **iOS simulator** shares the host network and uses `localhost`.
+This is handled automatically in `environment.native-dev.ts` based on `Capacitor.getPlatform()`.
+
+**Making local work required three things (already configured):**
+1. **CORS** — the backend (`backend/src/server.js`) now allows the native WebView origins
+   (`capacitor://localhost`, `http://localhost`, `https://localhost`) in addition to
+   `ALLOWED_ORIGINS`. Restart your local backend to pick this up. **Redeploy the production API**
+   for native apps pointed at prod to work.
+2. **Cleartext HTTP** — local dev uses `http://`. Android permits it only for `10.0.2.2` /
+   `localhost` via `android/app/src/main/res/xml/network_security_config.xml`; iOS permits local
+   networking via `NSAllowsLocalNetworking` in `Info.plist`. Production stays HTTPS-only.
+3. **Android WebView scheme** — set to `http` (`capacitor.config.ts` → `server.androidScheme`)
+   so the `http://localhost` app origin can call the `http` local API without mixed-content
+   blocking. `http://localhost` is still a secure context, and prod still calls the HTTPS API
+   (auth uses Bearer tokens, not cookies, so there's no security impact).
+
+**To run against local:**
+```bash
+# 1. Start the backend on your machine (listening on :3000)
+cd backend && npm run dev
+# 2. Build + run the app against it
+cd ../frontend && npm run cap:android:dev     # or cap:ios:dev
+```
+
+## 12. Debugging native Google sign-in
+
+If the button "does nothing" or login fails, read the **real** error (the login screen now shows
+the underlying message, e.g. `Google sign-in failed: ...`). For full detail:
+
+- **Android** — `adb logcat | grep -iE "GoogleProvider|CapgoSocialLogin"` shows the exact
+  `package=`, `signingSha1=`, and error the device sent. `[28444] Developer console is not set up
+  correctly` = the package/SHA-1/webClientId combination isn't registered (see §10).
+- **iOS** — Safari → Develop → [simulator] → inspect the WebView console. "Fails to open" almost
+  always means the **reversed iOS client ID URL scheme** in `Info.plist` or `googleIosClientId`
+  is still the placeholder or wrong.
+
+Remember: native Google sign-in **cannot** work until the Android + iOS OAuth clients from §10
+exist in Google Cloud Console. The code and native config are ready; the credentials are the
+remaining piece.

@@ -47,5 +47,24 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Allow cleartext HTTP to local dev backends (localhost) for cap:ios:dev.
+	     Production traffic to https://shivagri.com is unaffected and stays HTTPS. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- Google Sign-In (native): replace the scheme below with your iOS OAuth
+	     client's REVERSED client ID, i.e. com.googleusercontent.apps.<IOS_CLIENT_ID>
+	     (the reverse of googleIosClientId in the Angular environment files). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
