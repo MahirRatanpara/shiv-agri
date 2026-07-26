@@ -11,7 +11,9 @@
     "cap:ios": "ng build --configuration production && cap sync ios && cap open ios",
     "cap:android": "ng build --configuration production && cap sync android && cap open android",
     "cap:ios:dev": "ng build --configuration native-dev && cap sync ios && cap open ios",
-    "cap:android:dev": "ng build --configuration native-dev && cap sync android && cap open android"
+    "cap:android:dev": "ng build --configuration native-dev && cap sync android && cap open android",
+    "run:android": "bash scripts/run-android.sh",
+    "run:ios": "bash scripts/run-ios.sh"
   },
   "prettier": {
     "printWidth": 100,

@@ -19,9 +19,10 @@ dist/
 build/
 *.tgz
 
-# IDE
+# IDE / local tooling
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -67,6 +68,10 @@ temp/
 *.zip
 *.tar.gz
 *.rar
+# The Gradle wrapper jar is a bootstrap binary that MUST be committed — without
+# it `gradlew` can't run and Android Studio fails with "Error loading build
+# artifacts ... redirect.txt". Re-include it despite the blanket *.jar rule above.
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # VM crash logs
 hs_err_pid*

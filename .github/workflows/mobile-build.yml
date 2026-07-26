@@ -1,0 +1,106 @@
+name: Build Mobile Apps
+
+# Produces the deployable native packages (Android APK/AAB, iOS archive) as CI
+# artifacts so they never have to be committed to the repo. The native project
+# SOURCE lives in frontend/android and frontend/ios; the built packages are
+# generated here on demand.
+#
+# Triggers:
+#   - push of a tag like v1.2.3  -> full build, artifacts attached to the run
+#   - manual "Run workflow"      -> on-demand build from any branch
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  android:
+    name: Android (APK + AAB)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npx ng build --configuration production
+
+      - name: Sync Capacitor (android)
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: frontend/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      # Release AAB is what you upload to the Play Store. This produces an
+      # UNSIGNED bundle; wire in your keystore via secrets + signingConfig to
+      # get a store-ready signed artifact.
+      - name: Build release bundle (unsigned)
+        working-directory: frontend/android
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-packages
+          if-no-files-found: error
+          path: |
+            frontend/android/app/build/outputs/apk/debug/*.apk
+            frontend/android/app/build/outputs/bundle/release/*.aab
+
+  ios:
+    name: iOS (archive)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npx ng build --configuration production
+
+      - name: Sync Capacitor (ios)
+        run: npx cap sync ios
+
+      # Compiles the app to validate the iOS build without requiring signing
+      # certificates in CI. A distributable .ipa needs Apple signing secrets and
+      # `-exportArchive`; add those (Fastlane match or manual certs) when you set
+      # up TestFlight/App Store delivery.
+      - name: Build (no code signing)
+        working-directory: frontend/ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -target App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build
