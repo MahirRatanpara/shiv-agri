@@ -88,3 +88,5 @@ replay_pid*
 # .firebase/
 # .firebaserc
 # firebase.json
+
+.claude
