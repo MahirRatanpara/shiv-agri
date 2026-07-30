@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { FooterComponent } from '../../components/footer/footer';
 
 declare var $: any;
 
@@ -24,7 +25,7 @@ interface CarouselSlide {
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FooterComponent],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })

@@ -30,6 +30,8 @@ import { FarmManagementComponent } from './pages/farm-management/farm-management
 import { FarmProjectDetailsComponent } from './pages/farm-project-details/farm-project-details';
 import { FarmRegistrationPageComponent } from './pages/farm-registration/farm-registration';
 import { CompleteProfileComponent } from './pages/complete-profile/complete-profile';
+import { PrivacyPolicyComponent } from './pages/privacy-policy/privacy-policy';
+import { TermsAndConditionsComponent } from './pages/terms-and-conditions/terms-and-conditions';
 import { authGuard } from './guards/auth.guard';
 import { profileCompleteGuard } from './guards/profile-complete.guard';
 
@@ -83,6 +85,8 @@ export const routes: Routes = [
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'contact', component: ContactComponent },
+  { path: 'privacy-policy', component: PrivacyPolicyComponent },
+  { path: 'terms-and-conditions', component: TermsAndConditionsComponent },
   { path: '404', component: NotFoundComponent },
   { path: '**', redirectTo: '/404' }
 ];
