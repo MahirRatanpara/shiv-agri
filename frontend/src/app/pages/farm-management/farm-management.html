@@ -73,81 +73,99 @@
     </button>
   </section>
 
-  <section class="toolbar-shell">
-    <div class="search-box">
-      <i class="fas fa-search"></i>
-      <input
-        type="search"
-        placeholder="Search by farm, farmer, district, or mobile"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="applyFilters()"
-      >
+  <section class="toolbar-shell" [class.filters-open]="filtersExpanded">
+    <div class="toolbar-primary">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="search"
+          placeholder="Search farm, farmer, district, mobile"
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="applyFilters()"
+        >
+        <button
+          type="button"
+          class="search-clear"
+          *ngIf="searchQuery"
+          (click)="searchQuery = ''; applyFilters()"
+          aria-label="Clear search"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
       <button
         type="button"
-        class="search-clear"
-        *ngIf="searchQuery"
-        (click)="searchQuery = ''; applyFilters()"
-        aria-label="Clear search"
+        class="filters-toggle"
+        (click)="filtersExpanded = !filtersExpanded"
+        [attr.aria-expanded]="filtersExpanded"
       >
-        <i class="fas fa-times"></i>
+        <i class="fas fa-sliders-h"></i>
+        <span>Filters</span>
+        <span class="filters-count" *ngIf="activeFilterCount">{{ activeFilterCount }}</span>
+        <i class="fas fa-chevron-down chevron"></i>
       </button>
     </div>
-    <button
-      type="button"
-      class="filter-toggle"
-      [class.active]="showLandscapingOnly"
-      [attr.aria-pressed]="showLandscapingOnly"
-      (click)="showLandscapingOnly = !showLandscapingOnly; applyClientFilters()"
-    >
-      <i class="fas fa-tree"></i>
-      Landscaping
-    </button>
-    <div class="select-wrap">
-      <i class="fas fa-circle-dot"></i>
-      <select [(ngModel)]="selectedStatus" (change)="applyFilters()">
-        <option value="">All status</option>
-        <option value="pending_quotation">Pending Quotation</option>
-        <option value="pending_acceptance">Pending Acceptance</option>
-        <option value="pending_approval">Pending Approval</option>
-        <option value="approved">Approved</option>
-        <option value="Running">Running</option>
-        <option value="Completed">Completed</option>
-        <option value="On Hold">On Hold</option>
-        <option value="Cancelled">Cancelled</option>
-        <option value="rejected">Rejected</option>
-      </select>
+
+    <div class="toolbar-filters">
+      <button
+        type="button"
+        class="filter-toggle"
+        [class.active]="showLandscapingOnly"
+        [attr.aria-pressed]="showLandscapingOnly"
+        (click)="showLandscapingOnly = !showLandscapingOnly; applyClientFilters()"
+      >
+        <i class="fas fa-tree"></i>
+        Landscaping
+      </button>
+      <div class="select-wrap">
+        <i class="fas fa-circle-dot"></i>
+        <select [(ngModel)]="selectedStatus" (change)="applyFilters()">
+          <option value="">All status</option>
+          <option value="pending_quotation">Pending Quotation</option>
+          <option value="pending_acceptance">Pending Acceptance</option>
+          <option value="pending_approval">Pending Approval</option>
+          <option value="approved">Approved</option>
+          <option value="Running">Running</option>
+          <option value="Completed">Completed</option>
+          <option value="On Hold">On Hold</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="select-wrap">
+        <i class="fas fa-map-location-dot"></i>
+        <select [(ngModel)]="selectedDistrict" (change)="applyFilters()">
+          <option value="">All districts</option>
+          <option *ngFor="let district of districtOptions" [value]="district">{{ district }}</option>
+        </select>
+      </div>
+      <div class="select-wrap" *ngIf="!isFarmer">
+        <i class="fas fa-people-arrows"></i>
+        <select [(ngModel)]="selectedSource" (change)="applyFilters()">
+          <option value="">All sources</option>
+          <option value="farmer_self">Farmer submitted</option>
+          <option value="manager_direct">Manager created</option>
+        </select>
+      </div>
+      <div class="select-wrap">
+        <i class="fas fa-arrow-down-wide-short"></i>
+        <select [(ngModel)]="sortBy" (change)="applyFilters()">
+          <option value="updatedAt">Recently updated</option>
+          <option value="submittedAt">Recently submitted</option>
+          <option value="name">Farm name A-Z</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-apply" (click)="applyFilters()">
+          <i class="fas fa-sliders-h"></i>
+          Apply
+        </button>
+        <button class="btn-reset" (click)="resetFilters()" type="button" title="Clear all filters">
+          <i class="fas fa-rotate-left"></i>
+          Reset
+        </button>
+      </div>
     </div>
-    <div class="select-wrap">
-      <i class="fas fa-map-location-dot"></i>
-      <select [(ngModel)]="selectedDistrict" (change)="applyFilters()">
-        <option value="">All districts</option>
-        <option *ngFor="let district of districtOptions" [value]="district">{{ district }}</option>
-      </select>
-    </div>
-    <div class="select-wrap" *ngIf="!isFarmer">
-      <i class="fas fa-people-arrows"></i>
-      <select [(ngModel)]="selectedSource" (change)="applyFilters()">
-        <option value="">All sources</option>
-        <option value="farmer_self">Farmer submitted</option>
-        <option value="manager_direct">Manager created</option>
-      </select>
-    </div>
-    <div class="select-wrap">
-      <i class="fas fa-arrow-down-wide-short"></i>
-      <select [(ngModel)]="sortBy" (change)="applyFilters()">
-        <option value="updatedAt">Recently updated</option>
-        <option value="submittedAt">Recently submitted</option>
-        <option value="name">Farm name A-Z</option>
-      </select>
-    </div>
-    <button class="btn-apply" (click)="applyFilters()">
-      <i class="fas fa-sliders-h"></i>
-      Apply
-    </button>
-    <button class="btn-reset" (click)="resetFilters()" type="button" title="Clear all filters">
-      <i class="fas fa-rotate-left"></i>
-      Reset
-    </button>
   </section>
 
   <section class="form-panel" *ngIf="showForm">

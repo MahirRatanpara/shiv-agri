@@ -675,6 +675,17 @@ h1 {
   border-radius: 999px;
   box-shadow: 0 8px 24px rgba(20, 83, 45, 0.06);
   width: fit-content;
+  max-width: 100%;
+  /* Scroll horizontally instead of wrapping when the tabs don't fit (mobile). */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.tab-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
@@ -685,6 +696,8 @@ h1 {
   color: #4B5563;
   cursor: pointer;
   display: inline-flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-family: 'Raleway', sans-serif;
   font-size: 13px;
   font-weight: 700;
@@ -1715,11 +1728,12 @@ h1 {
   }
 
   .page-hero {
-    padding: 28px 22px;
+    padding: 26px 20px;
   }
 
   h1 {
     font-size: 30px;
+    margin: 14px 0 16px;
   }
 
   .details-layout {
@@ -1764,9 +1778,61 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* --- Condensed hero: lighter chips + tighter spacing so the header no longer
+     dominates the screen on phones (a lot of info was crowding the top). --- */
+  .page-hero {
+    padding: 22px 18px;
+    border-radius: 26px;
+  }
+
+  h1 {
+    font-size: 25px;
+    line-height: 1.15;
+    margin: 12px 0 14px;
+  }
+
+  .hero-meta {
+    gap: 7px;
+  }
+
+  .status-pill,
+  .source-tag {
+    font-size: 10px;
+    min-height: 28px;
+    padding: 0 12px;
+    gap: 6px;
+  }
+
+  .hero-contact {
+    gap: 7px;
+  }
+
+  .contact-chip {
+    font-size: 12px;
+    min-height: 34px;
+    padding: 0 12px;
+    gap: 8px;
+    /* Let a long email/name chip take the full row instead of overflowing. */
+    max-width: 100%;
+  }
+
+  .contact-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Scrolling tab strip reads better as a rounded bar than a full pill here. */
+  .tab-bar {
+    border-radius: 18px;
+    margin-top: 18px;
+    gap: 4px;
+  }
+
   .tab-btn {
     padding: 0 14px;
     font-size: 12px;
+    min-height: 40px;
   }
 }
 
