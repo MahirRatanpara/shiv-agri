@@ -11,41 +11,82 @@
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:8082/api/notifications';
 const NOTIFICATION_API_KEY = process.env.NOTIFICATION_API_KEY || '';
 
+console.log(`[notification] base URL: ${NOTIFICATION_SERVICE_URL}`);
+
 const buildHeaders = () => ({
   'Content-Type': 'application/json',
   'X-API-Key': NOTIFICATION_API_KEY
 });
 
-const post = async (path, body, { timeoutMs = 15000 } = {}) => {
+const maskPhone = (value) =>
+  typeof value === 'string' && value.length > 4 ? `••••${value.slice(-4)}` : value;
+
+/**
+ * Request bodies carry OTP codes and full phone numbers, so they are never logged
+ * verbatim — only the shape, which is what you need to spot a malformed payload.
+ */
+const SECRET_KEYS = new Set(['code', 'buttonOtpCode', 'bodyParameters', 'message']);
+
+const redactBody = (body) => {
+  if (!body || typeof body !== 'object') return body;
+  return Object.fromEntries(
+    Object.entries(body).map(([key, value]) => {
+      if (key === 'to') return [key, maskPhone(value)];
+      if (SECRET_KEYS.has(key)) return [key, '[redacted]'];
+      return [key, value];
+    })
+  );
+};
+
+const execute = async ({ method, url, body, timeoutMs }) => {
   if (!NOTIFICATION_API_KEY) {
     throw new Error('NOTIFICATION_API_KEY is not configured');
   }
-  const url = `${NOTIFICATION_SERVICE_URL}${path}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
+
+  console.log(
+    `[notification] → ${method} ${url}` +
+    (body ? ` body=${JSON.stringify(redactBody(body))}` : '')
+  );
+
   try {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: buildHeaders(),
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal
     });
     const text = await response.text();
     let payload = null;
     try { payload = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
+    const ms = Date.now() - startedAt;
 
     if (!response.ok) {
+      // The raw body matters here: a 404 from the Node backend renders an HTML
+      // "Cannot GET <path>" page that names the exact URL that missed.
+      console.error(
+        `[notification] ← ${response.status} ${method} ${url} (${ms}ms) response=${text.slice(0, 500)}`
+      );
       const err = new Error(payload?.message || `notification-service responded ${response.status}`);
       err.status = response.status;
       err.body = payload;
       throw err;
     }
+
+    console.log(`[notification] ← ${response.status} ${method} ${url} (${ms}ms)`);
     return payload;
   } catch (err) {
     if (err.name === 'AbortError') {
+      console.error(`[notification] ✗ TIMEOUT ${method} ${url} after ${timeoutMs}ms`);
       const wrapped = new Error('notification-service request timed out');
       wrapped.status = 504;
       throw wrapped;
+    }
+    // Non-HTTP failures (DNS, connection refused) have no status and were not logged above.
+    if (!err.status) {
+      console.error(`[notification] ✗ ${method} ${url} — ${err.message}`);
     }
     throw err;
   } finally {
@@ -53,39 +94,18 @@ const post = async (path, body, { timeoutMs = 15000 } = {}) => {
   }
 };
 
-const get = async (path, query = {}, { timeoutMs = 15000 } = {}) => {
-  if (!NOTIFICATION_API_KEY) {
-    throw new Error('NOTIFICATION_API_KEY is not configured');
-  }
+const post = (path, body, { timeoutMs = 15000 } = {}) =>
+  execute({ method: 'POST', url: `${NOTIFICATION_SERVICE_URL}${path}`, body, timeoutMs });
+
+const get = (path, query = {}, { timeoutMs = 15000 } = {}) => {
   const qs = new URLSearchParams(
     Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '')
   ).toString();
-  const url = `${NOTIFICATION_SERVICE_URL}${path}${qs ? `?${qs}` : ''}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, { headers: buildHeaders(), signal: controller.signal });
-    const text = await response.text();
-    let payload = null;
-    try { payload = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
-
-    if (!response.ok) {
-      const err = new Error(payload?.message || `notification-service responded ${response.status}`);
-      err.status = response.status;
-      err.body = payload;
-      throw err;
-    }
-    return payload;
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      const wrapped = new Error('notification-service request timed out');
-      wrapped.status = 504;
-      throw wrapped;
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return execute({
+    method: 'GET',
+    url: `${NOTIFICATION_SERVICE_URL}${path}${qs ? `?${qs}` : ''}`,
+    timeoutMs
+  });
 };
 
 /**
