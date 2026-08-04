@@ -1,5 +1,23 @@
 apply plugin: 'com.android.application'
 
+// Release signing config. Reads credentials from android/keystore.properties
+// (git-ignored) if present, otherwise from environment variables (used by CI).
+// If neither is available the release build is left unsigned so local/CI debug
+// builds still work.
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+def ksStoreFileName = keystoreProps['storeFile'] ?: System.getenv('ANDROID_KEYSTORE_FILE')
+def ksStorePassword = keystoreProps['storePassword'] ?: System.getenv('ANDROID_KEYSTORE_PASSWORD')
+def ksKeyAlias = keystoreProps['keyAlias'] ?: System.getenv('ANDROID_KEY_ALIAS')
+def ksKeyPassword = keystoreProps['keyPassword'] ?: System.getenv('ANDROID_KEY_PASSWORD')
+// storeFile is resolved relative to android/ (where keystore.properties lives);
+// absolute paths from env vars are used as-is.
+def ksStoreFile = ksStoreFileName != null ? rootProject.file(ksStoreFileName) : null
+def hasSigning = ksStoreFile != null && ksStoreFile.exists()
+
 android {
     namespace = "com.shivagri.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +34,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasSigning) {
+            release {
+                storeFile ksStoreFile
+                storePassword ksStorePassword
+                keyAlias ksKeyAlias
+                keyPassword ksKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

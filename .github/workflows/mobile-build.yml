@@ -23,6 +23,13 @@ jobs:
   android:
     name: Android (APK + AAB)
     runs-on: ubuntu-latest
+    # Mapped here because the `secrets` context is not available in step-level
+    # `if:` conditions, but `env` is. Signing is skipped when these are empty.
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,14 +56,32 @@ jobs:
       - name: Sync Capacitor (android)
         run: npx cap sync android
 
+      # Decode the release keystore + write keystore.properties, but only when
+      # the signing secrets are configured. If they are missing the release
+      # bundle is still built, just unsigned. Configure these repo secrets to
+      # get a Play-Store-ready signed AAB:
+      #   ANDROID_KEYSTORE_BASE64   (base64 of shiv-agri-release.jks)
+      #   ANDROID_KEYSTORE_PASSWORD
+      #   ANDROID_KEY_ALIAS
+      #   ANDROID_KEY_PASSWORD
+      - name: Decode signing keystore
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/shiv-agri-release.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=shiv-agri-release.jks
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
+
       - name: Build debug APK
         working-directory: frontend/android
         run: ./gradlew assembleDebug --no-daemon
 
-      # Release AAB is what you upload to the Play Store. This produces an
-      # UNSIGNED bundle; wire in your keystore via secrets + signingConfig to
-      # get a store-ready signed artifact.
-      - name: Build release bundle (unsigned)
+      # Release AAB is what you upload to the Play Store. Signed automatically
+      # when the signing secrets above are set; otherwise built unsigned.
+      - name: Build release bundle
         working-directory: frontend/android
         run: ./gradlew bundleRelease --no-daemon
 
