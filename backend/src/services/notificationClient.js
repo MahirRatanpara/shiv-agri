@@ -5,7 +5,10 @@
  * so they can be correlated to notification-service logs.
  */
 
-const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:8082';
+// Full base URL including the /api/notifications prefix — the paths below are relative to
+// it. Keeping the prefix in configuration rather than hardcoded means the service can be
+// remounted at a different path without touching this file.
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:8082/api/notifications';
 const NOTIFICATION_API_KEY = process.env.NOTIFICATION_API_KEY || '';
 
 const buildHeaders = () => ({
@@ -92,27 +95,27 @@ const get = async (path, query = {}, { timeoutMs = 15000 } = {}) => {
  * so the browser asks for one page at a time rather than filtering a full dump.
  */
 const getWhatsAppDeliverySummary = () =>
-  get('/api/notifications/whatsapp/delivery/summary');
+  get('/whatsapp/delivery/summary');
 
 const getWhatsAppDeliveryMessages = ({ page, limit, status, search }) =>
-  get('/api/notifications/whatsapp/delivery/messages', { page, limit, status, search });
+  get('/whatsapp/delivery/messages', { page, limit, status, search });
 
 const getWhatsAppDeliveryMessage = (wamid) =>
-  get(`/api/notifications/whatsapp/delivery/messages/${encodeURIComponent(wamid)}`);
+  get(`/whatsapp/delivery/messages/${encodeURIComponent(wamid)}`);
 
 /**
  * Channel-agnostic OTP send. The notification-service decides WhatsApp vs SMS based on
  * its `notification.otp.channel` property — this client just hands over the recipient + code.
  */
 const sendOtp = async ({ to, code, requestId }) =>
-  post('/api/notifications/otp', { to, code, _client_request_id: requestId });
+  post('/otp', { to, code, _client_request_id: requestId });
 
 const sendWhatsAppOtpTemplate = async ({ to, code, requestId }) => {
   const templateName = process.env.WHATSAPP_OTP_TEMPLATE_NAME || 'otp_login';
   const languageCode = process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE || 'en';
   const includeButton = String(process.env.WHATSAPP_OTP_TEMPLATE_HAS_BUTTON || 'true') === 'true';
 
-  return post('/api/notifications/whatsapp/template', {
+  return post('/whatsapp/template', {
     to,
     templateName,
     languageCode,
@@ -123,7 +126,7 @@ const sendWhatsAppOtpTemplate = async ({ to, code, requestId }) => {
 };
 
 const sendWhatsAppText = async ({ to, message }) =>
-  post('/api/notifications/whatsapp/text', { to, message });
+  post('/whatsapp/text', { to, message });
 
 /**
  * Sends the universally-available `hello_world` sample template.
@@ -134,7 +137,7 @@ const sendWhatsAppText = async ({ to, message }) =>
  * while the actual OTP is read from the backend console.
  */
 const sendHelloWorldTemplate = async ({ to, requestId }) =>
-  post('/api/notifications/whatsapp/template', {
+  post('/whatsapp/template', {
     to,
     templateName: 'hello_world',
     languageCode: 'en_US',
@@ -153,7 +156,7 @@ const sendWhatsAppOtpFreeText = async ({ to, code, requestId }) => {
   const message =
     `${code} is your ${brand} verification code. ` +
     `It expires in 3 minutes. For your security, do not share this code.`;
-  return post('/api/notifications/whatsapp/text', {
+  return post('/whatsapp/text', {
     to,
     message,
     _client_request_id: requestId

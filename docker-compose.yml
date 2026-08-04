@@ -35,7 +35,7 @@ services:
       MEDIA_SERVICE_URL: ${MEDIA_SERVICE_URL:-http://media-service:8081}
       MEDIA_SERVICE_PUBLIC_URL: ${MEDIA_SERVICE_PUBLIC_URL:-http://localhost:80}
       OTP_LOGIN_ENABLED: ${OTP_LOGIN_ENABLED:-true}
-      NOTIFICATION_SERVICE_URL: http://notification-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8082/api/notifications
       NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY:-dev-api-key-change-me}
       WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-otp_login}
       WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}

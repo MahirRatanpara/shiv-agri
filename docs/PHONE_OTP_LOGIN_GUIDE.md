@@ -101,7 +101,7 @@ Add to `/var/www/shiv-agri/.env` (production) and your local `.env`:
 
 ```bash
 # Where the backend should reach the notification microservice
-NOTIFICATION_SERVICE_URL=http://notification-service:8082
+NOTIFICATION_SERVICE_URL=http://notification-service:8082/api/notifications
 NOTIFICATION_API_KEY=<same key set on notification-service>
 
 # Template wiring

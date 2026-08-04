@@ -1516,7 +1516,7 @@ docker system prune -a -f                               # Cleanup
 | OTP_LOGIN_ENABLED | true | Master switch — when false, phone OTP routes return 403 and the login UI hides the phone tab |
 | OTP_DELIVERY_MODE | template | `template` / `hello_world` / `console` (forced to `template` when NODE_ENV=production) |
 | OTP_BRAND_NAME | Shiv-Agri | Brand string used in free-text OTP fallback |
-| NOTIFICATION_SERVICE_URL | http://notification-service:8082 | Where backend reaches the notification microservice |
+| NOTIFICATION_SERVICE_URL | http://notification-service:8082/api/notifications | Where backend reaches the notification microservice (includes the API path prefix) |
 | NOTIFICATION_API_KEY | — | Must match the value set on notification-service (`X-API-Key`) |
 | WHATSAPP_OTP_TEMPLATE_NAME / _LANGUAGE / _HAS_BUTTON | otp_login / en / true | WhatsApp template wiring for OTP |
 | DEFAULT_PHONE_COUNTRY_CODE | +91 | Default country code for phone parsing/lookup |
