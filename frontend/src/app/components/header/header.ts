@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, OnInit } from '@angular/core';
+import { Component, AfterViewInit, HostListener, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import {CommonModule, NgOptimizedImage} from '@angular/common';
 import { AuthService, User } from '../../services/auth.service';
@@ -19,6 +19,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   currentUser: User | null = null;
   isAuthenticated = false;
   profileImageLoadError = false;
+  isAdminMenuOpen = false;
 
   // Permission flags for navigation items
   hasLabTestingAccess = false;
@@ -166,4 +167,32 @@ export class HeaderComponent implements AfterViewInit, OnInit {
     this.profileImageLoadError = true;
   }
 
+  /**
+   * Opens/closes the Admin submenu.
+   *
+   * stopImmediatePropagation is deliberate: ngAfterViewInit attaches a raw listener to
+   * every .nav-link that collapses the mobile menu. Without this the toggle would close
+   * the whole menu instead of revealing the submenu. Angular's binding is registered at
+   * element creation, so it runs first and suppresses that listener.
+   */
+  toggleAdminMenu(event: Event): void {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    this.isAdminMenuOpen = !this.isAdminMenuOpen;
+  }
+
+  closeAdminMenu(): void {
+    this.isAdminMenuOpen = false;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    // The toggle stops propagation, so this only fires for clicks elsewhere.
+    this.closeAdminMenu();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeAdminMenu();
+  }
 }

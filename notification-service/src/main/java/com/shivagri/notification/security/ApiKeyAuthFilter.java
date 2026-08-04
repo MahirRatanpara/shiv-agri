@@ -2,6 +2,7 @@ package com.shivagri.notification.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shivagri.notification.config.SecurityProperties;
+import com.shivagri.notification.controller.WhatsAppWebhookController;
 import com.shivagri.notification.controller.dto.ErrorResponse;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,7 +29,10 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     private static final Set<String> OPEN_PATHS = Set.of(
             "/actuator/health",
             "/actuator/health/liveness",
-            "/actuator/health/readiness"
+            "/actuator/health/readiness",
+            // Meta cannot present an API key. This path authenticates itself instead via the
+            // X-Hub-Signature-256 HMAC checked in WhatsAppWebhookService.
+            WhatsAppWebhookController.WEBHOOK_PATH
     );
 
     private final SecurityProperties securityProperties;

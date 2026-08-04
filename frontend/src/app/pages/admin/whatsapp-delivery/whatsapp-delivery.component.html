@@ -1,0 +1,189 @@
+<div class="delivery-page">
+
+  <header class="page-header">
+    <div>
+      <h1>WhatsApp Delivery</h1>
+      <p class="subtitle">
+        End-to-end status of every message, straight from Meta's delivery webhook.
+      </p>
+    </div>
+    <div class="header-actions">
+      <span class="health-pill" [ngClass]="healthClass">{{ healthLabel }}</span>
+      <button type="button" class="btn-ghost" (click)="toggleAutoRefresh()">
+        {{ autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off' }}
+      </button>
+      <button type="button" class="btn-primary" (click)="loadAll()" [disabled]="isLoading">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary tiles -->
+  <section class="tiles" *ngIf="summary">
+    <div class="tile">
+      <span class="tile-label">Delivery rate</span>
+      <span class="tile-value">{{ summary.deliveryRatePercent }}%</span>
+      <span class="tile-note">{{ summary.deliveredCount }} of {{ summary.totalTracked }}</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Tracked</span>
+      <span class="tile-value">{{ summary.totalTracked }}</span>
+      <span class="tile-note">messages with a status</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Delivered / read</span>
+      <span class="tile-value success">{{ summary.deliveredCount }}</span>
+      <span class="tile-note">reached the handset</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Failed</span>
+      <span class="tile-value danger">{{ summary.failedCount }}</span>
+      <span class="tile-note">dropped by Meta</span>
+    </div>
+  </section>
+
+  <!-- Why things are failing -->
+  <section class="failure-panel"
+           *ngIf="summary?.topFailureReasons && summary!.topFailureReasons.length > 0">
+    <h2>Top failure reasons</h2>
+    <div class="failure-row" *ngFor="let reason of summary!.topFailureReasons">
+      <div class="failure-head">
+        <span class="failure-code">{{ reason.errorCode }}</span>
+        <span class="failure-count">{{ reason.count }}×</span>
+        <span class="failure-title">{{ reason.title || 'Unknown error' }}</span>
+      </div>
+      <p class="failure-hint" *ngIf="reason.hint">{{ reason.hint }}</p>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="filters">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Search by phone number…"
+      [(ngModel)]="searchQuery"
+      (ngModelChange)="onSearchChange()" />
+
+    <div class="status-chips">
+      <button type="button"
+              class="chip"
+              [class.active]="selectedStatus === ''"
+              (click)="onStatusChange('')">All</button>
+      <button type="button"
+              *ngFor="let status of statusOptions"
+              class="chip"
+              [class.active]="selectedStatus === status"
+              (click)="onStatusChange(status)">
+        {{ status | titlecase }}
+        <span class="chip-count" *ngIf="summary?.byStatus?.[status] as count">{{ count }}</span>
+      </button>
+    </div>
+
+    <button type="button"
+            class="btn-ghost"
+            *ngIf="selectedStatus || searchQuery"
+            (click)="clearFilters()">Clear</button>
+  </section>
+
+  <div class="error-banner" *ngIf="loadError">{{ loadError }}</div>
+
+  <!-- Table -->
+  <section class="table-wrap">
+    <table class="delivery-table">
+      <thead>
+        <tr>
+          <th>Recipient</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Category</th>
+          <th>Last update</th>
+          <th class="col-id">Message ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let msg of messages">
+          <tr class="data-row" (click)="toggleRow(msg.wamid)">
+            <td>{{ maskRecipient(msg.recipient) }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusClass(msg.latestStatus)">
+                {{ msg.latestStatus | titlecase }}
+              </span>
+            </td>
+            <td class="reason-cell">
+              <ng-container *ngIf="msg.errorCode; else noReason">
+                <strong>{{ msg.errorCode }}</strong> {{ msg.errorTitle }}
+              </ng-container>
+              <ng-template #noReason>—</ng-template>
+            </td>
+            <td>{{ msg.conversationCategory || '—' }}</td>
+            <td>{{ msg.lastUpdated ? (msg.lastUpdated | date: 'short') : '—' }}</td>
+            <td class="col-id">
+              <button type="button" class="id-btn" (click)="copyWamid(msg.wamid, $event)">
+                {{ msg.wamid | slice: 0:18 }}… copy
+              </button>
+            </td>
+          </tr>
+
+          <tr class="detail-row" *ngIf="expandedWamid === msg.wamid">
+            <td colspan="6">
+              <div class="detail">
+                <div class="detail-hint" *ngIf="msg.errorHint">
+                  <strong>What this means:</strong> {{ msg.errorHint }}
+                </div>
+                <div class="detail-hint" *ngIf="msg.errorDetails">
+                  <strong>Meta detail:</strong> {{ msg.errorDetails }}
+                </div>
+                <h4>Timeline</h4>
+                <ol class="timeline">
+                  <li *ngFor="let t of msg.transitions">
+                    <span class="badge" [ngClass]="statusClass(t.status)">
+                      {{ t.status | titlecase }}
+                    </span>
+                    <span class="timeline-time">
+                      {{ (t.statusTimestamp || t.receivedAt) | date: 'medium' }}
+                    </span>
+                    <span class="timeline-err" *ngIf="t.errorCode">
+                      — {{ t.errorCode }} {{ t.errorTitle }}
+                    </span>
+                  </li>
+                </ol>
+                <p class="detail-id">{{ msg.wamid }}</p>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+
+        <tr *ngIf="!isLoading && messages.length === 0">
+          <td colspan="6" class="empty">
+            No delivery activity yet. If you have sent messages recently, confirm the
+            webhook is subscribed in the Meta app dashboard.
+          </td>
+        </tr>
+        <tr *ngIf="isLoading">
+          <td colspan="6" class="empty">Loading…</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Pagination -->
+  <section class="pagination" *ngIf="totalMessages > 0">
+    <span class="range">
+      Showing {{ rangeStart }}–{{ rangeEnd }} of {{ totalMessages }}
+    </span>
+    <div class="pager">
+      <button type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+        Prev
+      </button>
+      <button type="button"
+              *ngFor="let p of pageNumbers"
+              [class.active]="p === currentPage"
+              (click)="goToPage(p)">{{ p }}</button>
+      <button type="button"
+              (click)="goToPage(currentPage + 1)"
+              [disabled]="currentPage === totalPages">Next</button>
+    </div>
+  </section>
+
+</div>

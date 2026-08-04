@@ -10,6 +10,7 @@ const managerialWorkRoutes = require('./managerialWork');
 const projectRoutes = require('./projects');
 const transactionRoutes = require('./transactions');
 const notificationRoutes = require('./notifications');
+const whatsappDeliveryRoutes = require('./whatsappDelivery');
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome to Shiv Agri API' });
@@ -48,5 +49,10 @@ router.use('/transactions', transactionRoutes);
 
 // Notifications
 router.use('/notifications', notificationRoutes);
+
+// WhatsApp delivery telemetry (admin dashboard). Deliberately NOT under /notifications:
+// nginx routes /api/notifications/whatsapp straight to the notification-service, which
+// would bypass this proxy and its admin check entirely.
+router.use('/admin/whatsapp', whatsappDeliveryRoutes);
 
 module.exports = router;

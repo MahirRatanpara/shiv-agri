@@ -198,3 +198,80 @@
     max-width: 100%;
   }
 }
+
+/* ===== ADMIN SUBMENU ===== */
+
+.admin-menu {
+  position: relative;
+}
+
+.admin-menu-toggle {
+  cursor: pointer;
+}
+
+.admin-caret {
+  font-size: 0.7em;
+  margin-left: 4px;
+  transition: transform 0.2s ease;
+}
+
+.admin-caret.open {
+  transform: rotate(180deg);
+}
+
+.admin-submenu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 220px;
+  margin: 4px 0 0;
+  padding: 6px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.admin-submenu.show {
+  display: block;
+}
+
+.admin-submenu li {
+  width: 100%;
+}
+
+.admin-submenu .nav-link {
+  display: block;
+  padding: 9px 16px;
+  color: #374151;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.admin-submenu .nav-link:hover {
+  background: #f3f4f6;
+  color: #16a34a;
+}
+
+.admin-submenu .nav-link i {
+  width: 18px;
+  margin-right: 6px;
+  text-align: center;
+}
+
+/* On mobile the navbar is a stacked list, so the submenu reads better inline
+   than as an overlay that would escape the collapsed menu's bounds. */
+@media (max-width: 991px) {
+  .admin-submenu {
+    position: static;
+    box-shadow: none;
+    border: none;
+    border-left: 2px solid #e5e7eb;
+    border-radius: 0;
+    margin: 0 0 0 18px;
+    min-width: 0;
+  }
+}

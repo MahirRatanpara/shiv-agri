@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: notification-service
+  data:
+    mongodb:
+      # Same variable and default as media-service — delivery statuses need to outlive redeploys.
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/shiv-agri}
+      # Off by default in Boot 3; without it the @Indexed fields the dashboard sorts
+      # and filters on would fall back to collection scans.
+      auto-index-creation: true
   servlet:
     multipart:
       max-file-size: 25MB
@@ -19,15 +26,20 @@ notification:
     thread-name-prefix: notif-async-
   whatsapp:
     api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com}
-    api-version: ${WHATSAPP_API_VERSION:v21.0}
+    api-version: ${WHATSAPP_API_VERSION:v26.0}
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
     access-token: ${WHATSAPP_ACCESS_TOKEN:}
     default-country-code: ${WHATSAPP_DEFAULT_COUNTRY_CODE:91}
+    # Delivery-status callbacks. Meta reports sent/delivered/read/failed only here —
+    # there is no API to query a wamid — so without this every drop is invisible.
+    webhook:
+      verify-token: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:}
+      app-secret: ${WHATSAPP_WEBHOOK_APP_SECRET:}
   # OTP delivery — flip `channel` between "whatsapp" and "sms" to switch providers.
   otp:
     channel: ${OTP_CHANNEL:whatsapp}
     whatsapp:
-      template-name: ${WHATSAPP_OTP_TEMPLATE_NAME:default_reachout}
+      template-name: ${WHATSAPP_OTP_TEMPLATE_NAME:shiv_agri_main}
       language-code: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:en}
       has-button: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:false}
   # MSG91 SMS (India) — used when otp.channel = sms. Requires a DLT-approved flow template.

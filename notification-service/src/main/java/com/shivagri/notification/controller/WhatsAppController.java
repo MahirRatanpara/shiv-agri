@@ -58,7 +58,12 @@ public class WhatsAppController {
                 try {
                     service.sendTemplate(requestId, req.to(), req.templateName(), req.languageCode(),
                             req.bodyParameters(), req.buttonOtpCode());
-                } catch (Exception ignored) {}
+                } catch (Exception ex) {
+                    // Swallowing this used to hide hard template rejections (132000/132001)
+                    // completely — the caller already has its 202 and never learns.
+                    log.error("[{}] Async WhatsApp template send failed to={} template={}: {}",
+                            requestId, req.to(), req.templateName(), ex.getMessage(), ex);
+                }
             }).start();
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(SendResponse.accepted(requestId, CHANNEL));
         }

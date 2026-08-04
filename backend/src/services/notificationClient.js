@@ -50,6 +50,56 @@ const post = async (path, body, { timeoutMs = 15000 } = {}) => {
   }
 };
 
+const get = async (path, query = {}, { timeoutMs = 15000 } = {}) => {
+  if (!NOTIFICATION_API_KEY) {
+    throw new Error('NOTIFICATION_API_KEY is not configured');
+  }
+  const qs = new URLSearchParams(
+    Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  ).toString();
+  const url = `${NOTIFICATION_SERVICE_URL}${path}${qs ? `?${qs}` : ''}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { headers: buildHeaders(), signal: controller.signal });
+    const text = await response.text();
+    let payload = null;
+    try { payload = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
+
+    if (!response.ok) {
+      const err = new Error(payload?.message || `notification-service responded ${response.status}`);
+      err.status = response.status;
+      err.body = payload;
+      throw err;
+    }
+    return payload;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const wrapped = new Error('notification-service request timed out');
+      wrapped.status = 504;
+      throw wrapped;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * WhatsApp delivery telemetry, proxied for the admin dashboard.
+ *
+ * Pagination is deliberately server-side: the status collection grows without bound,
+ * so the browser asks for one page at a time rather than filtering a full dump.
+ */
+const getWhatsAppDeliverySummary = () =>
+  get('/api/notifications/whatsapp/delivery/summary');
+
+const getWhatsAppDeliveryMessages = ({ page, limit, status, search }) =>
+  get('/api/notifications/whatsapp/delivery/messages', { page, limit, status, search });
+
+const getWhatsAppDeliveryMessage = (wamid) =>
+  get(`/api/notifications/whatsapp/delivery/messages/${encodeURIComponent(wamid)}`);
+
 /**
  * Channel-agnostic OTP send. The notification-service decides WhatsApp vs SMS based on
  * its `notification.otp.channel` property — this client just hands over the recipient + code.
@@ -114,5 +164,8 @@ module.exports = {
   sendOtp,
   sendWhatsAppOtpTemplate,
   sendHelloWorldTemplate,
-  sendWhatsAppText
+  sendWhatsAppText,
+  getWhatsAppDeliverySummary,
+  getWhatsAppDeliveryMessages,
+  getWhatsAppDeliveryMessage
 };

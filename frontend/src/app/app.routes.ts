@@ -22,6 +22,7 @@ import { WaterTestingComponent } from './pages/water-testing/water-testing';
 import { FertilizerTestingComponent } from './pages/fertilizer-testing/fertilizer-testing';
 import { LabTestingComponent } from './pages/lab-testing/lab-testing';
 import { UserManagementComponent } from './pages/admin/user-management/user-management.component';
+import { WhatsappDeliveryComponent } from './pages/admin/whatsapp-delivery/whatsapp-delivery.component';
 import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work';
 import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
 import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
@@ -83,6 +84,7 @@ export const routes: Routes = [
   { path: 'farm-management/new', component: FarmRegistrationPageComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'farm-management/project/:id', component: FarmProjectDetailsComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard, profileCompleteGuard] },
+  { path: 'admin/whatsapp-delivery', component: WhatsappDeliveryComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'contact', component: ContactComponent },
   { path: 'privacy-policy', component: PrivacyPolicyComponent },
