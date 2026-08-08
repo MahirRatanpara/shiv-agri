@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../environments/environment';
+import { Capacitor } from '@capacitor/core';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 
 declare const google: any;
 
@@ -39,6 +41,10 @@ export class LoginComponent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
+  /** True inside the native iOS/Android app; switches Google to the native flow. */
+  isNative = Capacitor.isNativePlatform();
+  private nativeAuthReady = false;
+
   // Phone form
   selectedCountryCode = '+91';
   phoneNumber = '';
@@ -73,7 +79,10 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: () => { /* keep optimistic default */ }
     });
 
-    if (isPlatformBrowser(this.platformId)) {
+    if (this.isNative) {
+      // Native app: use the OS account picker (browser GSI doesn't work in a WebView).
+      this.initializeNativeGoogle();
+    } else if (isPlatformBrowser(this.platformId)) {
       this.initializeGoogleSignIn();
     }
   }
@@ -125,11 +134,75 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   triggerGoogleSignIn(): void {
+    if (this.isNative) {
+      this.signInWithGoogleNative();
+      return;
+    }
     if (!this.codeClient) {
       this.errorMessage = 'Google Sign-In is still loading. Please try again in a moment.';
       return;
     }
     this.codeClient.requestCode();
+  }
+
+  // ---------- Native (iOS/Android) Google sign-in ----------
+  private async initializeNativeGoogle(): Promise<void> {
+    try {
+      await SocialLogin.initialize({
+        google: {
+          // Web/"server" client ID: makes the ID token audience match the backend
+          // and is the Credential Manager client on Android.
+          webClientId: environment.googleClientId,
+          iOSClientId: environment.googleIosClientId,
+          iOSServerClientId: environment.googleClientId,
+          mode: 'online'
+        }
+      });
+      this.nativeAuthReady = true;
+    } catch (error: any) {
+      console.error('Native Google Sign-In init failed:', error);
+      this.errorMessage = `Sign-in setup failed: ${error?.message || 'unknown error'}`;
+    }
+  }
+
+  private async signInWithGoogleNative(): Promise<void> {
+    if (!this.nativeAuthReady) {
+      await this.initializeNativeGoogle();
+      if (!this.nativeAuthReady) {
+        this.errorMessage = this.errorMessage || 'Google sign-in could not start. Check the app configuration.';
+        return;
+      }
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    try {
+      // Identity-only sign-in (no custom scopes → no Android MainActivity changes).
+      const res: any = await SocialLogin.login({ provider: 'google', options: {} });
+      const idToken = res?.result?.idToken ?? res?.idToken;
+      if (!idToken) {
+        throw new Error('Google returned no ID token');
+      }
+      // Native uses the ID-token endpoint (/auth/google); web uses the auth-code endpoint.
+      this.authService.googleLogin(idToken).subscribe({
+        next: () => this.onLoginSuccess(),
+        error: (error) => {
+          this.isLoading = false;
+          this.errorMessage = error.error?.error || 'Login failed. Please try again.';
+        }
+      });
+    } catch (error: any) {
+      this.isLoading = false;
+      const msg = (error?.message || error?.toString?.() || '').toLowerCase();
+      if (msg.includes('cancel')) {
+        return;
+      }
+      console.error('Native Google Sign-In failed:', error);
+      // Surface the real reason — critical for diagnosing OAuth/SHA-1/URL-scheme setup.
+      this.errorMessage = `Google sign-in failed: ${error?.message || 'unknown error'}`;
+    }
   }
 
   private handleGoogleCodeResponse(response: any): void {

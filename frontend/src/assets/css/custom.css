@@ -89,11 +89,8 @@ Sidebar heading:	font:28px/28px 'Poppins', serif;
 /*********************************
 Fonts Start
 *********************************/
-@import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
-@import url('https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,700i,800');
-@import url('https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,500,500i,700,700i,900,900i');
-@import url('https://fonts.googleapis.com/css?family=Roboto+Condensed:300i,400,400i,700');
-@import url('https://fonts.googleapis.com/css?family=Lato:300,400,700,900');
+/* Google Fonts are now vendored locally for offline/native use.
+   See src/assets/fonts/fonts.css, loaded via a <link> in index.html. */
 @font-face {
 	font-family: 'droidSans';
 	src: url('../webfonts/DroidSans-webfont.eot');

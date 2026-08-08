@@ -36,6 +36,8 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
   sortBy: 'updatedAt' | 'name' | 'submittedAt' = 'updatedAt';
   formMode: 'create' | 'edit' = 'create';
   editingFarm: FarmProject | null = null;
+  /** Controls the collapsible filter panel on small screens (always shown on desktop). */
+  filtersExpanded = false;
 
   constructor(
     private authService: AuthService,
@@ -76,6 +78,18 @@ export class FarmManagementComponent implements OnInit, OnDestroy {
 
   get showLinkedMobileStat(): boolean {
     return this.isFarmer;
+  }
+
+  /** Number of non-default filters currently applied — shown as a badge on the
+   *  mobile "Filters" toggle so users know filters are active while collapsed. */
+  get activeFilterCount(): number {
+    let count = 0;
+    if (this.selectedStatus) count++;
+    if (this.selectedDistrict) count++;
+    if (this.selectedSource) count++;
+    if (this.showLandscapingOnly) count++;
+    if (this.sortBy !== 'updatedAt') count++;
+    return count;
   }
 
   loadFarms(): void {
