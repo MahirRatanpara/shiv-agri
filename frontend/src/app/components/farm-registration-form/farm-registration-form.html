@@ -122,12 +122,12 @@
           (click)="useCurrentLocation()"
           [disabled]="detectingLocation"
         >
-          <i class="fas" [class.fa-location-crosshairs]="!detectingLocation" [class.fa-spinner]="detectingLocation" [class.fa-spin]="detectingLocation"></i>
+          <i class="fas" [class.fa-crosshairs]="!detectingLocation" [class.fa-spinner]="detectingLocation" [class.fa-spin]="detectingLocation"></i>
           {{ detectingLocation ? 'Detecting...' : 'Use current location' }}
         </button>
       </div>
       <a *ngIf="mapUrl" class="map-preview-link" [href]="mapUrl" target="_blank" rel="noopener">
-        <i class="fas fa-map-location-dot"></i> Open in Maps
+        <i class="fas fa-map-marked-alt"></i> Open in Maps
       </a>
     </div>
   </div>

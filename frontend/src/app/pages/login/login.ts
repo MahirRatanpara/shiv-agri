@@ -181,27 +181,50 @@ export class LoginComponent implements OnInit, OnDestroy {
     try {
       // Identity-only sign-in (no custom scopes → no Android MainActivity changes).
       const res: any = await SocialLogin.login({ provider: 'google', options: {} });
-      const idToken = res?.result?.idToken ?? res?.idToken;
-      if (!idToken) {
-        throw new Error('Google returned no ID token');
-      }
-      // Native uses the ID-token endpoint (/auth/google); web uses the auth-code endpoint.
-      this.authService.googleLogin(idToken).subscribe({
-        next: () => this.onLoginSuccess(),
-        error: (error) => {
+      // Defensive: the Capacitor bridge resolves plugin promises from a native
+      // callback, so re-enter the Angular zone explicitly rather than relying on
+      // zone.js's Promise patching to carry it. Mirrors the ngZone.run() wrapper
+      // the web GSI callback already uses.
+      this.ngZone.run(() => {
+        const idToken = res?.result?.idToken ?? res?.idToken;
+        if (!idToken) {
           this.isLoading = false;
-          this.errorMessage = error.error?.error || 'Login failed. Please try again.';
+          this.errorMessage = 'Google sign-in failed: Google returned no ID token';
+          return;
         }
+        // Native uses the ID-token endpoint (/auth/google); web uses the auth-code endpoint.
+        this.authService.googleLogin(idToken).subscribe({
+          next: () => this.onLoginSuccess(),
+          error: (error) => {
+            this.isLoading = false;
+            this.errorMessage = error.error?.error || 'Login failed. Please try again.';
+          }
+        });
       });
     } catch (error: any) {
-      this.isLoading = false;
-      const msg = (error?.message || error?.toString?.() || '').toLowerCase();
-      if (msg.includes('cancel')) {
-        return;
-      }
-      console.error('Native Google Sign-In failed:', error);
-      // Surface the real reason — critical for diagnosing OAuth/SHA-1/URL-scheme setup.
-      this.errorMessage = `Google sign-in failed: ${error?.message || 'unknown error'}`;
+      this.ngZone.run(() => {
+        this.isLoading = false;
+        // Always log the raw error — Android Credential Manager reports OAuth
+        // misconfiguration (unregistered SHA-1, wrong package, missing Android
+        // client) through cancellation-shaped exceptions, so a silent swallow
+        // here leaves the user staring at an unchanged login screen.
+        console.error('Native Google Sign-In failed:', error);
+
+        const raw = error?.message || error?.toString?.() || '';
+        const msg = raw.toLowerCase();
+        // Only a real user dismissal is silent. Everything else — including
+        // "cancelled" variants raised by a broken console setup — must be shown.
+        const isUserDismissal =
+          msg.includes('cancelled by the user') ||
+          msg.includes('canceled by the user') ||
+          msg.includes('user cancelled') ||
+          msg.includes('user canceled');
+        if (isUserDismissal) {
+          return;
+        }
+        // Surface the real reason — critical for diagnosing OAuth/SHA-1/URL-scheme setup.
+        this.errorMessage = `Google sign-in failed: ${raw || 'unknown error'}`;
+      });
     }
   }
 
@@ -423,8 +446,14 @@ export class LoginComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const redirectUrl = localStorage.getItem('redirectUrl') || '/';
+    // Land on the farms list, not the marketing home page — it's what every role
+    // actually wants after signing in. A stored redirectUrl (set by authGuard when
+    // an unauthenticated user was bounced off a protected page) still wins, so
+    // deep links survive the login round-trip. Matches complete-profile.ts.
+    const redirectUrl = localStorage.getItem('redirectUrl') || '/farm-management';
     localStorage.removeItem('redirectUrl');
-    setTimeout(() => this.router.navigate([redirectUrl]), 700);
+    // navigateByUrl, not navigate([...]): the stored value is a full URL from
+    // state.url and can carry query params, which the array form would escape.
+    setTimeout(() => this.router.navigateByUrl(redirectUrl), 700);
   }
 }

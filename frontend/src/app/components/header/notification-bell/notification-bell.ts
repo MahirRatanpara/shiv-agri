@@ -145,8 +145,8 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
   iconFor(notification: AppNotification): string {
     switch (notification.type) {
       case 'farm_registration': return 'fa-seedling';
-      case 'farm_approved': return 'fa-circle-check';
-      case 'farm_rejected': return 'fa-circle-xmark';
+      case 'farm_approved': return 'fa-check-circle';
+      case 'farm_rejected': return 'fa-times-circle';
       case 'farm_media_upload': return 'fa-images';
       case 'farm_quotation_required': return 'fa-file-invoice-dollar';
       case 'farm_quotation_received': return 'fa-file-invoice';

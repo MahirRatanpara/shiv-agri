@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 import { DownloadProgressService } from './download-progress.service';
+import { FileDeliveryService } from './file-delivery.service';
 
 export interface BulkPDFResponse {
   count: number;
@@ -22,7 +23,8 @@ export class PdfService {
 
   constructor(
     private http: HttpClient,
-    private downloadProgress: DownloadProgressService
+    private downloadProgress: DownloadProgressService,
+    private fileDelivery: FileDeliveryService
   ) {}
 
   /**
@@ -40,14 +42,9 @@ export class PdfService {
    * Download the PDF blob
    */
   downloadPDF(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    // Delegates so the native apps get a real file + system viewer instead of an
+    // <a download> the WebView silently ignores. See FileDeliveryService.
+    void this.fileDelivery.download(blob, filename, 'application/pdf');
   }
 
   /**
@@ -63,10 +60,8 @@ export class PdfService {
   /**
    * Open PDF in new tab
    */
-  openPDFInNewTab(blob: Blob): void {
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    // Note: URL will be cleaned up when the tab is closed
+  openPDFInNewTab(blob: Blob, filename = 'document.pdf'): void {
+    void this.fileDelivery.open(blob, filename, 'application/pdf');
   }
 
   /**

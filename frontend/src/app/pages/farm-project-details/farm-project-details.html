@@ -42,7 +42,7 @@
         Online visit
       </span>
       <span class="source-tag archived-tag" *ngIf="project.isArchived">
-        <i class="fas fa-box-archive"></i>
+        <i class="fas fa-archive"></i>
         Archived
       </span>
     </div>
@@ -62,7 +62,7 @@
         <i class="fas fa-envelope"></i>
         <span>{{ project.clientEmail }}</span>
       </div>
-      <div class="contact-chip" *ngIf="project.location?.district">
+      <div class="contact-chip location-chip" *ngIf="project.location?.district">
         <i class="fas fa-map-marker-alt"></i>
         <span>{{ project.location?.district }}{{ project.location?.state ? ', ' + project.location?.state : '' }}</span>
       </div>
@@ -192,7 +192,7 @@
     <section class="details-layout">
       <article class="profile-card">
         <header class="card-section-head">
-          <h2><i class="fas fa-circle-check"></i> Approval &amp; Lifecycle</h2>
+          <h2><i class="fas fa-check-circle"></i> Approval &amp; Lifecycle</h2>
         </header>
 
         <div class="action-row" *ngIf="canApprove && project.status === 'pending_approval'">
@@ -211,7 +211,7 @@
         </label>
 
         <label class="state-control" *ngIf="canChangeLifecycleStatus">
-          <span><i class="fas fa-shuffle"></i> Project state</span>
+          <span><i class="fas fa-random"></i> Project state</span>
           <select [ngModel]="project.status" (ngModelChange)="changeLifecycleStatus($event)" [disabled]="isSubmitting">
             <option *ngFor="let status of lifecycleStatuses" [value]="status.value">{{ status.label }}</option>
           </select>
@@ -229,7 +229,7 @@
           [disabled]="isArchiving"
           (click)="confirmArchiveProject()"
         >
-          <i class="fas" [class.fa-box-archive]="!project.isArchived" [class.fa-rotate-left]="project.isArchived"></i>
+          <i class="fas" [class.fa-archive]="!project.isArchived" [class.fa-undo]="project.isArchived"></i>
           {{ project.isArchived ? 'Restore Project' : 'Archive Project' }}
         </button>
 
@@ -239,7 +239,7 @@
             <strong>{{ project.submittedAt ? (project.submittedAt | date:'medium') : '-' }}</strong>
           </div>
           <div class="info-row" *ngIf="project.approvedAt">
-            <span><i class="fas fa-circle-check"></i> Approved</span>
+            <span><i class="fas fa-check-circle"></i> Approved</span>
             <strong>{{ project.approvedAt | date:'medium' }}</strong>
           </div>
           <div class="info-row" *ngIf="project.startDate">
@@ -259,12 +259,43 @@
         </header>
 
         <div class="facts-grid">
+          <!-- Status / contact facts. Also rendered as hero chips on larger
+               screens; the hero drops them on phones (see .page-hero rules in
+               the 575.98px breakpoint) so the header stays to name + location. -->
+          <div class="fact-card">
+            <span><i class="fas fa-info-circle"></i> Status</span>
+            <strong>{{ statusLabel(project.status) }}</strong>
+          </div>
+          <div class="fact-card">
+            <span><i class="fas fa-user-tie"></i> Created by</span>
+            <strong>{{ project.registrationSource === 'farmer_self' ? 'Farmer submitted' : 'Manager created' }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="project.clientName">
+            <span><i class="fas fa-user"></i> Farmer</span>
+            <strong>{{ project.clientName }}</strong>
+          </div>
+          <div class="fact-card" *ngIf="project.clientPhone">
+            <span><i class="fas fa-phone"></i> Phone</span>
+            <strong><a class="fact-link" [href]="'tel:' + project.clientPhone">{{ project.clientPhone }}</a></strong>
+          </div>
+          <div class="fact-card" *ngIf="project.clientEmail">
+            <span><i class="fas fa-envelope"></i> Email</span>
+            <strong><a class="fact-link" [href]="'mailto:' + project.clientEmail">{{ project.clientEmail }}</a></strong>
+          </div>
+          <div class="fact-card" *ngIf="project.needsLandscapingConsultancy">
+            <span><i class="fas fa-leaf"></i> Landscaping</span>
+            <strong>Consultancy requested</strong>
+          </div>
+          <div class="fact-card" *ngIf="project.isArchived">
+            <span><i class="fas fa-archive"></i> Archived</span>
+            <strong>Yes</strong>
+          </div>
           <div class="fact-card">
             <span><i class="fas fa-map-marker-alt"></i> District</span>
             <strong>{{ project.location?.district || 'Not set' }}</strong>
           </div>
           <div class="fact-card">
-            <span><i class="fas fa-signs-post"></i> Taluka</span>
+            <span><i class="fas fa-map-signs"></i> Taluka</span>
             <strong>{{ project.location?.taluka || 'Not set' }}</strong>
           </div>
           <div class="fact-card">
@@ -284,7 +315,7 @@
             <strong>{{ project.landDetails?.soilType || '-' }}</strong>
           </div>
           <div class="fact-card">
-            <span><i class="fas fa-droplet"></i> Irrigation Source</span>
+            <span><i class="fas fa-tint"></i> Irrigation Source</span>
             <strong>{{ project.landDetails?.irrigationSystem || '-' }}</strong>
           </div>
           <div class="fact-card">
@@ -300,7 +331,7 @@
             <strong>{{ project.electricity?.motorCount ?? '-' }}</strong>
           </div>
           <div class="fact-card">
-            <span><i class="fas fa-gauge-high"></i> Total Motor HP</span>
+            <span><i class="fas fa-tachometer-alt"></i> Total Motor HP</span>
             <strong>{{ project.electricity?.totalMotorHp ?? '-' }}</strong>
           </div>
           <div class="fact-card" *ngIf="!project.isOnlineVisit">
@@ -312,13 +343,13 @@
             <strong>Online (no on-site visit count)</strong>
           </div>
           <div class="fact-card wide">
-            <span><i class="fas fa-location-dot"></i> Address</span>
+            <span><i class="fas fa-map-marker-alt"></i> Address</span>
             <strong>{{ project.location?.address || '-' }}</strong>
           </div>
           <div class="fact-card wide map-card" *ngIf="project.location?.mapUrl">
-            <span><i class="fas fa-map-location-dot"></i> Location on Map</span>
+            <span><i class="fas fa-map-marked-alt"></i> Location on Map</span>
             <a class="map-link" [href]="project.location?.mapUrl" target="_blank" rel="noopener">
-              <i class="fas fa-diamond-turn-right"></i>
+              <i class="fas fa-directions"></i>
               Navigate / Open in Maps
             </a>
           </div>
@@ -331,11 +362,11 @@
             <strong>{{ project.description }}</strong>
           </div>
           <div class="fact-card wide" *ngIf="project.notes">
-            <span><i class="fas fa-note-sticky"></i> Notes</span>
+            <span><i class="fas fa-sticky-note"></i> Notes</span>
             <strong>{{ project.notes }}</strong>
           </div>
           <div class="fact-card wide rejection-card" *ngIf="project.status === 'rejected' && project.rejectedReason">
-            <span><i class="fas fa-circle-exclamation"></i> Rejection Reason</span>
+            <span><i class="fas fa-exclamation-circle"></i> Rejection Reason</span>
             <strong>{{ project.rejectedReason }}</strong>
           </div>
         </div>
@@ -387,7 +418,7 @@
           >
             <i
               class="fas"
-              [class.fa-cloud-arrow-up]="!isUploading"
+              [class.fa-cloud-upload-alt]="!isUploading"
               [class.fa-circle-notch]="isUploading"
               [class.fa-spin]="isUploading"
               aria-hidden="true"
@@ -409,8 +440,8 @@
               class="fas"
               [class.fa-circle-notch]="item.status === 'uploading'"
               [class.fa-spin]="item.status === 'uploading'"
-              [class.fa-circle-check]="item.status === 'success'"
-              [class.fa-circle-exclamation]="item.status === 'error'"
+              [class.fa-check-circle]="item.status === 'success'"
+              [class.fa-exclamation-circle]="item.status === 'error'"
               aria-hidden="true"
             ></i>
             <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
@@ -441,7 +472,7 @@
           [disabled]="isUploading"
           (click)="triggerFilePicker()"
         >
-          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
           <span>Upload Photos &amp; Videos</span>
         </button>
       </div>
@@ -471,7 +502,7 @@
         </header>
 
         <div class="media-empty-soft" *ngIf="!mediaItems.length && attendedMediaTotal > 0">
-          <i class="fas fa-circle-check"></i>
+          <i class="fas fa-check-circle"></i>
           <p>You're all caught up — no unattended photos.</p>
         </div>
 
@@ -553,7 +584,7 @@
 
         <section class="older-media" *ngIf="showAttendedMedia">
           <header class="older-head">
-            <h3><i class="fas fa-circle-check"></i> Attended photos</h3>
+            <h3><i class="fas fa-check-circle"></i> Attended photos</h3>
             <span class="older-sub">{{ attendedMediaTotal }} reviewed item{{ attendedMediaTotal === 1 ? '' : 's' }}</span>
           </header>
 
@@ -668,7 +699,7 @@
           >
             <i
               class="fas"
-              [class.fa-cloud-arrow-up]="!isUploadingDesigns"
+              [class.fa-cloud-upload-alt]="!isUploadingDesigns"
               [class.fa-circle-notch]="isUploadingDesigns"
               [class.fa-spin]="isUploadingDesigns"
               aria-hidden="true"
@@ -690,8 +721,8 @@
               class="fas"
               [class.fa-circle-notch]="item.status === 'uploading'"
               [class.fa-spin]="item.status === 'uploading'"
-              [class.fa-circle-check]="item.status === 'success'"
-              [class.fa-circle-exclamation]="item.status === 'error'"
+              [class.fa-check-circle]="item.status === 'success'"
+              [class.fa-exclamation-circle]="item.status === 'error'"
               aria-hidden="true"
             ></i>
             <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
@@ -722,7 +753,7 @@
           [disabled]="isUploadingDesigns"
           (click)="triggerDesignPicker()"
         >
-          <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+          <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
           <span>Upload Designs</span>
         </button>
       </div>
@@ -809,7 +840,7 @@
           >
             <i
               class="fas"
-              [class.fa-cloud-arrow-up]="!isUploadingPrescriptions"
+              [class.fa-cloud-upload-alt]="!isUploadingPrescriptions"
               [class.fa-circle-notch]="isUploadingPrescriptions"
               [class.fa-spin]="isUploadingPrescriptions"
               aria-hidden="true"
@@ -994,8 +1025,8 @@
               class="fas"
               [class.fa-circle-notch]="item.status === 'uploading'"
               [class.fa-spin]="item.status === 'uploading'"
-              [class.fa-circle-check]="item.status === 'success'"
-              [class.fa-circle-exclamation]="item.status === 'error'"
+              [class.fa-check-circle]="item.status === 'success'"
+              [class.fa-exclamation-circle]="item.status === 'error'"
               aria-hidden="true"
             ></i>
             <span class="upload-name" [title]="item.filename">{{ item.filename }}</span>
@@ -1116,7 +1147,7 @@
           <strong>{{ formatCurrency(transactionsSummary.totalDebits) }}</strong>
         </div>
         <div class="tx-stat" [class.tx-net-positive]="transactionsSummary.netExpense < 0" [class.tx-net-negative]="transactionsSummary.netExpense > 0">
-          <span class="tx-stat-label"><i class="fas fa-scale-balanced"></i> Net</span>
+          <span class="tx-stat-label"><i class="fas fa-balance-scale"></i> Net</span>
           <strong>{{ formatCurrency(-transactionsSummary.netExpense) }}</strong>
         </div>
         <div class="tx-stat tx-count">
@@ -1167,7 +1198,7 @@
         </label>
 
         <label class="rx-field">
-          <span><i class="fas fa-note-sticky"></i> Notes (optional)</span>
+          <span><i class="fas fa-sticky-note"></i> Notes (optional)</span>
           <textarea
             [(ngModel)]="transactionForm.notes"
             name="txNotes"
@@ -1224,7 +1255,7 @@
               <span>· {{ tx.date | date:'mediumDate' }}</span>
             </div>
             <p class="rx-notes" *ngIf="tx.notes">
-              <i class="fas fa-note-sticky"></i> {{ tx.notes }}
+              <i class="fas fa-sticky-note"></i> {{ tx.notes }}
             </p>
           </div>
           <div class="tx-amount" [class.credit]="tx.type === 'credit'" [class.debit]="tx.type === 'debit'">
@@ -1275,7 +1306,7 @@
           >
             <i
               class="fas"
-              [class.fa-cloud-arrow-up]="!isUploadingManualReport"
+              [class.fa-cloud-upload-alt]="!isUploadingManualReport"
               [class.fa-circle-notch]="isUploadingManualReport"
               [class.fa-spin]="isUploadingManualReport"
             ></i>
@@ -1288,7 +1319,7 @@
             (click)="refreshReports()"
             aria-label="Refresh reports"
           >
-            <i class="fas" [class.fa-rotate-right]="!reportsLoading" [class.fa-circle-notch]="reportsLoading" [class.fa-spin]="reportsLoading"></i>
+            <i class="fas" [class.fa-redo]="!reportsLoading" [class.fa-circle-notch]="reportsLoading" [class.fa-spin]="reportsLoading"></i>
             <span>{{ reportsLoading ? 'Refreshing...' : 'Refresh' }}</span>
           </button>
         </div>
@@ -1301,10 +1332,10 @@
           Other
         </button>
         <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'soil'" (click)="setManualReportSampleType('soil')">
-          <i class="fas fa-mound"></i> Soil
+          <i class="fas fa-mountain"></i> Soil
         </button>
         <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'water'" (click)="setManualReportSampleType('water')">
-          <i class="fas fa-droplet"></i> Water
+          <i class="fas fa-tint"></i> Water
         </button>
         <button type="button" class="filter-chip" [class.active]="manualReportSampleType === 'fertilizer'" (click)="setManualReportSampleType('fertilizer')">
           <i class="fas fa-flask"></i> Fertilizer
@@ -1393,7 +1424,7 @@
           [class.active]="reportFilter === 'soil'"
           (click)="setReportFilter('soil')"
         >
-          <i class="fas fa-mound"></i> Soil <span class="chip-count">{{ reportCounts.soil }}</span>
+          <i class="fas fa-mountain"></i> Soil <span class="chip-count">{{ reportCounts.soil }}</span>
         </button>
         <button
           type="button"
@@ -1401,7 +1432,7 @@
           [class.active]="reportFilter === 'water'"
           (click)="setReportFilter('water')"
         >
-          <i class="fas fa-droplet"></i> Water <span class="chip-count">{{ reportCounts.water }}</span>
+          <i class="fas fa-tint"></i> Water <span class="chip-count">{{ reportCounts.water }}</span>
         </button>
         <button
           type="button"
@@ -1536,7 +1567,7 @@
             *ngIf="canSubmitQuotation && !showQuotationForm"
             (click)="openQuotationForm()"
           >
-            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <i class="fas fa-edit" aria-hidden="true"></i>
             <span>Compose Quotation</span>
           </button>
         </div>
@@ -1547,7 +1578,7 @@
       <div class="quotation-empty-block" *ngIf="!quotationLoading && canAttachInitialQuotation && !showQuotationForm">
         <div class="quotation-empty-state">
           <div class="empty-illustration" aria-hidden="true">
-            <i class="fas fa-file-circle-plus"></i>
+            <i class="fas fa-file-medical"></i>
           </div>
           <h3>No quotation on file</h3>
           <p>
@@ -1560,7 +1591,7 @@
             class="upload-btn"
             (click)="openAttachInitialQuotationForm()"
           >
-            <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+            <i class="fas fa-edit" aria-hidden="true"></i>
             <span>Add Quotation</span>
           </button>
         </div>
@@ -1578,7 +1609,7 @@
             <p class="quotation-meta-line">
               <span *ngIf="activeQuotation.submittedByName"><i class="fas fa-user-tie"></i> {{ activeQuotation.submittedByName }}</span>
               <span><i class="fas fa-clock"></i> {{ activeQuotation.createdAt | date:'mediumDate' }}</span>
-              <span *ngIf="activeQuotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ activeQuotation.acceptedAt | date:'mediumDate' }}</span>
+              <span *ngIf="activeQuotation.acceptedAt"><i class="fas fa-check-circle"></i> Accepted {{ activeQuotation.acceptedAt | date:'mediumDate' }}</span>
             </p>
           </div>
 
@@ -1612,7 +1643,7 @@
         <section class="quotation-installments-block">
           <header class="block-head">
             <div>
-              <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+              <h3 class="block-title"><i class="fas fa-chart-line"></i> Payment Schedule</h3>
               <p>Bifurcated into 4 equal instalments, due every 3 months.</p>
             </div>
             <div class="instalment-each-chip">
@@ -1640,8 +1671,8 @@
                 <span class="installment-status-pill" [attr.data-status]="installment.status">
                   <i
                     class="fas"
-                    [class.fa-circle-check]="installment.status === 'paid'"
-                    [class.fa-circle-exclamation]="installmentStatusLabel(installment) === 'Overdue'"
+                    [class.fa-check-circle]="installment.status === 'paid'"
+                    [class.fa-exclamation-circle]="installmentStatusLabel(installment) === 'Overdue'"
                     [class.fa-clock]="installment.status === 'pending' && installmentStatusLabel(installment) !== 'Overdue'"
                   ></i>
                   {{ installmentStatusLabel(installment) }}
@@ -1680,7 +1711,7 @@
                 [disabled]="isRevertingInstallment(activeQuotation, installment)"
                 title="Admin: revert payment & remove invoice"
               >
-                <i class="fas" [class.fa-rotate-left]="!isRevertingInstallment(activeQuotation, installment)" [class.fa-circle-notch]="isRevertingInstallment(activeQuotation, installment)" [class.fa-spin]="isRevertingInstallment(activeQuotation, installment)"></i>
+                <i class="fas" [class.fa-undo]="!isRevertingInstallment(activeQuotation, installment)" [class.fa-circle-notch]="isRevertingInstallment(activeQuotation, installment)" [class.fa-spin]="isRevertingInstallment(activeQuotation, installment)"></i>
                 {{ isRevertingInstallment(activeQuotation, installment) ? 'Reverting...' : 'Revert Payment' }}
               </button>
 
@@ -1820,7 +1851,7 @@
         <!-- Edit (manager/admin can revise even after sending) -->
         <section class="quotation-revise-row" *ngIf="canSubmitQuotation && activeQuotation.status === 'submitted' && !showQuotationForm">
           <button type="button" class="quotation-revise-btn" (click)="openQuotationForm()">
-            <i class="fas fa-pen-to-square"></i>
+            <i class="fas fa-edit"></i>
             Revise Quotation
           </button>
           <span class="revise-hint">The farmer will be notified about the revised quotation.</span>
@@ -1831,7 +1862,7 @@
             state and active card so it slides in directly below the trigger button ============== -->
       <article class="quotation-form-card" *ngIf="showQuotationForm && canSubmitQuotation">
         <header class="card-section-head">
-          <h2><i class="fas fa-pen-to-square"></i> {{ activeQuotation ? 'Revise Quotation' : 'Compose Quotation' }}</h2>
+          <h2><i class="fas fa-edit"></i> {{ activeQuotation ? 'Revise Quotation' : 'Compose Quotation' }}</h2>
           <p>Compose the proposal details and set the annual amount. The farmer will see a clean view with quarterly installments.</p>
         </header>
 
@@ -1864,7 +1895,7 @@
 
         <div class="quotation-field-row">
           <label class="quotation-field">
-            <span><i class="fas fa-indian-rupee-sign"></i> Annual Amount</span>
+            <span><i class="fas fa-rupee-sign"></i> Annual Amount</span>
             <input
               type="number"
               min="0"
@@ -1875,7 +1906,7 @@
             />
           </label>
           <label class="quotation-field">
-            <span><i class="fas fa-calendar-day"></i> First Installment Date</span>
+            <span><i class="fas fa-calendar-alt"></i> First Installment Date</span>
             <input
               type="date"
               [(ngModel)]="quotationForm.startDate"
@@ -1886,7 +1917,7 @@
 
         <div class="quotation-installments-preview" *ngIf="quotationForm.amountPerYear && quotationForm.amountPerYear > 0">
           <header>
-            <i class="fas fa-money-bill-trend-up"></i>
+            <i class="fas fa-chart-line"></i>
             <span>Installment preview · 4 equal payments, 3 months apart</span>
           </header>
           <div class="install-preview-row">
@@ -1915,7 +1946,7 @@
       <!-- ============== Quotation History ============== -->
       <article class="quotation-history-card" *ngIf="quotationHistory.length">
         <header class="card-section-head">
-          <h2><i class="fas fa-clock-rotate-left"></i> Quotation History</h2>
+          <h2><i class="fas fa-history"></i> Quotation History</h2>
           <p>All quotations sent for this farm. Click any to view in detail.</p>
         </header>
 
@@ -1943,8 +1974,8 @@
               <div class="history-meta">
                 <span><i class="fas fa-calendar"></i> {{ quotation.createdAt | date:'mediumDate' }} · {{ quotation.createdAt | date:'y' }}</span>
                 <span *ngIf="quotation.submittedByName"><i class="fas fa-user-tie"></i> {{ quotation.submittedByName }}</span>
-                <span *ngIf="quotation.acceptedAt"><i class="fas fa-circle-check"></i> Accepted {{ quotation.acceptedAt | date:'mediumDate' }}</span>
-                <span *ngIf="quotation.rejectedAt"><i class="fas fa-circle-xmark"></i> Rejected {{ quotation.rejectedAt | date:'mediumDate' }}</span>
+                <span *ngIf="quotation.acceptedAt"><i class="fas fa-check-circle"></i> Accepted {{ quotation.acceptedAt | date:'mediumDate' }}</span>
+                <span *ngIf="quotation.rejectedAt"><i class="fas fa-times-circle"></i> Rejected {{ quotation.rejectedAt | date:'mediumDate' }}</span>
               </div>
             </div>
             <span class="history-chevron" aria-hidden="true">
@@ -2022,7 +2053,7 @@
 
         <!-- ============== BOP create form ============== -->
         <article class="bop-form-card" *ngIf="showBopForm && canCreateBopQuotation">
-          <h2><i class="fas fa-pen-to-square"></i> New BOP Quotation</h2>
+          <h2><i class="fas fa-edit"></i> New BOP Quotation</h2>
 
           <label class="quotation-field">
             <span><i class="fas fa-heading"></i> Title (optional)</span>
@@ -2052,7 +2083,7 @@
           </label>
 
           <label class="quotation-field">
-            <span><i class="fas fa-list-check"></i> Line Items</span>
+            <span><i class="fas fa-tasks"></i> Line Items</span>
           </label>
 
           <div class="bop-items-grid">
@@ -2304,7 +2335,7 @@
         </section>
 
         <section class="quotation-installments-block">
-          <h3 class="block-title"><i class="fas fa-money-bill-trend-up"></i> Payment Schedule</h3>
+          <h3 class="block-title"><i class="fas fa-chart-line"></i> Payment Schedule</h3>
           <div class="installments-grid">
             <div
               class="installment-card"
@@ -2330,7 +2361,7 @@
         </section>
 
         <p class="quotation-rejected-reason" *ngIf="selectedQuotationDetail.status === 'rejected' && selectedQuotationDetail.rejectedReason">
-          <i class="fas fa-circle-exclamation"></i>
+          <i class="fas fa-exclamation-circle"></i>
           <strong>Rejection reason:</strong> {{ selectedQuotationDetail.rejectedReason }}
         </p>
       </div>
@@ -2391,11 +2422,23 @@
           playsinline
         ></video>
         <iframe
-          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video'"
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video' && canEmbedPrescriptionPreview"
           class="report-overlay-frame"
           [src]="prescriptionPreviewUrl"
           title="Prescription preview"
         ></iframe>
+        <!-- Android/iOS WebViews cannot render PDFs inline — an iframe here paints a
+             blank white box. Offer the download instead of a dead frame. -->
+        <div
+          class="report-overlay-fallback"
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video' && !canEmbedPrescriptionPreview"
+        >
+          <i class="fas fa-file-pdf" aria-hidden="true"></i>
+          <p class="report-overlay-fallback-title">Preview isn't available in the app</p>
+          <p class="report-overlay-fallback-sub">
+            Tap <strong>Download PDF</strong> above to open this file in your device's PDF viewer.
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -2499,7 +2542,7 @@
     <div class="edit-overlay-inner" (click)="$event.stopPropagation()">
       <header class="edit-overlay-head">
         <div class="edit-overlay-title">
-          <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+          <i class="fas fa-edit" aria-hidden="true"></i>
           <div>
             <h2 id="edit-overlay-title">Edit Project</h2>
             <p *ngIf="isFarmer">Changes are sent for approval before going live.</p>
