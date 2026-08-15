@@ -36,7 +36,7 @@ import { DownloadProgressService, DownloadProgress } from '../../services/downlo
           </svg>
           <span class="mini-count">{{ progress?.current || 0 }}</span>
         </div>
-        <i class="fas fa-expand-alt expand-icon"></i>
+        <i class="fas fa-expand expand-icon"></i>
       </div>
 
       <!-- Expanded View -->

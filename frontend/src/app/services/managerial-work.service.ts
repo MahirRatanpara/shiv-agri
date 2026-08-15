@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
+import { FileDeliveryService } from './file-delivery.service';
 
 // Interfaces
 export interface Receipt {
@@ -126,7 +127,10 @@ export class ManagerialWorkService {
   private apiUrl = `${environment.apiUrl}/managerial-work`;
   private pdfUrl = `${environment.apiUrl}/pdf`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private fileDelivery: FileDeliveryService
+  ) {}
 
   // ============ RECEIPT METHODS ============
 
@@ -353,11 +357,8 @@ export class ManagerialWorkService {
    * Download blob as file
    */
   downloadFile(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    window.URL.revokeObjectURL(url);
+    // Native-aware: writes a real file and opens the system viewer inside the
+    // Capacitor apps, plain anchor download on the web. See FileDeliveryService.
+    void this.fileDelivery.download(blob, filename);
   }
 }

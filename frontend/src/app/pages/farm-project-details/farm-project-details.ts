@@ -40,6 +40,8 @@ import {
   ManualReportSampleType
 } from '../../services/farm-report.service';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
+import { Capacitor } from '@capacitor/core';
+import { FileDeliveryService } from '../../services/file-delivery.service';
 import {
   BopLineItem,
   BopQuotationPayload,
@@ -134,6 +136,42 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   prescriptionPreviewUrl: SafeResourceUrl | null = null;
   private prescriptionPreviewBlobUrl: string | null = null;
   isLoadingPrescriptionPreview = false;
+
+  /**
+   * Android's WebView ships no PDF renderer, so an <iframe src="....pdf"> paints
+   * a blank white box with no error. Detect the native shell and show an explicit
+   * fallback instead of a dead frame. Videos and images still embed fine.
+   */
+  readonly isNativeApp = Capacitor.isNativePlatform();
+
+  get canEmbedPrescriptionPreview(): boolean {
+    if (!this.isNativeApp) return true;
+    return this.activePrescription?.docType === 'video';
+  }
+
+  /** Treat anything that isn't an image/video as a PDF-ish document. */
+  private isPdfLike(item: PrescriptionRef): boolean {
+    const name = (item.fileName || item.url || '').toLowerCase();
+    return !/\.(png|jpe?g|gif|webp|bmp|heic|mp4|mov|webm)(\?|$)/.test(name);
+  }
+
+  /**
+   * Fetch a remote file and hand it to the device's viewer. Used on native where
+   * an <iframe> would render nothing for PDFs.
+   */
+  private openWithSystemViewer(url: string, fileName: string): void {
+    this.fileDelivery.fetchAsBlob(url)
+      .then((blob) => this.fileDelivery.open(blob, fileName))
+      .then(() => {
+        this.isLoadingPrescriptionPreview = false;
+        this.closePrescriptionOverlay();
+      })
+      .catch(() => {
+        this.isLoadingPrescriptionPreview = false;
+        this.closePrescriptionOverlay();
+        this.toastService.error('Unable to open this file.');
+      });
+  }
 
   // Add prescription dummy modal toggles (legacy text builder — kept for backwards compat)
   showTextPrescriptionForm = false;
@@ -280,7 +318,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     private farmAdminTransactionService: FarmAdminTransactionService,
     private farmReportService: FarmReportService,
     private sanitizer: DomSanitizer,
-    private quotationService: QuotationService
+    private quotationService: QuotationService,
+    private fileDelivery: FileDeliveryService
   ) {}
 
   ngOnInit(): void {
@@ -1014,14 +1053,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
           const dateStr = new Date(quotation.createdAt).toISOString().slice(0, 10);
           const filename = `BOP_${farm}_${dateStr}.pdf`;
-          const url = window.URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = filename;
-          document.body.appendChild(anchor);
-          anchor.click();
-          document.body.removeChild(anchor);
-          window.URL.revokeObjectURL(url);
+          void this.fileDelivery.download(blob, filename, 'application/pdf');
           this.isDownloadingBopId = null;
         },
         error: (err: HttpErrorResponse) => {
@@ -1110,14 +1142,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
         next: (blob) => {
           const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
           const filename = `Invoice_${invoiceId}_${farm}.pdf`;
-          const url = window.URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = filename;
-          document.body.appendChild(anchor);
-          anchor.click();
-          document.body.removeChild(anchor);
-          window.URL.revokeObjectURL(url);
+          void this.fileDelivery.download(blob, filename, 'application/pdf');
           this.downloadingInvoiceId = null;
         },
         error: (err: HttpErrorResponse) => {
@@ -1160,7 +1185,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       confirmText: 'Revert Payment',
       cancelText: 'Cancel',
       confirmClass: 'btn-danger',
-      icon: 'fas fa-rotate-left'
+      icon: 'fas fa-undo'
     });
     if (!confirmed) return;
 
@@ -1320,15 +1345,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
           const farm = (this.project?.name || 'farm').replace(/\s+/g, '_');
           const dateStr = new Date(quotation.createdAt).toISOString().slice(0, 10);
           const filename = `Quotation_${farm}_${dateStr}.pdf`;
-
-          const url = window.URL.createObjectURL(blob);
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = filename;
-          document.body.appendChild(anchor);
-          anchor.click();
-          document.body.removeChild(anchor);
-          window.URL.revokeObjectURL(url);
+          void this.fileDelivery.download(blob, filename, 'application/pdf');
           this.isDownloadingQuotationId = null;
         },
         error: (err: HttpErrorResponse) => {
@@ -1697,7 +1714,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       confirmText: archived ? 'Restore' : 'Archive',
       cancelText: 'Cancel',
       confirmClass: archived ? 'btn-primary' : 'btn-danger',
-      icon: archived ? 'fas fa-rotate-left' : 'fas fa-box-archive'
+      icon: archived ? 'fas fa-undo' : 'fas fa-archive'
     });
     if (!confirmed) return;
 
@@ -2334,9 +2351,17 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
 
     // For non-structured prescriptions, just embed the file URL.
     if (item.docType !== 'structured') {
-      if (item.url) {
-        this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
+      if (!item.url) {
+        this.isLoadingPrescriptionPreview = false;
+        return;
       }
+      // Native: the WebView cannot render a PDF in an iframe, so pull the bytes
+      // down and hand the file to the OS viewer instead of showing a blank frame.
+      if (this.fileDelivery.needsNativeViewer && item.docType !== 'video' && this.isPdfLike(item)) {
+        this.openWithSystemViewer(item.url, item.fileName || item.title || 'prescription.pdf');
+        return;
+      }
+      this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
       this.isLoadingPrescriptionPreview = false;
       return;
     }
@@ -2353,6 +2378,16 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
+          // Native has no inline PDF renderer — open the generated PDF in the
+          // device's viewer and close the (otherwise blank) overlay.
+          if (this.fileDelivery.needsNativeViewer) {
+            const name = `${(item.title || 'prescription').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'prescription'}.pdf`;
+            this.isLoadingPrescriptionPreview = false;
+            this.closePrescriptionOverlay();
+            this.fileDelivery.open(blob, name, 'application/pdf')
+              .catch(() => this.toastService.error('No app on this device can open PDFs.'));
+            return;
+          }
           const url = window.URL.createObjectURL(blob);
           this.prescriptionPreviewBlobUrl = url;
           this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
@@ -2393,10 +2428,24 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
         this.toastService.error('No file available to download.');
         return;
       }
+      const name = item.fileName || item.title || 'prescription';
+      // Native: <a download> is inert in a WebView — fetch the bytes and write a
+      // real file so the OS can save/open it.
+      if (this.fileDelivery.needsNativeViewer) {
+        this.downloadingPrescriptionId = rxKey;
+        this.fileDelivery.fetchAsBlob(item.url)
+          .then((blob) => this.fileDelivery.download(blob, name))
+          .then(() => { this.downloadingPrescriptionId = null; })
+          .catch(() => {
+            this.downloadingPrescriptionId = null;
+            this.toastService.error('Unable to download this file.');
+          });
+        return;
+      }
       // Direct file — open in new tab; the browser will offer to save.
       const a = document.createElement('a');
       a.href = item.url;
-      a.download = item.fileName || item.title || 'prescription';
+      a.download = name;
       a.target = '_blank';
       a.rel = 'noopener';
       document.body.appendChild(a);
@@ -2417,14 +2466,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (blob) => {
           const safeName = (item.title || 'prescription').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'prescription';
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${safeName}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+          void this.fileDelivery.download(blob, `${safeName}.pdf`, 'application/pdf');
           this.downloadingPrescriptionId = null;
         },
         error: () => {
@@ -2534,7 +2576,7 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       case 'video': return 'fa-file-video';
       case 'pdf': return 'fa-file-pdf';
       case 'docx': return 'fa-file-word';
-      case 'text': return 'fa-file-lines';
+      case 'text': return 'fa-file-alt';
       case 'manual': return 'fa-prescription';
       case 'structured': return 'fa-file-prescription';
       default: return 'fa-file';
@@ -3186,8 +3228,8 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   reportTypeIcon(type: FarmReportType): string {
-    if (type === 'soil') return 'fa-mound';
-    if (type === 'water') return 'fa-droplet';
+    if (type === 'soil') return 'fa-mountain';
+    if (type === 'water') return 'fa-tint';
     return 'fa-flask';
   }
 
@@ -3213,6 +3255,15 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
+          // Native has no inline PDF renderer — hand off to the device viewer.
+          if (this.fileDelivery.needsNativeViewer) {
+            const name = `${(report.farmerName || 'report').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'report'}.pdf`;
+            this.isLoadingReportPreview = false;
+            this.closeReportOverlay();
+            this.fileDelivery.open(blob, name, 'application/pdf')
+              .catch(() => this.toastService.error('No app on this device can open PDFs.'));
+            return;
+          }
           const url = window.URL.createObjectURL(blob);
           this.reportPreviewBlobUrl = url;
           this.reportPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);

@@ -2,6 +2,7 @@ import { HttpClient, HttpEvent, HttpEventType, HttpRequest } from '@angular/comm
 import { Injectable } from '@angular/core';
 import { Observable, filter, map } from 'rxjs';
 import { environment } from '../environments/environment';
+import { FileDeliveryService } from './file-delivery.service';
 
 export type FarmReportType = 'soil' | 'water' | 'fertilizer';
 export type ManualReportSampleType = 'soil' | 'water' | 'fertilizer' | 'other';
@@ -32,7 +33,10 @@ export interface FarmReportListResponse {
 export class FarmReportService {
   private readonly apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private fileDelivery: FileDeliveryService
+  ) {}
 
   listReports(projectId: string): Observable<FarmReportListResponse> {
     return this.http
@@ -69,14 +73,9 @@ export class FarmReportService {
    * Trigger a browser download for an already-fetched blob.
    */
   triggerBrowserDownload(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    // Native-aware: writes a real file and opens the system viewer inside the
+    // Capacitor apps, plain anchor download on the web. See FileDeliveryService.
+    void this.fileDelivery.download(blob, filename);
   }
 
   // ========================

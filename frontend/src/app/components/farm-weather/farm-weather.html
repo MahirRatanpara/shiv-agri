@@ -10,7 +10,7 @@
       </p>
     </div>
     <button type="button" class="weather-refresh" (click)="retry()" [disabled]="loading" aria-label="Refresh weather">
-      <i class="fas" [class.fa-rotate]="!loading" [class.fa-spinner]="loading" [class.fa-spin]="loading"></i>
+      <i class="fas" [class.fa-sync]="!loading" [class.fa-spinner]="loading" [class.fa-spin]="loading"></i>
     </button>
   </header>
 
@@ -20,7 +20,7 @@
   </div>
 
   <div class="weather-error" *ngIf="error && !loading">
-    <i class="fas fa-triangle-exclamation"></i>
+    <i class="fas fa-exclamation-triangle"></i>
     <span>{{ error }}</span>
     <button type="button" class="link-btn" (click)="retry()">Retry</button>
   </div>
@@ -36,7 +36,7 @@
       </div>
       <div class="now-meta">
         <div class="meta-row">
-          <i class="fas fa-droplet"></i>
+          <i class="fas fa-tint"></i>
           <span>Humidity</span>
           <strong>{{ current.relative_humidity_2m }}%</strong>
         </div>
@@ -46,7 +46,7 @@
           <strong>{{ current.wind_speed_10m | number:'1.0-1' }} km/h</strong>
         </div>
         <div class="meta-row">
-          <i class="fas fa-cloud-rain"></i>
+          <i class="fas fa-cloud"></i>
           <span>Now</span>
           <strong>{{ current.precipitation | number:'1.0-1' }} {{ rainfallUnit }}</strong>
         </div>
@@ -55,11 +55,11 @@
 
     <div class="rainfall-summary">
       <div class="rainfall-tile">
-        <span><i class="fas fa-cloud-showers-heavy"></i> Last 30 days</span>
+        <span><i class="fas fa-cloud"></i> Last 30 days</span>
         <strong>{{ rainfallTotal30d | number:'1.0-1' }} {{ rainfallUnit }}</strong>
       </div>
       <div class="rainfall-tile">
-        <span><i class="fas fa-calendar-day"></i> Rainy days</span>
+        <span><i class="fas fa-calendar-alt"></i> Rainy days</span>
         <strong>{{ rainyDays30d }} <small>/ 30</small></strong>
       </div>
     </div>
@@ -78,7 +78,7 @@
           <span>{{ day.tempMin | number:'1.0-0' }}°</span>
         </div>
         <div class="forecast-rain" *ngIf="day.precipitation > 0">
-          <i class="fas fa-droplet"></i> {{ day.precipitation | number:'1.0-1' }}
+          <i class="fas fa-tint"></i> {{ day.precipitation | number:'1.0-1' }}
         </div>
       </div>
     </div>
@@ -91,7 +91,7 @@
 
 <ng-template #noCoords>
   <section class="weather-card weather-card--empty">
-    <i class="fas fa-location-crosshairs"></i>
+    <i class="fas fa-crosshairs"></i>
     <h3>Add a map location to see weather</h3>
     <p>Capture coordinates for this farm by editing the project and either pasting a Google Maps URL or using "Use current location".</p>
   </section>
