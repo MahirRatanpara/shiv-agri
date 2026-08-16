@@ -1198,8 +1198,26 @@ h1 {
 }
 
 @media (max-width: 575.98px) {
+  /* Phones: strip the hero down to the page title and its primary action. The
+     eyebrow tag, the descriptive lede and the three stat cards pushed the actual
+     farm list below the fold — the counts are all visible in the list itself. */
+  .hero-shell .eyebrow,
+  .hero-shell .lede,
   .hero-stats {
-    grid-template-columns: 1fr;
+    display: none;
+  }
+
+  .hero-shell {
+    padding: 18px 16px;
+  }
+
+  .hero-content {
+    gap: 14px;
+  }
+
+  .hero-shell h1 {
+    font-size: 24px;
+    margin: 0;
   }
 
   .farm-grid {

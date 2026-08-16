@@ -678,6 +678,64 @@ h1 {
 }
 
 /* ============== Tabs ============== */
+/* Holds the scrolling strip plus its "more tabs" affordance.
+   max-width: 100% is load-bearing — without it the shell sizes to the full tab
+   list (≈990px) and overflows the page instead of letting the strip scroll. */
+.tab-bar-shell {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: min(1280px, 100%);
+  position: relative;
+  width: fit-content;
+}
+
+/* Fade the right edge only while tabs remain off-screen, so the strip visibly
+   continues rather than ending flush. Pointer-events off so it never eats taps. */
+.tab-bar-shell.has-more::after {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), #ffffff 72%);
+  border-radius: 0 999px 999px 0;
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  /* inset vertically to the shell, which coincides with the strip: the strip's
+     margin-top collapses through the shell, so shell.top === strip.top. Any
+     hardcoded offset here would also break when a media query changes the
+     margin (it is 18px on phones, 22px above). */
+  top: 0;
+  bottom: 0;
+  width: 64px;
+  z-index: 1;
+}
+
+.tab-scroll-hint {
+  align-items: center;
+  background: #F0FDF4;
+  border: 1px solid #DCFCE7;
+  border-radius: 50%;
+  color: #15803D;
+  cursor: pointer;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(20, 83, 45, 0.16);
+}
+
+.tab-scroll-hint:active {
+  background: #DCFCE7;
+}
+
+.tab-scroll-hint i {
+  font-size: 13px;
+}
+
 .tab-bar {
   display: flex;
   gap: 6px;
@@ -1676,9 +1734,17 @@ h1 {
 }
 
 .report-overlay-body {
-  background: #f3f5f0;
+  /* White so photos and videos sit on a clean sheet rather than a tinted panel. */
+  background: #ffffff;
   flex: 1;
   position: relative;
+}
+
+/* Video shares the frame class; letterbox bars render white, not the browser's
+   default black, and the frame is never stretched. */
+video.report-overlay-frame {
+  background: #ffffff;
+  object-fit: contain;
 }
 
 .report-overlay-frame {
@@ -1687,6 +1753,16 @@ h1 {
   display: block;
   height: 100%;
   width: 100%;
+}
+
+/* Image previews: fit the viewport without cropping, on a white backdrop so the
+   photo reads as a document rather than a media-player frame. */
+.report-overlay-image {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  background: #ffffff;
 }
 
 /* Shown in place of the iframe on native, where the WebView has no PDF renderer. */

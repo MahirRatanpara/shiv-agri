@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
@@ -76,8 +76,12 @@ type TabKey = 'overview' | 'media' | 'designs' | 'prescriptions' | 'reports' | '
   templateUrl: './farm-project-details.html',
   styleUrl: './farm-project-details.css'
 })
-export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
+export class FarmProjectDetailsComponent implements OnInit, AfterViewChecked, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  @ViewChild('tabBar') tabBar?: ElementRef<HTMLElement>;
+  /** True while tabs remain off the right edge — drives the fade + chevron. */
+  tabsCanScrollRight = false;
 
   @ViewChild('mediaInput') mediaInput?: ElementRef<HTMLInputElement>;
   @ViewChild('designInput') designInput?: ElementRef<HTMLInputElement>;
@@ -144,15 +148,30 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
    */
   readonly isNativeApp = Capacitor.isNativePlatform();
 
+  /**
+   * Whether the file can be shown inline. The WebView renders images and video
+   * natively — only PDFs and office documents have no inline renderer, and those
+   * get handed to the OS viewer instead.
+   */
   get canEmbedPrescriptionPreview(): boolean {
     if (!this.isNativeApp) return true;
-    return this.activePrescription?.docType === 'video';
+    const docType = this.activePrescription?.docType;
+    return docType === 'video' || docType === 'image';
   }
 
-  /** Treat anything that isn't an image/video as a PDF-ish document. */
-  private isPdfLike(item: PrescriptionRef): boolean {
-    const name = (item.fileName || item.url || '').toLowerCase();
-    return !/\.(png|jpe?g|gif|webp|bmp|heic|mp4|mov|webm)(\?|$)/.test(name);
+  /** Images render with <img>; everything embeddable else uses the iframe. */
+  get isImagePrescription(): boolean {
+    return this.activePrescription?.docType === 'image';
+  }
+
+  /** Label the action for what it actually is — not every file is a PDF. */
+  get prescriptionDownloadLabel(): string {
+    return this.activePrescription?.docType === 'pdf' ? 'Download PDF' : 'Download';
+  }
+
+  /** Documents with no inline WebView renderer — these go to the OS viewer. */
+  private needsExternalViewer(item: PrescriptionRef): boolean {
+    return item.docType !== 'image' && item.docType !== 'video';
   }
 
   /**
@@ -1510,6 +1529,47 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
     return 'Upcoming';
   }
 
+  /**
+   * The tab strip appears only once the project resolves, and tabs are added as
+   * permissions and counts arrive — so measure after each check rather than once.
+   * The write is guarded to a real change to avoid an expression-changed loop.
+   */
+  ngAfterViewChecked(): void {
+    this.updateTabScrollHint();
+  }
+
+  /**
+   * Recomputes whether any tab is still hidden past the right edge. Called on
+   * scroll, on resize, and after the tab list changes (tabs are permission- and
+   * data-gated, so the count varies per user and per project).
+   */
+  updateTabScrollHint(): void {
+    const el = this.tabBar?.nativeElement;
+    // 4px slack: sub-pixel widths otherwise leave the hint stuck on at the end.
+    const next = el ? el.scrollWidth - el.clientWidth - el.scrollLeft > 4 : false;
+    // Only assign on change — ngAfterViewChecked runs constantly, and an
+    // unconditional write would trip ExpressionChangedAfterItHasBeenChecked.
+    if (next !== this.tabsCanScrollRight) {
+      this.tabsCanScrollRight = next;
+    }
+  }
+
+  onTabBarScroll(): void {
+    this.updateTabScrollHint();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateTabScrollHint();
+  }
+
+  /** Nudge the strip along by most of a screen so the next tabs come into view. */
+  scrollTabsRight(): void {
+    const el = this.tabBar?.nativeElement;
+    if (!el) return;
+    el.scrollBy({ left: Math.max(el.clientWidth * 0.7, 140), behavior: 'smooth' });
+  }
+
   switchTab(tab: TabKey): void {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
@@ -2355,10 +2415,11 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
         this.isLoadingPrescriptionPreview = false;
         return;
       }
-      // Native: the WebView cannot render a PDF in an iframe, so pull the bytes
-      // down and hand the file to the OS viewer instead of showing a blank frame.
-      if (this.fileDelivery.needsNativeViewer && item.docType !== 'video' && this.isPdfLike(item)) {
-        this.openWithSystemViewer(item.url, item.fileName || item.title || 'prescription.pdf');
+      // Native + PDF/office doc: nothing renders those inline, so hand the file
+      // to the OS viewer. Images and video stay inline everywhere — the WebView
+      // renders them natively.
+      if (this.isNativeApp && this.needsExternalViewer(item)) {
+        this.openWithSystemViewer(item.url, item.fileName || item.title || 'prescription');
         return;
       }
       this.prescriptionPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
@@ -2378,9 +2439,10 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
-          // Native has no inline PDF renderer — open the generated PDF in the
-          // device's viewer and close the (otherwise blank) overlay.
-          if (this.fileDelivery.needsNativeViewer) {
+          // Native: open the generated PDF in the device's viewer. The bytes go
+          // to the app cache (not Documents) purely so the OS has a file handle
+          // to open — nothing is saved to the user's storage.
+          if (this.isNativeApp) {
             const name = `${(item.title || 'prescription').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'prescription'}.pdf`;
             this.isLoadingPrescriptionPreview = false;
             this.closePrescriptionOverlay();
@@ -3255,8 +3317,9 @@ export class FarmProjectDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
-          // Native has no inline PDF renderer — hand off to the device viewer.
-          if (this.fileDelivery.needsNativeViewer) {
+          // Native: open in the device's PDF viewer. Cached only so the OS has a
+          // file handle — nothing lands in the user's Documents.
+          if (this.isNativeApp) {
             const name = `${(report.farmerName || 'report').replace(/[^a-z0-9\-_ ]+/gi, '').replace(/\s+/g, '_').slice(0, 60) || 'report'}.pdf`;
             this.isLoadingReportPreview = false;
             this.closeReportOverlay();

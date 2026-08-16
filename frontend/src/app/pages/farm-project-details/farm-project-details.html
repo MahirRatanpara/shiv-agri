@@ -69,7 +69,11 @@
     </div>
   </section>
 
-  <nav class="tab-bar" *ngIf="!isLoading && project" role="tablist">
+  <!-- Wrapper exists so the scroll affordance can sit over the strip: with 7 tabs
+       and a hidden scrollbar there was nothing to show that Prescriptions,
+       Reports and Quotation & Payments existed off-screen. -->
+  <div class="tab-bar-shell" *ngIf="!isLoading && project" [class.has-more]="tabsCanScrollRight">
+    <nav class="tab-bar" #tabBar (scroll)="onTabBarScroll()" role="tablist">
     <button
       class="tab-btn"
       [class.active]="activeTab === 'overview'"
@@ -151,7 +155,17 @@
       Quotation &amp; Payments
       <span class="tab-count" *ngIf="quotationHistory.length">{{ quotationHistory.length }}</span>
     </button>
-  </nav>
+    </nav>
+    <button
+      type="button"
+      class="tab-scroll-hint"
+      *ngIf="tabsCanScrollRight"
+      (click)="scrollTabsRight()"
+      aria-label="Show more sections"
+    >
+      <i class="fas fa-chevron-right" aria-hidden="true"></i>
+    </button>
+  </div>
 
   <ng-container *ngIf="!isLoading && project && activeTab === 'overview'">
 
@@ -2396,7 +2410,7 @@
             [disabled]="downloadingPrescriptionId === prescriptionId(activePrescription)"
           >
             <i class="fas" [class.fa-download]="downloadingPrescriptionId !== prescriptionId(activePrescription)" [class.fa-circle-notch]="downloadingPrescriptionId === prescriptionId(activePrescription)" [class.fa-spin]="downloadingPrescriptionId === prescriptionId(activePrescription)"></i>
-            <span>Download PDF</span>
+            <span>{{ prescriptionDownloadLabel }}</span>
           </button>
           <button
             type="button"
@@ -2421,24 +2435,20 @@
           controls
           playsinline
         ></video>
+        <!-- Images render natively in the WebView; use <img> so they scale to fit
+             instead of sitting in a scrollable sub-document. -->
+        <img
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && isImagePrescription"
+          class="report-overlay-image"
+          [src]="prescriptionPreviewUrl"
+          [alt]="activePrescription?.fileName || activePrescription?.title || 'Prescription image'"
+        />
         <iframe
-          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video' && canEmbedPrescriptionPreview"
+          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video' && !isImagePrescription"
           class="report-overlay-frame"
           [src]="prescriptionPreviewUrl"
           title="Prescription preview"
         ></iframe>
-        <!-- Android/iOS WebViews cannot render PDFs inline — an iframe here paints a
-             blank white box. Offer the download instead of a dead frame. -->
-        <div
-          class="report-overlay-fallback"
-          *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && activePrescription?.docType !== 'video' && !canEmbedPrescriptionPreview"
-        >
-          <i class="fas fa-file-pdf" aria-hidden="true"></i>
-          <p class="report-overlay-fallback-title">Preview isn't available in the app</p>
-          <p class="report-overlay-fallback-sub">
-            Tap <strong>Download PDF</strong> above to open this file in your device's PDF viewer.
-          </p>
-        </div>
       </div>
     </div>
   </div>

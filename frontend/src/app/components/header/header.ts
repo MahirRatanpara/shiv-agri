@@ -1,5 +1,6 @@
 import { Component, AfterViewInit, HostListener, OnInit } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import {CommonModule, NgOptimizedImage} from '@angular/common';
 import { AuthService, User } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
@@ -35,6 +36,18 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Collapse the mobile menu on every completed navigation.
+    //
+    // This replaces per-link click listeners attached once in ngAfterViewInit:
+    // those were bound to whichever .nav-link elements existed at that moment, so
+    // links rendered later by *ngIf (Lab, Farms, Managerial Work, the Admin
+    // submenu — all permission-gated) never got a listener and left the menu open.
+    // Reacting to the router covers every link, now and later, plus programmatic
+    // navigation.
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe(() => this.closeMobileMenu());
+
     // Subscribe to current user changes
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
@@ -142,15 +155,6 @@ export class HeaderComponent implements AfterViewInit, OnInit {
           menu.classList.toggle('show');
         });
 
-        // Close menu when clicking on nav links
-        const navLinks = menu.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-          link.addEventListener('click', () => {
-            menu.classList.remove('show');
-            toggler.setAttribute('aria-expanded', 'false');
-          });
-        });
-
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
           const target = e.target as HTMLElement;
@@ -161,6 +165,15 @@ export class HeaderComponent implements AfterViewInit, OnInit {
         });
       }
     }, 100);
+  }
+
+  /** Collapse the mobile nav, wherever it was opened from. */
+  private closeMobileMenu(): void {
+    const menu = document.querySelector('#navbarSupportedContent');
+    const toggler = document.querySelector('.navbar-toggler');
+    menu?.classList.remove('show');
+    toggler?.setAttribute('aria-expanded', 'false');
+    this.closeAdminMenu();
   }
 
   onProfileImageError(): void {
