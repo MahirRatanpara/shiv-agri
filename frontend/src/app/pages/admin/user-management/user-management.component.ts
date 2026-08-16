@@ -241,6 +241,69 @@ export class UserManagementComponent implements OnInit {
     return this.editingUserId === user._id;
   }
 
+  // ---------- Add user (admin-only pre-authorisation) ----------
+  // Sign-in is invite-only: the backend refuses any email/phone that has no
+  // account. Registering a farm provisions the farmer automatically, so this
+  // form is for everyone else — staff, or a farmer with no farm yet.
+  isAddUserOpen = false;
+  isCreatingUser = false;
+  newUserDraft: { name: string; email: string; phone: string; phoneCountryCode: string; role: string } =
+    { name: '', email: '', phone: '', phoneCountryCode: '+91', role: 'user' };
+
+  openAddUser(): void {
+    this.newUserDraft = { name: '', email: '', phone: '', phoneCountryCode: '+91', role: 'user' };
+    this.isAddUserOpen = true;
+  }
+
+  cancelAddUser(): void {
+    this.isAddUserOpen = false;
+    this.isCreatingUser = false;
+  }
+
+  createUser(): void {
+    if (this.isCreatingUser) return;
+    const draft = this.newUserDraft;
+    const name = draft.name.trim();
+    const email = draft.email.trim();
+    const phone = draft.phone.trim();
+
+    if (!name) {
+      this.toastService.show('Enter the person\'s name.', 'warning');
+      return;
+    }
+    if (!email && !phone) {
+      this.toastService.show('Add an email address, a mobile number, or both.', 'warning');
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.toastService.show('Enter a valid email address (or leave blank).', 'warning');
+      return;
+    }
+    if (phone && phone.replace(/\D/g, '').length < 10) {
+      this.toastService.show('Phone number must have at least 10 digits.', 'warning');
+      return;
+    }
+
+    this.isCreatingUser = true;
+    this.userService.createUser({
+      name,
+      ...(email ? { email } : {}),
+      ...(phone ? { phone, phoneCountryCode: draft.phoneCountryCode } : {}),
+      role: draft.role
+    }).subscribe({
+      next: (res) => {
+        this.isCreatingUser = false;
+        this.isAddUserOpen = false;
+        this.toastService.show(res.message || `${name} can now sign in.`, 'success');
+        this.loadUsers();
+      },
+      error: (err) => {
+        this.isCreatingUser = false;
+        this.toastService.show(err?.error?.error || 'Failed to add user.', 'error');
+      }
+    });
+  }
+
   saveIdentity(user: User): void {
     if (this.isSavingIdentity) return;
     const draft = this.identityDraft;

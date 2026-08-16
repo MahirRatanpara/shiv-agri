@@ -33,7 +33,7 @@ This guide covers the phone-number + WhatsApp-OTP login flow added alongside the
                                                  └──────────┬───────────┘
                                                             │
 ┌──────────┐  POST /api/auth/otp/verify    ◄────────────────┘
-│ Frontend │ ───────────────────────────────► verify hash, find-or-create user,
+│ Frontend │ ───────────────────────────────► verify hash, match known user,
 │ (Angular)│  { phoneCountryCode, phoneNumber, otp }       issue JWT
 └──────────┘                                  ◄───────  { accessToken, user }
 ```
@@ -111,7 +111,7 @@ WHATSAPP_OTP_TEMPLATE_HAS_BUTTON=true
 
 # Defaults
 DEFAULT_PHONE_COUNTRY_CODE=+91
-DEFAULT_PHONE_SIGNUP_ROLE=user
+DEFAULT_PHONE_SIGNUP_ROLE=user   # legacy — unused since sign-in became invite-only
 ```
 
 The notification-service itself still needs `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` (see `notification-service/README.md` §3).
@@ -195,7 +195,15 @@ All routes are public (no JWT required) and live under `/api/auth/otp/...`.
 1. The phone is normalized to `<countryDigits><nationalDigits>` (e.g. `919876543210`).
 2. The backend looks for an existing user with `metadata.phoneNumberNormalized` matching.
 3. **Found** → mark `phoneVerified = true`, refresh `lastLogin`, populate role, issue a session (see §10).
-4. **Not found** → auto-create a user with `name: "New User"`, `role: "user"`, `phoneVerified: true`, link to the matching `Role` document, issue a session (201).
+4. **Not found** → **403 `NOT_REGISTERED`**. Sign-in is invite-only; accounts are
+   never created by logging in.
+
+> **Invite-only access.** `POST /api/auth/otp/request` also refuses unknown
+> numbers, *before* any WhatsApp message is dispatched — so a stranger cannot
+> make the system send messages, and no OTP cost is incurred. An account must
+> exist first, created either by an admin (**User Management → Add User**,
+> `POST /api/users`) or implicitly by registering a farm against that number
+> (§11). The same gate applies to Google sign-in in `authController`.
 
 A user pre-provisioned by a manager (§11) is found by phone here, so the farmer's first phone-OTP login lands on the existing account and inherits every farm created for them.
 

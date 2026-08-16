@@ -202,6 +202,38 @@
   .navbar-collapse .nav-link:hover {
     background-color: rgba(255, 255, 255, 0.1);
   }
+
+  /* Admin submenu inside the collapsed menu.
+     Its default styling is a desktop dropdown — white card, dark text,
+     absolutely positioned — which rendered as a floating white block over the
+     dark mobile menu. Here it becomes an inline, indented continuation of the
+     list instead. */
+  .navbar-collapse .admin-submenu {
+    background: rgba(255, 255, 255, 0.06);
+    border: 0;
+    border-left: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    box-shadow: none;
+    margin: 2px 0 6px 12px;
+    min-width: 0;
+    padding: 4px 0;
+    position: static;
+    width: calc(100% - 12px);
+  }
+
+  .navbar-collapse .admin-submenu .nav-link {
+    color: #ffffff !important;
+    font-size: 0.92rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .navbar-collapse .admin-submenu .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .navbar-collapse .admin-submenu .nav-link i {
+    color: rgba(255, 255, 255, 0.75);
+  }
 }
 
 /* Tablet (768px and below) */

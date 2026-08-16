@@ -53,7 +53,20 @@ const googleLogin = async (req, res) => {
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
     let isNewUser = false;
 
+    // Invite-only (INVITE_ONLY_LOGIN, default true): a valid Google identity is
+    // not enough. The account must have been provisioned first — by an admin in
+    // User Management, or implicitly by a manager registering a farm against
+    // this email. Otherwise anyone with a Google account could get in.
+    if (!user && features.inviteOnlyLogin) {
+      console.warn(`Rejected Google sign-in for unregistered email: ${email}`);
+      return res.status(403).json({
+        error: 'This account is not registered. Please contact Shiv Agri Consultancy to request access.',
+        reason: 'NOT_REGISTERED'
+      });
+    }
+
     if (!user) {
+      // Open sign-up mode — original behaviour.
       isNewUser = true;
       user = new User({
         googleId,
@@ -146,7 +159,17 @@ const googleLoginWithCode = async (req, res) => {
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
     let isNewUser = false;
 
+    // Invite-only — see googleLogin above. Same gate on the web auth-code flow.
+    if (!user && features.inviteOnlyLogin) {
+      console.warn(`Rejected Google sign-in for unregistered email: ${email}`);
+      return res.status(403).json({
+        error: 'This account is not registered. Please contact Shiv Agri Consultancy to request access.',
+        reason: 'NOT_REGISTERED'
+      });
+    }
+
     if (!user) {
+      // Open sign-up mode — original behaviour.
       isNewUser = true;
       user = new User({
         googleId,
