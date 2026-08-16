@@ -19,7 +19,7 @@ export type CdnManifest = Record<string, CdnManifestEntry>;
  *
  * Static media (marketing videos, large imagery) is no longer bundled into the web
  * build or the native app packages — it lives on the VPS and is streamed on demand.
- * A key is just the path under static-assets/, e.g. 'videos/home-about.mov'.
+ * A key is just the path under static-assets/, e.g. 'videos/home-about.mp4'.
  */
 @Injectable({ providedIn: 'root' })
 export class CdnService {

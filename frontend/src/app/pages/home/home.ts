@@ -45,7 +45,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly aboutVideoUrl: string;
 
   constructor(private http: HttpClient, private cdn: CdnService) {
-    this.aboutVideoUrl = this.cdn.url('videos/home-about.mov');
+    this.aboutVideoUrl = this.cdn.url('videos/home-about.mp4');
   }
 
   ngOnInit(): void {

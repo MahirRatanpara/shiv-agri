@@ -6,9 +6,6 @@ import com.shivagri.media.config.CdnProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRange;
@@ -21,7 +18,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +61,13 @@ public class CdnController {
      *
      * @param key the CDN key — everything after /api/v1/cdn/, e.g. "videos/home-about.mov"
      */
+    // NOTE: the declared generic here is load-bearing. Spring resolves the handler's
+    // declared return type to pick a message converter, so a wildcard (ResponseEntity<?>)
+    // or Object leaves it unable to match anything for a body — which is exactly how the
+    // earlier ResourceRegion attempt failed with "No converter for [ResourceRegion]".
+    // StreamingResponseBody sidesteps converters entirely: we write the bytes ourselves.
     @GetMapping("/cdn/{*key}")
-    public ResponseEntity<?> serve(
+    public ResponseEntity<StreamingResponseBody> serve(
             @PathVariable("key") String key,
             @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch,
@@ -103,7 +111,8 @@ public class CdnController {
      * Hand the file off to nginx. The body stays empty — nginx replaces it with the file
      * contents and adds Content-Length/Accept-Ranges, honouring any Range header itself.
      */
-    private ResponseEntity<Void> serveViaAccel(StaticAsset asset, String disposition, String rangeHeader) {
+    private ResponseEntity<StreamingResponseBody> serveViaAccel(StaticAsset asset, String disposition,
+                                                                String rangeHeader) {
         String internalPath = properties.getAccel().getInternalPrefix()
                 + staticAssetService.encodeForAccel(asset.key());
 
@@ -121,16 +130,15 @@ public class CdnController {
     }
 
     /** Stream from the JVM, honouring Range so playback starts without a full download. */
-    private ResponseEntity<?> serveFromJava(StaticAsset asset, String disposition,
-                                            String rangeHeader, HttpServletRequest request) {
-        Resource resource = new FileSystemResource(asset.path());
+    private ResponseEntity<StreamingResponseBody> serveFromJava(StaticAsset asset, String disposition,
+                                                                String rangeHeader, HttpServletRequest request) {
         long length = asset.sizeBytes();
 
         if (rangeHeader == null || rangeHeader.isBlank()) {
             log.info("CDN stream(full): key={} size={} ua={}", asset.key(), length, userAgent(request));
             return baseHeaders(HttpStatus.OK, asset, disposition)
                     .contentLength(length)
-                    .body(resource);
+                    .body(slice(asset, 0, length));
         }
 
         List<HttpRange> ranges;
@@ -138,13 +146,13 @@ public class CdnController {
             ranges = HttpRange.parseRanges(rangeHeader);
         } catch (IllegalArgumentException e) {
             log.warn("CDN malformed Range '{}' for key={}", rangeHeader, asset.key());
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + length)
-                    .build();
+            return unsatisfiable(length);
         }
 
         if (ranges.isEmpty()) {
-            return baseHeaders(HttpStatus.OK, asset, disposition).contentLength(length).body(resource);
+            return baseHeaders(HttpStatus.OK, asset, disposition)
+                    .contentLength(length)
+                    .body(slice(asset, 0, length));
         }
 
         // Only the first range is served. Multipart/byteranges is legal but no browser
@@ -155,24 +163,59 @@ public class CdnController {
 
         if (start >= length) {
             log.warn("CDN unsatisfiable Range start={} size={} key={}", start, length, asset.key());
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + length)
-                    .build();
+            return unsatisfiable(length);
         }
 
         // Cap the slice: an open-ended "bytes=0-" on a 51 MB file would otherwise tie up
-        // one servlet thread for the entire transfer. Returning less than asked for is
+        // one connection for the entire transfer. Returning less than asked for is
         // allowed — the client simply issues another Range request for the remainder.
         long requested = end - start + 1;
         long served = Math.min(requested, properties.getChunkSizeBytes());
-        ResourceRegion region = new ResourceRegion(resource, start, served);
 
         log.info("CDN stream(range): key={} bytes={}-{}/{} served={}",
                 asset.key(), start, start + served - 1, length, served);
 
-        // Content-Range is written by ResourceRegionHttpMessageConverter from the region.
         return baseHeaders(HttpStatus.PARTIAL_CONTENT, asset, disposition)
-                .body(region);
+                .header(HttpHeaders.CONTENT_RANGE,
+                        "bytes " + start + "-" + (start + served - 1) + "/" + length)
+                .contentLength(served)
+                .body(slice(asset, start, served));
+    }
+
+    private ResponseEntity<StreamingResponseBody> unsatisfiable(long length) {
+        return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                .header(HttpHeaders.CONTENT_RANGE, "bytes */" + length)
+                .build();
+    }
+
+    /**
+     * Copies {@code count} bytes starting at {@code offset} straight to the response.
+     *
+     * <p>FileChannel.transferTo lets the kernel move the data without round-tripping it
+     * through heap buffers — the closest equivalent to nginx's sendfile on the fallback
+     * path. The output channel is intentionally not closed: the servlet container owns
+     * the response stream.
+     */
+    private StreamingResponseBody slice(StaticAsset asset, long offset, long count) {
+        return outputStream -> {
+            try (FileChannel channel = FileChannel.open(asset.path(), StandardOpenOption.READ)) {
+                WritableByteChannel target = Channels.newChannel(outputStream);
+                long transferred = 0;
+                while (transferred < count) {
+                    long n = channel.transferTo(offset + transferred, count - transferred, target);
+                    if (n <= 0) {
+                        break;
+                    }
+                    transferred += n;
+                }
+                outputStream.flush();
+            } catch (IOException e) {
+                // Seeking or closing a video aborts the connection mid-transfer. That is
+                // normal client behaviour, not a server fault — log quietly and move on.
+                log.debug("CDN transfer aborted: key={} offset={} count={} ({})",
+                        asset.key(), offset, count, e.getMessage());
+            }
+        };
     }
 
     private ResponseEntity.BodyBuilder baseHeaders(HttpStatus status, StaticAsset asset, String disposition) {
