@@ -12,6 +12,7 @@ const localHost = Capacitor.getPlatform() === 'android' ? '10.0.2.2' : 'localhos
 export const environment = {
   production: false,
   apiUrl: `http://${localHost}:3000/api`,
+  cdnUrl: `http://${localHost}:8081/api/v1/cdn`,
   googleClientId: '965745303258-9t1i0v8rh9j25ecbhk1ft6l5jk8q1nv1.apps.googleusercontent.com',
   googleIosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com'
 };

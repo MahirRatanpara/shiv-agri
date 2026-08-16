@@ -33,6 +33,14 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("NOT_FOUND", ex.getMessage(), Instant.now()));
     }
 
+    @ExceptionHandler(StaticAssetNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStaticAssetNotFound(StaticAssetNotFoundException ex) {
+        // Logged at debug in the service with the key; a missing CDN asset is a routine
+        // client-side event (stale cache, typo'd key) and should not spam warn-level logs.
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("ASSET_NOT_FOUND", ex.getMessage(), Instant.now()));
+    }
+
     @ExceptionHandler(FileValidationException.class)
     public ResponseEntity<ErrorResponse> handleFileValidation(FileValidationException ex) {
         log.warn("File validation failed: {}", ex.getMessage());

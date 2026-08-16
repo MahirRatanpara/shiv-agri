@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FooterComponent } from '../../components/footer/footer';
+import { CdnService } from '../../services/cdn.service';
 
 declare var $: any;
 
@@ -40,7 +41,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   private keyboardHandler: ((event: KeyboardEvent) => void) | null = null;
   private isCarouselNavigating: boolean = false;
 
-  constructor(private http: HttpClient) {}
+  /** Drone-footage clip on the About section, streamed from the CDN. */
+  readonly aboutVideoUrl: string;
+
+  constructor(private http: HttpClient, private cdn: CdnService) {
+    this.aboutVideoUrl = this.cdn.url('videos/home-about.mp4');
+  }
 
   ngOnInit(): void {
     this.loadCarouselSlides();
@@ -53,7 +59,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.http.get<CarouselSlide[]>('assets/data/carousel-slides.json').subscribe({
       next: (slides) => {
 
-        this.carouselSlides = slides;
+        // JSON holds CDN keys ('images/home-crousal/...'); resolve to absolute URLs.
+        this.carouselSlides = slides.map((slide) => ({
+          ...slide,
+          image: this.cdn.url(slide.image),
+        }));
         // Reinitialize carousel after slides are loaded
         setTimeout(() => {
           this.initializeOwlCarousel();
@@ -71,9 +81,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       next: (projects) => {
 
         // Filter out invalid projects (must have at least a title or id)
-        this.projects = projects.filter(project =>
-          project && (project.title || project.id)
-        );
+        this.projects = projects
+          .filter(project => project && (project.title || project.id))
+          .map(project => ({
+            ...project,
+            // Leave a missing image undefined — the template keys its
+            // *ngIf="project.image" layout off that.
+            image: project.image ? this.cdn.url(project.image) : project.image,
+          }));
 
       },
       error: (error) => {
@@ -88,7 +103,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.http.get<string[]>('assets/data/mini-photos.json').subscribe({
       next: (photos) => {
 
-        this.miniPhotos = photos;
+        this.miniPhotos = photos.map((photo) => this.cdn.url(photo));
       },
       error: (error) => {
 

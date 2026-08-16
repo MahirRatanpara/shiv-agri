@@ -1,0 +1,134 @@
+name: Sync CDN Static Assets
+
+# Pushes static-assets/ to the VPS at /var/media/static, where media-service serves it
+# from /api/v1/cdn/**.
+#
+# No image rebuild and no container restart: media-service reads the files off a
+# read-only bind mount and re-reads manifest.json whenever its mtime changes. Editing
+# a video is a content change, not a deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'static-assets/**'
+      - 'scripts/generate-cdn-manifest.mjs'
+      - '.github/workflows/sync-cdn.yml'
+  workflow_dispatch:
+    inputs:
+      prune:
+        description: 'Delete remote files that no longer exist in static-assets/?'
+        required: true
+        type: choice
+        default: 'no'
+        options:
+          - 'no'
+          - 'yes'
+
+concurrency:
+  # Two overlapping rsyncs into the same directory can interleave partial files.
+  group: sync-cdn
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate manifest
+        run: |
+          echo "═══════════════════════════════════════════════════════"
+          echo "  Building CDN manifest"
+          echo "═══════════════════════════════════════════════════════"
+          node scripts/generate-cdn-manifest.mjs static-assets static-assets/manifest.json
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Ensure remote directory exists
+        run: |
+          ssh -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            'sudo mkdir -p /var/media/static && sudo chown -R $USER:$USER /var/media/static'
+
+      - name: Sync static assets
+        run: |
+          PRUNE=""
+          if [ "${{ github.event.inputs.prune }}" = "yes" ]; then
+            PRUNE="--delete"
+            echo "⚠ Prune enabled — remote files absent from static-assets/ will be DELETED"
+          fi
+
+          echo "═══════════════════════════════════════════════════════"
+          echo "  Syncing static-assets/ → /var/media/static/"
+          echo "═══════════════════════════════════════════════════════"
+
+          # --checksum, not mtime: a fresh git checkout stamps every file with the
+          # clone time, so mtime comparison would re-upload the entire tree each run.
+          # --chmod forces world-readable perms because nginx and media-service run
+          # as different uids than the SSH user that wrote the files.
+          rsync -rlvz \
+            --checksum \
+            --human-readable \
+            --chmod=D755,F644 \
+            --exclude='.DS_Store' \
+            --exclude='.gitkeep' \
+            $PRUNE \
+            -e "ssh -i ~/.ssh/id_rsa" \
+            static-assets/ \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/media/static/"
+
+      - name: Verify on server
+        run: |
+          ssh -i ~/.ssh/id_rsa "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" '
+            echo "Remote /var/media/static:"
+            du -sh /var/media/static
+            echo ""
+            echo "Files:"
+            find /var/media/static -type f -printf "  %-50p %10s bytes\n" | sort
+            echo ""
+            if [ -f /var/media/static/manifest.json ]; then
+              echo "✓ manifest.json present"
+            else
+              echo "✗ manifest.json MISSING"
+              exit 1
+            fi
+          '
+
+      - name: Smoke test public CDN
+        run: |
+          # Non-fatal: the sync itself already succeeded. This just surfaces an
+          # nginx/mount misconfiguration in the workflow log instead of in prod.
+          echo "Checking https://shivagri.com/api/v1/cdn-manifest ..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://shivagri.com/api/v1/cdn-manifest || echo "000")
+          echo "  manifest endpoint → HTTP $STATUS"
+
+          echo "Checking Range support on a known asset ..."
+          RANGE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Range: bytes=0-1023" \
+            "https://shivagri.com/api/v1/cdn/videos/home-about.mov" || echo "000")
+          echo "  range request → HTTP $RANGE_STATUS (expect 206)"
+
+          if [ "$STATUS" != "200" ] || [ "$RANGE_STATUS" != "206" ]; then
+            echo ""
+            echo "⚠ CDN not responding as expected. Assets ARE synced; check that:"
+            echo "  - nginx has the /api/v1/cdn and /internal-static/ locations"
+            echo "  - nginx mounts /var/media/static"
+            echo "  - media-service has MEDIA_CDN_ACCEL_ENABLED=true"
+            echo "  - both containers were recreated after the compose change"
+          fi
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa

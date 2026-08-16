@@ -1,6 +1,9 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:3000/api',
+  // Static CDN served by media-service. Points straight at the service in web dev
+  // (no nginx locally); prod goes through nginx on the main domain.
+  cdnUrl: 'http://localhost:8081/api/v1/cdn',
   // Web/"server" OAuth client ID. Used by web GSI, and as webClientId +
   // iOSServerClientId for native sign-in so the ID token's audience matches
   // what the backend (/auth/google) verifies against.
