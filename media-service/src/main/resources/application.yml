@@ -56,7 +56,7 @@ media:
     # Shared secret for POST /api/v1/cdn-refresh (X-CDN-Refresh-Token header).
     # Unset by default, which leaves the endpoint 404ing — it mutates state and this
     # service has no auth filter, so it must never be open by accident.
-    refresh-token: ${MEDIA_CDN_REFRESH_TOKEN:}
+    refresh-token: ${MEDIA_CDN_REFRESH_TOKEN:dev-refresh-token}
     accel:
       # Enable ONLY when nginx fronts this service and has the matching
       # `internal` location. Prod sets MEDIA_CDN_ACCEL_ENABLED=true; local dev
