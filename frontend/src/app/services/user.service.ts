@@ -113,4 +113,20 @@ export class UserService {
       payload
     );
   }
+
+  /**
+   * Admin-only: pre-authorise a new account. Sign-in is invite-only — the login
+   * endpoints reject any email/phone with no User record — so this is how
+   * someone without a registered farm is given access. At least one of
+   * email/phone must be supplied; each must be unused (backend returns 409).
+   */
+  createUser(payload: {
+    name: string;
+    email?: string;
+    phone?: string;
+    phoneCountryCode?: string;
+    role?: string;
+  }): Observable<{ success: boolean; user: any; message?: string }> {
+    return this.http.post<{ success: boolean; user: any; message?: string }>(this.apiUrl, payload);
+  }
 }

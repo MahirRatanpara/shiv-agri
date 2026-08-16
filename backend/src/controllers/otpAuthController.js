@@ -14,6 +14,7 @@ const User = require('../models/User');
 const Role = require('../models/Role');
 const otpService = require('../services/otpService');
 const { deliverOtp, OTP_DELIVERY_MODE } = require('../services/otpDelivery');
+const { features } = require('../config/features');
 const { issueSession } = require('../utils/session');
 
 const DEFAULT_COUNTRY_CODE = process.env.DEFAULT_PHONE_COUNTRY_CODE || '+91';
@@ -68,6 +69,32 @@ const requestOtp = async (req, res) => {
     const normalizedKey = `${ccDigits}${nationalDigits}`;
     const e164 = `+${normalizedKey}`;
 
+    // Invite-only (INVITE_ONLY_LOGIN, default true): only send an OTP to a
+    // number that already belongs to a provisioned account. Checking before
+    // dispatch (rather than at verify) means a stranger can never make the
+    // system send WhatsApp messages — no message cost, and the business number
+    // can't be used to spam people.
+    //
+    // Note this gate is on the LOGIN endpoint only. A signed-in user attaching
+    // their first phone uses /api/auth/profile/phone/request-otp, which is
+    // authenticated and deliberately unaffected.
+    if (features.inviteOnlyLogin) {
+      const known = await User.findOne({
+        $or: [
+          { 'metadata.phoneNumberNormalized': normalizedKey },
+          { 'metadata.phoneNumberNormalized': nationalDigits }
+        ]
+      }).select('_id').lean();
+
+      if (!known) {
+        console.warn(`[${requestId}] OTP request refused — unregistered number ${e164}`);
+        return res.status(403).json({
+          error: 'This mobile number is not registered. Please contact Shiv Agri Consultancy to request access.',
+          reason: 'NOT_REGISTERED'
+        });
+      }
+    }
+
     const gate = otpService.canIssueOtp(normalizedKey);
     if (!gate.allowed) {
       console.warn(`[${requestId}] OTP request blocked for ${e164}: ${gate.reason}`);
@@ -119,7 +146,8 @@ const requestOtp = async (req, res) => {
  * POST /api/auth/otp/verify
  * Body: { phoneCountryCode, phoneNumber, otp }
  *
- * On success: returns JWT + user. Auto-creates user if phone is unknown.
+ * On success: returns JWT + user. Rejects unknown numbers — accounts are only
+ * created by an admin, or by registering a farm against the number.
  */
 const verifyOtp = async (req, res) => {
   const requestId = crypto.randomUUID();
@@ -165,7 +193,19 @@ const verifyOtp = async (req, res) => {
 
     let isNewUser = false;
 
+    // Defence in depth: requestOtp already refuses unregistered numbers, so
+    // reaching here without a user means the account was removed mid-flow (or
+    // someone replayed a code).
+    if (!user && features.inviteOnlyLogin) {
+      console.warn(`[${requestId}] OTP verify refused — no account for ${e164}`);
+      return res.status(403).json({
+        error: 'This mobile number is not registered. Please contact Shiv Agri Consultancy to request access.',
+        reason: 'NOT_REGISTERED'
+      });
+    }
+
     if (!user) {
+      // Open sign-up mode — original behaviour.
       isNewUser = true;
       user = new User({
         name: 'New User',

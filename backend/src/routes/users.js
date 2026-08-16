@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getAllUsers,
   getUser,
+  createUser,
   updateUserRole,
   updateUserIdentity,
   deleteUser,
@@ -47,6 +48,14 @@ router.get('/',
 router.get('/lookup/by-phone',
   requirePermission('users.view'),
   lookupUserByPhone
+);
+
+// Admin-only: pre-authorise a new account. The system is invite-only, so this
+// is the only way in for anyone who doesn't already have a farm registered.
+// Declared before '/:id' is irrelevant (different method) but kept grouped.
+router.post('/',
+  requireAdmin,
+  createUser
 );
 
 // Get user by ID

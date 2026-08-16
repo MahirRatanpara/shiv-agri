@@ -29,6 +29,120 @@
   margin: 0;
 }
 
+.add-user-btn {
+  align-items: center;
+  background: #15803D;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 700;
+  gap: 8px;
+  margin-top: 14px;
+  min-height: 42px;
+  padding: 0 20px;
+}
+
+.add-user-btn:hover {
+  background: #166534;
+}
+
+.add-user-panel {
+  background: #F0FDF4;
+  border: 1px solid #DCFCE7;
+  border-radius: 14px;
+  margin-bottom: 24px;
+  padding: 20px;
+}
+
+.add-user-panel h2 {
+  align-items: center;
+  color: #14532D;
+  display: flex;
+  font-size: 1.2rem;
+  gap: 10px;
+  margin: 0 0 6px;
+}
+
+.add-user-hint {
+  color: #4B5563;
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.add-user-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.add-user-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-user-field > span {
+  color: #14532D;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.add-user-field em {
+  color: #6B7280;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.add-user-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.add-user-actions .btn-save,
+.add-user-actions .btn-cancel {
+  align-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 20px;
+}
+
+.add-user-actions .btn-save {
+  background: #15803D;
+  border: 0;
+  color: #ffffff;
+}
+
+.add-user-actions .btn-save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.add-user-actions .btn-cancel {
+  background: #ffffff;
+  border: 1px solid #D1D5DB;
+  color: #374151;
+}
+
+@media (max-width: 575.98px) {
+  .add-user-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-user-actions .btn-save,
+  .add-user-actions .btn-cancel {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 .filters-section {
   display: flex;
   gap: 20px;

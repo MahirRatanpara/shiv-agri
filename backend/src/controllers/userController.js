@@ -357,9 +357,116 @@ const updateUserIdentity = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/users  (admin only)
+ *
+ * Pre-authorises someone to sign in. The system is invite-only: the login
+ * endpoints refuse any identity that has no User record, so this is how staff
+ * and farmers without a farm get access. (Registering a farm already
+ * pre-provisions the client — see projectService.findOrCreateFarmerByPhone.)
+ *
+ * Body: { name, email?, phone?, phoneCountryCode?, role? } — at least one of
+ * email or phone is required, since those are the two ways to authenticate.
+ */
+const createUser = async (req, res) => {
+  try {
+    const { name, email, phone, phoneCountryCode, role } = req.body || {};
+
+    const cleanName = String(name || '').trim();
+    const cleanEmail = email == null ? '' : String(email).trim().toLowerCase();
+    const rawPhone = phone == null ? '' : String(phone).trim();
+
+    if (!cleanName) {
+      return res.status(400).json({ error: 'Name is required.' });
+    }
+    if (!cleanEmail && !rawPhone) {
+      return res.status(400).json({ error: 'Provide an email address, a mobile number, or both.' });
+    }
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+
+    // ---- Phone normalisation, mirroring updateUserIdentity ----
+    let phoneFields = null;
+    if (rawPhone) {
+      const allDigits = normalizePhoneNumber(rawPhone);
+      if (allDigits.length < 10) {
+        return res.status(400).json({ error: 'Phone number must have at least 10 digits.' });
+      }
+      const cc = String(phoneCountryCode || '').trim() || (allDigits.length === 10 ? '+91' : '');
+      const ccDigits = cc.replace(/\D/g, '');
+      const normalizedKey = ccDigits && !allDigits.startsWith(ccDigits)
+        ? ccDigits + allDigits
+        : allDigits;
+      phoneFields = {
+        phoneCountryCode: cc || '+91',
+        phoneNumber: rawPhone,
+        phoneNumberNormalized: normalizedKey
+      };
+    }
+
+    // ---- Uniqueness: both identities are 1-1 with an account ----
+    if (cleanEmail) {
+      const taken = await User.findOne({ email: cleanEmail }).select('_id').lean();
+      if (taken) {
+        return res.status(409).json({ error: 'This email is already linked to an account.' });
+      }
+    }
+    if (phoneFields) {
+      const taken = await User.findOne({
+        'metadata.phoneNumberNormalized': phoneFields.phoneNumberNormalized
+      }).select('_id').lean();
+      if (taken) {
+        return res.status(409).json({ error: 'This phone number is already linked to an account.' });
+      }
+    }
+
+    const requestedRole = String(role || 'user').trim() || 'user';
+    const roleDoc = await Role.findOne({ name: requestedRole });
+    if (!roleDoc) {
+      return res.status(400).json({ error: `Unknown role "${requestedRole}".` });
+    }
+
+    const user = new User({
+      name: cleanName,
+      email: cleanEmail || undefined,
+      role: requestedRole,
+      roleRef: roleDoc._id,
+      // Not verified yet — that happens when they complete an OTP sign-in.
+      phoneVerified: false,
+      ...(phoneFields ? { metadata: phoneFields } : {})
+    });
+
+    try {
+      await user.save();
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({ error: 'Email or phone already in use by another account.' });
+      }
+      throw err;
+    }
+
+    logger.info(`Admin ${req.user?._id} pre-authorised user ${user._id} (${cleanEmail || phoneFields?.phoneNumber})`);
+
+    const fresh = await User.findById(user._id)
+      .populate({ path: 'roleRef', select: 'name displayName' })
+      .select('_id name email role profilePhoto createdAt metadata');
+
+    res.status(201).json({
+      success: true,
+      message: 'User added. They can now sign in with the email or mobile number you provided.',
+      user: fresh
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to add user' });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUser,
+  createUser,
   updateUserRole,
   updateUserIdentity,
   deleteUser,

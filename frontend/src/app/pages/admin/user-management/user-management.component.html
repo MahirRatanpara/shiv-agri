@@ -5,6 +5,62 @@
       User Management
     </h1>
     <p class="subtitle">Manage user roles and permissions</p>
+    <button type="button" class="add-user-btn" (click)="openAddUser()" *ngIf="!isAddUserOpen">
+      <i class="fas fa-user-plus" aria-hidden="true"></i>
+      Add User
+    </button>
+  </div>
+
+  <!-- Invite-only access: sign-in is refused for any email/phone without an
+       account here. Registering a farm provisions the farmer automatically;
+       this form covers everyone else. -->
+  <div class="add-user-panel" *ngIf="isAddUserOpen">
+    <h2><i class="fas fa-user-plus" aria-hidden="true"></i> Add a user</h2>
+    <p class="add-user-hint">
+      Only people listed here can sign in. Provide an email (for Google sign-in),
+      a mobile number (for WhatsApp OTP), or both.
+    </p>
+
+    <div class="add-user-grid">
+      <label class="add-user-field">
+        <span>Name</span>
+        <input type="text" [(ngModel)]="newUserDraft.name" placeholder="Full name" class="form-control" />
+      </label>
+
+      <label class="add-user-field">
+        <span>Email <em>(optional)</em></span>
+        <input type="email" [(ngModel)]="newUserDraft.email" placeholder="name@example.com" class="form-control" />
+      </label>
+
+      <label class="add-user-field">
+        <span>Country code</span>
+        <select [(ngModel)]="newUserDraft.phoneCountryCode" class="form-control">
+          <option *ngFor="let opt of countryCodeOptions" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </label>
+
+      <label class="add-user-field">
+        <span>Mobile number <em>(optional)</em></span>
+        <input type="tel" [(ngModel)]="newUserDraft.phone" placeholder="9876543210" class="form-control" />
+      </label>
+
+      <label class="add-user-field">
+        <span>Role</span>
+        <select [(ngModel)]="newUserDraft.role" class="form-control">
+          <option *ngFor="let role of roles" [value]="role.name">{{ role.displayName || role.name }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="add-user-actions">
+      <button type="button" class="btn-save" (click)="createUser()" [disabled]="isCreatingUser">
+        <i class="fas" [class.fa-check]="!isCreatingUser" [class.fa-circle-notch]="isCreatingUser" [class.fa-spin]="isCreatingUser"></i>
+        {{ isCreatingUser ? 'Adding...' : 'Add user' }}
+      </button>
+      <button type="button" class="btn-cancel" (click)="cancelAddUser()" [disabled]="isCreatingUser">
+        Cancel
+      </button>
+    </div>
   </div>
 
   <div class="filters-section">
