@@ -45,8 +45,16 @@ services:
       SPRING_PROFILES_ACTIVE: filesystem
       SPRING_DATA_MONGODB_URI: ${MONGODB_URI}
       MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+      # Static CDN: served out of a separate root from user uploads, populated by the
+      # "Sync CDN Static Assets" workflow. accel=true because nginx fronts this service
+      # and owns the /internal-static/ location, so video bytes bypass the JVM entirely.
+      MEDIA_CDN_ROOT_DIR: /var/media/static
+      MEDIA_CDN_ACCEL_ENABLED: ${MEDIA_CDN_ACCEL_ENABLED:-true}
+      MEDIA_CDN_CACHE_MAX_AGE_SECONDS: ${MEDIA_CDN_CACHE_MAX_AGE_SECONDS:-604800}
     volumes:
       - /var/media/uploads:/var/media/uploads
+      # Read-only: the CDN never writes here, the sync workflow does.
+      - /var/media/static:/var/media/static:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -105,9 +113,14 @@ services:
     volumes:
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
+      # Required by the /internal-static/ location: nginx serves CDN bytes straight
+      # off this volume after media-service issues the X-Accel-Redirect. Without the
+      # mount every CDN request 404s inside nginx even though the file exists.
+      - /var/media/static:/var/media/static:ro
     depends_on:
       - api
       - frontend
+      - media-service
     networks:
       app-network:
         # Aliases let other containers resolve shivagri.com to nginx's internal IP,

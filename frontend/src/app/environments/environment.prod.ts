@@ -1,6 +1,9 @@
 export const environment = {
   production: true,
   apiUrl: 'https://shivagri.com/api',
+  // Static CDN served by media-service behind nginx. Absolute URL on purpose: the
+  // native apps load from capacitor://localhost and must reach the real host.
+  cdnUrl: 'https://shivagri.com/api/v1/cdn',
   // Web/"server" OAuth client ID. Used by web GSI, and as webClientId +
   // iOSServerClientId for native sign-in so the ID token's audience matches
   // what the backend (/auth/google) verifies against.

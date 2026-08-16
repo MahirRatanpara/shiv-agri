@@ -63,10 +63,17 @@ services:
       SPRING_PROFILES_ACTIVE: filesystem
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/shiv-agri
       MEDIA_STORAGE_FILESYSTEM_ROOT_DIR: /var/media/uploads
+      MEDIA_CDN_ROOT_DIR: /var/media/static
+      # No nginx in front locally, so the service streams the bytes itself
+      # (Range/206 from Java) instead of delegating via X-Accel-Redirect.
+      MEDIA_CDN_ACCEL_ENABLED: "false"
     ports:
       - "8081:8081"
     volumes:
       - /Users/mahirratanpara/shiv-agri-media:/var/media/uploads
+      # Serve the repo's static-assets tree directly in dev — edit a file and it is
+      # live on the next request, no sync workflow needed.
+      - ./static-assets:/var/media/static:ro
     depends_on:
       mongodb:
         condition: service_healthy
