@@ -18,6 +18,47 @@
 }
 
 /* Mobile menu toggle button */
+/* Login shortcut on the bar itself, so a signed-out visitor never has to open
+   the hamburger to find it. The desktop nav already shows Login in auth-nav, so
+   this is hidden from the lg breakpoint up (see the media query below). */
+.mobile-login-btn {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 7px;
+  letter-spacing: 0.3px;
+  margin-left: auto;
+  margin-right: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mobile-login-btn:hover,
+.mobile-login-btn:focus {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.mobile-login-btn i {
+  font-size: 14px;
+}
+
+@media (min-width: 992px) {
+  .mobile-login-btn {
+    display: none;
+  }
+}
+
 .navbar-toggler {
   padding: 0.5rem 0.75rem;
   font-size: 1.25rem;

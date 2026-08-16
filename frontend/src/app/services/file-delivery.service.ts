@@ -31,7 +31,12 @@ export class FileDeliveryService {
 
   /**
    * Show the file to the user. On web this opens a blob URL in a new tab; on
-   * native it writes the file and launches the system viewer.
+   * native it writes to the **app cache** and launches the system viewer.
+   *
+   * Cache, not Documents, is deliberate: viewing must not leave a file in the
+   * user's storage. Android reclaims the cache automatically, and the file is
+   * only there so the OS has a handle to open — there is no way to hand a
+   * viewer an authenticated remote URL without materialising the bytes first.
    */
   async open(blob: Blob, fileName: string, mimeType?: string): Promise<void> {
     const safeName = this.sanitizeFileName(fileName);
@@ -80,8 +85,9 @@ export class FileDeliveryService {
       recursive: true
     });
 
-    // Opening after writing is what makes the file reachable for most users —
-    // the app-scoped Documents dir is awkward to browse to by hand.
+    // Verified on-device: this lands in the public /storage/emulated/0/Documents,
+    // so the file stays after the app closes. Opening it right away just saves the
+    // user a trip to the Files app.
     try {
       await FileOpener.open({ filePath: written.uri, contentType: type });
     } catch {
