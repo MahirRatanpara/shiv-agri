@@ -88,6 +88,17 @@ public class CdnProperties {
     private long cacheMaxAgeSeconds = 604800; // 7 days
 
     /**
+     * Shared secret for POST /api/v1/cdn-refresh, supplied as the X-CDN-Refresh-Token
+     * header. Blank (the default) disables the endpoint entirely — it 404s exactly like
+     * an unmapped path.
+     *
+     * <p>Fail-closed on purpose: the endpoint mutates server state and this service sits
+     * behind no authentication filter, so an operator who forgets to set the secret gets
+     * no endpoint rather than an open one.
+     */
+    private String refreshToken = "";
+
+    /**
      * Largest slice returned for a single Range request on the Java streaming path.
      * A browser asking for "bytes=0-" on a 51 MB video gets this much and comes back
      * for more, which keeps a single request from pinning a servlet thread for the

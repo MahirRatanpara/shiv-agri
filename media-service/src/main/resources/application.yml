@@ -53,6 +53,10 @@ media:
     root-dir: ${MEDIA_CDN_ROOT_DIR:/var/media/static}
     cache-max-age-seconds: ${MEDIA_CDN_CACHE_MAX_AGE_SECONDS:604800}
     chunk-size-bytes: ${MEDIA_CDN_CHUNK_SIZE_BYTES:4194304}
+    # Shared secret for POST /api/v1/cdn-refresh (X-CDN-Refresh-Token header).
+    # Unset by default, which leaves the endpoint 404ing — it mutates state and this
+    # service has no auth filter, so it must never be open by accident.
+    refresh-token: ${MEDIA_CDN_REFRESH_TOKEN:}
     accel:
       # Enable ONLY when nginx fronts this service and has the matching
       # `internal` location. Prod sets MEDIA_CDN_ACCEL_ENABLED=true; local dev

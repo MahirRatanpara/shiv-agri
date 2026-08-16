@@ -3,6 +3,8 @@ package com.shivagri.media.controller;
 import com.shivagri.media.cdn.StaticAsset;
 import com.shivagri.media.cdn.StaticAssetService;
 import com.shivagri.media.config.CdnProperties;
+import com.shivagri.media.controller.dto.CdnRefreshResponse;
+import com.shivagri.media.exception.StaticAssetNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,8 +27,11 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +57,9 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class CdnController {
+
+    /** Shared-secret header for the refresh endpoint. */
+    static final String REFRESH_TOKEN_HEADER = "X-CDN-Refresh-Token";
 
     private final StaticAssetService staticAssetService;
     private final CdnProperties properties;
@@ -105,6 +114,53 @@ public class CdnController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
                 .body(manifest);
+    }
+
+    /**
+     * Force a re-read of manifest.json, ignoring the mtime check that gates the
+     * automatic reload.
+     *
+     * <p>Scope, precisely: this refreshes the checksums and content-types this service
+     * hands out, which is what determines the ETag on future responses. It does
+     * <b>not</b> reach caches it does not own — a browser holding a copy under
+     * {@code max-age} will not re-request the asset regardless of what this endpoint
+     * does. Changing the bytes for an already-cached visitor needs a new URL, not a
+     * server-side purge. There is no nginx {@code proxy_cache} on this path, so nothing
+     * else is holding stale content either.
+     *
+     * <p>Normally unnecessary: rsync rewrites manifest.json with a fresh mtime, so the
+     * sync workflow already triggers the automatic reload. This covers the cases mtime
+     * cannot see — a manifest restored with a preserved timestamp, or edited directly
+     * on the volume.
+     *
+     * <p>Guarded by a shared secret; 404s when {@code media.cdn.refresh-token} is unset.
+     */
+    @PostMapping("/cdn-refresh")
+    public ResponseEntity<CdnRefreshResponse> refresh(
+            @RequestHeader(value = REFRESH_TOKEN_HEADER, required = false) String token) {
+
+        String expected = properties.getRefreshToken();
+        if (expected == null || expected.isBlank()) {
+            log.warn("CDN refresh rejected: no refresh token configured");
+            throw new StaticAssetNotFoundException("Not found");
+        }
+        if (token == null || !MessageDigest.isEqual(
+                token.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8))) {
+            log.warn("CDN refresh rejected: bad or missing token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        StaticAssetService.RefreshResult result = staticAssetService.refreshManifest();
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new CdnRefreshResponse(
+                        result.manifestPresent() ? "refreshed" : "manifest-missing",
+                        result.manifestPresent(),
+                        result.assetsBefore(),
+                        result.assetsAfter(),
+                        result.generatedAt(),
+                        result.commit(),
+                        Instant.now()));
     }
 
     /**

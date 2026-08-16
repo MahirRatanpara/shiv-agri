@@ -51,6 +51,8 @@ services:
       MEDIA_CDN_ROOT_DIR: /var/media/static
       MEDIA_CDN_ACCEL_ENABLED: ${MEDIA_CDN_ACCEL_ENABLED:-true}
       MEDIA_CDN_CACHE_MAX_AGE_SECONDS: ${MEDIA_CDN_CACHE_MAX_AGE_SECONDS:-604800}
+      # Enables POST /api/v1/cdn-refresh. Leave unset to keep the endpoint disabled.
+      MEDIA_CDN_REFRESH_TOKEN: ${MEDIA_CDN_REFRESH_TOKEN:-}
     volumes:
       - /var/media/uploads:/var/media/uploads
       # Read-only: the CDN never writes here, the sync workflow does.

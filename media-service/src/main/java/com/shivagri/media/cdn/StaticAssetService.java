@@ -38,6 +38,10 @@ public class StaticAssetService {
     private volatile Map<String, ManifestEntry> manifest = Collections.emptyMap();
     private volatile long manifestLastModified = -1L;
 
+    /** Provenance of the loaded manifest, echoed by the refresh endpoint. */
+    private volatile String generatedAt;
+    private volatile String commit;
+
     @PostConstruct
     void init() {
         this.rootDir = Paths.get(properties.getRootDir()).toAbsolutePath().normalize();
@@ -113,6 +117,27 @@ public class StaticAssetService {
     }
 
     /**
+     * Re-read manifest.json unconditionally, ignoring the mtime check.
+     *
+     * <p>The normal path already reloads on every mtime change, which covers the sync
+     * workflow. This exists for the cases mtime cannot see: a manifest rewritten with a
+     * preserved timestamp, a restored backup, or an edit made straight on the volume.
+     *
+     * <p>Note what this does <em>not</em> do: file bytes are never cached in this
+     * service — {@link #resolve} stats the file on every request — and nothing purges
+     * caches held by browsers or intermediaries. This refreshes checksums and
+     * content-types, i.e. the ETags this service will hand out from now on.
+     */
+    public synchronized RefreshResult refreshManifest() {
+        int before = manifest.size();
+        loadManifest(true);
+        boolean present = Files.isRegularFile(rootDir.resolve(properties.getManifestFile()));
+        log.info("CDN manifest refresh requested: {} assets before, {} after (manifest present={})",
+                before, manifest.size(), present);
+        return new RefreshResult(present, before, manifest.size(), generatedAt, commit);
+    }
+
+    /**
      * Percent-encode a key for use in an X-Accel-Redirect header. nginx re-decodes the
      * URI before matching the internal location, so spaces and other unsafe characters
      * in filenames must be escaped or the redirect silently 404s.
@@ -175,36 +200,57 @@ public class StaticAssetService {
     }
 
     private void refreshManifestIfStale() {
+        loadManifest(false);
+    }
+
+    /**
+     * @param force re-read even when mtime is unchanged. The mtime guard is what keeps
+     *              this off the hot path — every {@link #resolve} call passes through
+     *              here — so only the explicit refresh endpoint sets it.
+     */
+    private void loadManifest(boolean force) {
         Path manifestPath = rootDir.resolve(properties.getManifestFile());
         try {
             if (!Files.isRegularFile(manifestPath)) {
-                if (manifestLastModified != -1L) {
+                if (manifestLastModified != -1L || !manifest.isEmpty()) {
                     log.info("CDN manifest removed, falling back to on-disk metadata");
-                    manifest = Collections.emptyMap();
-                    manifestLastModified = -1L;
+                    clearManifest();
                 }
                 return;
             }
             long mtime = Files.getLastModifiedTime(manifestPath).toMillis();
-            if (mtime == manifestLastModified) {
+            if (!force && mtime == manifestLastModified) {
                 return;
             }
             Manifest parsed = objectMapper.readValue(manifestPath.toFile(), Manifest.class);
             manifest = parsed.assets() != null ? parsed.assets() : Collections.emptyMap();
             manifestLastModified = mtime;
+            generatedAt = parsed.generatedAt();
+            commit = parsed.commit();
             log.info("CDN manifest loaded: {} assets, generatedAt={}, commit={}",
                     manifest.size(), parsed.generatedAt(), parsed.commit());
         } catch (Exception e) {
             // A broken manifest must not take the CDN down — on-disk metadata is enough
             // to serve every file, we just lose checksum-based ETags until it is fixed.
             log.error("Failed to load CDN manifest at {} — serving without it", manifestPath, e);
-            manifest = Collections.emptyMap();
-            manifestLastModified = -1L;
+            clearManifest();
         }
+    }
+
+    private void clearManifest() {
+        manifest = Collections.emptyMap();
+        manifestLastModified = -1L;
+        generatedAt = null;
+        commit = null;
     }
 
     /** Shape of manifest.json, written by the sync workflow. */
     public record Manifest(String generatedAt, String commit, Map<String, ManifestEntry> assets) {
+    }
+
+    /** Outcome of an explicit {@link #refreshManifest()}. */
+    public record RefreshResult(boolean manifestPresent, int assetsBefore, int assetsAfter,
+                                String generatedAt, String commit) {
     }
 
     public record ManifestEntry(long size, String sha256, String contentType) {

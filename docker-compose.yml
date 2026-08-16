@@ -67,6 +67,8 @@ services:
       # No nginx in front locally, so the service streams the bytes itself
       # (Range/206 from Java) instead of delegating via X-Accel-Redirect.
       MEDIA_CDN_ACCEL_ENABLED: "false"
+      # Dev secret for POST /api/v1/cdn-refresh — local only, not a real credential.
+      MEDIA_CDN_REFRESH_TOKEN: ${MEDIA_CDN_REFRESH_TOKEN:-dev-refresh-token}
     ports:
       - "8081:8081"
     volumes:
