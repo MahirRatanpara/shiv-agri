@@ -781,7 +781,7 @@
             type="button"
             class="media-tile-inner"
             (click)="openDesignLightbox(item)"
-            [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : item.type === 'image' ? 'View design uploaded ' : 'Download design file uploaded ') + (item.uploadedAt | date:'medium')"
+            [attr.aria-label]="(item.type === 'video' ? 'Play design video uploaded ' : item.type === 'image' ? 'View design uploaded ' : 'Open design file uploaded ') + (item.uploadedAt | date:'medium')"
           >
             <ng-container *ngIf="item.type === 'image'">
               <img [src]="item.url" [alt]="'Landscaping design uploaded ' + (item.uploadedAt | date:'mediumDate')" loading="lazy" />
@@ -2515,6 +2515,12 @@
     <div class="lightbox-content" (click)="$event.stopPropagation()">
       <img *ngIf="designLightboxItem.type === 'image'" [src]="designLightboxItem.url" [alt]="'Landscaping design'" />
       <video *ngIf="designLightboxItem.type === 'video'" [src]="designLightboxItem.url" controls autoplay playsinline></video>
+      <iframe
+        *ngIf="designPreviewUrl"
+        class="lightbox-doc"
+        [src]="designPreviewUrl"
+        title="Landscaping design document"
+      ></iframe>
       <div class="lightbox-meta">
         <span>{{ designLightboxItem.uploadedAt | date:'medium' }}</span>
         <span *ngIf="designLightboxItem.uploadedByName">· {{ designLightboxItem.uploadedByName }}</span>

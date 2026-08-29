@@ -125,6 +125,8 @@ export class FarmProjectDetailsComponent implements OnInit, AfterViewChecked, On
   isUploadingDesigns = false;
   designUploadingBatch: UploadProgressItem[] = [];
   designLightboxItem: FarmDesignRef | null = null;
+  designPreviewUrl: SafeResourceUrl | null = null;
+  isLoadingDesignPreview = false;
   deletingDesignIds = new Set<string>();
 
   // Prescriptions
@@ -2062,19 +2064,52 @@ export class FarmProjectDetailsComponent implements OnInit, AfterViewChecked, On
       });
   }
 
+  /** A design PDF arrives as type 'file'; the MIME type is what distinguishes it. */
+  private isPdfDesign(item: FarmDesignRef): boolean {
+    return /application\/pdf/i.test(item.mimeType || '') || /\.pdf$/i.test(item.fileName || '');
+  }
+
   openDesignLightbox(item: FarmDesignRef): void {
-    // Non-media files (PDF, doc, zip, etc.) can't be shown in the lightbox —
-    // open them in a new tab so the browser downloads/previews them.
-    if (item.type !== 'image' && item.type !== 'video') {
-      window.open(item.url, '_blank', 'noopener');
+    if (item.type === 'image' || item.type === 'video') {
+      this.designLightboxItem = item;
+      document.body.style.overflow = 'hidden';
       return;
     }
-    this.designLightboxItem = item;
-    document.body.style.overflow = 'hidden';
+
+    const name = item.fileName || item.title || 'design';
+
+    // Native: the WebView ships no PDF renderer and treats a remote file URL as a
+    // dead end, so fetch the bytes and hand them to the OS viewer — the same path
+    // prescriptions already take.
+    if (this.isNativeApp) {
+      this.isLoadingDesignPreview = true;
+      this.fileDelivery.fetchAsBlob(item.url)
+        .then((blob) => this.fileDelivery.open(blob, name))
+        .then(() => { this.isLoadingDesignPreview = false; })
+        .catch(() => {
+          this.isLoadingDesignPreview = false;
+          this.toastService.error('Unable to open this file.');
+        });
+      return;
+    }
+
+    // Web + PDF: embed it in the lightbox instead of bouncing the user out to a
+    // new browser tab.
+    if (this.isPdfDesign(item)) {
+      this.designLightboxItem = item;
+      this.designPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(item.url);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    // Everything else (doc, zip, …) has no inline renderer anywhere — let the
+    // browser download or preview it.
+    window.open(item.url, '_blank', 'noopener');
   }
 
   closeDesignLightbox(): void {
     this.designLightboxItem = null;
+    this.designPreviewUrl = null;
     document.body.style.overflow = '';
   }
 

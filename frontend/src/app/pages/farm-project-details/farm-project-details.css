@@ -5548,3 +5548,12 @@ label.quotation-field > span .optional {
     padding: 16px 18px 24px;
   }
 }
+
+.lightbox-doc {
+  background: #ffffff;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  height: 85vh;
+  width: min(900px, 92vw);
+}

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- The logo's own cream ground, so the adaptive foreground sits on a
+         continuous field instead of a white patch inside a cream mark. -->
+    <color name="ic_launcher_background">#FDFAF4</color>
 </resources>
