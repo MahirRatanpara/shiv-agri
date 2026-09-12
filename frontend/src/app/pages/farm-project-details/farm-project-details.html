@@ -2435,8 +2435,9 @@
           controls
           playsinline
         ></video>
-        <!-- Images render natively in the WebView; use <img> so they scale to fit
-             instead of sitting in a scrollable sub-document. -->
+        <!-- Images render natively in the WebView. They show at full size and
+             scroll vertically (see .report-overlay-image) rather than being
+             scaled down, so photographed handwriting stays readable. -->
         <img
           *ngIf="prescriptionPreviewUrl && !isLoadingPrescriptionPreview && isImagePrescription"
           class="report-overlay-image"

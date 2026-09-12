@@ -1738,6 +1738,14 @@ h1 {
   background: #ffffff;
   flex: 1;
   position: relative;
+  /* A column flex child defaults to min-height:auto, so it cannot shrink below
+     its content: a tall photo inflated this past the card, which then clipped it
+     via overflow:hidden. min-height:0 lets it shrink (which also gives the
+     iframe/video a definite height to resolve their 100% against), and overflow
+     scrolls anything taller than the card instead of cropping it. */
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Video shares the frame class; letterbox bars render white, not the browser's
@@ -1755,13 +1763,16 @@ video.report-overlay-frame {
   width: 100%;
 }
 
-/* Image previews: fit the viewport without cropping, on a white backdrop so the
-   photo reads as a document rather than a media-player frame. */
+/* Image previews: shown at full height and scrolled, not scaled down to fit.
+   These are photographed documents — handwritten prescriptions and estimates —
+   so shrinking a tall page into the card makes the writing unreadable. Width is
+   capped to the card so only the vertical axis ever scrolls. */
 .report-overlay-image {
   display: block;
-  height: 100%;
-  width: 100%;
-  object-fit: contain;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  margin: 0 auto;
   background: #ffffff;
 }
 
