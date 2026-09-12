@@ -316,7 +316,13 @@ class FarmMediaService {
   }
 
   /**
-   * Notify only the project's stakeholders — owner and assigned workers.
+   * Notify the farm's own stakeholders AND the whole back office.
+   *
+   * Stakeholders alone are not enough: most farms have no team assigned, so the
+   * only staff member attached is whoever happened to create the farm. Admins
+   * and managers therefore need an unconditional fan-out, or a farmer's upload
+   * reaches at most one person.
+   *
    * The uploader is excluded so they don't notify themselves.
    * Best-effort; failures are logged and don't fail the upload.
    */
@@ -340,20 +346,21 @@ class FarmMediaService {
       };
 
       const stakeholderIds = this.collectProjectStakeholders(project);
-      stakeholderIds.delete(user._id.toString());
+      const staffIds = await notificationService.resolveStaffRecipientIds('farm.documents.view');
+      staffIds.forEach((id) => stakeholderIds.add(String(id)));
 
-      if (!stakeholderIds.size) {
-        logger.debug(`[FarmMedia] No stakeholders to notify for project ${project._id}`);
+      const created = await notificationService.createForMany(
+        Array.from(stakeholderIds),
+        basePayload,
+        user._id
+      );
+
+      if (!created.length) {
+        logger.warn(`[FarmMedia] No recipients to notify for project ${project._id}`);
         return;
       }
 
-      await Promise.all(
-        Array.from(stakeholderIds).map((uid) =>
-          notificationService.createForUser(uid, basePayload)
-        )
-      );
-
-      logger.info(`[FarmMedia] Notifications sent: project=${project._id}, recipients=${stakeholderIds.size}`);
+      logger.info(`[FarmMedia] Notifications sent: project=${project._id}, recipients=${created.length}`);
     } catch (err) {
       logger.error(`[FarmMedia] Notification failed: ${err.message}`);
     }

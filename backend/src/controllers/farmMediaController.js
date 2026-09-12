@@ -15,7 +15,11 @@ exports.uploadMedia = async (req, res) => {
   try {
     logger.info(`[FarmMedia] POST /projects/${projectId}/media by user=${req.user._id}`);
 
-    const project = await Project.findById(projectId).select('_id name submittedBy clientId status isArchived');
+    // Team fields are part of the notification audience (see
+    // farmMediaService.collectProjectStakeholders) — omitting them from the
+    // projection silently drops those recipients.
+    const project = await Project.findById(projectId)
+      .select('_id name submittedBy clientId status isArchived assignedTo projectManager fieldWorkers consultants assignedTeam');
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }

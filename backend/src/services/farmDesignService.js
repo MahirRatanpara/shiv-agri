@@ -83,20 +83,18 @@ class FarmDesignService {
     return designRef;
   }
 
+  /**
+   * Notify the farmer the design is for, plus the back office. clientId comes
+   * first for the same reason as prescriptions: submittedBy is the staff member
+   * who filed the farm, not its owner.
+   */
   async notifyOwner(project, count, user) {
     try {
-      const ownerId = project.submittedBy || project.clientId;
-      if (!ownerId) {
-        logger.debug(`[FarmDesign] No owner to notify for project ${project._id}`);
-        return;
-      }
-      if (ownerId.toString() === user._id.toString()) return;
-
       const message = count > 1
         ? `${count} new landscaping designs added to ${project.name}`
         : `New landscaping design added to ${project.name}`;
 
-      await notificationService.createForUser(ownerId, {
+      const payload = {
         type: 'farm_design_upload',
         title: 'New landscaping design uploaded',
         message,
@@ -107,8 +105,19 @@ class FarmDesignService {
           uploaderName: user.name || user.email,
           itemCount: count
         }
-      });
-      logger.info(`[FarmDesign] Notification sent to owner=${ownerId} for project=${project._id}`);
+      };
+
+      const recipients = [project.clientId, project.submittedBy];
+      const staffIds = await notificationService.resolveStaffRecipientIds('farm.documents.view');
+      recipients.push(...staffIds);
+
+      const created = await notificationService.createForMany(recipients, payload, user._id);
+
+      if (!created.length) {
+        logger.warn(`[FarmDesign] No recipients to notify for project ${project._id}`);
+        return;
+      }
+      logger.info(`[FarmDesign] Notifications sent: project=${project._id}, recipients=${created.length}`);
     } catch (err) {
       logger.error(`[FarmDesign] Notification failed: ${err.message}`);
     }

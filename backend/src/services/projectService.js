@@ -109,6 +109,7 @@ class ProjectService {
       startBefore,
       isFavorite,
       submittedBy,
+      linkedToUser,
       showDrafts,
       includeArchived
     } = filters;
@@ -183,6 +184,17 @@ class ProjectService {
 
     if (submittedBy) {
       query.submittedBy = submittedBy;
+    }
+
+    // Ownership scope for farmers: a farm belongs to them whether they registered
+    // it themselves (submittedBy) or an admin/consultant created it against their
+    // client record (clientId). Matching only submittedBy hides admin-created farms
+    // from the farmer they were created for.
+    if (linkedToUser) {
+      query.$or = [
+        { clientId: linkedToUser },
+        { submittedBy: linkedToUser }
+      ];
     }
 
     // Team filters
@@ -566,8 +578,12 @@ class ProjectService {
     await project.save();
     await notificationService.archiveFarmRegistration(project._id);
 
-    if (project.submittedBy) {
-      await notificationService.createForUser(project.submittedBy, {
+    // Both the farmer (clientId) and whoever filed the farm (submittedBy) are
+    // told. On a staff-created farm these differ, and notifying only submittedBy
+    // sent the outcome to the admin instead of the farmer it concerns.
+    await notificationService.createForMany(
+      [project.clientId, project.submittedBy],
+      {
         type: 'farm_approved',
         title: 'Farm approved',
         message: `${project.name} has been approved.`,
@@ -575,8 +591,9 @@ class ProjectService {
         metadata: {
           farmName: project.name
         }
-      });
-    }
+      },
+      approverId
+    );
 
     logger.info(`Project ${project._id} approved by ${approverId}`);
     return project;
@@ -598,8 +615,9 @@ class ProjectService {
     await project.save();
     await notificationService.archiveFarmRegistration(project._id);
 
-    if (project.submittedBy) {
-      await notificationService.createForUser(project.submittedBy, {
+    await notificationService.createForMany(
+      [project.clientId, project.submittedBy],
+      {
         type: 'farm_rejected',
         title: 'Farm registration rejected',
         message: project.rejectedReason
@@ -610,8 +628,9 @@ class ProjectService {
           farmName: project.name,
           rejectionReason: project.rejectedReason
         }
-      });
-    }
+      },
+      rejectedBy
+    );
 
     logger.info(`Project ${project._id} rejected by ${rejectedBy}`);
     return project;
