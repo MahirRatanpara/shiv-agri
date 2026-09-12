@@ -265,20 +265,20 @@ class FarmPrescriptionService {
     return ref;
   }
 
+  /**
+   * Notify the farmer the prescription is for, plus the back office.
+   *
+   * clientId comes first: on a staff-created farm submittedBy is the admin who
+   * filed it, so resolving submittedBy first sent the farmer's own prescription
+   * to that admin — and dropped it entirely when they were also the uploader.
+   */
   async notifyOwner(project, count, user, kindLabel = 'prescription') {
     try {
-      const ownerId = project.submittedBy || project.clientId;
-      if (!ownerId) {
-        logger.debug(`[FarmPrescription] No owner to notify for project ${project._id}`);
-        return;
-      }
-      if (ownerId.toString() === user._id.toString()) return;
-
       const message = count > 1
         ? `${count} new ${kindLabel}s added to ${project.name}`
         : `New ${kindLabel} added to ${project.name}`;
 
-      await notificationService.createForUser(ownerId, {
+      const payload = {
         type: 'farm_prescription_upload',
         title: 'New prescription available',
         message,
@@ -289,8 +289,19 @@ class FarmPrescriptionService {
           uploaderName: user.name || user.email,
           itemCount: count
         }
-      });
-      logger.info(`[FarmPrescription] Notification sent to owner=${ownerId} for project=${project._id}`);
+      };
+
+      const recipients = [project.clientId, project.submittedBy];
+      const staffIds = await notificationService.resolveStaffRecipientIds('farm.documents.view');
+      recipients.push(...staffIds);
+
+      const created = await notificationService.createForMany(recipients, payload, user._id);
+
+      if (!created.length) {
+        logger.warn(`[FarmPrescription] No recipients to notify for project ${project._id}`);
+        return;
+      }
+      logger.info(`[FarmPrescription] Notifications sent: project=${project._id}, recipients=${created.length}`);
     } catch (err) {
       logger.error(`[FarmPrescription] Notification failed: ${err.message}`);
     }

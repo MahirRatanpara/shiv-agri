@@ -147,7 +147,10 @@ class QuotationService {
 
     // Notify the farmer — only for the standard flow. The attach-on-create
     // case is silent because the manager already acted on the farmer's behalf.
-    const farmerId = project.submittedBy || project.clientId;
+    // clientId first — it is the farmer. submittedBy is the staff member who
+    // filed the farm, so resolving it first delivered "Quotation received" to
+    // an admin and left the farmer waiting on a quote they never saw.
+    const farmerId = project.clientId || project.submittedBy;
     if (!attachInitial && farmerId) {
       await notificationService.createForUser(farmerId, {
         type: 'farm_quotation_received',

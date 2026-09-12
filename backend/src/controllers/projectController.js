@@ -77,8 +77,21 @@ exports.getProjects = async (req, res) => {
       submittedBy: submittedBy === 'me' ? req.user._id : submittedBy
     };
 
-    if ((req.user.role === 'user' || req.user.role === 'end_user') && !hasPermission(req.user, 'farm.projects.view')) {
-      filters.submittedBy = req.user._id;
+    const isFarmerRole = req.user.role === 'user' || req.user.role === 'end_user';
+
+    // For a farmer, "mine" means every farm they own, not just the ones they
+    // filed themselves. For staff, "mine" keeps its literal submittedBy meaning.
+    if (isFarmerRole && submittedBy === 'me') {
+      filters.linkedToUser = req.user._id;
+      filters.submittedBy = undefined;
+    }
+
+    if (isFarmerRole && !hasPermission(req.user, 'farm.projects.view')) {
+      // Scope to farms this user owns. Most farms are created by an admin or
+      // consultant against the farmer's client record, so submittedBy is the
+      // staff member and only clientId points at the farmer - match either.
+      filters.linkedToUser = req.user._id;
+      filters.submittedBy = undefined;
       filters.categoryInclude = ['FARM'];
     }
 
