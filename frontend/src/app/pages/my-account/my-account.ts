@@ -21,7 +21,7 @@ export class MyAccountComponent implements OnInit {
   profileImageLoadError = false;
 
   // Phone-attach (OTP) flow — a number can only be ADDED, never edited once set.
-  readonly OTP_LENGTH = 4;
+  readonly OTP_LENGTH = 6;
   phoneOtpStep: PhoneOtpStep = 'idle';
   phoneCountryCode = '+91';
   phoneNumber = '';

@@ -30,7 +30,7 @@ const COUNTRY_CODES = [
   styleUrl: './complete-profile.css'
 })
 export class CompleteProfileComponent implements OnInit, OnDestroy {
-  readonly OTP_LENGTH = 4;
+  readonly OTP_LENGTH = 6;
   readonly countryCodes = COUNTRY_CODES;
   private destroy$ = new Subject<void>();
 
