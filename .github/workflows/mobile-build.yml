@@ -14,6 +14,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, e.g. 5.2.0 (blank = the fallback in build.gradle)'
+        required: false
+        type: string
 
 defaults:
   run:
@@ -55,6 +60,34 @@ jobs:
           packages: ''
           log-accepted-android-sdk-licenses: false
 
+      # Tag builds get their version from the tag itself: v5.2.0 -> versionCode
+      # 50200, versionName 5.2.0 (scripts/app-version.sh explains the mapping).
+      # A manual run has no tag, so it builds with the fallback literals in
+      # app/build.gradle -- a test build must not claim to be a release.
+      - name: Resolve app version
+        id: appver
+        working-directory: .
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            scripts/app-version.sh "${{ github.ref_name }}" | tee -a "$GITHUB_OUTPUT"
+          elif [ -n "${{ inputs.version }}" ]; then
+            # Manual override, for rehearsing a release build without tagging.
+            scripts/app-version.sh "${{ inputs.version }}" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "No tag and no version input -- building with the fallback in build.gradle." >&2
+          fi
+
+      # Passed to both Gradle invocations. Empty for a manual run.
+      - name: Compose Gradle version args
+        id: gradleargs
+        working-directory: .
+        run: |
+          if [ -n "${{ steps.appver.outputs.version_code }}" ]; then
+            echo "args=-PappVersionCode=${{ steps.appver.outputs.version_code }} -PappVersionName=${{ steps.appver.outputs.version_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
         run: npm ci
 
@@ -85,13 +118,48 @@ jobs:
 
       - name: Build debug APK
         working-directory: frontend/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon ${{ steps.gradleargs.outputs.args }}
 
       # Release AAB is what you upload to the Play Store. Signed automatically
       # when the signing secrets above are set; otherwise built unsigned.
       - name: Build release bundle
         working-directory: frontend/android
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew bundleRelease --no-daemon ${{ steps.gradleargs.outputs.args }}
+
+      # Ships the resolved version alongside the binaries so the values fed to
+      # the promote-app-version workflow are read off the build itself rather
+      # than retyped from memory. aapt2 is the authority: it reports what was
+      # actually baked into the package, not what we asked for.
+      - name: Record built version
+        working-directory: frontend/android
+        run: |
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)
+          CODE="${{ steps.appver.outputs.version_code }}"
+          NAME="${{ steps.appver.outputs.version_name }}"
+          if [ -n "$AAPT" ]; then
+            BADGE=$("$AAPT" dump badging app/build/outputs/apk/debug/app-debug.apk 2>/dev/null | head -1 || true)
+            echo "aapt2 reports: $BADGE"
+            PARSED_CODE=$(echo "$BADGE" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+            PARSED_NAME=$(echo "$BADGE" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+            [ -n "$PARSED_CODE" ] && CODE="$PARSED_CODE"
+            [ -n "$PARSED_NAME" ] && NAME="$PARSED_NAME"
+          fi
+          {
+            echo "ANDROID_LATEST_VERSION_CODE=$CODE"
+            echo "ANDROID_LATEST_VERSION_NAME=$NAME"
+          } > app-version.env
+          echo "--- app-version.env ---"
+          cat app-version.env
+          {
+            echo "### Android build"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| versionCode | \`$CODE\` |"
+            echo "| versionName | \`$NAME\` |"
+            echo ""
+            echo "Promote with the **Promote App Version** workflow once tested."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
@@ -101,6 +169,7 @@ jobs:
           path: |
             frontend/android/app/build/outputs/apk/debug/*.apk
             frontend/android/app/build/outputs/bundle/release/*.aab
+            frontend/android/app-version.env
 
   ios:
     name: iOS (archive)
