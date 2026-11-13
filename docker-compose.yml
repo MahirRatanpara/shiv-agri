@@ -96,6 +96,14 @@ services:
       WHATSAPP_DEFAULT_COUNTRY_CODE: ${WHATSAPP_DEFAULT_COUNTRY_CODE:-91}
       WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:-}
       WHATSAPP_WEBHOOK_APP_SECRET: ${WHATSAPP_WEBHOOK_APP_SECRET:-}
+      # OTP routing: "whatsapp" or "sms". Kept in sync with prod so a template
+      # mismatch shows up locally instead of only after deploy.
+      OTP_CHANNEL: ${OTP_CHANNEL:-whatsapp}
+      WHATSAPP_OTP_TEMPLATE_NAME: ${WHATSAPP_OTP_TEMPLATE_NAME:-shiv_agri_otp_login}
+      WHATSAPP_OTP_TEMPLATE_LANGUAGE: ${WHATSAPP_OTP_TEMPLATE_LANGUAGE:-en}
+      # Meta's Authentication-category templates always carry a "Copy code" URL
+      # button, and the send fails with 131008 unless we pass its parameter.
+      WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-true}
       GMAIL_FROM_ADDRESS: ${GMAIL_FROM_ADDRESS:-}
       GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:-Shiv-Agri}
       GMAIL_OAUTH_CLIENT_ID: ${GMAIL_OAUTH_CLIENT_ID:-}

@@ -299,6 +299,7 @@ Design tokens align with `ui-ux-pro-max`'s "Minimal Single Column" pattern: 16â€
 |---|---|---|
 | `502` on `/otp/request`, logs show `WHATSAPP_ACCESS_TOKEN not configured` | notification-service env missing | Set Meta creds in compose env / `.env` |
 | `502` with `template_param_count_mismatch` | template body has more `{{n}}` than `bodyParameters` provided | Match the template's parameter count (we send 1 by default) |
+| `131008` `Button at index 0 of type Url requires a parameter` | the Authentication template has a "Copy code" button but the send omitted its parameter | Set `WHATSAPP_OTP_TEMPLATE_HAS_BUTTON=true` on **notification-service** (now the default); the service also retries once with the flipped shape and logs a warning |
 | `132001` from Meta | template name/language not approved | Re-check `WHATSAPP_OTP_TEMPLATE_NAME` & language exactly match a *Approved* template |
 | User never receives the code | sandbox-mode WhatsApp account, or template still in review | Approve template; add the recipient to test recipients |
 | `429 COOLDOWN` immediately after first request | working as intended | Frontend respects `resendAfterSeconds`; tell user to wait |
