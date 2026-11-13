@@ -280,6 +280,84 @@ blocked after Google returns a valid token. See `backend/src/server.js`.
 
 ---
 
+## Forcing users onto a new version
+
+The app will not nag or update itself — Android never replaces an installed app
+on its own unless the user has Play auto-update on. What the codebase gives you
+is a **server-controlled gate**: you decide, at any time and without shipping new
+code, which builds are still allowed to talk to the API.
+
+### How it works
+
+| Piece | File | Job |
+|---|---|---|
+| Policy | `backend/src/config/appVersion.js` | Reads `ANDROID_MIN_VERSION_CODE` etc. from the environment |
+| Public endpoint | `backend/src/routes/appVersion.js` | `GET /api/app/version` — what the client asks at startup and on resume |
+| Enforcement | `backend/src/middleware/appVersionGate.js` | Refuses retired builds with **426 Upgrade Required** on every other `/api` route |
+| Client gate | `frontend/src/app/services/app-update.service.ts` | Startup + resume check, and a 426 backstop via the auth interceptor |
+| Blocking screen | `frontend/src/app/components/force-update/` | Full-screen, non-dismissible "Update required" |
+
+Two layers on purpose. The screen alone is **not** enforcement — it lives in code
+the old build already shipped, so it can only ever be as strict as that old build
+happened to be. The 426 gate is what actually holds: an app below the minimum
+gets nothing but 426 from the API, so there is no useful state it can reach even
+if its UI is bypassed.
+
+Comparison is on Android's integer **`versionCode`**, never `versionName` —
+string-comparing `"5.10.0"` against `"5.9.0"` gives the wrong answer.
+
+### Rolling out a forced update
+
+1. Bump `versionCode` (and `versionName`) in `frontend/android/app/build.gradle`.
+2. Build and ship that build — Play Store, or host the `.apk` and hand out the URL.
+3. **Wait until the new build is actually available to users.** Setting the
+   minimum before the update exists locks everyone out with nowhere to go.
+4. Set these on the API and restart it (prod `.env`, read by `docker-compose.prod.yml`):
+
+   ```bash
+   ANDROID_MIN_VERSION_CODE=6                 # the switch — builds below 6 are refused
+   ANDROID_LATEST_VERSION_CODE=6
+   ANDROID_LATEST_VERSION_NAME=5.1.0
+   ANDROID_UPDATE_URL=https://play.google.com/store/apps/details?id=com.shivagri.app
+   ANDROID_UPDATE_MESSAGE="We've updated Shiv Agri. Please install the new version to continue."
+   ```
+
+   Default is `ANDROID_MIN_VERSION_CODE=0`, which leaves the gate **off**.
+
+Every user on versionCode 5 then sees the blocking screen within one app resume
+or one API call, whichever comes first. Nobody needs a new app build for this —
+only the API restarts.
+
+### Two things Android will not let you do
+
+- **You cannot replace the installed app remotely.** Only Play (with auto-update
+  enabled) or the user tapping your `.apk` can do that. The gate makes the old
+  build *unusable* and points at the download; the install is still the user's tap.
+- **An update only installs over the old app if it is signed with the same key
+  and has a higher `versionCode`.** A differently-signed APK fails with
+  `INSTALL_FAILED_UPDATE_INCOMPATIBLE` and the user has to uninstall first —
+  which is why the CI debug APK cannot upgrade a release-signed install.
+
+### If you publish on Play
+
+Layer Google's in-app updates on top for a nicer flow — `AppUpdateManager` with
+`IMMEDIATE` mode downloads and installs inside your app instead of bouncing the
+user to the store listing. It needs a native plugin and only works for installs
+that came from Play, so keep the 426 gate as the thing you actually rely on.
+
+### Testing the gate
+
+```bash
+# Pretend to be an old build
+curl -s "https://shivagri.com/api/app/version?platform=android&versionCode=1" | jq
+
+# Confirm the API refuses it
+curl -s -o /dev/null -w '%{http_code}\n' https://shivagri.com/api/farms \
+  -H 'X-App-Platform: android' -H 'X-App-Version-Code: 1'     # expect 426
+```
+
+---
+
 ## Quick reference
 
 ```bash

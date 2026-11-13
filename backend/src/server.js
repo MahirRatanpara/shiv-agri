@@ -7,6 +7,8 @@ const fertilizerCropConfig = require('./config/fertilizerCropConfig');
 const mediaCleanupService = require('./services/mediaCleanupService');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
+const appVersionRoutes = require('./routes/appVersion');
+const { enforceMinAppVersion } = require('./middleware/appVersionGate');
 
 const app = express();
 
@@ -47,6 +49,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+// The app-version endpoint is mounted BEFORE the gate: a build that the gate
+// blocks must still be able to ask what it should update to.
+app.use('/api/app', appVersionRoutes);
+
+// Everything below here refuses native builds older than ANDROID_MIN_VERSION_CODE
+// with 426 Upgrade Required. Inert until that variable is set (default 0).
+app.use('/api', enforceMinAppVersion);
+
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 app.use('/health', apiRoutes);
