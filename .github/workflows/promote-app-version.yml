@@ -1,0 +1,188 @@
+name: Promote App Version
+
+# Tells the live API which native build is current -- and, optionally, which
+# builds are no longer allowed to talk to it.
+#
+# This is the second half of a release. mobile-build.yml produces a signed AAB
+# and prints the versionCode/versionName it baked in; you upload that build and
+# test it; THEN you run this to point the backend's forced-update gate at it.
+# Keeping the two apart is the whole point: raising the minimum before the new
+# build is actually installable locks every user out with nowhere to go.
+#
+# What it touches: the ANDROID_* keys in /var/www/shiv-agri/.env, which
+# docker-compose.prod.yml passes to the api service and
+# backend/src/config/appVersion.js reads at startup. Nothing else in .env is
+# read, printed or modified.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'versionCode of the build you tested (from the build run summary, e.g. 50200)'
+        required: true
+        type: string
+      version_name:
+        description: 'versionName of that build (e.g. 5.2.0)'
+        required: true
+        type: string
+      force_update:
+        description: 'Also BLOCK older builds? Only once the new build is installable by users.'
+        required: true
+        type: choice
+        default: 'no'
+        options:
+          - 'no'
+          - 'yes'
+      restart_api:
+        description: 'Restart the api container so the new values take effect'
+        required: true
+        type: choice
+        default: 'yes'
+        options:
+          - 'yes'
+          - 'no'
+
+concurrency:
+  # Two runs rewriting the same .env would interleave their edits.
+  group: promote-app-version
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Update API version policy
+    runs-on: ubuntu-latest
+    steps:
+      # Fail before touching the server rather than halfway through the edit.
+      - name: Validate inputs
+        run: |
+          CODE='${{ inputs.version_code }}'
+          NAME='${{ inputs.version_name }}'
+          if ! echo "$CODE" | grep -qE '^[0-9]+$'; then
+            echo "::error::version_code must be a plain integer, got '$CODE'"
+            exit 1
+          fi
+          if ! echo "$NAME" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version_name must be MAJOR.MINOR.PATCH, got '$NAME'"
+            exit 1
+          fi
+          echo "versionCode=$CODE versionName=$NAME force_update=${{ inputs.force_update }}"
+          if [ '${{ inputs.force_update }}' = 'yes' ]; then
+            echo "::warning::force_update=yes -- every build below $CODE will be refused with 426. Make sure the new build is actually available to users."
+          fi
+
+      - name: Update .env on the VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # Passed as env rather than interpolated into the script, so the
+          # values are never re-parsed by the remote shell.
+          envs: VERSION_CODE,VERSION_NAME,FORCE_UPDATE,RESTART_API
+          script: |
+            set -e
+            cd /var/www/shiv-agri
+
+            if [ ! -f .env ]; then
+              echo "✗ /var/www/shiv-agri/.env not found"
+              exit 1
+            fi
+
+            # Timestamped backup. .env holds every production secret, so it is
+            # never printed -- only the ANDROID_* keys are echoed below.
+            BACKUP=".env.bak.$(date +%Y%m%d-%H%M%S)"
+            cp -p .env "$BACKUP"
+            echo "✓ backed up .env -> $BACKUP"
+
+            # Idempotent upsert. awk (not sed) because the values must not be
+            # re-interpreted as regex/replacement syntax. Writing through `cat >`
+            # keeps the original file's inode, owner and permissions.
+            upsert() {
+              UP_KEY="$1" UP_VAL="$2" awk '
+                BEGIN { key = ENVIRON["UP_KEY"]; val = ENVIRON["UP_VAL"]; done = 0 }
+                {
+                  if ($0 ~ "^[[:space:]]*#?[[:space:]]*" key "[[:space:]]*=") {
+                    if (!done) { print key "=" val; done = 1 }
+                    next
+                  }
+                  print
+                }
+                END { if (!done) print key "=" val }
+              ' .env > .env.promote.tmp
+              cat .env.promote.tmp > .env
+              rm -f .env.promote.tmp
+            }
+
+            upsert ANDROID_LATEST_VERSION_CODE "$VERSION_CODE"
+            upsert ANDROID_LATEST_VERSION_NAME "$VERSION_NAME"
+
+            if [ "$FORCE_UPDATE" = "yes" ]; then
+              upsert ANDROID_MIN_VERSION_CODE "$VERSION_CODE"
+              echo "✓ minimum raised to $VERSION_CODE -- older builds will get 426"
+            else
+              echo "• minimum left untouched (gate unchanged)"
+            fi
+
+            echo ""
+            echo "ANDROID_* keys now in .env:"
+            grep -E '^ANDROID_(MIN|LATEST)_VERSION' .env | sed 's/^/  /'
+            echo ""
+
+            # Sanity check: a minimum above the latest build would block everyone,
+            # including users on the build we just promoted.
+            MIN=$(grep -E '^ANDROID_MIN_VERSION_CODE=' .env | tail -1 | cut -d= -f2)
+            MIN=${MIN:-0}
+            if [ "$MIN" -gt "$VERSION_CODE" ]; then
+              echo "✗ ANDROID_MIN_VERSION_CODE ($MIN) is above the promoted build ($VERSION_CODE)."
+              echo "  That would lock out every user. Restoring $BACKUP."
+              cat "$BACKUP" > .env
+              exit 1
+            fi
+
+            if [ "$RESTART_API" = "yes" ]; then
+              echo "Restarting api to pick up the new values..."
+              docker compose -f docker-compose.prod.yml up -d --no-deps api
+              sleep 5
+              docker compose -f docker-compose.prod.yml ps api
+              echo ""
+              echo "Policy the API logged at startup:"
+              docker compose -f docker-compose.prod.yml logs --tail 50 api 2>/dev/null | grep '\[appVersion\]' || \
+                echo "  (no [appVersion] line yet -- check 'docker compose logs api')"
+            else
+              echo "• api NOT restarted -- the new values take effect on its next restart"
+            fi
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          FORCE_UPDATE: ${{ inputs.force_update }}
+          RESTART_API: ${{ inputs.restart_api }}
+
+      # Proves the running API actually serves the new policy, rather than
+      # trusting that the restart worked.
+      - name: Verify the live endpoint
+        if: ${{ inputs.restart_api == 'yes' }}
+        run: |
+          URL='https://shivagri.com/api/app/version?platform=android&versionCode=1'
+          echo "GET $URL"
+          BODY=$(curl -fsS --retry 3 --retry-delay 5 "$URL") || {
+            echo "::warning::Could not reach the version endpoint. Check the api container."
+            exit 0
+          }
+          echo "$BODY"
+          echo "$BODY" | grep -q '"${{ inputs.version_name }}"' \
+            && echo "✓ API reports versionName ${{ inputs.version_name }}" \
+            || echo "::warning::Endpoint responded but did not mention ${{ inputs.version_name }} -- verify manually."
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Promoted app version"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| versionCode | \`${{ inputs.version_code }}\` |"
+            echo "| versionName | \`${{ inputs.version_name }}\` |"
+            echo "| older builds blocked | \`${{ inputs.force_update }}\` |"
+            echo "| api restarted | \`${{ inputs.restart_api }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -18,6 +18,36 @@ def ksKeyPassword = keystoreProps['keyPassword'] ?: System.getenv('ANDROID_KEY_P
 def ksStoreFile = ksStoreFileName != null ? rootProject.file(ksStoreFileName) : null
 def hasSigning = ksStoreFile != null && ksStoreFile.exists()
 
+// Release version. CI derives both values from the git tag being built and
+// passes them in (see scripts/app-version.sh and .github/workflows/mobile-build.yml):
+//   ./gradlew bundleRelease -PappVersionCode=50200 -PappVersionName=5.2.0
+// A plain local build supplies neither and falls back to the literals below, so
+// `./gradlew assembleDebug` keeps working with no arguments.
+//
+// The fallbacks are deliberately the LOWEST shippable values rather than the
+// latest ones: if the override ever fails to arrive, the build produces an
+// obviously-stale version instead of silently claiming to be the new release.
+def FALLBACK_VERSION_CODE = 6
+def FALLBACK_VERSION_NAME = "5.1.0"
+
+def appVersionCode = (project.findProperty('appVersionCode')
+        ?: System.getenv('ANDROID_VERSION_CODE'))?.toString()?.trim()
+def appVersionName = (project.findProperty('appVersionName')
+        ?: System.getenv('ANDROID_VERSION_NAME'))?.toString()?.trim()
+
+def resolvedVersionCode = appVersionCode ? appVersionCode.toInteger() : FALLBACK_VERSION_CODE
+def resolvedVersionName = appVersionName ?: FALLBACK_VERSION_NAME
+
+if (resolvedVersionCode < FALLBACK_VERSION_CODE) {
+    // Play rejects a versionCode at or below one already uploaded, and the
+    // backend gate compares against this integer -- a lower one here would make
+    // a new build look older than the build it replaces.
+    throw new GradleException(
+        "appVersionCode ${resolvedVersionCode} is below the last shipped code ${FALLBACK_VERSION_CODE}")
+}
+logger.lifecycle("[version] versionCode=${resolvedVersionCode} versionName=${resolvedVersionName}" +
+    (appVersionCode ? "" : " (fallback -- no -PappVersionCode supplied)"))
+
 android {
     namespace = "com.shivagri.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -25,11 +55,12 @@ android {
         applicationId "com.shivagri.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode MUST increase on every release — it is what the backend's
-        // ANDROID_MIN_VERSION_CODE gate compares against (see
-        // backend/src/config/appVersion.js). versionName is display-only.
-        versionCode 6
-        versionName "5.1.0"
+        // Resolved above: CI passes -PappVersionCode / -PappVersionName derived
+        // from the git tag; local builds get the fallback literals. The integer
+        // is what the backend's ANDROID_MIN_VERSION_CODE gate compares against
+        // (see backend/src/config/appVersion.js); versionName is display-only.
+        versionCode resolvedVersionCode
+        versionName resolvedVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

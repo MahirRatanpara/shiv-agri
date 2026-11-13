@@ -177,9 +177,42 @@ still builds — just unsigned (not uploadable).
 
 ### Before each release: bump the version
 
-Edit `frontend/android/app/build.gradle` → `defaultConfig`:
-- `versionCode` — **integer, must increase every upload** (1 → 2 → 3 …).
-- `versionName` — human string shown to users (e.g. `"1.0.1"`).
+**You don't edit `build.gradle` any more — the version comes from the git tag.**
+
+```bash
+git tag v5.2.0 && git push origin v5.2.0
+```
+
+`scripts/app-version.sh` maps the tag to both values with
+`major * 10000 + minor * 100 + patch`:
+
+| Tag | versionName | versionCode |
+|---|---|---|
+| `v5.1.0` | 5.1.0 | 50100 |
+| `v5.2.0` | 5.2.0 | 50200 |
+| `v5.2.1` | 5.2.1 | 50201 |
+| `v5.10.0` | 5.10.0 | 51000 |
+| `v6.0.0` | 6.0.0 | 60000 |
+
+Why derived rather than a counter: Play requires `versionCode` to increase on
+every upload and never lets it come back down, so the same tag must always
+produce the same code — a rebuild of `v5.2.0` is still 50200. Minor and patch
+are capped at 99 each, because `5.1.100` and `5.2.0` would both be 50200; the
+script refuses that instead of emitting a duplicate.
+
+The run's summary prints the `versionCode`/`versionName` it baked in, and the
+`android-packages` artifact carries an `app-version.env` with the same pair —
+that is what you feed to the promote workflow below. Both are read back out of
+the built package with `aapt2`, not from what CI intended to build.
+
+To rehearse a release build without creating a tag, run the workflow manually
+and put `5.2.0` in the **version** input. A manual run with that box empty
+builds the fallback literals in `build.gradle` (currently 6 / 5.1.0) on
+purpose — a test build must not claim to be a release.
+
+> The fallbacks are the *last hand-maintained* values, not the latest ones. If
+> the override ever fails to arrive, the build is obviously stale rather than
+> silently mislabelled as the new release.
 
 ---
 
@@ -308,21 +341,41 @@ string-comparing `"5.10.0"` against `"5.9.0"` gives the wrong answer.
 
 ### Rolling out a forced update
 
-1. Bump `versionCode` (and `versionName`) in `frontend/android/app/build.gradle`.
-2. Build and ship that build — Play Store, or host the `.apk` and hand out the URL.
-3. **Wait until the new build is actually available to users.** Setting the
-   minimum before the update exists locks everyone out with nowhere to go.
-4. Set these on the API and restart it (prod `.env`, read by `docker-compose.prod.yml`):
+1. Tag the release — `git tag v5.2.0 && git push origin v5.2.0`. CI builds a
+   signed AAB at versionCode 50200 and prints that number in the run summary.
+2. Upload and ship that build — Play Store, or host the `.apk` and hand out the URL.
+3. **Wait until the new build is actually available to users, and test it.**
+   Setting the minimum before the update exists locks everyone out with nowhere
+   to go.
+4. Run the **Promote App Version** workflow
+   (`.github/workflows/promote-app-version.yml`) from the Actions tab:
 
-   ```bash
-   ANDROID_MIN_VERSION_CODE=6                 # the switch — builds below 6 are refused
-   ANDROID_LATEST_VERSION_CODE=6
-   ANDROID_LATEST_VERSION_NAME=5.1.0
-   ANDROID_UPDATE_URL=https://play.google.com/store/apps/details?id=com.shivagri.app
-   ANDROID_UPDATE_MESSAGE="We've updated Shiv Agri. Please install the new version to continue."
-   ```
+   | Input | Value |
+   |---|---|
+   | `version_code` | `50200` (from the build run summary / `app-version.env`) |
+   | `version_name` | `5.2.0` |
+   | `force_update` | `no` first — `yes` only when you mean to block older builds |
+   | `restart_api` | `yes` |
 
-   Default is `ANDROID_MIN_VERSION_CODE=0`, which leaves the gate **off**.
+   It backs up the prod `.env`, upserts `ANDROID_LATEST_VERSION_CODE` /
+   `ANDROID_LATEST_VERSION_NAME` (and `ANDROID_MIN_VERSION_CODE` when
+   `force_update=yes`), restarts the `api` container, and then curls
+   `/api/app/version` to prove the live API serves the new policy.
+
+   The two-step shape is deliberate: promoting with `force_update=no` advertises
+   the new build to users who are behind, and changes nothing for anyone. Only
+   `force_update=yes` starts refusing old builds with 426. If a requested
+   minimum would exceed the build being promoted — which would lock out even the
+   users who just updated — the workflow restores the backup and fails.
+
+   Default remains `ANDROID_MIN_VERSION_CODE=0`, which leaves the gate **off**.
+
+   **`ANDROID_UPDATE_MESSAGE` is deliberately not set by the workflow.** The
+   other deploy workflows load prod config with
+   `export $(cat .env | grep -v '^#' | xargs)`, which word-splits on spaces — a
+   prose message written into `.env` would break them. The backend already ships
+   a sensible default; set it by hand if you must, and check those workflows
+   still run.
 
 Every user on versionCode 5 then sees the blocking screen within one app resume
 or one API call, whichever comes first. Nobody needs a new app build for this —
@@ -369,8 +422,13 @@ cd frontend && npm install && npm run cap:sync
 cd android && ./gradlew bundleRelease
 # -> app/build/outputs/bundle/release/app-release.aab
 
-# CI build
-git tag v1.0.0 && git push origin v1.0.0   # or Actions -> Run workflow
+# CI build — the tag sets versionCode/versionName (v5.2.0 -> 50200 / 5.2.0)
+git tag v5.2.0 && git push origin v5.2.0   # or Actions -> Run workflow + version input
+
+# Check what a tag maps to, without building
+scripts/app-version.sh v5.2.0
+
+# After testing the build: point the API at it (Actions -> Promote App Version)
 
 # Reclaim disk when done
 ./clean.sh            # from repo root
