@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -8,15 +8,18 @@ import { HeaderComponent } from './components/header/header';
 import { ToastComponent } from './components/toast/toast.component';
 import { ConfirmationModalComponent } from './components/confirmation-modal/confirmation-modal.component';
 import { DownloadProgressComponent } from './components/download-progress/download-progress.component';
+import { ForceUpdateComponent } from './components/force-update/force-update.component';
+import { AppUpdateService } from './services/app-update.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, HeaderComponent, ToastComponent, ConfirmationModalComponent, DownloadProgressComponent],
+  imports: [RouterOutlet, HeaderComponent, ToastComponent, ConfirmationModalComponent, DownloadProgressComponent, ForceUpdateComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App implements OnInit {
   protected readonly title = signal('Shiv Agri Consultancy');
+  private appUpdates = inject(AppUpdateService);
 
   ngOnInit(): void {
     // Native-only setup. On web this is a no-op so the existing web build is unaffected.
@@ -52,5 +55,10 @@ export class App implements OnInit {
     } catch {
       // No-op if the splash screen was already hidden.
     }
+
+    // Ask the backend whether this build is still allowed to run, and keep
+    // re-checking on resume. Never throws — a failed check leaves the app usable
+    // and the 426 interceptor backstop still applies.
+    void this.appUpdates.init();
   }
 }

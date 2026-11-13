@@ -30,6 +30,19 @@ services:
       WHATSAPP_OTP_TEMPLATE_HAS_BUTTON: ${WHATSAPP_OTP_TEMPLATE_HAS_BUTTON:-true}
       DEFAULT_PHONE_COUNTRY_CODE: ${DEFAULT_PHONE_COUNTRY_CODE:-+91}
       DEFAULT_PHONE_SIGNUP_ROLE: ${DEFAULT_PHONE_SIGNUP_ROLE:-user}
+      # Forced-update gate for the native apps. ANDROID_MIN_VERSION_CODE is the
+      # switch: builds below it are refused with 426 and shown a blocking update
+      # screen. Default 0 keeps the gate OFF — raise it to the versionCode you
+      # want to make mandatory, and set LATEST_* to the build you just shipped.
+      ANDROID_MIN_VERSION_CODE: ${ANDROID_MIN_VERSION_CODE:-0}
+      ANDROID_LATEST_VERSION_CODE: ${ANDROID_LATEST_VERSION_CODE:-0}
+      ANDROID_LATEST_VERSION_NAME: ${ANDROID_LATEST_VERSION_NAME:-}
+      ANDROID_UPDATE_URL: ${ANDROID_UPDATE_URL:-https://play.google.com/store/apps/details?id=com.shivagri.app}
+      ANDROID_UPDATE_MESSAGE: ${ANDROID_UPDATE_MESSAGE:-}
+      IOS_MIN_VERSION_CODE: ${IOS_MIN_VERSION_CODE:-0}
+      IOS_LATEST_VERSION_CODE: ${IOS_LATEST_VERSION_CODE:-0}
+      IOS_LATEST_VERSION_NAME: ${IOS_LATEST_VERSION_NAME:-}
+      IOS_UPDATE_URL: ${IOS_UPDATE_URL:-}
     volumes:
       - api_uploads:/app/uploads
     extra_hosts:

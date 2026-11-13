@@ -1,0 +1,95 @@
+/* Sits above every other layer in the app (modals, toasts, download progress).
+   Nothing in the app renders above 9999, so this is the top of the stack. */
+.fu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Opaque, not translucent: the app behind it is unusable, so showing it
+     through the overlay would only invite tapping at it. */
+  background: #ffffff;
+  /* Keep clear of the status bar / gesture bar on notched devices. */
+  padding-top: calc(24px + env(safe-area-inset-top));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.fu-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.fu-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef0ff;
+  color: #4f46e5;
+}
+
+.fu-icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.fu-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.fu-message {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.fu-version {
+  margin: 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.fu-btn {
+  margin-top: 8px;
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fu-btn:disabled {
+  background: #c7d2fe;
+  cursor: default;
+}
+
+.fu-fallback {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fu-overlay { background: #0b1220; }
+  .fu-title { color: #f9fafb; }
+  .fu-message { color: #d1d5db; }
+  .fu-icon { background: #1e213a; color: #a5b4fc; }
+}
