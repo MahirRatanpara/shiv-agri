@@ -44,8 +44,16 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # Must stay on v4 or newer: v3 asks sdkmanager for the long-retired `tools`
+      # package and dies with "Failed to find package 'tools'". `packages: ''`
+      # skips the install entirely -- the runner image already ships
+      # platform-tools, and Gradle fetches the compileSdk platform + build-tools
+      # itself once this step has accepted the SDK licences.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+          log-accepted-android-sdk-licenses: false
 
       - name: Install dependencies
         run: npm ci
