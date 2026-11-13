@@ -546,7 +546,10 @@
 .otp-digit {
   width: 56px;
   height: 60px;
-  flex: 0 0 56px;
+  /* Shrinkable so a 6-digit code still fits on narrow phones. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 56px;
   padding: 0;
   border: 1.5px solid var(--c-border);
   border-radius: var(--radius-field);
@@ -625,7 +628,7 @@
   .login-card { padding: 28px 22px 22px; gap: 18px; }
   .card-header h1 { font-size: 21px; }
   .otp-digits { gap: 8px; }
-  .otp-digit { width: 52px; flex-basis: 52px; height: 56px; font-size: 20px; }
+  .otp-digit { width: 52px; flex-basis: 52px; max-width: 52px; height: 56px; font-size: 20px; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -634,7 +637,7 @@
   .country-select, .phone-input,
   .primary-btn, .secondary-btn, .google-btn { height: 56px; font-size: 16px; }
   .otp-digits { gap: 12px; }
-  .otp-digit { width: 60px; flex-basis: 60px; height: 64px; font-size: 24px; }
+  .otp-digit { width: 60px; flex-basis: 60px; max-width: 60px; height: 64px; font-size: 24px; }
 }
 
 @media (min-width: 1024px) {

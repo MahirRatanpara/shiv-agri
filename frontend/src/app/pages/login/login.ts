@@ -31,7 +31,7 @@ const COUNTRY_CODES = [
   styleUrls: ['./login.css']
 })
 export class LoginComponent implements OnInit, OnDestroy {
-  readonly OTP_LENGTH = 4;
+  readonly OTP_LENGTH = 6;
   readonly countryCodes = COUNTRY_CODES;
 
   // Top-level state — Google is the default sign-in method, phone OTP is secondary.

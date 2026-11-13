@@ -4,8 +4,8 @@
  * Stores active OTPs in a Map keyed by normalized phone (digits only, country-code prefixed).
  * Also tracks per-phone rate-limit counters (codes-requested-in-rolling-hour).
  *
- * Policy (user-selected "stricter" but with 4-digit code as explicitly requested):
- *   - 4-digit numeric code
+ * Policy:
+ *   - 6-digit numeric code
  *   - 3-minute expiry
  *   - max 3 verify attempts per code
  *   - 60-second resend cooldown
@@ -16,7 +16,7 @@
 
 const crypto = require('crypto');
 
-const OTP_LENGTH = 4;
+const OTP_LENGTH = 6;
 const OTP_TTL_MS = 3 * 60 * 1000;          // 3 minutes
 const MAX_ATTEMPTS = 3;
 const RESEND_COOLDOWN_MS = 60 * 1000;       // 60 seconds
