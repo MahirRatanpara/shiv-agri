@@ -26,6 +26,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
   hasLabTestingAccess = false;
   hasManagerialWorkAccess = false;
   hasFarmDashboardAccess = false;
+  hasReportDeliveryAccess = false;
 
   constructor(
     private authService: AuthService,
@@ -75,6 +76,7 @@ export class HeaderComponent implements AfterViewInit, OnInit {
       this.hasLabTestingAccess = false;
       this.hasManagerialWorkAccess = false;
       this.hasFarmDashboardAccess = false;
+      this.hasReportDeliveryAccess = false;
       return;
     }
 
@@ -93,6 +95,9 @@ export class HeaderComponent implements AfterViewInit, OnInit {
       'water.samples.create',
       'water.reports.download'
     ]);
+
+    // Lab report delivery dashboard (WhatsApp / email audit trail)
+    this.hasReportDeliveryAccess = this.permissionService.hasPermission('reports.delivery.view');
 
     // Check if user has ANY managerial work related permission
     this.hasManagerialWorkAccess = this.permissionService.hasAnyPermission([

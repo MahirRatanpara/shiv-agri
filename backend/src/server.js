@@ -5,6 +5,7 @@ require('dotenv').config();
 const connectDB = require('./config/database');
 const fertilizerCropConfig = require('./config/fertilizerCropConfig');
 const mediaCleanupService = require('./services/mediaCleanupService');
+const reportDeliveryReconciler = require('./services/reportDeliveryReconciler');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 const appVersionRoutes = require('./routes/appVersion');
@@ -23,6 +24,10 @@ fertilizerCropConfig.loadConfig();
 // retention window (default 30 days) and removes the underlying files
 // from the media service.
 mediaCleanupService.startScheduled();
+
+// Lab report delivery reconciler (every 30 min): re-sends missed WhatsApp/email report
+// deliveries, retries transient failures and syncs WhatsApp delivered/read statuses.
+reportDeliveryReconciler.startScheduled();
 
 // Allowed origins: configured web origins + native app WebView origins.
 // Capacitor serves the app from capacitor://localhost (iOS) and http(s)://localhost

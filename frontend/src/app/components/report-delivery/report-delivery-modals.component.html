@@ -1,0 +1,226 @@
+<!-- ═══════════════════════ Preview modal ═══════════════════════ -->
+<ng-container *ngIf="previewOpen && previewRow as row">
+  <div class="rd-backdrop" (click)="closePreview()"></div>
+  <section class="rd-modal rd-modal--preview" role="dialog" aria-modal="true" aria-labelledby="rd-preview-title">
+    <header class="rd-modal__header">
+      <div class="rd-modal__title-wrap">
+        <span class="rd-modal__eyebrow">{{ typeLabel }} report</span>
+        <h3 id="rd-preview-title" class="rd-modal__title">
+          {{ row.farmerName || 'Unnamed farmer' }}
+          <span class="rd-muted" *ngIf="row.sampleNumber">· #{{ row.sampleNumber }}</span>
+        </h3>
+        <div class="rd-preview-meta">
+          <span *ngIf="row.farmsName"><i class="fas fa-seedling" aria-hidden="true"></i> {{ row.farmsName }}</span>
+          <span *ngIf="row.mobileNo"><i class="fas fa-phone" aria-hidden="true"></i> {{ row.mobileNo }}</span>
+          <span class="rd-chip rd-chip--{{ statusMeta[statusOf(row.delivery, 'whatsapp')].tone }}"
+                [title]="row.delivery?.whatsapp?.lastError || ''">
+            <i class="fab fa-whatsapp" aria-hidden="true"></i>
+            {{ statusMeta[statusOf(row.delivery, 'whatsapp')].label }}
+          </span>
+          <span class="rd-chip rd-chip--{{ statusMeta[statusOf(row.delivery, 'email')].tone }}"
+                *ngIf="statusOf(row.delivery, 'email') !== 'not_sent'">
+            <i class="fas fa-envelope" aria-hidden="true"></i>
+            {{ statusMeta[statusOf(row.delivery, 'email')].label }}
+          </span>
+        </div>
+      </div>
+      <button type="button" class="rd-icon-btn" (click)="closePreview()" aria-label="Close preview">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="rd-preview-body">
+      <div class="rd-preview-state" *ngIf="previewLoading">
+        <span class="rd-spinner" aria-hidden="true"></span>
+        <p>Generating report preview…</p>
+      </div>
+      <div class="rd-preview-state rd-preview-state--error" *ngIf="!previewLoading && previewError">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <p>{{ previewError }}</p>
+      </div>
+      <div class="rd-preview-state" *ngIf="!previewLoading && previewUrl && nativeViewer">
+        <i class="fas fa-file-pdf rd-preview-state__pdf" aria-hidden="true"></i>
+        <p>The report is ready.</p>
+        <button type="button" class="rd-btn rd-btn--outline" (click)="openPreviewInNewTab()">
+          <i class="fas fa-eye" aria-hidden="true"></i> Open report
+        </button>
+      </div>
+      <iframe *ngIf="!previewLoading && previewUrl && !nativeViewer"
+              class="rd-preview-frame"
+              [src]="previewUrl"
+              title="Report preview"></iframe>
+    </div>
+
+    <footer class="rd-modal__footer">
+      <button type="button" class="rd-btn rd-btn--ghost" (click)="openPreviewInNewTab()" [disabled]="!previewUrl">
+        <i class="fas fa-external-link-alt" aria-hidden="true"></i> {{ nativeViewer ? 'Open report' : 'Open in new tab' }}
+      </button>
+      <span class="rd-spacer"></span>
+      <ng-container *ngIf="canSend">
+        <button type="button" class="rd-btn rd-btn--outline" (click)="sendFromPreview('email')">
+          <i class="fas fa-envelope" aria-hidden="true"></i> Email
+        </button>
+        <button type="button" class="rd-btn rd-btn--whatsapp" (click)="sendFromPreview('whatsapp')">
+          <i class="fab fa-whatsapp" aria-hidden="true"></i>
+          {{ statusOf(row.delivery, 'whatsapp') === 'not_sent' ? 'Send on WhatsApp' : 'Resend on WhatsApp' }}
+        </button>
+      </ng-container>
+    </footer>
+  </section>
+</ng-container>
+
+<!-- ═══════════════════════ Send confirmation dialog ═══════════════════════ -->
+<ng-container *ngIf="sendOpen">
+  <div class="rd-backdrop rd-backdrop--top" (click)="!sending && closeSend()"></div>
+  <section #sendDialog class="rd-modal rd-modal--send" role="dialog" aria-modal="true" aria-labelledby="rd-send-title" tabindex="-1">
+    <header class="rd-modal__header">
+      <span class="rd-modal__icon" [class.rd-modal__icon--email]="!isWhatsApp" aria-hidden="true">
+        <i [class]="isWhatsApp ? 'fab fa-whatsapp' : 'fas fa-envelope'"></i>
+      </span>
+      <div class="rd-modal__title-wrap">
+        <h3 id="rd-send-title" class="rd-modal__title">
+          {{ isWhatsApp ? 'Send on WhatsApp' : 'Send by email' }}
+        </h3>
+        <p class="rd-modal__subtitle">
+          {{ sampleIds.length }} {{ typeLabel | lowercase }} {{ sampleIds.length === 1 ? 'report' : 'reports' }} selected
+        </p>
+      </div>
+      <button type="button" class="rd-icon-btn" (click)="closeSend()" [disabled]="sending" aria-label="Close">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="rd-modal__body">
+      <!-- Loading -->
+      <div class="rd-skeleton-list" *ngIf="precheckLoading" aria-busy="true" aria-label="Checking reports">
+        <div class="rd-skeleton"></div>
+        <div class="rd-skeleton"></div>
+        <div class="rd-skeleton rd-skeleton--short"></div>
+      </div>
+
+      <div class="rd-alert rd-alert--danger" *ngIf="precheckError" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <span>{{ precheckError }}</span>
+      </div>
+
+      <ng-container *ngIf="precheck && !precheckLoading">
+        <!-- Summary -->
+        <div class="rd-stats" *ngIf="isWhatsApp">
+          <div class="rd-stat rd-stat--ok">
+            <span class="rd-stat__value">{{ validItems.length }}</span>
+            <span class="rd-stat__label">Ready to send</span>
+          </div>
+          <div class="rd-stat rd-stat--warn" *ngIf="resendItems.length">
+            <span class="rd-stat__value">{{ resendItems.length }}</span>
+            <span class="rd-stat__label">Already sent</span>
+          </div>
+          <div class="rd-stat rd-stat--bad" *ngIf="invalidItems.length">
+            <span class="rd-stat__value">{{ invalidItems.length }}</span>
+            <span class="rd-stat__label">Will be skipped</span>
+          </div>
+        </div>
+
+        <!-- Email recipient -->
+        <div class="rd-field" *ngIf="!isWhatsApp">
+          <label for="rd-email" class="rd-field__label">Recipient email</label>
+          <input #emailInput
+                 id="rd-email"
+                 type="email"
+                 class="rd-input"
+                 [class.rd-input--invalid]="emailTouched && !emailValid"
+                 placeholder="name@example.com"
+                 autocomplete="email"
+                 inputmode="email"
+                 [(ngModel)]="email"
+                 (blur)="emailTouched = true"
+                 (keydown.enter)="confirmSend()"
+                 [disabled]="sending"
+                 [attr.aria-invalid]="emailTouched && !emailValid"
+                 aria-describedby="rd-email-help" />
+          <small id="rd-email-help" class="rd-field__help" [class.rd-field__help--error]="emailTouched && !emailValid">
+            <ng-container *ngIf="emailTouched && !emailValid; else emailHelp">Enter a valid email address.</ng-container>
+            <ng-template #emailHelp>
+              All {{ precheck.items.length }} {{ precheck.items.length === 1 ? 'report is' : 'reports are' }}
+              bundled into one ZIP attachment.
+            </ng-template>
+          </small>
+        </div>
+
+        <!-- Report list -->
+        <ul class="rd-list" aria-label="Selected reports">
+          <li class="rd-list__item" *ngFor="let item of precheck.items; trackBy: trackBySample"
+              [class.rd-list__item--invalid]="isWhatsApp && !item.valid">
+            <div class="rd-list__main">
+              <span class="rd-list__name">{{ item.farmerName || 'Unnamed farmer' }}</span>
+              <span class="rd-list__meta">
+                <ng-container *ngIf="item.sampleNumber">#{{ item.sampleNumber }}</ng-container>
+                <ng-container *ngIf="item.farmsName"> · {{ item.farmsName }}</ng-container>
+              </span>
+            </div>
+            <div class="rd-list__side">
+              <ng-container *ngIf="isWhatsApp">
+                <span class="rd-list__phone" *ngIf="item.valid">{{ item.recipientDisplay }}</span>
+                <span class="rd-chip rd-chip--danger" *ngIf="!item.valid">
+                  <i class="fas fa-ban" aria-hidden="true"></i> {{ item.reason }}
+                </span>
+              </ng-container>
+              <span class="rd-chip rd-chip--warn" *ngIf="item.alreadySent && (item.valid || !isWhatsApp)"
+                    [title]="'Last sent ' + (item.lastSentAt ? (item.lastSentAt | date: 'medium') : '') + (item.lastRecipient ? ' to ' + item.lastRecipient : '')">
+                <i class="fas fa-redo" aria-hidden="true"></i>
+                Sent {{ item.sendCount }}×<ng-container *ngIf="item.lastSentAt"> · {{ item.lastSentAt | date: 'd MMM' }}</ng-container>
+              </span>
+            </div>
+          </li>
+        </ul>
+
+        <!-- Resend warning + explicit confirmation -->
+        <div class="rd-alert rd-alert--warn" *ngIf="resendItems.length" role="alert">
+          <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+          <div>
+            <strong>{{ resendItems.length }} {{ resendItems.length === 1 ? 'report was' : 'reports were' }} already sent.</strong>
+            <p>The farmer will get it again, and it will be recorded as a new delivery in the audit log.</p>
+            <label class="rd-check">
+              <input type="checkbox" [(ngModel)]="confirmResend" [disabled]="sending" />
+              <span>Yes, send {{ resendItems.length === 1 ? 'it' : 'them' }} again</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- What the farmer receives -->
+        <p class="rd-note" *ngIf="isWhatsApp && validItems.length">
+          <i class="fas fa-info-circle" aria-hidden="true"></i>
+          Each farmer gets the PDF on WhatsApp (+91) with a <strong>View Report in App</strong> button.
+          <ng-container *ngIf="invalidItems.length"> Rows without a valid mobile number are skipped.</ng-container>
+        </p>
+        <p class="rd-note" *ngIf="!isWhatsApp">
+          <i class="fas fa-info-circle" aria-hidden="true"></i>
+          The email is sent right away. If delivery fails, it is retried automatically.
+        </p>
+        <div class="rd-alert rd-alert--danger" *ngIf="isWhatsApp && !validItems.length" role="alert">
+          <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+          <span>None of the selected reports has a valid mobile number. Fix the Mobile No. column and try again.</span>
+        </div>
+
+        <div class="rd-alert rd-alert--danger" *ngIf="sendError" role="alert">
+          <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+          <span>{{ sendError }}</span>
+        </div>
+      </ng-container>
+    </div>
+
+    <footer class="rd-modal__footer">
+      <span class="rd-spacer"></span>
+      <button type="button" class="rd-btn rd-btn--ghost" (click)="closeSend()" [disabled]="sending">Cancel</button>
+      <button type="button"
+              class="rd-btn"
+              [class.rd-btn--whatsapp]="isWhatsApp"
+              [class.rd-btn--primary]="!isWhatsApp"
+              (click)="confirmSend()"
+              [disabled]="!canConfirm">
+        <span class="rd-spinner rd-spinner--sm" *ngIf="sending" aria-hidden="true"></span>
+        <i *ngIf="!sending" [class]="isWhatsApp ? 'fab fa-whatsapp' : 'fas fa-paper-plane'" aria-hidden="true"></i>
+        {{ sending ? 'Sending…' : confirmLabel }}
+      </button>
+    </footer>
+  </section>
+</ng-container>

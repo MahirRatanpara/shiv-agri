@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -11,6 +11,10 @@ import { FarmManagementService } from '../../services/farm-management.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { ReportDeliveryModalsComponent, ReportsSentEvent } from '../../components/report-delivery/report-delivery-modals.component';
+import { ReportDeliveryGridController, buildDeliveryColumn } from '../../components/report-delivery/report-delivery-grid';
+import { ReportDeliveryService, DeliveryChannel } from '../../services/report-delivery.service';
+import { PermissionService } from '../../services/permission.service';
 import { FertilizerSessionStateManager, FertilizerSessionStatus } from '../../models/fertilizer-session-state.model';
 import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
 import { firstValueFrom } from 'rxjs';
@@ -20,7 +24,7 @@ type CropType = 'normal' | 'small-fruit' | 'large-fruit';
 @Component({
   selector: 'app-fertilizer-testing',
   standalone: true,
-  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective, ReportDeliveryModalsComponent],
   providers: [FertilizerTestingService, SoilTestingService, FarmManagementService, PdfService],
   templateUrl: './fertilizer-testing.html',
   styleUrls: ['./fertilizer-testing.css'],
@@ -47,6 +51,16 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
   isBackendConnected: boolean = false;
   isLoading: boolean = true;
   hasSelectedRows: boolean = false;
+
+  // Report delivery (WhatsApp / email) — status column, send dialog, preview
+  @ViewChild(ReportDeliveryModalsComponent) private deliveryModals?: ReportDeliveryModalsComponent;
+  private readonly deliveryPermissions = inject(PermissionService);
+  private readonly deliveryGrid = new ReportDeliveryGridController(
+    inject(ReportDeliveryService),
+    'fertilizer',
+    () => this.gridApi,
+    (sampleId, delivery) => this.deliveryModals?.updatePreviewDelivery(sampleId, delivery)
+  );
 
   // State Management
   stateManager: FertilizerSessionStateManager = new FertilizerSessionStateManager('started');
@@ -177,7 +191,39 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
     document.addEventListener('click', this.handleDocumentClick.bind(this));
   }
 
+  // ===== REPORT DELIVERY (WhatsApp / Email) =====
+
+  get canSendReports(): boolean {
+    return this.deliveryPermissions.hasPermission('fertilizer.reports.send');
+  }
+
+  /** Toolbar action: confirm & send the selected rows' reports. */
+  openDeliveryDialog(channel: DeliveryChannel): void {
+    const { ids, unsaved } = this.deliveryGrid.getSelectedSampleIds();
+    if (unsaved) {
+      this.toastService.warning(`${unsaved} unsaved row(s) skipped — save them first.`, 4000);
+    }
+    if (ids.length) this.deliveryModals?.openSend(channel, ids);
+  }
+
+  /** Row action: preview the PDF, then send it on WhatsApp or email. */
+  openDeliveryPreview(row: FertilizerSampleData): void {
+    this.deliveryModals?.openPreview({
+      sampleId: row._id || '',
+      sampleNumber: row.sampleNumber,
+      farmerName: row.farmerName,
+      farmsName: (row as any).farmsName,
+      mobileNo: '',
+      delivery: (row as any).delivery
+    });
+  }
+
+  onReportsSent(event: ReportsSentEvent): void {
+    this.deliveryGrid.track(event.sampleIds);
+  }
+
   ngOnDestroy(): void {
+    this.deliveryGrid.destroy();
     this.destroy$.next();
     this.destroy$.complete();
 
@@ -370,6 +416,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
         }
       },
       { field: 'spray3_hormoneDose', headerName: 'Spray 3 - Hormone Dose', editable: true, cellDataType: 'number', width: 180, headerClass: 'header-section-spray' },
+      buildDeliveryColumn((row) => this.openDeliveryPreview(row)),
       // Actions column
       {
         headerName: 'Actions',
@@ -477,6 +524,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
       // M5 - Spray section
       { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', width: 170, headerClass: 'header-section-m5' },
+      buildDeliveryColumn((row) => this.openDeliveryPreview(row)),
       fruitActionsCol,
     ];
 
@@ -530,6 +578,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
       { field: 'm4_erandakhol', headerName: 'M4 એરંડો ખોળ (કિ)', editable: true, cellDataType: 'number', width: 140, headerClass: 'header-section-m4' },
       // M5 - Spray section
       { field: 'm5_npk1919', headerName: 'M5 NPK 19:19:19 (ગ્રામ)', editable: true, cellDataType: 'number', width: 170, headerClass: 'header-section-m5' },
+      buildDeliveryColumn((row) => this.openDeliveryPreview(row)),
       fruitActionsCol,
     ];
   }
@@ -1164,6 +1213,9 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
           }
         }
 
+        // Freshen WhatsApp statuses (sent → delivered → read) for the rows just loaded.
+        this.deliveryGrid.refreshInFlight(newSamples);
+
         this.gridCurrentPage++;
         this.isLoadingMore = false;
       },
@@ -1220,7 +1272,7 @@ export class FertilizerTestingComponent implements OnInit, OnDestroy {
     // Update all column definitions to enable/disable editing
     const updatedColDefs = this.colDefs.map(col => {
       // Skip columns that should never be editable (checkboxes, actions)
-      if (col.checkboxSelection || col.headerName === 'Actions') {
+      if (col.checkboxSelection || col.headerName === 'Actions' || col.colId === 'delivery') {
         return col;
       }
 

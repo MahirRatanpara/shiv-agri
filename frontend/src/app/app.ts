@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, NgZone, OnInit, inject, signal } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -20,6 +20,8 @@ import { AppUpdateService } from './services/app-update.service';
 export class App implements OnInit {
   protected readonly title = signal('Shiv Agri Consultancy');
   private appUpdates = inject(AppUpdateService);
+  private router = inject(Router);
+  private zone = inject(NgZone);
 
   ngOnInit(): void {
     // Native-only setup. On web this is a no-op so the existing web build is unaffected.
@@ -49,6 +51,14 @@ export class App implements OnInit {
       }
     });
 
+    // App Links / Universal Links: https://shivagri.com/r/<token> (the WhatsApp
+    // "View Report in App" button) opens the app — route to the in-app report viewer.
+    CapacitorApp.addListener('appUrlOpen', ({ url }) => this.handleDeepLink(url));
+    // Cold start from a link: the URL may arrive before the listener is attached.
+    CapacitorApp.getLaunchUrl()
+      .then((launch) => launch?.url && this.handleDeepLink(launch.url))
+      .catch(() => { /* no launch URL */ });
+
     // Hide the splash once the app shell is ready.
     try {
       await SplashScreen.hide();
@@ -60,5 +70,17 @@ export class App implements OnInit {
     // re-checking on resume. Never throws — a failed check leaves the app usable
     // and the 426 interceptor backstop still applies.
     void this.appUpdates.init();
+  }
+
+  /** Only allow-listed in-app paths are honoured; anything else is ignored. */
+  private handleDeepLink(rawUrl: string): void {
+    try {
+      const url = new URL(rawUrl);
+      const match = url.pathname.match(/^\/r\/([A-Za-z0-9_-]{20,64})\/?$/);
+      if (!match) return;
+      this.zone.run(() => this.router.navigateByUrl(`/r/${match[1]}`));
+    } catch {
+      // Malformed URL — ignore.
+    }
   }
 }

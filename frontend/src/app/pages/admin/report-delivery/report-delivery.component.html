@@ -1,0 +1,263 @@
+<div class="rdash">
+
+  <header class="rdash-header">
+    <div>
+      <h1>Report Delivery</h1>
+      <p class="rdash-subtitle">Every soil, water and fertilizer report sent to farmers on WhatsApp or by email.</p>
+    </div>
+    <div class="rdash-header__actions">
+      <button type="button" class="rdash-btn rdash-btn--ghost" (click)="toggleAutoRefresh()" [attr.aria-pressed]="autoRefresh">
+        <i class="fas fa-sync" aria-hidden="true"></i>
+        {{ autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off' }}
+      </button>
+      <button type="button" class="rdash-btn rdash-btn--primary" (click)="loadAll()" [disabled]="isLoading">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <!-- Summary tiles (respect all filters except status) -->
+  <section class="rdash-tiles" *ngIf="summary" aria-label="Delivery summary">
+    <div class="rdash-tile">
+      <span class="rdash-tile__label">Reports sent</span>
+      <span class="rdash-tile__value">{{ summary.total }}</span>
+      <span class="rdash-tile__note">
+        <i class="fab fa-whatsapp" aria-hidden="true"></i> {{ summary.byChannel.whatsapp }}
+        &nbsp;·&nbsp;
+        <i class="fas fa-envelope" aria-hidden="true"></i> {{ summary.byChannel.email }}
+      </span>
+    </div>
+    <div class="rdash-tile">
+      <span class="rdash-tile__label">Success rate</span>
+      <span class="rdash-tile__value">{{ summary.successRatePercent }}%</span>
+      <span class="rdash-tile__note">accepted, delivered or read</span>
+    </div>
+    <div class="rdash-tile">
+      <span class="rdash-tile__label">Delivered / read</span>
+      <span class="rdash-tile__value rdash-tile__value--success">{{ reachedCount }}</span>
+      <span class="rdash-tile__note">reached the farmer's phone</span>
+    </div>
+    <div class="rdash-tile">
+      <span class="rdash-tile__label">Sending</span>
+      <span class="rdash-tile__value rdash-tile__value--pending">{{ summary.pending }}</span>
+      <span class="rdash-tile__note">queued or retrying</span>
+    </div>
+    <div class="rdash-tile">
+      <span class="rdash-tile__label">Failed</span>
+      <span class="rdash-tile__value rdash-tile__value--danger">{{ summary.byStatus.failed }}</span>
+      <span class="rdash-tile__note">need attention</span>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="rdash-filters" aria-label="Filters">
+    <div class="rdash-filters__row">
+      <div class="rdash-search">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input type="search"
+               placeholder="Search farmer, farm, sample no., phone or email…"
+               aria-label="Search deliveries"
+               [(ngModel)]="search"
+               (ngModelChange)="onSearchChange()" />
+      </div>
+
+      <div class="rdash-segment" role="group" aria-label="Channel">
+        <button type="button" [class.active]="channel === ''" (click)="setChannel('')">All</button>
+        <button type="button" [class.active]="channel === 'whatsapp'" (click)="setChannel('whatsapp')">
+          <i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp
+        </button>
+        <button type="button" [class.active]="channel === 'email'" (click)="setChannel('email')">
+          <i class="fas fa-envelope" aria-hidden="true"></i> Email
+        </button>
+      </div>
+
+      <select class="rdash-select" aria-label="Report type" [(ngModel)]="sampleType" (ngModelChange)="applyFilters()">
+        <option *ngFor="let t of typeOptions" [ngValue]="t.value">{{ t.label }}</option>
+      </select>
+
+      <div class="rdash-dates">
+        <label>
+          <span class="sr-only">From date</span>
+          <input type="date" class="rdash-select" [(ngModel)]="from" (change)="applyFilters()" aria-label="From date" />
+        </label>
+        <span class="rdash-dates__sep" aria-hidden="true">–</span>
+        <label>
+          <span class="sr-only">To date</span>
+          <input type="date" class="rdash-select" [(ngModel)]="to" (change)="applyFilters()" aria-label="To date" />
+        </label>
+      </div>
+    </div>
+
+    <div class="rdash-filters__row">
+      <div class="rdash-chips" role="group" aria-label="Status">
+        <button type="button" class="rdash-chip" [class.active]="status === ''" (click)="setStatus('')">All statuses</button>
+        <button type="button"
+                *ngFor="let s of statusOptions"
+                class="rdash-chip"
+                [class.active]="status === s"
+                [attr.aria-pressed]="status === s"
+                (click)="setStatus(s)">
+          {{ statusMeta[s].label }}
+          <span class="rdash-chip__count">{{ statusCount(s) }}</span>
+        </button>
+      </div>
+      <button type="button" class="rdash-btn rdash-btn--link" *ngIf="hasFilters" (click)="clearFilters()">
+        Clear filters
+      </button>
+    </div>
+  </section>
+
+  <div class="rdash-error" *ngIf="loadError" role="alert">{{ loadError }}</div>
+
+  <!-- Table -->
+  <section class="rdash-table-wrap">
+    <table class="rdash-table">
+      <thead>
+        <tr>
+          <th scope="col">Report</th>
+          <th scope="col">Farmer</th>
+          <th scope="col">Sent to</th>
+          <th scope="col">Status</th>
+          <th scope="col">Sent by</th>
+          <th scope="col">When</th>
+          <th scope="col" class="rdash-col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let row of rows; trackBy: trackById">
+          <tr class="rdash-row"
+              [class.rdash-row--open]="expandedId === row.id"
+              tabindex="0"
+              (click)="toggleRow(row)"
+              (keydown.enter)="toggleRow(row)"
+              [attr.aria-expanded]="expandedId === row.id">
+            <td>
+              <span class="rdash-type rdash-type--{{ row.sampleType }}">{{ typeLabels[row.sampleType] }}</span>
+              <span class="rdash-sample" *ngIf="row.sampleNumber">#{{ row.sampleNumber }}</span>
+            </td>
+            <td>
+              <div class="rdash-primary">{{ row.farmerName || '—' }}</div>
+              <div class="rdash-secondary" *ngIf="row.farmsName">{{ row.farmsName }}</div>
+            </td>
+            <td>
+              <div class="rdash-recipient">
+                <i [class]="row.channel === 'whatsapp' ? 'fab fa-whatsapp rdash-ico-wa' : 'fas fa-envelope rdash-ico-mail'" aria-hidden="true"></i>
+                <span>{{ row.recipientDisplay }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="rd-chip rd-chip--{{ statusMeta[row.status].tone }}" [title]="row.error?.message || ''">
+                <i [class]="statusMeta[row.status].icon" aria-hidden="true"></i>
+                {{ statusMeta[row.status].label }}
+              </span>
+              <div class="rdash-tags">
+                <span class="rdash-tag" *ngIf="row.isResend" title="Sent again after an earlier delivery">Resend #{{ row.sendSequence }}</span>
+                <span class="rdash-tag rdash-tag--warn" *ngIf="row.status === 'failed' && row.nextRetryAt">
+                  Auto-retry {{ row.nextRetryAt | date: 'shortTime' }}
+                </span>
+              </div>
+            </td>
+            <td class="rdash-secondary">{{ row.sentByName || '—' }}</td>
+            <td>
+              <div class="rdash-primary">{{ row.createdAt | date: 'd MMM y' }}</div>
+              <div class="rdash-secondary">{{ row.createdAt | date: 'shortTime' }}</div>
+            </td>
+            <td class="rdash-col-actions">
+              <button type="button"
+                      class="rdash-btn rdash-btn--small"
+                      *ngIf="row.status === 'failed'"
+                      [disabled]="retrying.has(row.id)"
+                      (click)="retry(row, $event)">
+                <i class="fas fa-redo" aria-hidden="true"></i> Retry
+              </button>
+              <i class="fas fa-chevron-down rdash-caret" [class.open]="expandedId === row.id" aria-hidden="true"></i>
+            </td>
+          </tr>
+
+          <!-- Detail: timeline + link stats -->
+          <tr class="rdash-detail-row" *ngIf="expandedId === row.id">
+            <td colspan="7">
+              <div class="rdash-detail" *ngIf="detailLoading">Loading details…</div>
+              <div class="rdash-detail" *ngIf="!detailLoading && detail as d">
+                <div class="rdash-detail__grid">
+                  <div>
+                    <h4>Timeline</h4>
+                    <ol class="rdash-timeline">
+                      <li *ngFor="let e of d.statusHistory">
+                        <span class="rd-chip rd-chip--{{ statusMeta[$any(e.status)]?.tone || 'neutral' }}">{{ statusMeta[$any(e.status)]?.label || e.status }}</span>
+                        <span class="rdash-timeline__time">{{ e.at | date: 'd MMM, h:mm:ss a' }}</span>
+                        <span class="rdash-timeline__source">{{ sourceLabel(e.source) }}</span>
+                        <span class="rdash-timeline__note" *ngIf="e.note">{{ e.note }}</span>
+                      </li>
+                    </ol>
+                  </div>
+                  <dl class="rdash-facts">
+                    <div *ngIf="d.error?.message">
+                      <dt>Last error</dt>
+                      <dd class="rdash-facts__error">
+                        <code *ngIf="d.error?.code">{{ d.error?.code }}</code> {{ d.error?.message }}
+                        <em *ngIf="d.error?.permanent"> — not retried automatically</em>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Attempts</dt>
+                      <dd>{{ d.attempts }} of {{ d.maxAttempts }}</dd>
+                    </div>
+                    <div *ngIf="d.sessionDate">
+                      <dt>Session</dt>
+                      <dd>{{ d.sessionDate }}</dd>
+                    </div>
+                    <div *ngIf="d.shareLink">
+                      <dt>Report link</dt>
+                      <dd>
+                        Opened {{ d.shareLink.accessCount }}×<ng-container *ngIf="d.shareLink.lastAccessedAt">, last {{ d.shareLink.lastAccessedAt | date: 'd MMM, h:mm a' }}</ng-container>
+                        <br />
+                        <span class="rdash-secondary">
+                          {{ d.shareLink.revoked ? 'Revoked' : 'Expires ' + (d.shareLink.expiresAt | date: 'd MMM y') }}
+                        </span>
+                      </dd>
+                    </div>
+                    <div *ngIf="d.providerMessageId">
+                      <dt>Message ID</dt>
+                      <dd>
+                        <button type="button" class="rdash-id" (click)="copy(d.providerMessageId, 'Message ID', $event)" title="Copy">
+                          {{ d.providerMessageId | slice: 0:24 }}… <i class="far fa-copy" aria-hidden="true"></i>
+                        </button>
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+
+        <tr *ngIf="!isLoading && rows.length === 0 && !loadError">
+          <td colspan="7" class="rdash-empty">
+            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+            <p *ngIf="hasFilters">No deliveries match these filters.</p>
+            <p *ngIf="!hasFilters">No reports have been sent yet. Select rows on a testing page and choose <strong>Send via WhatsApp</strong>.</p>
+          </td>
+        </tr>
+        <tr *ngIf="isLoading">
+          <td colspan="7" class="rdash-empty">Loading…</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Pagination -->
+  <nav class="rdash-pagination" *ngIf="total > 0" aria-label="Pagination">
+    <span class="rdash-range">Showing {{ rangeStart }}–{{ rangeEnd }} of {{ total }}</span>
+    <div class="rdash-pager">
+      <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 1" aria-label="Previous page">Prev</button>
+      <button type="button"
+              *ngFor="let p of pageNumbers"
+              [class.active]="p === page"
+              [attr.aria-current]="p === page ? 'page' : null"
+              (click)="goToPage(p)">{{ p }}</button>
+      <button type="button" (click)="goToPage(page + 1)" [disabled]="page === totalPages" aria-label="Next page">Next</button>
+    </div>
+  </nav>
+
+</div>

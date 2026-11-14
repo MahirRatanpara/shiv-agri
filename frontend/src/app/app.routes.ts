@@ -23,6 +23,8 @@ import { FertilizerTestingComponent } from './pages/fertilizer-testing/fertilize
 import { LabTestingComponent } from './pages/lab-testing/lab-testing';
 import { UserManagementComponent } from './pages/admin/user-management/user-management.component';
 import { WhatsappDeliveryComponent } from './pages/admin/whatsapp-delivery/whatsapp-delivery.component';
+import { ReportDeliveryComponent } from './pages/admin/report-delivery/report-delivery.component';
+import { ReportLinkComponent } from './pages/report-link/report-link.component';
 import { ManagerialWorkComponent } from './pages/managerial-work/managerial-work';
 import { ReceiptsComponent } from './pages/managerial-work/receipts/receipts';
 import { InvoicesComponent } from './pages/managerial-work/invoices/invoices';
@@ -85,6 +87,10 @@ export const routes: Routes = [
   { path: 'farm-management/project/:id', component: FarmProjectDetailsComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'admin/whatsapp-delivery', component: WhatsappDeliveryComponent, canActivate: [authGuard, profileCompleteGuard] },
+  { path: 'admin/report-delivery', component: ReportDeliveryComponent, canActivate: [authGuard, profileCompleteGuard] },
+  // Public, token-gated lab report (target of the WhatsApp "View Report in App" button).
+  // Also opened inside the native app via App Links / Universal Links.
+  { path: 'r/:token', component: ReportLinkComponent },
   { path: 'my-account', component: MyAccountComponent, canActivate: [authGuard, profileCompleteGuard] },
   { path: 'contact', component: ContactComponent },
   { path: 'privacy-policy', component: PrivacyPolicyComponent },
