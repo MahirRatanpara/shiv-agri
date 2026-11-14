@@ -1,0 +1,88 @@
+<main class="rl">
+  <section class="rl-card" aria-live="polite">
+
+    <!-- Loading -->
+    <div class="rl-state" *ngIf="loading">
+      <span class="rl-spinner" aria-hidden="true"></span>
+      <p>Loading your report…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="rl-state" *ngIf="!loading && errorTitle && !report">
+      <span class="rl-icon rl-icon--error" aria-hidden="true"><i class="fas fa-exclamation-circle"></i></span>
+      <h1 class="rl-title">{{ errorTitle }}</h1>
+      <p class="rl-text">{{ errorMessage }}</p>
+      <button type="button" class="rl-btn rl-btn--outline" (click)="retry()">Try again</button>
+    </div>
+
+    <!-- Report -->
+    <ng-container *ngIf="!loading && report as r">
+      <header class="rl-head">
+        <span class="rl-icon" aria-hidden="true"><i class="fas fa-file-alt"></i></span>
+        <div>
+          <span class="rl-eyebrow">Shiv Agri Consultancy</span>
+          <h1 class="rl-title">{{ r.title }}</h1>
+        </div>
+      </header>
+
+      <dl class="rl-facts">
+        <div *ngIf="r.farmerName"><dt>Farmer</dt><dd>{{ r.farmerName }}</dd></div>
+        <div *ngIf="r.farmsName"><dt>Farm</dt><dd>{{ r.farmsName }}</dd></div>
+        <div *ngIf="r.sampleNumber"><dt>Sample no.</dt><dd>{{ r.sampleNumber }}</dd></div>
+        <div *ngIf="r.sessionDate"><dt>Tested on</dt><dd>{{ r.sessionDate }}</dd></div>
+      </dl>
+
+      <div class="rl-alert" *ngIf="errorTitle" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i> {{ errorMessage }}
+      </div>
+
+      <!-- Inside the native app -->
+      <div class="rl-actions" *ngIf="platform === 'native'">
+        <button type="button" class="rl-btn rl-btn--primary" (click)="viewPdf()" [disabled]="opening">
+          <span class="rl-spinner rl-spinner--sm" *ngIf="opening" aria-hidden="true"></span>
+          <i class="fas fa-eye" *ngIf="!opening" aria-hidden="true"></i>
+          {{ opening ? 'Opening…' : 'Open report' }}
+        </button>
+        <button type="button" class="rl-btn rl-btn--outline" (click)="saveToDevice()" [disabled]="opening">
+          <i class="fas fa-download" aria-hidden="true"></i> Save to phone
+        </button>
+      </div>
+
+      <!-- In a browser -->
+      <ng-container *ngIf="platform !== 'native'">
+        <div class="rl-actions">
+          <a *ngIf="platform === 'android' && androidIntentUrl" class="rl-btn rl-btn--primary" [href]="androidIntentUrl">
+            <i class="fas fa-mobile-alt" aria-hidden="true"></i> Open in Shiv Agri app
+          </a>
+          <a class="rl-btn" [class.rl-btn--primary]="platform !== 'android'" [class.rl-btn--outline]="platform === 'android'"
+             [href]="pdfUrl" target="_blank" rel="noopener">
+            <i class="fas fa-eye" aria-hidden="true"></i> View report
+          </a>
+          <a class="rl-btn rl-btn--outline" [href]="downloadUrl">
+            <i class="fas fa-download" aria-hidden="true"></i> Download PDF
+          </a>
+        </div>
+
+        <aside class="rl-app">
+          <div class="rl-app__text">
+            <strong>Get the Shiv Agri app</strong>
+            <span>See all your soil, water and fertilizer reports in one place.</span>
+          </div>
+          <div class="rl-app__links">
+            <a class="rl-store" [href]="playStoreUrl" target="_blank" rel="noopener" *ngIf="platform !== 'ios' || !appStoreUrl">
+              <i class="fab fa-google-play" aria-hidden="true"></i> Google Play
+            </a>
+            <a class="rl-store" [href]="appStoreUrl" target="_blank" rel="noopener" *ngIf="appStoreUrl">
+              <i class="fab fa-app-store-ios" aria-hidden="true"></i> App Store
+            </a>
+          </div>
+        </aside>
+      </ng-container>
+
+      <p class="rl-footnote">
+        <i class="fas fa-clock" aria-hidden="true"></i>
+        This link is private to you and works until {{ r.expiresAt | date: 'd MMM y' }}.
+      </p>
+    </ng-container>
+  </section>
+</main>

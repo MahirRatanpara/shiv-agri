@@ -11,6 +11,8 @@ const projectRoutes = require('./projects');
 const transactionRoutes = require('./transactions');
 const notificationRoutes = require('./notifications');
 const whatsappDeliveryRoutes = require('./whatsappDelivery');
+const reportDeliveryRoutes = require('./reportDelivery');
+const publicReportRoutes = require('./publicReports');
 
 router.get('/', (req, res) => {
   res.json({ message: 'Welcome to Shiv Agri API' });
@@ -54,5 +56,11 @@ router.use('/notifications', notificationRoutes);
 // nginx routes /api/notifications/whatsapp straight to the notification-service, which
 // would bypass this proxy and its admin check entirely.
 router.use('/admin/whatsapp', whatsappDeliveryRoutes);
+
+// Lab report delivery to farmers (WhatsApp / email) + delivery audit dashboard
+router.use('/report-delivery', reportDeliveryRoutes);
+
+// Unauthenticated, token-gated report links (WhatsApp button target) + app-link manifests
+router.use('/public', publicReportRoutes);
 
 module.exports = router;

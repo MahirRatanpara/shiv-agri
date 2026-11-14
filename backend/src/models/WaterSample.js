@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { reportDeliveryStatusSchema } = require('./schemas/reportDeliveryStatus');
 
 const sampleSchema = new mongoose.Schema({
   sessionId: {
@@ -178,6 +179,13 @@ const sampleSchema = new mongoose.Schema({
   linkedAt: {
     type: Date,
     default: null
+  },
+
+  // Latest WhatsApp / email delivery snapshot (server-managed; full history lives in
+  // the report_deliveries audit collection).
+  delivery: {
+    type: reportDeliveryStatusSchema,
+    default: () => ({})
   }
 }, {
   timestamps: true

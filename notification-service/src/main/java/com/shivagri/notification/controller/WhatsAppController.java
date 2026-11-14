@@ -1,21 +1,29 @@
 package com.shivagri.notification.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shivagri.notification.controller.dto.SendResponse;
+import com.shivagri.notification.controller.dto.WhatsAppDocumentTemplateRequest;
 import com.shivagri.notification.controller.dto.WhatsAppMediaRequest;
 import com.shivagri.notification.controller.dto.WhatsAppTemplateRequest;
 import com.shivagri.notification.controller.dto.WhatsAppTextRequest;
 import com.shivagri.notification.service.WhatsAppService;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.UUID;
 
 @Slf4j
@@ -27,6 +35,8 @@ public class WhatsAppController {
     private static final String CHANNEL = "whatsapp";
 
     private final WhatsAppService service;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     @PostMapping("/text")
     public ResponseEntity<SendResponse> sendText(
@@ -69,6 +79,41 @@ public class WhatsAppController {
         }
         String providerId = service.sendTemplate(requestId, req.to(), req.templateName(), req.languageCode(),
                 req.bodyParameters(), req.buttonOtpCode());
+        return ResponseEntity.ok(SendResponse.sent(requestId, CHANNEL, providerId));
+    }
+
+    /**
+     * Template with a DOCUMENT header (lab reports). Multipart: "payload" (JSON
+     * {@link WhatsAppDocumentTemplateRequest}) + "document" (the PDF). Always synchronous — the
+     * caller records the returned wamid against its audit row to correlate webhook statuses.
+     */
+    @PostMapping(value = "/template/document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<SendResponse> sendDocumentTemplate(
+            @RequestPart("payload") String payloadJson,
+            @RequestPart("document") MultipartFile document) throws IOException {
+        String requestId = UUID.randomUUID().toString();
+
+        WhatsAppDocumentTemplateRequest req;
+        try {
+            req = objectMapper.readValue(payloadJson, WhatsAppDocumentTemplateRequest.class);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalArgumentException("payload part must be valid JSON: " + ex.getOriginalMessage());
+        }
+        var violations = validator.validate(req);
+        if (!violations.isEmpty()) {
+            var first = violations.iterator().next();
+            throw new IllegalArgumentException(first.getPropertyPath() + ": " + first.getMessage());
+        }
+        if (document == null || document.isEmpty()) {
+            throw new IllegalArgumentException("document part is required");
+        }
+
+        log.info("[{}] POST /whatsapp/template/document to={} template={} filename={} bytes={}",
+                requestId, req.to(), req.templateName(), req.filename(), document.getSize());
+
+        String providerId = service.sendDocumentTemplate(requestId, req.to(), req.templateName(),
+                req.languageCode(), req.bodyParameters(), req.buttonUrlParameter(),
+                document.getBytes(), req.filename(), document.getContentType());
         return ResponseEntity.ok(SendResponse.sent(requestId, CHANNEL, providerId));
     }
 

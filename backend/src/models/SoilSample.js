@@ -178,6 +178,13 @@ const sampleSchema = new mongoose.Schema({
   potashResultEn: {
     type: String,
     default: ''
+  },
+
+  // Latest WhatsApp / email delivery snapshot (server-managed; full history lives in
+  // the report_deliveries audit collection).
+  delivery: {
+    type: reportDeliveryStatusSchema,
+    default: () => ({})
   }
 }, {
   timestamps: true
