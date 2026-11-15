@@ -75,7 +75,9 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${SERVER_USER}@${SERVER_HOST}" << EOF
           set -e
           cd /var/www/shiv-agri
-          [ -f .env ] && export \$(cat .env | grep -v '^#' | xargs)
+          # docker compose reads .env from this directory itself; exporting it through the
+          # shell word-splits values that contain spaces and aborts the deploy under set -e.
+          [ -f .env ] || echo "⚠ Warning: .env file not found"
           echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_USER}" --password-stdin 2>/dev/null
           docker compose -f docker-compose.prod.yml pull --quiet ${SERVICE_NAME}
           docker compose -f docker-compose.prod.yml up -d --no-deps ${SERVICE_NAME}

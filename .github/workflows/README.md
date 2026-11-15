@@ -74,31 +74,11 @@ Triggers on:
 
 ## Environment Variable Loading
 
-All deployment workflows now **automatically source the `.env` file** from the VPS before executing docker-compose commands. This ensures that:
+The workflows run `docker compose` from `/var/www/shiv-agri`, and Compose loads the `.env` file in that directory by itself. The workflows only check that `.env` exists and warn if it doesn't; they do **not** export it into the shell.
 
-- Environment variables are properly loaded for docker-compose
-- Variables with special characters (like `MONGO_PASSWORD_ENCODED`) are correctly available
-- The deployment uses the exact same environment configuration as manual deployments
+Don't add `export $(cat .env | grep -v '^#' | xargs)` back. It splits every value on whitespace, so a value with spaces (for example `REPORT_EMAIL_BRAND_NAME="Shiv Agri Consultancy"` or an update message) becomes several words. Bash then fails with `export: 'Agri.': not a valid identifier`, which aborts any script running under `set -e`.
 
-### How it Works
-
-Each workflow includes this step before running docker-compose:
-
-```bash
-# Source environment variables from .env file
-if [ -f .env ]; then
-  export $(cat .env | grep -v '^#' | xargs)
-  echo "✓ Environment variables loaded from .env"
-else
-  echo "⚠ Warning: .env file not found"
-fi
-```
-
-This command:
-1. Checks if `.env` exists
-2. Reads the file and filters out comments (lines starting with `#`)
-3. Exports all variables to the shell environment
-4. Confirms successful loading
+Quote any `.env` value that contains spaces or special characters, for example `KEY="two words"`. Compose's parser handles quoted values correctly.
 
 ## Required GitHub Secrets
 
