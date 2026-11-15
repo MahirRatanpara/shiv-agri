@@ -3,3 +3,28 @@
 /* AG Grid Styles */
 @import 'ag-grid-community/styles/ag-grid.css';
 @import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+/* Report delivery status chip — shared by the testing grids, send dialog and the
+   Report Delivery dashboard (see components/report-delivery). */
+
+.rd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.rd-chip i { font-size: 0.72rem; }
+
+.rd-chip--neutral { background: #f3f4f6; color: #4b5563; }
+.rd-chip--pending { background: #fef3c7; color: #92400e; }
+.rd-chip--info    { background: #dbeafe; color: #1d4ed8; }
+.rd-chip--success { background: #dcfce7; color: #166534; }
+.rd-chip--read    { background: #ccfbf1; color: #115e59; }
+.rd-chip--danger  { background: #fee2e2; color: #991b1b; }
+.rd-chip--warn    { background: #fef3c7; color: #92400e; }

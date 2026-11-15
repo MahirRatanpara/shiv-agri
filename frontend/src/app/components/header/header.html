@@ -35,7 +35,7 @@
             <i class="fas fa-file-invoice"></i> Managerial
           </a>
         </li>
-        <li class="nav-item admin-menu" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
+        <li class="nav-item admin-menu" *ngIf="isAuthenticated && (currentUser?.role === 'admin' || hasReportDeliveryAccess)">
           <a class="nav-link admin-menu-toggle"
              href="#"
              role="button"
@@ -45,12 +45,17 @@
             <i class="fas fa-chevron-down admin-caret" [class.open]="isAdminMenuOpen"></i>
           </a>
           <ul class="admin-submenu" [class.show]="isAdminMenuOpen">
-            <li>
+            <li *ngIf="currentUser?.role === 'admin'">
               <a class="nav-link" routerLink="/admin/users" (click)="closeAdminMenu()">
                 <i class="fas fa-users"></i> User Management
               </a>
             </li>
-            <li>
+            <li *ngIf="hasReportDeliveryAccess">
+              <a class="nav-link" routerLink="/admin/report-delivery" (click)="closeAdminMenu()">
+                <i class="fas fa-paper-plane"></i> Report Delivery
+              </a>
+            </li>
+            <li *ngIf="currentUser?.role === 'admin'">
               <a class="nav-link" routerLink="/admin/whatsapp-delivery" (click)="closeAdminMenu()">
                 <i class="fab fa-whatsapp"></i> WhatsApp Delivery
               </a>

@@ -10,6 +10,7 @@ const { extractCellText } = require('../utils/excelCellText');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const farmReportLinker = require('../services/farmReportLinker');
 const logger = require('../utils/logger');
+const { stripServerManagedFields } = require('../utils/serverManagedFields');
 
 // Configure multer for file uploads (memory storage)
 const upload = multer({
@@ -625,7 +626,8 @@ router.get('/sessions/:sessionId/samples', requirePermission('water.sessions.vie
 router.patch('/sessions/:sessionId/samples', requirePermission('water.sessions.update'), async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { samples } = req.body;
+    // Never let a stale grid row overwrite server-maintained delivery status.
+    const samples = stripServerManagedFields(req.body.samples);
 
     if (!samples || !Array.isArray(samples)) {
       return res.status(400).json({ error: 'Samples array is required' });

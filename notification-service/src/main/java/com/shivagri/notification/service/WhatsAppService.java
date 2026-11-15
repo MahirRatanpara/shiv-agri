@@ -98,6 +98,135 @@ public class WhatsAppService {
         return postMessage(requestId, body);
     }
 
+    /**
+     * Sends an approved template whose header is a DOCUMENT (e.g. a lab report PDF), with an
+     * optional dynamic URL button. The file is first uploaded to Meta's media store so the
+     * document never has to be reachable on a public URL.
+     *
+     * @param buttonUrlParameter substituted into the {{1}} suffix of the template's URL button (index 0)
+     */
+    public String sendDocumentTemplate(String requestId, String to, String templateName, String languageCode,
+                                       List<String> bodyParameters, String buttonUrlParameter,
+                                       byte[] document, String filename, String mimeType) {
+        validateCreds();
+        String normalized = normalizePhone(to);
+
+        String mediaId = uploadMedia(requestId, document, filename, mimeType);
+
+        Map<String, Object> template = new HashMap<>();
+        template.put("name", templateName);
+        Map<String, Object> language = new HashMap<>();
+        language.put("code", languageCode == null || languageCode.isBlank() ? "en" : languageCode);
+        template.put("language", language);
+
+        List<Map<String, Object>> components = new java.util.ArrayList<>();
+
+        Map<String, Object> documentRef = new HashMap<>();
+        documentRef.put("id", mediaId);
+        documentRef.put("filename", filename);
+        Map<String, Object> headerParam = new HashMap<>();
+        headerParam.put("type", "document");
+        headerParam.put("document", documentRef);
+        Map<String, Object> header = new HashMap<>();
+        header.put("type", "header");
+        header.put("parameters", List.of(headerParam));
+        components.add(header);
+
+        if (bodyParameters != null && !bodyParameters.isEmpty()) {
+            List<Map<String, Object>> params = new java.util.ArrayList<>();
+            for (String p : bodyParameters) {
+                Map<String, Object> param = new HashMap<>();
+                param.put("type", "text");
+                param.put("text", p);
+                params.add(param);
+            }
+            Map<String, Object> bodyComponent = new HashMap<>();
+            bodyComponent.put("type", "body");
+            bodyComponent.put("parameters", params);
+            components.add(bodyComponent);
+        }
+
+        if (buttonUrlParameter != null && !buttonUrlParameter.isBlank()) {
+            Map<String, Object> param = new HashMap<>();
+            param.put("type", "text");
+            param.put("text", buttonUrlParameter);
+            Map<String, Object> button = new HashMap<>();
+            button.put("type", "button");
+            button.put("sub_type", "url");
+            button.put("index", "0");
+            button.put("parameters", List.of(param));
+            components.add(button);
+        }
+        template.put("components", components);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("messaging_product", "whatsapp");
+        body.put("recipient_type", "individual");
+        body.put("to", normalized);
+        body.put("type", "template");
+        body.put("template", template);
+
+        log.info("[{}] Sending WhatsApp document template to={} template={} lang={} mediaId={} filename={} hasButton={}",
+                requestId, normalized, templateName, language.get("code"), mediaId, filename,
+                buttonUrlParameter != null && !buttonUrlParameter.isBlank());
+        return postMessage(requestId, body);
+    }
+
+    /**
+     * Uploads a file to Meta's media store and returns its media id (valid ~30 days on Meta's side,
+     * long enough for the recipient to download it from the chat).
+     */
+    public String uploadMedia(String requestId, byte[] content, String filename, String mimeType) {
+        validateCreds();
+        if (content == null || content.length == 0) {
+            throw new IllegalArgumentException("document is empty");
+        }
+        String type = mimeType == null || mimeType.isBlank() ? "application/pdf" : mimeType;
+        String url = String.format("%s/%s/%s/media",
+                props.getApiBaseUrl(), props.getApiVersion(), props.getPhoneNumberId());
+
+        org.springframework.util.MultiValueMap<String, Object> form = new org.springframework.util.LinkedMultiValueMap<>();
+        form.add("messaging_product", "whatsapp");
+        form.add("type", type);
+
+        HttpHeaders fileHeaders = new HttpHeaders();
+        fileHeaders.setContentType(MediaType.parseMediaType(type));
+        org.springframework.core.io.ByteArrayResource resource = new org.springframework.core.io.ByteArrayResource(content) {
+            @Override
+            public String getFilename() {
+                return filename;
+            }
+        };
+        form.add("file", new HttpEntity<>(resource, fileHeaders));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(props.getAccessToken());
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        long startedAt = System.currentTimeMillis();
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST,
+                    new HttpEntity<>(form, headers), Map.class);
+            Object id = response.getBody() == null ? null : response.getBody().get("id");
+            if (id == null) {
+                throw new ProviderException("WhatsApp media upload returned no id", 0, String.valueOf(response.getBody()));
+            }
+            log.info("[{}] WhatsApp media uploaded mediaId={} bytes={} filename={} ({}ms)",
+                    requestId, id, content.length, filename, System.currentTimeMillis() - startedAt);
+            return id.toString();
+        } catch (HttpStatusCodeException ex) {
+            String respBody = ex.getResponseBodyAsString();
+            log.error("[{}] WhatsApp media upload error status={} body={}", requestId, ex.getStatusCode(), respBody);
+            throw new ProviderException("WhatsApp media upload rejected: " + ex.getStatusCode(),
+                    ex.getStatusCode().value(), respBody);
+        } catch (ProviderException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("[{}] WhatsApp media upload failed: {}", requestId, ex.getMessage(), ex);
+            throw new ProviderException("Failed to upload media to WhatsApp Cloud API", ex);
+        }
+    }
+
     public String sendMedia(String requestId, String to, String mediaUrl, String mediaType,
                             String caption, String filename) {
         validateCreds();

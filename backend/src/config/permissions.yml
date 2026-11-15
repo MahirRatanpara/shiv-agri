@@ -482,6 +482,27 @@ permissions:
     action: manage
     description: Add or remove projects from favorites
 
+  # ==================== Lab Report Delivery (WhatsApp / Email) ====================
+  - name: soil.reports.send
+    resource: soil-reports
+    action: send
+    description: Send soil reports to farmers via WhatsApp or email
+
+  - name: water.reports.send
+    resource: water-reports
+    action: send
+    description: Send water reports to farmers via WhatsApp or email
+
+  - name: fertilizer.reports.send
+    resource: fertilizer-reports
+    action: send
+    description: Send fertilizer recommendation reports to farmers via WhatsApp or email
+
+  - name: reports.delivery.view
+    resource: report-delivery
+    action: view
+    description: View the lab report delivery dashboard and audit trail
+
 # ============================================
 # ROLE DEFINITIONS
 # ============================================
@@ -529,6 +550,12 @@ roles:
       - water.samples.delete
       - water.reports.generate
       - water.reports.download
+
+      # Lab Report Delivery
+      - soil.reports.send
+      - water.reports.send
+      - fertilizer.reports.send
+      - reports.delivery.view
 
       # Projects
       - projects.view
@@ -663,6 +690,11 @@ roles:
       - water.reports.generate
       - water.reports.download
 
+      # Lab Report Delivery
+      - soil.reports.send
+      - water.reports.send
+      - fertilizer.reports.send
+
       # Files
       - files.view
       - files.upload
@@ -705,6 +737,12 @@ roles:
       - water.samples.delete
       - water.reports.generate
       - water.reports.download
+
+      # Lab Report Delivery
+      - soil.reports.send
+      - water.reports.send
+      - fertilizer.reports.send
+      - reports.delivery.view
 
       # Projects - Full Access
       - projects.view

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -16,6 +16,10 @@ import { FarmManagementService } from '../../services/farm-management.service';
 import { PdfService } from '../../services/pdf.service';
 import { ToastService } from '../../services/toast.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { ReportDeliveryModalsComponent, ReportsSentEvent } from '../../components/report-delivery/report-delivery-modals.component';
+import { ReportDeliveryGridController, buildDeliveryColumn } from '../../components/report-delivery/report-delivery-grid';
+import { ReportDeliveryService, DeliveryChannel } from '../../services/report-delivery.service';
+import { PermissionService } from '../../services/permission.service';
 import { SessionStateManager, SessionStatus } from '../../models/session-state.model';
 import { DatalistCellEditor } from '../../components/ag-grid-editors/datalist-cell-editor';
 import { firstValueFrom } from 'rxjs';
@@ -23,7 +27,7 @@ import { firstValueFrom } from 'rxjs';
 @Component({
   selector: 'app-water-testing',
   standalone: true,
-  imports: [CommonModule, AgGridAngular, HasPermissionDirective],
+  imports: [CommonModule, AgGridAngular, HasPermissionDirective, ReportDeliveryModalsComponent],
   providers: [WaterTestingService, FarmManagementService, PdfService],
   templateUrl: './water-testing.html',
   styleUrls: ['./water-testing.css'],
@@ -52,6 +56,16 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
   isBackendConnected: boolean = false;
   isLoading: boolean = true;
   hasSelectedRows: boolean = false;
+
+  // Report delivery (WhatsApp / email) — status column, send dialog, preview
+  @ViewChild(ReportDeliveryModalsComponent) private deliveryModals?: ReportDeliveryModalsComponent;
+  private readonly deliveryPermissions = inject(PermissionService);
+  private readonly deliveryGrid = new ReportDeliveryGridController(
+    inject(ReportDeliveryService),
+    'water',
+    () => this.gridApi,
+    (sampleId, delivery) => this.deliveryModals?.updatePreviewDelivery(sampleId, delivery)
+  );
 
   // State Management
   stateManager: SessionStateManager = new SessionStateManager('started');
@@ -343,6 +357,7 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
         return null;
       },
     },
+    buildDeliveryColumn((row) => this.openDeliveryPreview(row)),
     {
       headerName: 'Actions',
       cellRenderer: (params: any) => {
@@ -407,7 +422,39 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ===== REPORT DELIVERY (WhatsApp / Email) =====
+
+  get canSendReports(): boolean {
+    return this.deliveryPermissions.hasPermission('water.reports.send');
+  }
+
+  /** Toolbar action: confirm & send the selected rows' reports. */
+  openDeliveryDialog(channel: DeliveryChannel): void {
+    const { ids, unsaved } = this.deliveryGrid.getSelectedSampleIds();
+    if (unsaved) {
+      this.toastService.warning(`${unsaved} unsaved row(s) skipped — save them first.`, 4000);
+    }
+    if (ids.length) this.deliveryModals?.openSend(channel, ids);
+  }
+
+  /** Row action: preview the PDF, then send it on WhatsApp or email. */
+  openDeliveryPreview(row: WaterTestingData): void {
+    this.deliveryModals?.openPreview({
+      sampleId: row._id || '',
+      sampleNumber: row.sampleNumber,
+      farmerName: row.farmersName,
+      farmsName: (row as any).farmsName,
+      mobileNo: row.mobileNo,
+      delivery: (row as any).delivery
+    });
+  }
+
+  onReportsSent(event: ReportsSentEvent): void {
+    this.deliveryGrid.track(event.sampleIds);
+  }
+
   ngOnDestroy(): void {
+    this.deliveryGrid.destroy();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -683,6 +730,9 @@ export class WaterTestingComponent implements OnInit, OnDestroy {
             this.gridApi.applyTransaction({ add: newSamples });
           }
         }
+
+        // Freshen WhatsApp statuses (sent → delivered → read) for the rows just loaded.
+        this.deliveryGrid.refreshInFlight(newSamples);
 
         this.gridCurrentPage++;
         this.isLoadingMore = false;

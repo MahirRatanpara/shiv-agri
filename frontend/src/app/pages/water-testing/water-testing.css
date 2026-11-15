@@ -949,6 +949,32 @@
   background: linear-gradient(135deg, #ee5a6f 0%, #dd495e 100%);
 }
 
+/* Report delivery toolbar actions */
+.btn-whatsapp {
+  background: #15803d;
+  color: white;
+}
+
+.btn-whatsapp:hover {
+  background: #166534;
+}
+
+.btn-email {
+  background: #ffffff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.btn-email:hover {
+  background: #eff6ff;
+}
+
+.btn-whatsapp:focus-visible,
+.btn-email:focus-visible {
+  outline: 2px solid #16a34a;
+  outline-offset: 2px;
+}
+
 .btn-pdf-combined {
   background: linear-gradient(135deg, #ff9068 0%, #fd868c 100%);
   color: white;

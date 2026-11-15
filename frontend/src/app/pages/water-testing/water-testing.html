@@ -285,6 +285,20 @@
       </div>
 
       <div class="toolbar-right">
+        <!-- Send selected reports - Ready / Completed states, when rows are selected -->
+        <ng-container *ngIf="canPerformAction('downloadPDFs') && hasSelectedRows">
+          <button *hasPermission="'water.reports.send'" class="btn btn-whatsapp" (click)="openDeliveryDialog('whatsapp')"
+            title="Send the selected reports to farmers on WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+            Send via WhatsApp
+          </button>
+          <button *hasPermission="'water.reports.send'" class="btn btn-email" (click)="openDeliveryDialog('email')"
+            title="Email the selected reports as one ZIP file">
+            <i class="fas fa-envelope"></i>
+            Send via Email
+          </button>
+        </ng-container>
+
         <!-- Download PDFs - Only in Ready and Completed states -->
         <ng-container *ngIf="canPerformAction('downloadPDFs')">
           <button *hasPermission="'water.reports.download'" class="btn btn-pdf" (click)="downloadAllPdfs()">
@@ -294,6 +308,10 @@
         </ng-container>
       </div>
     </div>
+    <!-- Report delivery: send confirmation + preview modals -->
+    <app-report-delivery-modals [sampleType]="'water'" typeLabel="Water" [canSend]="canSendReports"
+      (sent)="onReportsSent($event)"></app-report-delivery-modals>
+
 
     <!-- AG Grid -->
     <div class="grid-wrapper" *ngIf="sessionActive">

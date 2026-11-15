@@ -183,6 +183,97 @@ const sendWhatsAppOtpFreeText = async ({ to, code, requestId }) => {
   });
 };
 
+/**
+ * Multipart POST (files + a JSON "payload" part). Kept separate from `execute` because the
+ * body must not be JSON-encoded and fetch must set the multipart boundary itself.
+ *
+ * @param {Array<{ field: string, buffer: Buffer, filename: string, contentType: string }>} files
+ */
+const postMultipart = async (path, payload, files, { timeoutMs = 60000 } = {}) => {
+  if (!NOTIFICATION_API_KEY) {
+    throw new Error('NOTIFICATION_API_KEY is not configured');
+  }
+  const url = `${NOTIFICATION_SERVICE_URL}${path}`;
+  const form = new FormData();
+  form.append('payload', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+  for (const file of files) {
+    form.append(file.field, new Blob([file.buffer], { type: file.contentType }), file.filename);
+  }
+
+  const totalBytes = files.reduce((sum, f) => sum + (f.buffer?.length || 0), 0);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
+  console.log(
+    `[notification] → POST ${url} (multipart) payload=${JSON.stringify(redactBody(payload))} ` +
+    `files=${files.map((f) => `${f.filename}:${f.buffer?.length || 0}B`).join(',')} total=${totalBytes}B`
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-API-Key': NOTIFICATION_API_KEY },
+      body: form,
+      signal: controller.signal
+    });
+    const text = await response.text();
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; } catch { /* non-JSON body */ }
+    const ms = Date.now() - startedAt;
+
+    if (!response.ok) {
+      console.error(`[notification] ← ${response.status} POST ${url} (${ms}ms) response=${text.slice(0, 500)}`);
+      const err = new Error(body?.message || `notification-service responded ${response.status}`);
+      err.status = response.status;
+      err.body = body;
+      err.providerErrorCode = body?.providerErrorCode ?? null;
+      throw err;
+    }
+    console.log(`[notification] ← ${response.status} POST ${url} (${ms}ms) providerMessageId=${body?.providerMessageId || '-'}`);
+    return body;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.error(`[notification] ✗ TIMEOUT POST ${url} after ${timeoutMs}ms`);
+      const wrapped = new Error('notification-service request timed out');
+      wrapped.status = 504;
+      throw wrapped;
+    }
+    if (!err.status) {
+      console.error(`[notification] ✗ POST ${url} — ${err.message}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Approved template with the report PDF as its DOCUMENT header and a dynamic URL button.
+ * notification-service uploads the PDF to Meta's media store, so it never needs a public URL.
+ * Resolves to `{ providerMessageId (wamid), requestId, ... }`.
+ */
+const sendWhatsAppDocumentTemplate = async ({
+  to, templateName, languageCode, bodyParameters, buttonUrlParameter, pdfBuffer, filename
+}) =>
+  postMultipart(
+    '/whatsapp/template/document',
+    { to, templateName, languageCode, bodyParameters: bodyParameters || [], buttonUrlParameter, filename },
+    [{ field: 'document', buffer: pdfBuffer, filename, contentType: 'application/pdf' }],
+    { timeoutMs: 60000 }
+  );
+
+/**
+ * HTML email with file attachments (Gmail via notification-service).
+ * @param {Array<{ buffer: Buffer, filename: string, contentType: string }>} attachments
+ */
+const sendEmailWithAttachments = async ({ to, subject, html, attachments }) =>
+  postMultipart(
+    '/email/with-attachments',
+    { to, subject, body: html, html: true },
+    attachments.map((a) => ({ field: 'attachments', ...a })),
+    { timeoutMs: 90000 }
+  );
+
 module.exports = {
   sendOtp,
   sendWhatsAppOtpTemplate,
@@ -190,5 +281,7 @@ module.exports = {
   sendWhatsAppText,
   getWhatsAppDeliverySummary,
   getWhatsAppDeliveryMessages,
-  getWhatsAppDeliveryMessage
+  getWhatsAppDeliveryMessage,
+  sendWhatsAppDocumentTemplate,
+  sendEmailWithAttachments
 };

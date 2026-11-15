@@ -1,5 +1,7 @@
 package com.shivagri.notification.exception;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shivagri.notification.controller.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,8 +42,22 @@ public class GlobalExceptionHandler {
                 ? HttpStatus.BAD_GATEWAY
                 : HttpStatus.BAD_GATEWAY;
         return ResponseEntity.status(status)
-                .body(new ErrorResponse("PROVIDER_ERROR", ex.getMessage(), Instant.now()));
+                .body(new ErrorResponse("PROVIDER_ERROR", ex.getMessage(), Instant.now(),
+                        extractProviderErrorCode(ex.getProviderBody())));
     }
+
+    /** Pulls {@code error.code} out of a Meta Graph API error body; null when absent/unparseable. */
+    private Integer extractProviderErrorCode(String providerBody) {
+        if (providerBody == null || providerBody.isBlank()) return null;
+        try {
+            JsonNode code = OBJECT_MAPPER.readTree(providerBody).path("error").path("code");
+            return code.isNumber() ? code.asInt() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @ExceptionHandler(NotificationException.class)
     public ResponseEntity<ErrorResponse> handleNotification(NotificationException ex) {
