@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { reportDeliveryStatusSchema } = require('./schemas/reportDeliveryStatus');
 
 const sampleSchema = new mongoose.Schema({
   sessionId: {
