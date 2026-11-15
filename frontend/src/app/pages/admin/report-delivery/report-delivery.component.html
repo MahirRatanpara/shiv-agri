@@ -184,7 +184,7 @@
                     <h4>Timeline</h4>
                     <ol class="rdash-timeline">
                       <li *ngFor="let e of d.statusHistory">
-                        <span class="rd-chip rd-chip--{{ statusMeta[$any(e.status)]?.tone || 'neutral' }}">{{ statusMeta[$any(e.status)]?.label || e.status }}</span>
+                        <span class="rd-chip rd-chip--{{ historyStatusMeta(e.status)?.tone || 'neutral' }}">{{ historyStatusMeta(e.status)?.label || e.status }}</span>
                         <span class="rdash-timeline__time">{{ e.at | date: 'd MMM, h:mm:ss a' }}</span>
                         <span class="rdash-timeline__source">{{ sourceLabel(e.source) }}</span>
                         <span class="rdash-timeline__note" *ngIf="e.note">{{ e.note }}</span>

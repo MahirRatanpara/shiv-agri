@@ -286,6 +286,13 @@ export class ReportDeliveryComponent implements OnInit, OnDestroy {
 
   // ── display helpers ──
 
+  /** History events carry a free-form status string, which may not be a known DeliveryStatus. */
+  historyStatusMeta(status: string): { label: string; icon: string; tone: string } | undefined {
+    return Object.prototype.hasOwnProperty.call(this.statusMeta, status)
+      ? this.statusMeta[status as DeliveryStatus]
+      : undefined;
+  }
+
   statusCount(status: DeliveryStatus): number {
     return (this.summary?.byStatus as Record<string, number> | undefined)?.[status] ?? 0;
   }
