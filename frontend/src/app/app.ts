@@ -10,6 +10,7 @@ import { ConfirmationModalComponent } from './components/confirmation-modal/conf
 import { DownloadProgressComponent } from './components/download-progress/download-progress.component';
 import { ForceUpdateComponent } from './components/force-update/force-update.component';
 import { AppUpdateService } from './services/app-update.service';
+import { extractReportToken } from './pages/report-link/report-link.matcher';
 
 @Component({
   selector: 'app-root',
@@ -75,10 +76,9 @@ export class App implements OnInit {
   /** Only allow-listed in-app paths are honoured; anything else is ignored. */
   private handleDeepLink(rawUrl: string): void {
     try {
-      const url = new URL(rawUrl);
-      const match = url.pathname.match(/^\/r\/([A-Za-z0-9_-]{20,64})\/?$/);
-      if (!match) return;
-      this.zone.run(() => this.router.navigateByUrl(`/r/${match[1]}`));
+      const token = extractReportToken(new URL(rawUrl).pathname);
+      if (!token) return;
+      this.zone.run(() => this.router.navigateByUrl(`/r/${token}`));
     } catch {
       // Malformed URL — ignore.
     }
