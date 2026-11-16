@@ -8,6 +8,9 @@ const TOKEN = /^[A-Za-z0-9_-]{20,64}$/;
  * can produce on top of the canonical `/r/<token>`:
  *  • `/r/r/<token>`: the template's base URL already ends in `/r/` and we send `r/<token>`.
  *  • `/r%2F<token>`: Meta URL-encodes the `/` inside the `{{1}}` button variable.
+ *  • `/%7B%7B1%7D%7Dr/<token>`: the button URL was saved as `https://shivagri.com/{{1}}` while
+ *    Meta's dynamic-URL field appends its own `{{1}}`, so the first one stays as literal text.
+ *    Already-delivered messages keep this URL, so it must keep working.
  * Returns null for anything else.
  */
 export function extractReportToken(path: string): string | null {
@@ -17,6 +20,8 @@ export function extractReportToken(path: string): string | null {
   } catch {
     return null;
   }
+  // Drop leftover literal template placeholders such as "{{1}}" in front of "r/".
+  decoded = decoded.replace(/^\/?(?:\{\{\d+\}\})+/, '');
   const parts = decoded.split('/').filter(Boolean);
   if (parts[0] !== 'r') return null;
   const rest = parts[1] === 'r' ? parts.slice(2) : parts.slice(1);
